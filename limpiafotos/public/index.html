@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>LimpiaFotos JPMR — Clipdrop</title>
+<meta name="description" content="Limpia y recorta tus fotos con IA (Clipdrop) y descárgalas al instante en tu ordenador o móvil." />
+<meta name="theme-color" content="#0b1224" />
+<style>
+  :root{
+    --bg:#0b1224; --bg-2:#0f1729; --card:#141d36; --card-2:#182241;
+    --input:#0e1730; --input-border:#243056; --fg:#e8eefc; --muted:#7d8aab;
+    --cyan:#22d3ee; --green:#00d774; --green-2:#00b964; --danger:#ef4444;
+    --purple:#6c5ce7; --purple-2:#4d3fc8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    background:radial-gradient(1200px 600px at 80% -10%,rgba(108,92,231,.25),transparent),
+               radial-gradient(1000px 500px at -10% 10%,rgba(34,211,238,.15),transparent),
+               var(--bg);
+    color:var(--fg);-webkit-font-smoothing:antialiased;padding:24px 16px 60px
+  }
+  .wrap{max-width:920px;margin:0 auto}
+  header{text-align:center;margin-bottom:24px}
+  .logo{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:14px;
+    background:linear-gradient(135deg,var(--purple),var(--cyan));padding:6px 14px;border-radius:999px;color:#fff}
+  h1{font-size:clamp(26px,5vw,38px);font-weight:800;margin:16px 0 6px;
+    background:linear-gradient(135deg,#b4ecf7,#8fd9ee 40%,#6c5ce7);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  header p{color:var(--muted);font-size:15px}
+  .card{background:var(--card);border:1px solid var(--input-border);border-radius:18px;padding:22px;margin-top:18px}
+  label.field{display:block;font-size:13px;color:var(--muted);margin-bottom:8px;font-weight:600}
+  select{width:100%;background:var(--input);border:1px solid var(--input-border);color:var(--fg);
+    padding:12px 14px;border-radius:12px;font-size:15px;font-family:inherit}
+  .drop{margin-top:16px;border:1.5px dashed var(--input-border);border-radius:14px;padding:34px 20px;
+    text-align:center;color:var(--muted);cursor:pointer;transition:.15s;background:rgba(255,255,255,.015)}
+  .drop:hover,.drop.drag{border-color:var(--cyan);color:var(--fg);background:rgba(34,211,238,.05)}
+  .drop strong{color:var(--fg)}
+  .drop .big{font-size:30px;margin-bottom:8px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  .pane{background:var(--input);border:1px solid var(--input-border);border-radius:14px;padding:12px;min-height:220px;
+    display:flex;flex-direction:column}
+  .pane h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
+  .imgbox{flex:1;display:flex;align-items:center;justify-content:center;border-radius:10px;overflow:hidden;min-height:180px;
+    /* tablero de ajedrez para ver transparencias */
+    background-image:
+      linear-gradient(45deg,#20305a 25%,transparent 25%),
+      linear-gradient(-45deg,#20305a 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#20305a 75%),
+      linear-gradient(-45deg,transparent 75%,#20305a 75%);
+    background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0}
+  .imgbox img{max-width:100%;max-height:340px;display:block}
+  .imgbox .placeholder{color:var(--muted);font-size:13px}
+  .btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:12px;font-weight:700;font-size:15px;
+    padding:14px 22px;transition:.15s;display:inline-flex;align-items:center;gap:8px}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .btn-primary{background:linear-gradient(180deg,#b4ecf7,#8fd9ee);color:#0b1224}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.05)}
+  .btn-download{background:linear-gradient(180deg,#00e07d,#00b964);color:#052012}
+  .btn-download:hover:not(:disabled){filter:brightness(1.06)}
+  .btn-ghost{background:var(--card-2);border:1px solid var(--input-border);color:var(--fg)}
+  .btn-ghost:hover:not(:disabled){filter:brightness(1.1)}
+  .status{margin-top:16px;font-size:14px;min-height:20px}
+  .status.err{color:var(--danger)}
+  .status.ok{color:var(--green)}
+  .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#0b1224;
+    border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .hint{color:var(--muted);font-size:12.5px;margin-top:10px;line-height:1.5}
+  .credits{color:var(--muted);font-size:12px;margin-top:6px}
+  a.reveal{color:var(--cyan);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="logo">✦ JPMR NEGOCIOS</span>
+    <h1>LimpiaFotos con IA</h1>
+    <p>Quita el fondo, borra objetos o mejora tus fotos con Clipdrop — y descárgalas al instante.</p>
+  </header>
+
+  <div class="card">
+    <label class="field" for="tool">1 · Elige qué hacer</label>
+    <select id="tool">
+      <option value="remove-background">Quitar fondo (transparente)</option>
+      <option value="remove-text">Quitar texto de la foto</option>
+      <option value="image-upscaling">Mejorar resolución (x2)</option>
+    </select>
+
+    <div class="drop" id="drop">
+      <div class="big">📷</div>
+      <div><strong>Toca para elegir una foto</strong> o arrástrala aquí</div>
+      <div class="hint">JPG o PNG · hasta 30 MB · desde tu ordenador o galería del móvil</div>
+      <input type="file" id="file" accept="image/*" hidden />
+    </div>
+
+    <div class="grid">
+      <div class="pane">
+        <h3>Original</h3>
+        <div class="imgbox"><span class="placeholder" id="ph-orig">Sin imagen todavía</span></div>
+      </div>
+      <div class="pane">
+        <h3>Resultado</h3>
+        <div class="imgbox"><span class="placeholder" id="ph-res">Aparecerá aquí</span></div>
+      </div>
+    </div>
+
+    <div class="btns">
+      <button class="btn-primary" id="go" disabled>
+        <span id="go-label">✨ Procesar con Clipdrop</span>
+      </button>
+      <button class="btn-download" id="download" disabled>⬇️ Descargar foto</button>
+      <button class="btn-ghost" id="reset" disabled>↺ Otra foto</button>
+    </div>
+
+    <div class="status" id="status"></div>
+    <div class="credits" id="credits"></div>
+    <div class="hint">
+      📱 En el móvil, «Descargar foto» guarda la imagen en tu carpeta de Descargas o galería.
+      En algunos iPhone se abre la imagen: mantén pulsado y elige <em>«Guardar en Fotos»</em>.
+    </div>
+  </div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const drop = $("drop"), fileInput = $("file"), toolSel = $("tool");
+  const goBtn = $("go"), goLabel = $("go-label"), dlBtn = $("download"), resetBtn = $("reset");
+  const statusEl = $("status"), creditsEl = $("credits");
+
+  let selectedFile = null;   // File original
+  let resultBlob = null;     // Blob procesado (para descargar)
+  let resultUrl = null;      // objectURL del resultado
+
+  function setStatus(msg, kind){ statusEl.textContent = msg || ""; statusEl.className = "status" + (kind ? " "+kind : ""); }
+
+  function showOriginal(file){
+    const url = URL.createObjectURL(file);
+    const box = drop.parentElement.querySelector(".grid .pane:nth-child(1) .imgbox");
+    box.innerHTML = `<img src="${url}" alt="original">`;
+  }
+
+  function pickFile(file){
+    if(!file) return;
+    if(!file.type.startsWith("image/")){ setStatus("Ese archivo no es una imagen.", "err"); return; }
+    if(file.size > 30*1024*1024){ setStatus("La imagen supera los 30 MB.", "err"); return; }
+    selectedFile = file;
+    showOriginal(file);
+    // reset resultado
+    resultBlob = null; if(resultUrl){ URL.revokeObjectURL(resultUrl); resultUrl = null; }
+    $("ph-res").parentElement.innerHTML = '<span class="placeholder" id="ph-res">Aparecerá aquí</span>';
+    goBtn.disabled = false; dlBtn.disabled = true; resetBtn.disabled = false;
+    creditsEl.textContent = "";
+    setStatus("Foto lista. Pulsa «Procesar con Clipdrop».", "ok");
+  }
+
+  // --- Selección de archivo ---
+  drop.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", (e) => pickFile(e.target.files[0]));
+  ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("drag"); }));
+  ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("drag"); }));
+  drop.addEventListener("drop", e => pickFile(e.dataTransfer.files[0]));
+
+  // --- Procesar con el backend (que llama a Clipdrop) ---
+  goBtn.addEventListener("click", async () => {
+    if(!selectedFile) return;
+    goBtn.disabled = true; dlBtn.disabled = true; resetBtn.disabled = true;
+    goLabel.innerHTML = '<span class="spinner"></span> Procesando…';
+    setStatus("Enviando a Clipdrop, espera unos segundos…");
+
+    try {
+      const form = new FormData();
+      form.append("image_file", selectedFile, selectedFile.name);
+      if(toolSel.value === "image-upscaling"){
+        // Duplicamos el tamaño (Clipdrop exige target_width/height en upscaling).
+        const dims = await imageSize(selectedFile);
+        form.append("target_width", Math.min(dims.w*2, 4096));
+        form.append("target_height", Math.min(dims.h*2, 4096));
+      }
+
+      const res = await fetch(`/api/process/${toolSel.value}`, { method:"POST", body: form });
+
+      if(!res.ok){
+        let msg = `Error ${res.status}`;
+        try { const j = await res.json(); msg = j.error + (j.detail ? " — "+j.detail : ""); } catch(_){}
+        throw new Error(msg);
+      }
+
+      resultBlob = await res.blob();
+      if(resultUrl) URL.revokeObjectURL(resultUrl);
+      resultUrl = URL.createObjectURL(resultBlob);
+
+      const box = drop.parentElement.querySelector(".grid .pane:nth-child(2) .imgbox");
+      box.innerHTML = `<img src="${resultUrl}" alt="resultado">`;
+
+      dlBtn.disabled = false;
+      const remaining = res.headers.get("X-Remaining-Credits");
+      if(remaining) creditsEl.textContent = `Créditos de Clipdrop restantes: ${remaining}`;
+      setStatus("¡Listo! Ya puedes descargar tu foto.", "ok");
+    } catch(err){
+      setStatus(err.message || "No se pudo procesar la imagen.", "err");
+    } finally {
+      goBtn.disabled = false; resetBtn.disabled = false;
+      goLabel.textContent = "✨ Procesar con Clipdrop";
+    }
+  });
+
+  // --- Descargar el resultado (ordenador y móvil) ---
+  dlBtn.addEventListener("click", () => {
+    if(!resultBlob) return;
+    const base = (selectedFile?.name || "foto").replace(/\.[^.]+$/, "");
+    const ext = resultBlob.type.includes("png") ? "png" : (resultBlob.type.includes("jpeg") ? "jpg" : "png");
+    const filename = `${base}-limpiafotos.${ext}`;
+
+    const url = URL.createObjectURL(resultBlob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    setStatus(`Descargando «${filename}»…`, "ok");
+  });
+
+  // --- Empezar de nuevo ---
+  resetBtn.addEventListener("click", () => {
+    selectedFile = null; resultBlob = null;
+    if(resultUrl){ URL.revokeObjectURL(resultUrl); resultUrl = null; }
+    fileInput.value = "";
+    drop.parentElement.querySelectorAll(".imgbox").forEach((b,i) => {
+      b.innerHTML = `<span class="placeholder">${i===0?"Sin imagen todavía":"Aparecerá aquí"}</span>`;
+    });
+    goBtn.disabled = true; dlBtn.disabled = true; resetBtn.disabled = true;
+    creditsEl.textContent = ""; setStatus("");
+  });
+
+  // Utilidad: medir tamaño de una imagen (para upscaling)
+  function imageSize(file){
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve({ w: 1024, h: 1024 });
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  // Aviso si el backend no tiene la clave configurada
+  fetch("/api/health").then(r=>r.json()).then(d=>{
+    if(d && d.clipdropConfigured === false){
+      setStatus("⚠ El servidor no tiene la clave de Clipdrop configurada (CLIPDROP_API_KEY).", "err");
+    }
+  }).catch(()=>{});
+</script>
+</body>
+</html>
