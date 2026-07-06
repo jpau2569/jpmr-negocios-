@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>LimpiaFotos JPMR — IA para tus fotos</title>
+<meta name="description" content="Quita el fondo, borra texto o mejora la resolución de tus fotos con IA (Clipdrop) y descárgalas al instante en tu ordenador o móvil." />
+<meta name="theme-color" content="#070b18" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<link rel="icon" href='data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" rx="24" fill="%236c5ce7"/%3E%3Ctext x="50" y="68" font-size="52" text-anchor="middle"%3E%E2%9C%A8%3C/text%3E%3C/svg%3E' />
+<style>
+  :root{
+    --bg:#070b18; --fg:#eef2ff; --muted:#8b96b8; --muted-2:#5d6786;
+    --glass:rgba(255,255,255,.045); --glass-2:rgba(255,255,255,.07);
+    --stroke:rgba(255,255,255,.09); --stroke-2:rgba(255,255,255,.16);
+    --cyan:#22d3ee; --purple:#8b7cf7; --pink:#ff5c9d; --green:#2fe08d; --danger:#ff6b6b; --amber:#ffc857;
+    --r-lg:22px; --r-md:16px; --r-sm:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg); color:var(--fg); -webkit-font-smoothing:antialiased;
+    padding:28px 16px 80px; overflow-x:hidden;
+  }
+  /* ---- Fondo "aurora" animado ---- */
+  .aurora{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+  .aurora span{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;animation:float 16s ease-in-out infinite}
+  .aurora span:nth-child(1){width:520px;height:520px;left:-140px;top:-160px;background:#5b3df0}
+  .aurora span:nth-child(2){width:460px;height:460px;right:-120px;top:-80px;background:#0e7490;animation-delay:-5s}
+  .aurora span:nth-child(3){width:420px;height:420px;left:35%;bottom:-220px;background:#9d174d;animation-delay:-10s;opacity:.35}
+  @keyframes float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(46px) scale(1.08)}}
+  @media (prefers-reduced-motion: reduce){.aurora span{animation:none}}
+
+  .wrap{max-width:980px;margin:0 auto}
+  header{text-align:center;margin-bottom:26px}
+  .logo{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:12.5px;letter-spacing:.14em;
+    background:linear-gradient(135deg,var(--purple),var(--cyan));padding:7px 16px;border-radius:999px;color:#fff;
+    box-shadow:0 8px 30px rgba(108,92,231,.35)}
+  h1{font-size:clamp(30px,6vw,46px);font-weight:900;margin:18px 0 8px;letter-spacing:-.02em;
+    background:linear-gradient(100deg,#dff6ff 10%,#9fe7f5 35%,#8b7cf7 70%,#ff5c9d 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  header p{color:var(--muted);font-size:15.5px;max-width:560px;margin:0 auto;line-height:1.55}
+
+  .card{background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r-lg);
+    padding:24px;margin-top:18px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    box-shadow:0 20px 60px rgba(0,0,0,.35)}
+
+  /* ---- Aviso de configuración ---- */
+  .banner{display:none;gap:12px;align-items:flex-start;background:rgba(255,200,87,.08);
+    border:1px solid rgba(255,200,87,.35);border-radius:var(--r-md);padding:14px 16px;margin-top:18px;
+    color:#ffe3a3;font-size:13.5px;line-height:1.6}
+  .banner.show{display:flex}
+  .banner code{background:rgba(255,255,255,.08);padding:2px 7px;border-radius:6px;font-size:12.5px}
+
+  .step-label{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+  .step-label .n{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;
+    border-radius:8px;background:linear-gradient(135deg,var(--purple),var(--cyan));color:#fff;font-size:12px}
+
+  /* ---- Selector de herramienta ---- */
+  .tools{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:640px){.tools{grid-template-columns:1fr}}
+  .tool{position:relative;text-align:left;background:var(--glass);border:1px solid var(--stroke);
+    border-radius:var(--r-md);padding:16px;cursor:pointer;transition:.18s;color:var(--fg);font-family:inherit}
+  .tool:hover{border-color:var(--stroke-2);background:var(--glass-2);transform:translateY(-2px)}
+  .tool.active{border-color:rgba(139,124,247,.7);background:linear-gradient(135deg,rgba(139,124,247,.16),rgba(34,211,238,.10));
+    box-shadow:0 10px 34px rgba(108,92,231,.25)}
+  .tool .ico{font-size:24px}
+  .tool h4{font-size:14.5px;font-weight:700;margin:8px 0 4px}
+  .tool p{font-size:12px;color:var(--muted);line-height:1.45}
+  .tool .check{position:absolute;top:10px;right:12px;width:20px;height:20px;border-radius:50%;
+    background:linear-gradient(135deg,var(--purple),var(--cyan));color:#fff;font-size:11px;font-weight:800;
+    display:none;align-items:center;justify-content:center}
+  .tool.active .check{display:inline-flex}
+
+  /* ---- Zona de subida ---- */
+  .drop{margin-top:22px;border:1.6px dashed var(--stroke-2);border-radius:var(--r-md);padding:38px 20px;
+    text-align:center;color:var(--muted);cursor:pointer;transition:.18s;background:rgba(255,255,255,.015)}
+  .drop:hover,.drop.drag{border-color:var(--cyan);color:var(--fg);background:rgba(34,211,238,.06);
+    box-shadow:inset 0 0 50px rgba(34,211,238,.05)}
+  .drop .big{font-size:34px;margin-bottom:10px}
+  .drop strong{color:var(--fg)}
+  .drop .hint{font-size:12.5px;margin-top:8px;color:var(--muted-2)}
+  kbd{background:rgba(255,255,255,.08);border:1px solid var(--stroke);border-radius:6px;padding:1px 7px;
+    font-family:inherit;font-size:11.5px}
+
+  /* ---- Paneles Original / Resultado ---- */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  .pane{background:rgba(0,0,0,.22);border:1px solid var(--stroke);border-radius:var(--r-md);padding:12px;
+    display:flex;flex-direction:column;min-height:230px}
+  .pane h3{display:flex;align-items:center;gap:8px;font-size:11.5px;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--muted);margin-bottom:10px;font-weight:700}
+  .pane h3 .dot{width:7px;height:7px;border-radius:50%;background:var(--muted-2)}
+  .pane.res h3 .dot{background:var(--green);box-shadow:0 0 10px var(--green)}
+  .imgbox{position:relative;flex:1;display:flex;align-items:center;justify-content:center;border-radius:10px;
+    overflow:hidden;min-height:190px;
+    background-image:
+      linear-gradient(45deg,#1c2748 25%,transparent 25%),linear-gradient(-45deg,#1c2748 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#1c2748 75%),linear-gradient(-45deg,transparent 75%,#1c2748 75%);
+    background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0;background-color:#111a33}
+  .imgbox img{max-width:100%;max-height:360px;display:block}
+  .imgbox .placeholder{color:var(--muted-2);font-size:13px}
+  .imgbox.shimmer::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.09) 50%,transparent 70%);
+    background-size:220% 100%;animation:shimmer 1.3s linear infinite}
+  @keyframes shimmer{to{background-position:-220% 0}}
+  .meta{font-size:11.5px;color:var(--muted-2);margin-top:8px;min-height:14px}
+
+  /* ---- Fondos para el resultado ---- */
+  .bgpick{display:none;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap}
+  .bgpick.show{display:flex}
+  .bgpick .lbl{font-size:12.5px;color:var(--muted);font-weight:600}
+  .swatch{width:34px;height:34px;border-radius:10px;border:2px solid var(--stroke-2);cursor:pointer;
+    transition:.15s;position:relative;flex-shrink:0}
+  .swatch:hover{transform:scale(1.1)}
+  .swatch.active{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(34,211,238,.25)}
+  .swatch.transparent{background-image:linear-gradient(45deg,#3a4a75 25%,transparent 25%),linear-gradient(-45deg,#3a4a75 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#3a4a75 75%),linear-gradient(-45deg,transparent 75%,#3a4a75 75%);background-size:10px 10px;background-position:0 0,0 5px,5px -5px,-5px 0;background-color:#232f55}
+  input[type=color]{width:34px;height:34px;border-radius:10px;border:2px solid var(--stroke-2);cursor:pointer;
+    background:none;padding:0}
+  input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+  input[type=color]::-webkit-color-swatch{border-radius:6px;border:none}
+
+  /* ---- Botones ---- */
+  .btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+  button.action{font-family:inherit;cursor:pointer;border:none;border-radius:14px;font-weight:800;font-size:15px;
+    padding:15px 24px;transition:.18s;display:inline-flex;align-items:center;gap:9px;letter-spacing:.01em}
+  button.action:disabled{opacity:.45;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+  .btn-primary{background:linear-gradient(135deg,#8b7cf7,#22d3ee);color:#061021;box-shadow:0 10px 30px rgba(108,92,231,.35)}
+  .btn-primary:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.08)}
+  .btn-download{background:linear-gradient(135deg,#2fe08d,#14b8a6);color:#04160e;box-shadow:0 10px 30px rgba(47,224,141,.28)}
+  .btn-download:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.07)}
+  button.action.btn-share{display:none;background:rgba(255,255,255,.07);border:1px solid var(--stroke-2);color:var(--fg)}
+  button.action.btn-share.show{display:inline-flex}
+  .btn-share:hover:not(:disabled){background:rgba(255,255,255,.12)}
+  .btn-ghost{background:transparent;border:1px solid var(--stroke-2);color:var(--muted)}
+  .btn-ghost:hover:not(:disabled){color:var(--fg);border-color:var(--fg)}
+  @media(max-width:640px){.btns{flex-direction:column}.btns button.action{justify-content:center}}
+  .spinner{width:16px;height:16px;border:2.5px solid rgba(6,16,33,.3);border-top-color:#061021;border-radius:50%;
+    animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .statusline{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;flex-wrap:wrap}
+  .status{font-size:14px;min-height:20px}
+  .status.err{color:var(--danger)}
+  .status.ok{color:var(--green)}
+  .chip{display:none;font-size:11.5px;color:var(--cyan);background:rgba(34,211,238,.1);
+    border:1px solid rgba(34,211,238,.3);padding:4px 12px;border-radius:999px;font-weight:700}
+  .chip.show{display:inline-block}
+
+  footer{text-align:center;color:var(--muted-2);font-size:12.5px;margin-top:34px;line-height:1.7}
+
+  /* ---- Toast ---- */
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:#101b38;border:1px solid var(--stroke-2);color:var(--fg);padding:12px 20px;border-radius:14px;
+    font-size:13.5px;font-weight:600;pointer-events:none;transition:.28s;z-index:50;max-width:calc(100vw - 32px);
+    box-shadow:0 16px 50px rgba(0,0,0,.5)}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+
+<div class="wrap">
+  <header>
+    <span class="logo">✦ JPMR NEGOCIOS</span>
+    <h1>LimpiaFotos con IA</h1>
+    <p>Quita el fondo, borra texto o mejora la resolución de tus fotos en segundos — y descárgalas directas a tu ordenador o móvil.</p>
+  </header>
+
+  <div class="banner" id="banner">
+    <span style="font-size:18px">🔑</span>
+    <div>
+      <strong>Falta un paso de configuración:</strong> el servidor aún no tiene la clave de Clipdrop.
+      En Vercel entra en <em>tu proyecto → Settings → Environment Variables</em>, añade
+      <code>CLIPDROP_API_KEY</code> con tu clave de <a href="https://clipdrop.co/apis" target="_blank" rel="noopener" style="color:#ffe3a3">clipdrop.co/apis</a>
+      y pulsa <em>Redeploy</em>. Después recarga esta página.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="step-label"><span class="n">1</span> Elige qué hacer</div>
+    <div class="tools" id="tools">
+      <button class="tool active" data-tool="remove-background" type="button">
+        <span class="check">✓</span><span class="ico">🪄</span>
+        <h4>Quitar fondo</h4>
+        <p>Deja el sujeto con fondo transparente. Ideal para productos y catálogos.</p>
+      </button>
+      <button class="tool" data-tool="remove-text" type="button">
+        <span class="check">✓</span><span class="ico">🧽</span>
+        <h4>Quitar texto</h4>
+        <p>Borra rótulos y letras que estropean la foto, rellenando el hueco con IA.</p>
+      </button>
+      <button class="tool" data-tool="image-upscaling" type="button">
+        <span class="check">✓</span><span class="ico">🔍</span>
+        <h4>Mejorar resolución</h4>
+        <p>Duplica el tamaño con más nitidez. Perfecto para fotos pequeñas o borrosas.</p>
+      </button>
+    </div>
+
+    <div class="step-label" style="margin-top:26px"><span class="n">2</span> Sube tu foto</div>
+    <div class="drop" id="drop" role="button" tabindex="0" aria-label="Subir foto">
+      <div class="big">📷</div>
+      <div><strong>Toca para elegir una foto</strong> o arrástrala aquí</div>
+      <div class="hint">También puedes pegarla con <kbd>Ctrl</kbd>+<kbd>V</kbd> · JPG, PNG o WebP · las fotos grandes se optimizan solas</div>
+      <input type="file" id="file" accept="image/*" hidden />
+    </div>
+
+    <div class="grid">
+      <div class="pane">
+        <h3><span class="dot"></span> Original</h3>
+        <div class="imgbox" id="box-orig"><span class="placeholder">Sin imagen todavía</span></div>
+        <div class="meta" id="meta-orig"></div>
+      </div>
+      <div class="pane res">
+        <h3><span class="dot"></span> Resultado</h3>
+        <div class="imgbox" id="box-res"><span class="placeholder">Aparecerá aquí</span></div>
+        <div class="meta" id="meta-res"></div>
+      </div>
+    </div>
+
+    <div class="bgpick" id="bgpick">
+      <span class="lbl">Fondo:</span>
+      <button class="swatch transparent active" data-bg="transparent" title="Transparente" type="button"></button>
+      <button class="swatch" data-bg="#ffffff" style="background:#fff" title="Blanco (Amazon, catálogos)" type="button"></button>
+      <button class="swatch" data-bg="#000000" style="background:#000" title="Negro" type="button"></button>
+      <button class="swatch" data-bg="#f3f4f6" style="background:#f3f4f6" title="Gris claro" type="button"></button>
+      <input type="color" id="bgcustom" value="#22d3ee" title="Color personalizado" />
+    </div>
+
+    <div class="btns">
+      <button class="action btn-primary" id="go" disabled type="button"><span id="go-label">✨ Procesar con IA</span></button>
+      <button class="action btn-download" id="download" disabled type="button">⬇️ Descargar foto</button>
+      <button class="action btn-share" id="share" type="button">📤 Compartir / Guardar en galería</button>
+      <button class="action btn-ghost" id="reset" disabled type="button">↺ Otra foto</button>
+    </div>
+
+    <div class="statusline">
+      <div class="status" id="status" role="status"></div>
+      <span class="chip" id="credits"></span>
+    </div>
+  </div>
+
+  <footer>
+    Impulsado por Clipdrop AI · Tus fotos se procesan al momento y no se almacenan.<br />
+    📱 En iPhone, si la descarga abre la imagen: mantén pulsado → «Guardar en Fotos».
+  </footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const drop = $("drop"), fileInput = $("file");
+  const goBtn = $("go"), goLabel = $("go-label"), dlBtn = $("download"), shareBtn = $("share"), resetBtn = $("reset");
+  const boxOrig = $("box-orig"), boxRes = $("box-res");
+  const statusEl = $("status"), creditsEl = $("credits"), bgpick = $("bgpick");
+
+  const MAX_DIM = 2560;              // lado máximo antes de optimizar
+  const MAX_BYTES = 3.8 * 1024 * 1024; // límite de subida en Vercel (~4.5 MB)
+
+  let currentTool = "remove-background";
+  let selectedFile = null;   // File ya optimizado, listo para enviar
+  let resultBlob = null;     // Blob devuelto por Clipdrop
+  let variantBlob = null;    // Blob con el fondo elegido (lo que se descarga)
+  let busy = false;
+  const urls = [];           // objectURLs para liberar
+
+  const objUrl = (blob) => { const u = URL.createObjectURL(blob); urls.push(u); return u; };
+  const freeUrls = () => { urls.forEach(u => URL.revokeObjectURL(u)); urls.length = 0; };
+
+  function setStatus(msg, kind){ statusEl.textContent = msg || ""; statusEl.className = "status" + (kind ? " " + kind : ""); }
+  let toastTimer;
+  function toast(msg){
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+  }
+  const fmtKB = (bytes) => bytes > 1024*1024 ? (bytes/1024/1024).toFixed(1) + " MB" : Math.round(bytes/1024) + " KB";
+
+  // ---------- Selección de herramienta ----------
+  $("tools").addEventListener("click", (e) => {
+    const btn = e.target.closest(".tool");
+    if (!btn || busy) return;
+    currentTool = btn.dataset.tool;
+    document.querySelectorAll(".tool").forEach(t => t.classList.toggle("active", t === btn));
+    if (selectedFile) setStatus("Herramienta cambiada. Pulsa «Procesar con IA».", "ok");
+  });
+
+  // ---------- Utilidades de imagen ----------
+  function loadImage(blob){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("No se pudo leer la imagen."));
+      img.src = objUrl(blob);
+    });
+  }
+
+  // Optimiza fotos grandes para que suban rápido y quepan en el servidor.
+  async function optimize(file){
+    const img = await loadImage(file);
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (file.size <= MAX_BYTES && Math.max(w, h) <= MAX_DIM) return { file, w, h, optimized: false };
+
+    const scale = Math.min(1, MAX_DIM / Math.max(w, h));
+    const cw = Math.round(w * scale), ch = Math.round(h * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = cw; canvas.height = ch;
+    canvas.getContext("2d").drawImage(img, 0, 0, cw, ch);
+
+    const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", 0.92));
+    if (!blob) return { file, w, h, optimized: false };
+    const name = (file.name || "foto").replace(/\.[^.]+$/, "") + ".jpg";
+    return { file: new File([blob], name, { type: "image/jpeg" }), w: cw, h: ch, optimized: true };
+  }
+
+  // ---------- Elegir foto (click / arrastrar / pegar) ----------
+  async function pickFile(file){
+    if (!file || busy) return;
+    if (!file.type.startsWith("image/")) { setStatus("Ese archivo no es una imagen.", "err"); return; }
+
+    setStatus("Preparando la foto…");
+    try {
+      const opt = await optimize(file);
+      selectedFile = opt.file;
+      boxOrig.innerHTML = `<img src="${objUrl(selectedFile)}" alt="original">`;
+      $("meta-orig").textContent = `${opt.w} × ${opt.h} px · ${fmtKB(selectedFile.size)}` + (opt.optimized ? " · optimizada ✓" : "");
+      clearResult();
+      goBtn.disabled = false; resetBtn.disabled = false;
+      setStatus("Foto lista. Pulsa «Procesar con IA».", "ok");
+    } catch (err) {
+      setStatus(err.message || "No se pudo leer esa imagen.", "err");
+    }
+  }
+
+  function clearResult(){
+    resultBlob = null; variantBlob = null;
+    boxRes.innerHTML = '<span class="placeholder">Aparecerá aquí</span>';
+    $("meta-res").textContent = "";
+    dlBtn.disabled = true; shareBtn.classList.remove("show");
+    bgpick.classList.remove("show");
+    document.querySelectorAll(".swatch").forEach((s, i) => s.classList.toggle("active", i === 0));
+  }
+
+  drop.addEventListener("click", () => !busy && fileInput.click());
+  drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); } });
+  fileInput.addEventListener("change", (e) => pickFile(e.target.files[0]));
+  ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("drag"); }));
+  ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("drag"); }));
+  drop.addEventListener("drop", e => pickFile(e.dataTransfer.files[0]));
+  window.addEventListener("paste", (e) => {
+    const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
+    if (item) { pickFile(item.getAsFile()); toast("📋 Imagen pegada"); }
+  });
+
+  // ---------- Procesar con Clipdrop (vía backend) ----------
+  goBtn.addEventListener("click", async () => {
+    if (!selectedFile || busy) return;
+    busy = true;
+    goBtn.disabled = true; dlBtn.disabled = true; resetBtn.disabled = true;
+    goLabel.innerHTML = '<span class="spinner"></span> Procesando…';
+    boxRes.classList.add("shimmer");
+    setStatus("La IA está trabajando, unos segundos…");
+
+    try {
+      const form = new FormData();
+      form.append("image_file", selectedFile, selectedFile.name);
+      if (currentTool === "image-upscaling") {
+        const img = await loadImage(selectedFile);
+        form.append("target_width", Math.min(img.naturalWidth * 2, 4096));
+        form.append("target_height", Math.min(img.naturalHeight * 2, 4096));
+      }
+
+      const res = await fetch(`/api/process/${currentTool}`, { method: "POST", body: form });
+      if (!res.ok) {
+        let msg = `Error ${res.status}`;
+        try { const j = await res.json(); msg = j.error + (j.detail ? " — " + j.detail : ""); } catch (_) {}
+        throw new Error(msg);
+      }
+
+      resultBlob = await res.blob();
+      variantBlob = resultBlob;
+      const img = await loadImage(resultBlob);
+      boxRes.innerHTML = ""; boxRes.appendChild(img);
+      $("meta-res").textContent = `${img.naturalWidth} × ${img.naturalHeight} px · ${fmtKB(resultBlob.size)}`;
+
+      dlBtn.disabled = false;
+      if (currentTool === "remove-background") bgpick.classList.add("show");
+      await setupShare();
+
+      const remaining = res.headers.get("X-Remaining-Credits");
+      if (remaining) { creditsEl.textContent = `⚡ ${remaining} créditos restantes`; creditsEl.classList.add("show"); }
+      setStatus("¡Listo! Ya puedes descargar tu foto.", "ok");
+      toast("✅ Foto procesada");
+    } catch (err) {
+      setStatus(err.message || "No se pudo procesar la imagen.", "err");
+    } finally {
+      busy = false;
+      goBtn.disabled = false; resetBtn.disabled = false;
+      goLabel.textContent = "✨ Procesar con IA";
+      boxRes.classList.remove("shimmer");
+    }
+  });
+
+  // ---------- Elegir color de fondo (solo tras quitar fondo) ----------
+  async function applyBg(color){
+    if (!resultBlob) return;
+    if (color === "transparent") { variantBlob = resultBlob; }
+    else {
+      const img = await loadImage(resultBlob);
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = color; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      variantBlob = await new Promise(res => canvas.toBlob(res, "image/png"));
+    }
+    const img = await loadImage(variantBlob);
+    boxRes.innerHTML = ""; boxRes.appendChild(img);
+    await setupShare();
+  }
+  bgpick.addEventListener("click", (e) => {
+    const sw = e.target.closest(".swatch");
+    if (!sw) return;
+    document.querySelectorAll(".swatch").forEach(s => s.classList.toggle("active", s === sw));
+    applyBg(sw.dataset.bg);
+  });
+  $("bgcustom").addEventListener("input", (e) => {
+    document.querySelectorAll(".swatch").forEach(s => s.classList.remove("active"));
+    applyBg(e.target.value);
+  });
+
+  // ---------- Nombre del archivo final ----------
+  function outName(){
+    const base = (selectedFile?.name || "foto").replace(/\.[^.]+$/, "");
+    const suffix = { "remove-background": "sin-fondo", "remove-text": "sin-texto", "image-upscaling": "hd" }[currentTool] || "limpia";
+    const ext = (variantBlob?.type || "").includes("jpeg") ? "jpg" : "png";
+    return `${base}-${suffix}.${ext}`;
+  }
+
+  // ---------- Descargar (ordenador y móvil) ----------
+  dlBtn.addEventListener("click", () => {
+    if (!variantBlob) return;
+    const name = outName();
+    const url = URL.createObjectURL(variantBlob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast(`⬇️ Descargando «${name}»`);
+  });
+
+  // ---------- Compartir / guardar en galería (móvil) ----------
+  async function setupShare(){
+    shareBtn.classList.remove("show");
+    if (!navigator.share || !navigator.canShare || !variantBlob) return;
+    try {
+      const f = new File([variantBlob], outName(), { type: variantBlob.type || "image/png" });
+      if (navigator.canShare({ files: [f] })) shareBtn.classList.add("show");
+    } catch (_) {}
+  }
+  shareBtn.addEventListener("click", async () => {
+    if (!variantBlob) return;
+    try {
+      const f = new File([variantBlob], outName(), { type: variantBlob.type || "image/png" });
+      await navigator.share({ files: [f], title: "Foto procesada — LimpiaFotos JPMR" });
+    } catch (_) { /* usuario canceló */ }
+  });
+
+  // ---------- Empezar de nuevo ----------
+  resetBtn.addEventListener("click", () => {
+    if (busy) return;
+    selectedFile = null; resultBlob = null; variantBlob = null;
+    fileInput.value = "";
+    freeUrls();
+    boxOrig.innerHTML = '<span class="placeholder">Sin imagen todavía</span>';
+    $("meta-orig").textContent = "";
+    clearResult();
+    goBtn.disabled = true; resetBtn.disabled = true;
+    creditsEl.classList.remove("show");
+    setStatus("");
+  });
+
+  // ---------- Comprobar configuración del servidor ----------
+  fetch("/api/health").then(r => r.json()).then(d => {
+    if (d && d.clipdropConfigured === false) $("banner").classList.add("show");
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>
