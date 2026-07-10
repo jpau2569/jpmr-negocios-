@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { PALETTE } from '../assets/palette';
-import { DEFAULT_AVATAR, type AvatarConfig, type HatId, type BootsId, type WeaponId } from './AvatarConfig';
+import {
+  DEFAULT_AVATAR, type AvatarConfig, type HatId, type BootsId, type WeaponId, weaponKind, WATER_GUNS,
+} from './AvatarConfig';
 
 /**
  * Partes articuladas del avatar que el animador rota/escala.
@@ -154,22 +156,50 @@ export class PlayerAvatar {
 
   private buildWeapon(weapon: WeaponId): void {
     this.clearSlot(this.weaponSlot);
-    if (weapon === 'none') return;
-    const bladeMat = new THREE.MeshStandardMaterial({
-      color: 0xe2eaf0, metalness: 0.7, roughness: 0.25, emissive: 0x223a4a, emissiveIntensity: 0.3,
+    const kind = weaponKind(weapon);
+    if (kind === 'none') return;
+
+    if (kind === 'sword') {
+      const bladeMat = new THREE.MeshStandardMaterial({
+        color: 0xe2eaf0, metalness: 0.7, roughness: 0.25, emissive: 0x223a4a, emissiveIntensity: 0.3,
+      });
+      const hiltMat = new THREE.MeshStandardMaterial({ color: 0x8a5a2b, roughness: 0.7 });
+      const sword = new THREE.Group();
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.95, 0.03), bladeMat);
+      blade.position.y = 0.5;
+      const guard = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.07, 0.07), hiltMat);
+      guard.position.y = 0.03;
+      const grip = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.22, 0.07), hiltMat);
+      grip.position.y = -0.1;
+      sword.add(blade, guard, grip);
+      sword.rotation.x = -Math.PI / 2;
+      sword.traverse((o) => { if (o instanceof THREE.Mesh) o.castShadow = true; });
+      this.weaponSlot.add(sword);
+      return;
+    }
+
+    // Pistola de agua: cuerpo + cañón + depósito. Tamaño/color según el modelo.
+    const stats = WATER_GUNS[weapon];
+    const scale = weapon === 'mega' ? 1.35 : weapon === 'super' ? 1.15 : 1;
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2f3540, roughness: 0.6 });
+    const tankMat = new THREE.MeshStandardMaterial({
+      color: stats.color, emissive: stats.color, emissiveIntensity: 0.35, roughness: 0.4, transparent: true, opacity: 0.85,
     });
-    const hiltMat = new THREE.MeshStandardMaterial({ color: 0x8a5a2b, roughness: 0.7 });
-    const sword = new THREE.Group();
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.95, 0.03), bladeMat);
-    blade.position.y = 0.5;
-    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.07, 0.07), hiltMat);
-    guard.position.y = 0.03;
-    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.22, 0.07), hiltMat);
-    grip.position.y = -0.1;
-    sword.add(blade, guard, grip);
-    sword.rotation.x = -Math.PI / 2; // la hoja apunta hacia delante desde la mano
-    sword.traverse((o) => { if (o instanceof THREE.Mesh) o.castShadow = true; });
-    this.weaponSlot.add(sword);
+    const gun = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.34), bodyMat);
+    body.position.z = 0.14;
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.3, 10), bodyMat);
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(0, 0.03, 0.34);
+    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.22, 0.12), bodyMat);
+    grip.position.set(0, -0.16, 0.05);
+    const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.26, 12), tankMat);
+    tank.rotation.z = Math.PI / 2;
+    tank.position.set(0, 0.14, 0.06);
+    gun.add(body, barrel, grip, tank);
+    gun.scale.setScalar(scale);
+    gun.traverse((o) => { if (o instanceof THREE.Mesh) o.castShadow = true; });
+    this.weaponSlot.add(gun);
   }
 
   private buildHat(hat: HatId): void {

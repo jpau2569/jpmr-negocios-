@@ -6,7 +6,7 @@ import { CameraRig } from '../engine/CameraRig';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { InputManager } from '../player/InputManager';
 import { PlayerController } from '../player/PlayerController';
-import { saveAvatar } from '../player/AvatarConfig';
+import { saveAvatar, WATER_GUNS } from '../player/AvatarConfig';
 import { setupEnvironment } from '../world/Environment';
 import { Lobby } from '../world/Lobby';
 import { WORLDS, START_WORLD, type LevelDefinition } from '../world/LevelData';
@@ -15,6 +15,7 @@ import { AudioSystem } from '../systems/AudioSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
 import { RingFx } from '../systems/RingFx';
 import { AmbientMotes } from '../systems/AmbientMotes';
+import { WaterGun } from '../systems/WaterGun';
 import { MissionSystem } from '../systems/MissionSystem';
 import { Inventory } from '../systems/Inventory';
 import { LocalNetworkAdapter, type NetworkAdapter } from '../net/NetworkAdapter';
@@ -52,6 +53,13 @@ export class Game {
   private ringFx = new RingFx();
   private motes = new AmbientMotes();
   private bounceCooldown = 0;
+  private waterGun = new WaterGun();
+
+  // Pistola de agua: depósito que se recarga con el tiempo y modelo equipado.
+  private currentWeaponId = 'none';
+  private waterMax = 20;
+  private waterTank = 20;
+  private fireCooldownTimer = 0;
   private missions!: MissionSystem;
   private inventory!: Inventory;
   private network: NetworkAdapter = new LocalNetworkAdapter();
@@ -74,10 +82,12 @@ export class Game {
     setupEnvironment(this.scene, this.renderer.renderer);
 
     this.player = new PlayerController(this.physics, this.ui.avatar);
+    this.currentWeaponId = this.ui.avatar.weapon;
     this.scene.add(this.player.avatar.group);
     this.scene.add(this.particles.points);
     this.scene.add(this.ringFx.group);
     this.scene.add(this.motes.points);
+    this.scene.add(this.waterGun.group);
 
     // El inventario es global (persiste entre mundos) y se suscribe antes que
     // los handlers de wireGameFeel para que récords/trofeos estén frescos.
@@ -168,6 +178,22 @@ export class Game {
     this.machine.transition('won');
   }
 
+  /** Dispara una gota de agua desde el jugador hacia donde mira la cámara. */
+  private fireWater(): void {
+    const gun = WATER_GUNS[this.currentWeaponId];
+    if (!gun || this.fireCooldownTimer > 0 || this.waterTank < 1) return;
+    this.fireCooldownTimer = gun.cooldown;
+    this.waterTank -= 1;
+    const dir = new THREE.Vector3();
+    this.cameraRig.camera.getWorldDirection(dir);
+    const origin = this.player.visualPos.clone();
+    origin.y += 1.4;
+    origin.addScaledVector(dir, 0.6);
+    this.waterGun.fire(origin, dir, gun.speed, gun.color);
+    this.audio.squirt();
+    this.player.triggerShootAnim();
+  }
+
   /** Trampolines: lanzan al jugador hacia arriba al pisarlos (con cooldown). */
   private checkBouncePads(dt: number): void {
     if (this.bounceCooldown > 0) {
@@ -247,6 +273,7 @@ export class Game {
     this.ui.onAvatarChange = (cfg) => {
       this.player.avatar.applyConfig(cfg);
       this.player.applyGear(cfg);
+      this.currentWeaponId = cfg.weapon;
     };
     this.ui.onAvatarDone = (cfg) => saveAvatar(cfg);
     // Encuadre frontal del avatar mientras se personaliza.
@@ -298,9 +325,11 @@ export class Game {
       this.audio.jump();
     };
     this.player.onSwing = () => this.audio.swoosh();
-    // Clic izquierdo durante el juego → espadazo (solo si hay arma equipada).
+    // Clic izquierdo durante el juego → espadazo o disparo de agua, según el arma.
     window.addEventListener('mousedown', (e) => {
-      if (e.button === 0 && this.machine.is('playing')) this.player.swing();
+      if (e.button !== 0 || !this.machine.is('playing')) return;
+      if (this.player.weapon === 'sword') this.player.swing();
+      else if (this.player.weapon === 'water') this.fireWater();
     });
     this.player.onLand = (impact) => {
       this.audio.land(impact);
@@ -378,6 +407,19 @@ export class Game {
     this.missions.update(this.player.visualPos);
     this.checkObbyProgress();
     this.checkBouncePads(dt);
+
+    // Pistola de agua: recarga del depósito, cooldown y vuelo de las gotas.
+    this.fireCooldownTimer = Math.max(0, this.fireCooldownTimer - dt);
+    if (this.waterTank < this.waterMax) this.waterTank = Math.min(this.waterMax, this.waterTank + 5 * dt);
+    this.ui.setWater(this.waterTank / this.waterMax, this.player.weapon === 'water');
+    this.waterGun.update(dt, (pos) => {
+      const hit = this.coins.tryHit(pos, 1.2, this.elapsed);
+      if (hit) {
+        this.audio.coin();
+        this.particles.burst(pos, 0x8fd0ff, { count: 12, speed: 2.4, life: 0.45, upBias: 1.2, gravity: -4 });
+      }
+      return hit;
+    });
 
     // Publica el estado local a ~10 Hz por la capa de red (loopback en Fase 1).
     this.snapshotTimer += dt;

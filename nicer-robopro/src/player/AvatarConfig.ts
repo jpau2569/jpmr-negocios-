@@ -8,7 +8,22 @@ import { PALETTE } from '../assets/palette';
 
 export type HatId = 'none' | 'cap' | 'crown' | 'party' | 'headphones' | 'wizard' | 'halo';
 export type BootsId = 'none' | 'jump' | 'speed';
-export type WeaponId = 'none' | 'sword';
+export type WeaponId = 'none' | 'sword' | 'pistola' | 'chorro' | 'super' | 'mega';
+
+/** Kind funcional del arma: espada (cuerpo a cuerpo) o pistola de agua (dispara). */
+export function weaponKind(w: WeaponId): 'none' | 'sword' | 'water' {
+  if (w === 'sword') return 'sword';
+  if (w === 'none') return 'none';
+  return 'water';
+}
+
+/** Stats de cada pistola de agua: cadencia (s), velocidad del chorro y color. */
+export const WATER_GUNS: Record<string, { cooldown: number; speed: number; color: number }> = {
+  pistola: { cooldown: 0.34, speed: 24, color: 0x5b8fd9 },
+  chorro: { cooldown: 0.26, speed: 27, color: 0x35d0ba },
+  super: { cooldown: 0.19, speed: 31, color: 0x66bf62 },
+  mega: { cooldown: 0.13, speed: 35, color: 0x9b7fd4 },
+};
 
 export interface AvatarConfig {
   torso: number; // color de torso + brazos
@@ -42,8 +57,14 @@ export const BOOTS_PRICES: Record<BootsId, number> = { none: 0, jump: 14, speed:
 export const WEAPONS: { id: WeaponId; label: string }[] = [
   { id: 'none', label: 'Ninguna' },
   { id: 'sword', label: 'Espada' },
+  { id: 'pistola', label: 'Pistola de agua' },
+  { id: 'chorro', label: 'Chorro doble' },
+  { id: 'super', label: 'Súper soaker' },
+  { id: 'mega', label: 'Mega cañón' },
 ];
-export const WEAPON_PRICES: Record<WeaponId, number> = { none: 0, sword: 20 };
+export const WEAPON_PRICES: Record<WeaponId, number> = {
+  none: 0, sword: 20, pistola: 10, chorro: 18, super: 30, mega: 45,
+};
 
 /** Catálogos de opciones para el personalizador (colores amables tipo bloques). */
 export const TORSO_COLORS = [0x35d0ba, 0xd9634f, 0x5b8fd9, 0x9b7fd4, 0x66bf62, 0xe8934a, 0xe86fa8];
@@ -84,7 +105,7 @@ export function loadAvatar(): AvatarConfig {
         boots: (['none', 'jump', 'speed'] as BootsId[]).includes(p.boots as BootsId)
           ? (p.boots as BootsId)
           : 'none',
-        weapon: (['none', 'sword'] as WeaponId[]).includes(p.weapon as WeaponId)
+        weapon: (['none', 'sword', 'pistola', 'chorro', 'super', 'mega'] as WeaponId[]).includes(p.weapon as WeaponId)
           ? (p.weapon as WeaponId)
           : 'none',
       };

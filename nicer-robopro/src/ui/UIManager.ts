@@ -43,6 +43,10 @@ export class UIManager {
   private toast: HTMLElement;
   private toastTimer = 0;
   private portalPrompt: HTMLElement;
+  private scoreEl: HTMLElement;
+  private waterEl: HTMLElement;
+  private waterFill: HTMLElement;
+  private score = 0;
 
   constructor(events: EventBus) {
     const get = (id: string): HTMLElement => {
@@ -66,6 +70,9 @@ export class UIManager {
     this.pauseStats = get('pause-stats');
     this.toast = get('hud-toast');
     this.portalPrompt = get('hud-portal');
+    this.scoreEl = get('hud-score');
+    this.waterEl = get('hud-water');
+    this.waterFill = get('hud-water-fill');
 
     get('btn-play').addEventListener('click', () => this.onPlay?.());
     get('btn-resume').addEventListener('click', () => this.onResume?.());
@@ -103,7 +110,11 @@ export class UIManager {
       this.coinCount.textContent = `${collected} / ${total}`;
       // Mundos sin monedas (el hub) ocultan el contador.
       this.coinCount.parentElement?.classList.toggle('hidden', total === 0);
-      if (collected > 0) this.pulseCoins();
+      if (collected > 0) {
+        this.pulseCoins();
+        this.score += 10; // cada moneda vale 10 puntos
+        this.scoreEl.textContent = `${this.score} pts`;
+      }
     });
     events.on('missions-updated', ({ missions }) => this.renderMissions(missions));
     events.on('mission-completed', ({ title }) => this.showToast(`✔ ${title}`));
@@ -154,6 +165,12 @@ export class UIManager {
 
   setWinTime(seconds: number): void {
     this.winTime.textContent = formatTime(seconds);
+  }
+
+  /** Barra de agua de la pistola: fracción 0..1 y si debe mostrarse (arma de agua). */
+  setWater(fraction: number, visible: boolean): void {
+    this.waterEl.classList.toggle('hidden', !visible);
+    this.waterFill.style.width = `${Math.round(fraction * 100)}%`;
   }
 
   setWinBest(text: string): void {

@@ -263,6 +263,27 @@ h2 { color: var(--text); font-size: 34px; letter-spacing: 1.5px; text-transform:
 
 .hud-timer { top: 18px; right: 18px; font-variant-numeric: tabular-nums; color: var(--gold); }
 
+.hud-score { top: 66px; right: 18px; color: var(--teal); font-variant-numeric: tabular-nums; }
+
+/* Barra de agua de la pistola */
+.hud-water {
+  position: absolute;
+  bottom: 54px;
+  right: 20px;
+  width: 140px;
+  height: 14px;
+  background: rgba(19, 32, 40, 0.7);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.hud-water-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #3a7bd5, #5bc8f0);
+  transition: width 0.1s linear;
+}
+
 /* ---- Misiones ---- */
 
 .hud-missions {

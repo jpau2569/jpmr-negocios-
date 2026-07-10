@@ -4,7 +4,7 @@ import { CONFIG } from '../core/Config';
 import type { InputFrame, AvatarAnimState } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { AvatarAnimator } from './AvatarAnimator';
-import { type AvatarConfig, JUMP_MUL, SPEED_MUL } from './AvatarConfig';
+import { type AvatarConfig, JUMP_MUL, SPEED_MUL, weaponKind } from './AvatarConfig';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 
 /**
@@ -32,10 +32,10 @@ export class PlayerController {
   onLand: ((impactSpeed: number) => void) | null = null;
   onSwing: (() => void) | null = null;
 
-  // Modificadores de gear (botas). El arma solo habilita el espadazo.
+  // Modificadores de gear (botas) y tipo de arma equipada.
   private jumpMul = 1;
   private speedMul = 1;
-  private hasWeapon = false;
+  private weaponType: 'none' | 'sword' | 'water' = 'none';
 
   // Posiciones del paso físico anterior/actual para interpolar el visual.
   private prevPos = new THREE.Vector3();
@@ -210,11 +210,16 @@ export class PlayerController {
     this.killY = y;
   }
 
-  /** Aplica los efectos del gear equipado (botas → salto/velocidad; arma → espadazo). */
+  /** Aplica los efectos del gear equipado (botas → salto/velocidad; arma → tipo). */
   applyGear(config: AvatarConfig): void {
     this.jumpMul = JUMP_MUL[config.boots];
     this.speedMul = SPEED_MUL[config.boots];
-    this.hasWeapon = config.weapon !== 'none';
+    this.weaponType = weaponKind(config.weapon);
+  }
+
+  /** Tipo de arma equipada (el juego decide entre espadazo y disparo). */
+  get weapon(): 'none' | 'sword' | 'water' {
+    return this.weaponType;
   }
 
   /** Impulso vertical de un trampolín. */
@@ -223,12 +228,17 @@ export class PlayerController {
     this.animator.triggerJump();
   }
 
-  /** Intenta blandir el arma (solo si hay una equipada). */
+  /** Blande la espada (solo si es el arma equipada). */
   swing(): void {
-    if (this.hasWeapon) {
+    if (this.weaponType === 'sword') {
       this.animator.triggerSwing();
       this.onSwing?.();
     }
+  }
+
+  /** Gesto de disparo del brazo (pistola de agua). */
+  triggerShootAnim(): void {
+    this.animator.triggerSwing();
   }
 
   respawn(): void {

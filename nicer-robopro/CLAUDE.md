@@ -81,6 +81,13 @@ Rama de trabajo: `claude/nicer-robopro-mvp-el56jp`. Commits clave:
 - **Gear con efecto**: botas saltarinas (+salto) / veloces (+velocidad) → `PlayerController.applyGear`
   (multiplicadores `JUMP_MUL`/`SPEED_MUL`); espada (mano derecha, `swing()` con clic, `AvatarAnimator.triggerSwing`).
   7 gorros (incl. Cascos/Mago/Aureola). `PlayerAvatar` renderiza botas y espada en slots.
+- **Pistolas de agua** (`weaponKind`='water', modelos en `WATER_GUNS`: pistola/chorro/super/mega):
+  clic dispara gotas (`systems/WaterGun`, pool) hacia donde mira la cámara; impactar una moneda la
+  recoge (`CoinSystem.tryHit`). Depósito de agua que se recarga (HUD barra, `UIManager.setWater`).
+  Marcador de **puntos** en el HUD (10 pts/moneda). Game.fireWater orquesta disparo+cooldown+tanque.
+  PENDIENTE (plan del usuario): cargadores de agua comprables, cabezas de animal, ropa/pelo militar,
+  monedas premium/sorpresas, power-ups (imán, doble salto), dianas para la espada, mundo de carreras
+  con ranking, rival IA "Iyan".
 - **Trampolines** (`bouncePads` en LevelData → `PlayerController.bounce`) y **motas ambientales**
   (`systems/AmbientMotes`, un `THREE.Points` que flota). **Preview en vivo** del avatar en el
   personalizador vía `CameraRig.setPortrait` (encuadre frontal).

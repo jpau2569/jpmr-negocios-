@@ -86,19 +86,37 @@ export class CoinSystem {
         coin.basePos.y + Math.sin(this.time * c.bobSpeed + coin.phase) * c.bobAmplitude;
 
       if (coin.mesh.position.distanceToSquared(playerPos) < r2) {
-        coin.collected = true;
-        coin.popTime = 0.25;
-        this.collectedCount++;
-        this.events.emit('coin-collected', {
-          collected: this.collectedCount,
-          total: this.coins.length,
-          position: { x: coin.mesh.position.x, y: coin.mesh.position.y, z: coin.mesh.position.z },
-        });
-        if (this.collectedCount === this.coins.length) {
-          this.events.emit('all-coins-collected', { timeSeconds: elapsedSeconds });
-        }
+        this.collect(coin, elapsedSeconds);
       }
     }
+  }
+
+  /** Recoge una moneda: anima, cuenta y emite eventos (recogida y, si toca, victoria). */
+  private collect(coin: Coin, elapsedSeconds: number): void {
+    coin.collected = true;
+    coin.popTime = 0.25;
+    this.collectedCount++;
+    this.events.emit('coin-collected', {
+      collected: this.collectedCount,
+      total: this.coins.length,
+      position: { x: coin.mesh.position.x, y: coin.mesh.position.y, z: coin.mesh.position.z },
+    });
+    if (this.collectedCount === this.coins.length) {
+      this.events.emit('all-coins-collected', { timeSeconds: elapsedSeconds });
+    }
+  }
+
+  /** Intenta recoger una moneda no recogida cercana a `point` (impacto de agua). */
+  tryHit(point: THREE.Vector3, radius: number, elapsedSeconds: number): boolean {
+    const r2 = radius * radius;
+    for (const coin of this.coins) {
+      if (coin.collected) continue;
+      if (coin.mesh.position.distanceToSquared(point) < r2) {
+        this.collect(coin, elapsedSeconds);
+        return true;
+      }
+    }
+    return false;
   }
 
   reset(): void {

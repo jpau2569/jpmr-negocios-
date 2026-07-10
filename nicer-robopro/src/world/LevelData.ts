@@ -150,7 +150,7 @@ const ISLAS: LevelDefinition = {
   ],
   zones: [],
   bouncePads: [[0, 1, 6], [0, 2.1, 0]],
-  portals: [{ pos: [0, 1.4, 11], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
+  portals: [{ pos: [3.5, 1.4, 11], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
 };
 
 // --- OBBY: circuito de parkour flotante con checkpoints y meta. ---

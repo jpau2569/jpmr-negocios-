@@ -103,4 +103,8 @@ export class AudioSystem {
   boing(): void {
     this.tone(280, 0.22, 'sine', 0, 0.4, 760);
   }
+
+  squirt(): void {
+    this.tone(420, 0.09, 'triangle', 0, 0.18, 820);
+  }
 }
