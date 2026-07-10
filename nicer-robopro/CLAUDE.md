@@ -54,7 +54,12 @@ Rama de trabajo: `claude/nicer-robopro-mvp-el56jp`. Commits clave:
   `PlayerSnapshot` (JSON plano) a 10 Hz vía `LocalNetworkAdapter`. Colyseus deberá
   implementar la misma interfaz sin tocar el resto.
 - Audio 100% sintetizado con WebAudio (sin assets); partículas con pool fijo sobre un
-  único `THREE.Points`.
+  único `THREE.Points`; anillos de recogida con pool fijo (`systems/RingFx.ts`).
+- **Post-procesado** (`engine/Renderer.ts`): EffectComposer con bloom SELECTIVO (umbral 1.1
+  en HDR lineal → solo florecen emisivos con intensidad >1: monedas 1.3, lámparas 2.5) +
+  OutputPass (tone mapping ACES al final). Cielo con degradado (`world/Sky.ts`), niebla
+  FogExp2 sutil, e IBL suave (`RoomEnvironment` vía PMREM, `environmentIntensity` 0.35).
+  ¡OJO! subir emisivos <1 o bajar el umbral <1 relava toda la escena.
 - El avatar mira hacia +Z local (la cara está en z positivo); heading = atan2(wish.x, wish.z).
 - **Animación desacoplada**: `PlayerAvatar` = solo el rig (meshes + `parts`); `AvatarAnimator`
   = lógica de poses driven por `AvatarAnimState` (idle/walk/run/air). El estado de locomoción

@@ -12,6 +12,7 @@ import { LOBBY_LEVEL } from '../world/LevelData';
 import { CoinSystem } from '../systems/CoinSystem';
 import { AudioSystem } from '../systems/AudioSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
+import { RingFx } from '../systems/RingFx';
 import { MissionSystem } from '../systems/MissionSystem';
 import { Inventory } from '../systems/Inventory';
 import { LocalNetworkAdapter, type NetworkAdapter } from '../net/NetworkAdapter';
@@ -40,6 +41,7 @@ export class Game {
   private ui!: UIManager;
   private audio = new AudioSystem();
   private particles = new ParticleSystem();
+  private ringFx = new RingFx();
   private missions!: MissionSystem;
   private inventory!: Inventory;
   private network: NetworkAdapter = new LocalNetworkAdapter();
@@ -59,7 +61,7 @@ export class Game {
     await this.physics.init();
 
     this.cameraRig = new CameraRig(this.physics.world, this.physics.rapier);
-    setupEnvironment(this.scene);
+    setupEnvironment(this.scene, this.renderer.renderer);
 
     // El nivel se define como datos (LevelData); geometría, monedas y misiones
     // consumen la MISMA fuente de verdad.
@@ -76,6 +78,7 @@ export class Game {
     this.coins = new CoinSystem(coinSpots, this.events);
     this.scene.add(this.coins.group);
     this.scene.add(this.particles.points);
+    this.scene.add(this.ringFx.group);
 
     // El inventario se suscribe antes que los handlers de wireGameFeel para que
     // récords y trofeos ya estén actualizados cuando estos los lean.
@@ -162,13 +165,15 @@ export class Game {
     this.events.on('coin-collected', ({ position }) => {
       if (!position) return; // resets
       this.audio.coin();
-      this.particles.burst(new THREE.Vector3(position.x, position.y, position.z), PALETTE.coin, {
-        count: 16,
-        speed: 3,
+      const at = new THREE.Vector3(position.x, position.y, position.z);
+      this.particles.burst(at, PALETTE.coin, {
+        count: 18,
+        speed: 3.2,
         life: 0.7,
         gravity: -3,
         upBias: 2,
       });
+      this.ringFx.spawn(at, PALETTE.coin); // anillo de choque expansivo
     });
 
     this.events.on('mission-completed', () => this.audio.missionComplete());
@@ -225,6 +230,7 @@ export class Game {
     this.player.syncVisual(alpha, dt);
     this.coins.update(dt, this.player.visualPos, this.elapsed);
     this.particles.update(dt);
+    this.ringFx.update(dt, this.cameraRig.camera);
     this.missions.update(this.player.visualPos);
 
     // Publica el estado local a ~10 Hz por la capa de red (loopback en Fase 1).

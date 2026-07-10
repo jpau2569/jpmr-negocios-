@@ -95,7 +95,7 @@ export class Lobby {
         new THREE.MeshStandardMaterial({
           color: PALETTE.coin,
           emissive: PALETTE.coinEmissive,
-          emissiveIntensity: 0.8,
+          emissiveIntensity: 2.5, // lámparas: brillo fuerte para un halo de bloom marcado
         }),
       );
       lamp.position.set(x, 3.5, z);

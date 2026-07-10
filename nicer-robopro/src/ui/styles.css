@@ -168,6 +168,16 @@ h2 { color: var(--text); font-size: 34px; letter-spacing: 1.5px; text-transform:
   letter-spacing: 1px;
 }
 
+/* Entrada suave de los paneles al mostrarse el HUD (sin transform base). */
+.hud-coins, .hud-timer, .hud-missions {
+  animation: hudPanelIn 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+
+@keyframes hudPanelIn {
+  from { opacity: 0; transform: translateY(-10px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
 .hud-coins { top: 18px; left: 18px; }
 .hud-coins.pulse { animation: pop 0.3s ease; }
 

@@ -21,8 +21,8 @@ export function coinMaterial(): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     color: PALETTE.coin,
     emissive: PALETTE.coinEmissive,
-    emissiveIntensity: 0.35,
-    roughness: 0.3,
-    metalness: 0.7,
+    emissiveIntensity: 1.3, // >1 para cruzar el umbral de bloom y "florecer"
+    roughness: 0.25,
+    metalness: 0.75,
   });
 }
