@@ -55,6 +55,7 @@ export class UIManager {
   private waterEl: HTMLElement;
   private waterFill: HTMLElement;
   private cartridgesEl: HTMLElement;
+  private powerupsEl: HTMLElement;
   private score = 0;
 
   constructor(events: EventBus) {
@@ -83,6 +84,7 @@ export class UIManager {
     this.waterEl = get('hud-water');
     this.waterFill = get('hud-water-fill');
     this.cartridgesEl = get('hud-cartridges');
+    this.powerupsEl = get('hud-powerups');
     events.on('cartridges-changed', ({ cartridges, awarded }) => {
       this.cartridgesEl.textContent = String(cartridges);
       if (awarded) this.showToast('🎁 ¡Cargador de agua gratis!');
@@ -194,6 +196,15 @@ export class UIManager {
     this.waterEl.classList.toggle('hidden', !visible);
     this.waterFill.style.width = `${Math.round(fraction * 100)}%`;
     this.cartridgesEl.textContent = String(cartridges);
+  }
+
+  /** Muestra los power-ups activos con su tiempo restante. */
+  setPowerups(magnet: number, djump: number): void {
+    const parts: string[] = [];
+    if (magnet > 0) parts.push(`🧲 ${Math.ceil(magnet)}s`);
+    if (djump > 0) parts.push(`⏫ ${Math.ceil(djump)}s`);
+    this.powerupsEl.textContent = parts.join('   ');
+    this.powerupsEl.classList.toggle('hidden', parts.length === 0);
   }
 
   /** Suma puntos al marcador (monedas, regalos). */

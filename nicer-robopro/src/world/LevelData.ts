@@ -73,6 +73,8 @@ export interface LevelDefinition {
   gemCoins?: { pos: Vec3; color: number; value: number }[];
   /** Cajas regalo con sorpresa aleatoria al recogerlas. */
   gifts?: Vec3[];
+  /** Power-ups temporales flotantes (imán de monedas, doble salto). */
+  powerups?: { pos: Vec3; kind: 'magnet' | 'djump' }[];
 }
 
 // --- HUB: lobby social central. Sin monedas ni misiones; solo portales. ---
@@ -135,6 +137,10 @@ const PLAZA: LevelDefinition = {
     { pos: [-20, 9.8, 2], color: 0xa0e0ff, value: 50 }, // diamante en la cima de la torre
   ],
   gifts: [[7, 1.3, 6], [-7, 1.3, 6]],
+  powerups: [
+    { pos: [0, 1.4, -16], kind: 'magnet' },
+    { pos: [-4, 2.1, 18], kind: 'djump' },
+  ],
   portals: [{ pos: [0, 0.9, 12], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
 };
 
@@ -164,6 +170,10 @@ const ISLAS: LevelDefinition = {
     { pos: [0, 8.7, -22], color: 0x9b7fd4, value: 25 }, // amatista en la isla alta
   ],
   gifts: [[0, 1.5, 8]],
+  powerups: [
+    { pos: [-7, 3.7, -6], kind: 'djump' },
+    { pos: [7, 4.5, -6], kind: 'magnet' },
+  ],
   portals: [{ pos: [3.5, 1.4, 11], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
 };
 

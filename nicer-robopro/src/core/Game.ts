@@ -12,6 +12,7 @@ import { Lobby } from '../world/Lobby';
 import { WORLDS, START_WORLD, type LevelDefinition } from '../world/LevelData';
 import { CoinSystem, type CoinDef } from '../systems/CoinSystem';
 import { GiftSystem } from '../systems/GiftSystem';
+import { PowerupSystem, type PowerupKind } from '../systems/PowerupSystem';
 import { AudioSystem } from '../systems/AudioSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
 import { RingFx } from '../systems/RingFx';
@@ -48,6 +49,9 @@ export class Game {
   private currentLevel!: LevelDefinition;
   private currentLobby: Lobby | null = null;
   private currentGifts: GiftSystem | null = null;
+  private currentPowerups: PowerupSystem | null = null;
+  private magnetTimer = 0; // imán de monedas activo (s)
+  private djumpTimer = 0; // doble salto activo (s)
   private portalCooldown = 0; // evita re-disparar el portal justo al llegar
   private reachedCheckpoints = new Set<number>(); // checkpoints del obby ya tocados
   private audio = new AudioSystem();
@@ -148,6 +152,10 @@ export class Game {
       this.scene.remove(this.currentGifts.group);
       this.currentGifts.dispose();
     }
+    if (this.currentPowerups) {
+      this.scene.remove(this.currentPowerups.group);
+      this.currentPowerups.dispose();
+    }
 
     this.currentLevel = level;
     this.currentLobby = new Lobby(this.physics, level);
@@ -167,6 +175,15 @@ export class Game {
       (pos) => this.rollGiftReward(pos),
     );
     this.scene.add(this.currentGifts.group);
+
+    // Power-ups temporales (imán, doble salto); se resetean los activos.
+    this.currentPowerups = new PowerupSystem(
+      (level.powerups ?? []).map((pu) => ({ pos: new THREE.Vector3(pu.pos[0], pu.pos[1], pu.pos[2]), kind: pu.kind })),
+      (kind) => this.activatePowerup(kind),
+    );
+    this.scene.add(this.currentPowerups.group);
+    this.magnetTimer = 0;
+    this.djumpTimer = 0;
 
     this.missions = new MissionSystem(this.events, this.coins.total, level);
     this.missions.emitState();
@@ -220,6 +237,19 @@ export class Game {
     this.waterGun.fire(origin, dir, gun.speed, gun.color);
     this.audio.squirt();
     this.player.triggerShootAnim();
+  }
+
+  /** Activa un power-up temporal (imán de monedas o doble salto). */
+  private activatePowerup(kind: PowerupKind): void {
+    if (kind === 'magnet') {
+      this.magnetTimer = 12;
+      this.ui.notify('🧲 ¡Imán de monedas!');
+    } else {
+      this.djumpTimer = 12;
+      this.ui.notify('⏫ ¡Doble salto!');
+    }
+    this.audio.missionComplete();
+    this.particles.burst(this.player.visualPos, 0x66d66b, { count: 14, speed: 2.5, life: 0.5, upBias: 2 });
   }
 
   /** Recompensa aleatoria de un regalo: monedas, cargador o puntos. */
@@ -459,7 +489,14 @@ export class Game {
 
     const alpha = this.accumulator / step;
     this.player.syncVisual(alpha, dt);
-    this.coins.update(dt, this.player.visualPos, this.elapsed);
+    // Power-ups temporales: cuentan atrás y aplican efecto (imán → coins, doble salto → player).
+    if (this.magnetTimer > 0) this.magnetTimer = Math.max(0, this.magnetTimer - dt);
+    if (this.djumpTimer > 0) this.djumpTimer = Math.max(0, this.djumpTimer - dt);
+    this.player.setDoubleJump(this.djumpTimer > 0);
+    this.currentPowerups?.update(dt, this.player.visualPos);
+    this.ui.setPowerups(this.magnetTimer, this.djumpTimer);
+
+    this.coins.update(dt, this.player.visualPos, this.elapsed, this.magnetTimer > 0 ? 6 : 0);
     this.currentGifts?.update(dt, this.player.visualPos);
     this.particles.update(dt);
     this.ringFx.update(dt, this.cameraRig.camera);

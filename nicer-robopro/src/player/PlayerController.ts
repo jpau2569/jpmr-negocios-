@@ -36,6 +36,8 @@ export class PlayerController {
   private jumpMul = 1;
   private speedMul = 1;
   private weaponType: 'none' | 'sword' | 'water' = 'none';
+  private airJumpsUsed = 0;
+  private maxAirJumps = 0; // 1 mientras el power-up de doble salto esté activo
 
   // Posiciones del paso físico anterior/actual para interpolar el visual.
   private prevPos = new THREE.Vector3();
@@ -120,13 +122,23 @@ export class PlayerController {
     this.velocity.x += delta.x;
     this.velocity.z += delta.z;
 
-    // --- Salto y gravedad ---
+    // --- Salto y gravedad (con salto en suelo/coyote y doble salto opcional) ---
     this.timeSinceGrounded = this.grounded ? 0 : this.timeSinceGrounded + dt;
-    if (input.jump && this.timeSinceGrounded <= p.coyoteTime && this.velocity.y <= 0.1) {
-      this.velocity.y = p.jumpSpeed * this.jumpMul;
-      this.timeSinceGrounded = 999;
-      this.animator.triggerJump(); // respuesta visual (squash & stretch)
-      this.onJump?.(); // game feel externo (audio, partículas) que orquesta Game
+    if (this.grounded) this.airJumpsUsed = 0;
+    if (input.jump) {
+      const canGroundJump = this.timeSinceGrounded <= p.coyoteTime && this.velocity.y <= 0.1;
+      if (canGroundJump) {
+        this.velocity.y = p.jumpSpeed * this.jumpMul;
+        this.timeSinceGrounded = 999;
+        this.animator.triggerJump();
+        this.onJump?.();
+      } else if (this.airJumpsUsed < this.maxAirJumps) {
+        // Doble salto (power-up): un impulso extra en el aire.
+        this.airJumpsUsed++;
+        this.velocity.y = p.jumpSpeed * this.jumpMul;
+        this.animator.triggerJump();
+        this.onJump?.();
+      }
     }
     this.velocity.y += CONFIG.physics.gravity * dt;
     this.velocity.y = Math.max(this.velocity.y, -40); // velocidad terminal
@@ -220,6 +232,11 @@ export class PlayerController {
   /** Tipo de arma equipada (el juego decide entre espadazo y disparo). */
   get weapon(): 'none' | 'sword' | 'water' {
     return this.weaponType;
+  }
+
+  /** Activa/desactiva el doble salto (power-up temporal). */
+  setDoubleJump(on: boolean): void {
+    this.maxAirJumps = on ? 1 : 0;
   }
 
   /** Impulso vertical de un trampolín. */
