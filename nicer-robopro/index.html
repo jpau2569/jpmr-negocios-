@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nicer RoboPro</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='15' y='15' width='70' height='70' rx='14' fill='%2335d0ba'/%3E%3Crect x='30' y='38' width='14' height='14' rx='3' fill='%23132028'/%3E%3Crect x='56' y='38' width='14' height='14' rx='3' fill='%23132028'/%3E%3Crect x='34' y='62' width='32' height='8' rx='4' fill='%23132028'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./src/ui/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas"></canvas>
+
+      <!-- HUD (visible durante la partida) -->
+      <div id="hud" class="hidden">
+        <div class="hud-panel hud-coins">
+          <span class="hud-coin-icon"></span>
+          <span id="hud-coin-count">0 / 12</span>
+        </div>
+        <div class="hud-panel hud-timer">
+          <span id="hud-time">0:00</span>
+        </div>
+        <div class="hud-hint">
+          <span><b>WASD</b> mover</span>
+          <span><b>Espacio</b> saltar</span>
+          <span><b>Shift</b> correr</span>
+          <span><b>Esc</b> pausa</span>
+        </div>
+      </div>
+
+      <!-- Pantalla de inicio -->
+      <div id="screen-title" class="screen">
+        <div class="screen-card">
+          <h1 class="logo">Nicer <span>RoboPro</span></h1>
+          <p class="tagline">Un lobby, doce monedas, cero prisa.</p>
+          <button id="btn-play" class="btn btn-primary">Jugar</button>
+          <p class="footnote">MVP · Fase 1 · offline</p>
+        </div>
+      </div>
+
+      <!-- Menú de pausa -->
+      <div id="screen-pause" class="screen hidden">
+        <div class="screen-card">
+          <h2>Pausa</h2>
+          <button id="btn-resume" class="btn btn-primary">Continuar</button>
+          <button id="btn-restart" class="btn btn-ghost">Reiniciar</button>
+        </div>
+      </div>
+
+      <!-- Pantalla de victoria -->
+      <div id="screen-win" class="screen hidden">
+        <div class="screen-card">
+          <h2>¡Meta completada!</h2>
+          <p class="win-detail">Has recogido las 12 monedas en <b id="win-time">0:00</b></p>
+          <button id="btn-win-restart" class="btn btn-primary">Jugar otra vez</button>
+        </div>
+      </div>
+
+      <!-- Aviso de carga -->
+      <div id="screen-loading" class="screen">
+        <div class="loading-text">Cargando mundo…</div>
+      </div>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

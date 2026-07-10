@@ -1,0 +1,169 @@
+/* ---- Nicer RoboPro · UI retro-tech ---- */
+
+:root {
+  --teal: #35d0ba;
+  --gold: #ffd94a;
+  --ink: #132028;
+  --panel: rgba(19, 32, 40, 0.82);
+  --panel-border: rgba(53, 208, 186, 0.45);
+  --text: #eef7f5;
+  font-family: 'Segoe UI', 'Helvetica Neue', system-ui, -apple-system, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; overflow: hidden; background: #0d161c; }
+
+#app { position: fixed; inset: 0; }
+
+#game-canvas { display: block; width: 100%; height: 100%; }
+
+.hidden { display: none !important; }
+
+/* ---- Pantallas (overlays a pantalla completa) ---- */
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(13, 22, 28, 0.55), rgba(13, 22, 28, 0.85));
+  z-index: 10;
+}
+
+#screen-title {
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(53, 208, 186, 0.12), transparent 60%),
+    linear-gradient(180deg, #14232d 0%, #0d161c 100%);
+}
+
+.screen-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 44px 56px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+  text-align: center;
+}
+
+.logo {
+  font-size: 52px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.logo span {
+  color: var(--teal);
+  text-shadow: 0 0 24px rgba(53, 208, 186, 0.55);
+}
+
+.tagline { color: rgba(238, 247, 245, 0.65); font-size: 15px; letter-spacing: 0.5px; }
+
+h2 { color: var(--text); font-size: 34px; letter-spacing: 1.5px; text-transform: uppercase; }
+
+.win-detail { color: rgba(238, 247, 245, 0.8); font-size: 16px; }
+.win-detail b { color: var(--gold); }
+
+.footnote { color: rgba(238, 247, 245, 0.35); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; }
+
+.loading-text {
+  color: var(--teal);
+  font-size: 18px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  animation: breathe 1.4s ease-in-out infinite;
+}
+
+@keyframes breathe { 50% { opacity: 0.4; } }
+
+/* ---- Botones ---- */
+
+.btn {
+  min-width: 220px;
+  padding: 14px 34px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.btn:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: var(--teal);
+  color: var(--ink);
+  box-shadow: 0 6px 0 #1e8f80, 0 14px 30px rgba(53, 208, 186, 0.3);
+}
+
+.btn-primary:hover { background: #4be0cb; transform: translateY(-2px); box-shadow: 0 8px 0 #1e8f80, 0 18px 34px rgba(53, 208, 186, 0.38); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: rgba(238, 247, 245, 0.3);
+}
+
+.btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
+
+/* ---- HUD ---- */
+
+#hud { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+
+.hud-panel {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.hud-coins { top: 18px; left: 18px; }
+.hud-coins.pulse { animation: pop 0.3s ease; }
+
+@keyframes pop { 40% { transform: scale(1.12); } }
+
+.hud-coin-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe98a, var(--gold) 60%, #d9a520);
+  box-shadow: 0 0 10px rgba(255, 217, 74, 0.6);
+}
+
+.hud-timer { top: 18px; right: 18px; font-variant-numeric: tabular-nums; color: var(--gold); }
+
+.hud-hint {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 22px;
+  padding: 8px 20px;
+  background: rgba(19, 32, 40, 0.55);
+  border-radius: 10px;
+  color: rgba(238, 247, 245, 0.55);
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.hud-hint b { color: var(--teal); font-weight: 700; }
