@@ -14,6 +14,7 @@ import { CoinSystem } from '../systems/CoinSystem';
 import { AudioSystem } from '../systems/AudioSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
 import { RingFx } from '../systems/RingFx';
+import { AmbientMotes } from '../systems/AmbientMotes';
 import { MissionSystem } from '../systems/MissionSystem';
 import { Inventory } from '../systems/Inventory';
 import { LocalNetworkAdapter, type NetworkAdapter } from '../net/NetworkAdapter';
@@ -49,6 +50,8 @@ export class Game {
   private audio = new AudioSystem();
   private particles = new ParticleSystem();
   private ringFx = new RingFx();
+  private motes = new AmbientMotes();
+  private bounceCooldown = 0;
   private missions!: MissionSystem;
   private inventory!: Inventory;
   private network: NetworkAdapter = new LocalNetworkAdapter();
@@ -74,6 +77,7 @@ export class Game {
     this.scene.add(this.player.avatar.group);
     this.scene.add(this.particles.points);
     this.scene.add(this.ringFx.group);
+    this.scene.add(this.motes.points);
 
     // El inventario es global (persiste entre mundos) y se suscribe antes que
     // los handlers de wireGameFeel para que récords/trofeos estén frescos.
@@ -162,6 +166,28 @@ export class Game {
       isRecord ? '¡Nuevo récord!' : best !== null ? `Mejor tiempo: ${formatTime(best)}` : '',
     );
     this.machine.transition('won');
+  }
+
+  /** Trampolines: lanzan al jugador hacia arriba al pisarlos (con cooldown). */
+  private checkBouncePads(dt: number): void {
+    if (this.bounceCooldown > 0) {
+      this.bounceCooldown -= dt;
+      return;
+    }
+    const pads = this.currentLevel.bouncePads;
+    if (!pads) return;
+    const p = this.player.visualPos;
+    for (const [bx, by, bz] of pads) {
+      if ((p.x - bx) ** 2 + (p.z - bz) ** 2 < 1.6 && Math.abs(p.y - by) < 0.7) {
+        this.player.bounce(22);
+        this.audio.boing();
+        this.particles.burst(new THREE.Vector3(bx, by + 0.2, bz), 0xff5fa8, {
+          count: 16, speed: 3, upBias: 3, life: 0.6,
+        });
+        this.bounceCooldown = 0.3;
+        break;
+      }
+    }
   }
 
   /** Obby: checkpoints (actualizan reaparición) y meta (completa el mundo). */
@@ -351,6 +377,7 @@ export class Game {
     this.ringFx.update(dt, this.cameraRig.camera);
     this.missions.update(this.player.visualPos);
     this.checkObbyProgress();
+    this.checkBouncePads(dt);
 
     // Publica el estado local a ~10 Hz por la capa de red (loopback en Fase 1).
     this.snapshotTimer += dt;
@@ -377,6 +404,7 @@ export class Game {
 
     // Solo el estado activo simula ('playing' → simulate); el resto no hace nada.
     this.machine.update(dt);
+    this.motes.update(dt); // ambiente vivo siempre (también en menús)
 
     // Cámara y render corren SIEMPRE (también en pausa/victoria) para no congelar el encuadre.
     this.cameraRig.update(dt, this.player.visualPos, this.player.collider);

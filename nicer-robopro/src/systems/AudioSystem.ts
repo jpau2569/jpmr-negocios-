@@ -99,4 +99,8 @@ export class AudioSystem {
   swoosh(): void {
     this.tone(720, 0.14, 'sawtooth', 0, 0.22, 150);
   }
+
+  boing(): void {
+    this.tone(280, 0.22, 'sine', 0, 0.4, 760);
+  }
 }

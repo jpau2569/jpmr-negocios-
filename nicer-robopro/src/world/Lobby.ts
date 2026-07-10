@@ -32,6 +32,22 @@ export class Lobby {
     this.buildPortals(level.portals);
     if (level.checkpoints) this.buildCheckpoints(level.checkpoints);
     if (level.finish) this.buildFinish(level.finish);
+    if (level.bouncePads) this.buildBouncePads(level.bouncePads);
+  }
+
+  /** Trampolines: cojín brillante que rebota. No sólido (el impulso lo da el juego). */
+  private buildBouncePads(pads: import('./LevelData').Vec3[]): void {
+    for (const [x, y, z] of pads) {
+      const pad = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.1, 1.3, 0.35, 20),
+        new THREE.MeshStandardMaterial({
+          color: 0xff5fa8, emissive: 0xff2f88, emissiveIntensity: 1.4, roughness: 0.4,
+        }),
+      );
+      pad.position.set(x, y + 0.18, z);
+      pad.castShadow = true;
+      this.group.add(pad);
+    }
   }
 
   /** Retira colliders del mundo físico y libera geometrías. */

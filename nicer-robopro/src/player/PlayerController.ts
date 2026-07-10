@@ -217,6 +217,12 @@ export class PlayerController {
     this.hasWeapon = config.weapon !== 'none';
   }
 
+  /** Impulso vertical de un trampolín. */
+  bounce(vy: number): void {
+    this.velocity.y = vy;
+    this.animator.triggerJump();
+  }
+
   /** Intenta blandir el arma (solo si hay una equipada). */
   swing(): void {
     if (this.hasWeapon) {

@@ -67,6 +67,8 @@ export interface LevelDefinition {
   noGround?: boolean;
   /** Altura por debajo de la cual se reaparece (obby: justo bajo las plataformas). */
   killY?: number;
+  /** Trampolines: al pisarlos lanzan al jugador hacia arriba. */
+  bouncePads?: Vec3[];
 }
 
 // --- HUB: lobby social central. Sin monedas ni misiones; solo portales. ---
@@ -144,6 +146,7 @@ const ISLAS: LevelDefinition = {
     [0, 8.7, -22],
   ],
   zones: [],
+  bouncePads: [[0, 1, 6], [0, 2.1, 0]],
   portals: [{ pos: [0, 1.4, 11], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
 };
 
