@@ -56,6 +56,12 @@ Rama de trabajo: `claude/nicer-robopro-mvp-el56jp`. Commits clave:
 - Audio 100% sintetizado con WebAudio (sin assets); partículas con pool fijo sobre un
   único `THREE.Points`.
 - El avatar mira hacia +Z local (la cara está en z positivo); heading = atan2(wish.x, wish.z).
+- **Animación desacoplada**: `PlayerAvatar` = solo el rig (meshes + `parts`); `AvatarAnimator`
+  = lógica de poses driven por `AvatarAnimState` (idle/walk/run/air). El estado de locomoción
+  lo calcula `PlayerController.animState` UNA vez y alimenta animación y red por igual. Para
+  mejorar animaciones (clips GLTF, blending, estados nuevos) se amplía/sustituye solo el
+  animador. El squash & stretch lo dispara el propio controlador al detectar salto/aterrizaje;
+  los hooks `onJump/onLand` quedan para el game feel externo (audio/partículas) que orquesta Game.
 - Cámara: yaw 0 = detrás del jugador mirando a -Z (plaza en el origen); anticolisión por
   raycast de Rapier excluyendo el collider del jugador.
 

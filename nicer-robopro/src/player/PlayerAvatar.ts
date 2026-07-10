@@ -3,24 +3,31 @@ import { PALETTE } from '../assets/palette';
 import { matte } from '../assets/materials';
 
 /**
- * Avatar por bloques (cabeza, torso, brazos, piernas) con animación procedural:
- * balanceo de extremidades al andar, bob en idle y pose de salto.
- * Es solo representación visual: la física vive en PlayerController.
+ * Partes articuladas del avatar que el animador rota/escala. Grupos con el
+ * pivote en el hombro/cadera (brazos y piernas) y el tronco completo (body).
+ */
+export interface AvatarRig {
+  body: THREE.Group;
+  leftArm: THREE.Group;
+  rightArm: THREE.Group;
+  leftLeg: THREE.Group;
+  rightLeg: THREE.Group;
+}
+
+/**
+ * Avatar por bloques (cabeza, torso, brazos, piernas): SOLO construcción del
+ * rig y exposición de sus partes. Ninguna lógica de animación vive aquí — de eso
+ * se encarga `AvatarAnimator`, de modo que el rig es reemplazable (p. ej. por un
+ * modelo GLTF con esqueleto) sin tocar al controlador ni la animación.
  */
 export class PlayerAvatar {
   readonly group: THREE.Group;
-  private leftArm: THREE.Group;
-  private rightArm: THREE.Group;
-  private leftLeg: THREE.Group;
-  private rightLeg: THREE.Group;
-  private body: THREE.Group;
-  private walkPhase = 0;
-  private stretch = 0; // -1 aplastado (aterrizar) .. +1 estirado (saltar)
+  readonly parts: AvatarRig;
 
   constructor() {
     this.group = new THREE.Group();
-    this.body = new THREE.Group();
-    this.group.add(this.body);
+    const body = new THREE.Group();
+    this.group.add(body);
 
     const torsoMat = matte(PALETTE.playerTorso, 0.75);
     const legMat = matte(PALETTE.playerLegs, 0.8);
@@ -30,7 +37,7 @@ export class PlayerAvatar {
     // Torso: 0.7 x 0.65 x 0.4, con la base a la altura de la cadera (0.75)
     const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.65, 0.4), torsoMat);
     torso.position.y = 0.75 + 0.325;
-    this.body.add(torso);
+    body.add(torso);
 
     // Cabeza con ojos y boca (bloques pequeños, sin texturas)
     const head = new THREE.Group();
@@ -46,22 +53,24 @@ export class PlayerAvatar {
     const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.03), faceMat);
     mouth.position.set(0, -0.12, 0.235);
     head.add(mouth);
-    this.body.add(head);
+    body.add(head);
 
     // Extremidades: grupos con pivote en el hombro/cadera para rotarlas al andar.
-    this.leftArm = this.makeLimb(0.22, 0.6, matte(PALETTE.playerArms, 0.75), matte(PALETTE.playerHands, 0.7));
-    this.leftArm.position.set(-0.47, 0.75 + 0.6, 0);
-    this.rightArm = this.makeLimb(0.22, 0.6, matte(PALETTE.playerArms, 0.75), matte(PALETTE.playerHands, 0.7));
-    this.rightArm.position.set(0.47, 0.75 + 0.6, 0);
-    this.leftLeg = this.makeLimb(0.28, 0.75, legMat);
-    this.leftLeg.position.set(-0.19, 0.75, 0);
-    this.rightLeg = this.makeLimb(0.28, 0.75, legMat);
-    this.rightLeg.position.set(0.19, 0.75, 0);
-    this.body.add(this.leftArm, this.rightArm, this.leftLeg, this.rightLeg);
+    const leftArm = this.makeLimb(0.22, 0.6, matte(PALETTE.playerArms, 0.75), matte(PALETTE.playerHands, 0.7));
+    leftArm.position.set(-0.47, 0.75 + 0.6, 0);
+    const rightArm = this.makeLimb(0.22, 0.6, matte(PALETTE.playerArms, 0.75), matte(PALETTE.playerHands, 0.7));
+    rightArm.position.set(0.47, 0.75 + 0.6, 0);
+    const leftLeg = this.makeLimb(0.28, 0.75, legMat);
+    leftLeg.position.set(-0.19, 0.75, 0);
+    const rightLeg = this.makeLimb(0.28, 0.75, legMat);
+    rightLeg.position.set(0.19, 0.75, 0);
+    body.add(leftArm, rightArm, leftLeg, rightLeg);
 
     this.group.traverse((obj) => {
       if (obj instanceof THREE.Mesh) obj.castShadow = true;
     });
+
+    this.parts = { body, leftArm, rightArm, leftLeg, rightLeg };
   }
 
   /** Extremidad con pivote arriba; opcionalmente con "mano" de otro color en la punta. */
@@ -81,56 +90,5 @@ export class PlayerAvatar {
       pivot.add(tip);
     }
     return pivot;
-  }
-
-  /**
-   * Anima el avatar según el estado de movimiento.
-   * @param horizontalSpeed velocidad horizontal actual (m/s)
-   * @param grounded si está apoyado en el suelo
-   */
-  /** Impulso visual al despegar: estiramiento vertical breve. */
-  triggerJump(): void {
-    this.stretch = 1;
-  }
-
-  /** Impulso visual al aterrizar: aplastamiento breve proporcional al impacto. */
-  triggerLand(impact: number): void {
-    this.stretch = -Math.min(impact / 18, 1);
-  }
-
-  update(dt: number, horizontalSpeed: number, grounded: boolean, time: number): void {
-    const moving = horizontalSpeed > 0.5;
-
-    // Squash & stretch: decae hacia 0 y se aplica conservando el volumen aparente.
-    this.stretch *= Math.exp(-8 * dt);
-    this.body.scale.y = 1 + this.stretch * 0.18;
-    this.body.scale.x = this.body.scale.z = 1 - this.stretch * 0.1;
-
-    if (grounded && moving) {
-      this.walkPhase += dt * horizontalSpeed * 1.6;
-      const swing = Math.sin(this.walkPhase) * 0.7;
-      this.leftLeg.rotation.x = swing;
-      this.rightLeg.rotation.x = -swing;
-      this.leftArm.rotation.x = -swing * 0.8;
-      this.rightArm.rotation.x = swing * 0.8;
-      this.body.position.y = Math.abs(Math.cos(this.walkPhase)) * 0.05;
-    } else if (!grounded) {
-      // Pose de salto: brazos ligeramente arriba, piernas recogidas.
-      this.lerpLimbs(dt, -0.5, -0.5, 0.35, -0.25);
-      this.body.position.y = 0;
-    } else {
-      // Idle: vuelta suave a la pose neutra + respiración sutil.
-      this.lerpLimbs(dt, 0, 0, 0, 0);
-      this.body.position.y = Math.sin(time * 1.8) * 0.02;
-      this.walkPhase = 0;
-    }
-  }
-
-  private lerpLimbs(dt: number, la: number, ra: number, ll: number, rl: number): void {
-    const t = 1 - Math.exp(-12 * dt);
-    this.leftArm.rotation.x += (la - this.leftArm.rotation.x) * t;
-    this.rightArm.rotation.x += (ra - this.rightArm.rotation.x) * t;
-    this.leftLeg.rotation.x += (ll - this.leftLeg.rotation.x) * t;
-    this.rightLeg.rotation.x += (rl - this.rightLeg.rotation.x) * t;
   }
 }

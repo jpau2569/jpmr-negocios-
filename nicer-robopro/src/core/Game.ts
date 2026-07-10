@@ -142,13 +142,13 @@ export class Game {
 
   /** Conexiones de game feel: audio, partículas y squash & stretch. */
   private wireGameFeel(): void {
+    // El squash & stretch lo dispara el propio PlayerController; aquí solo va el
+    // game feel externo (audio + partículas) que orquesta el juego.
     this.player.onJump = () => {
       this.audio.jump();
-      this.player.avatar.triggerJump();
     };
     this.player.onLand = (impact) => {
       this.audio.land(impact);
-      this.player.avatar.triggerLand(impact);
       this.particles.burst(this.player.avatar.group.position, 0xd8cfba, {
         count: Math.min(6 + Math.floor(impact), 18),
         speed: 1.6,

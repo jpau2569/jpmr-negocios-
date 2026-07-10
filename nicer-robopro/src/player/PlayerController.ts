@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import type RAPIER from '@dimforge/rapier3d-compat';
 import { CONFIG } from '../core/Config';
-import type { InputFrame } from '../types';
+import type { InputFrame, AvatarAnimState } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
+import { AvatarAnimator } from './AvatarAnimator';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 
 /**
@@ -15,6 +16,7 @@ import type { PhysicsWorld } from '../physics/PhysicsWorld';
  */
 export class PlayerController {
   readonly avatar: PlayerAvatar;
+  private animator: AvatarAnimator;
   body: RAPIER.RigidBody;
   collider: RAPIER.Collider;
   private controller: RAPIER.KinematicCharacterController;
@@ -65,6 +67,7 @@ export class PlayerController {
     this.controller.setApplyImpulsesToDynamicBodies(true);
 
     this.avatar = new PlayerAvatar();
+    this.animator = new AvatarAnimator(this.avatar.parts);
     this.avatar.group.rotation.y = this.targetHeading;
 
     this.currPos.set(spawn.x, spawn.y, spawn.z);
@@ -112,7 +115,8 @@ export class PlayerController {
     if (input.jump && this.timeSinceGrounded <= p.coyoteTime && this.velocity.y <= 0.1) {
       this.velocity.y = p.jumpSpeed;
       this.timeSinceGrounded = 999;
-      this.onJump?.();
+      this.animator.triggerJump(); // respuesta visual (squash & stretch)
+      this.onJump?.(); // game feel externo (audio, partículas) que orquesta Game
     }
     this.velocity.y += CONFIG.physics.gravity * dt;
     this.velocity.y = Math.max(this.velocity.y, -40); // velocidad terminal
@@ -128,7 +132,8 @@ export class PlayerController {
     const impactSpeed = -this.velocity.y; // velocidad de caída antes de tocar suelo
     this.grounded = this.controller.computedGrounded();
     if (this.grounded && !this.wasGrounded && impactSpeed > 3) {
-      this.onLand?.(impactSpeed);
+      this.animator.triggerLand(impactSpeed); // respuesta visual (aplastamiento)
+      this.onLand?.(impactSpeed); // game feel externo (audio, partículas)
     }
     this.wasGrounded = this.grounded;
     if (this.grounded && this.velocity.y < 0) this.velocity.y = 0;
@@ -158,13 +163,17 @@ export class PlayerController {
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
     this.avatar.group.rotation.y += diff * Math.min(1, 14 * dt);
 
+    // Estado de locomoción calculado UNA vez: alimenta animación y red por igual.
     this.animTime += dt;
     const horizSpeed = Math.hypot(this.velocity.x, this.velocity.z);
-    this.avatar.update(dt, horizSpeed, this.grounded, this.animTime);
+    this.animator.update(dt, this.animState, horizSpeed, this.animTime);
   }
 
-  /** Estado de animación replicable (para snapshots de red). */
-  get animState(): 'idle' | 'walk' | 'run' | 'air' {
+  /**
+   * Estado de locomoción del jugador. Única fuente de verdad, consumida tanto
+   * por el animador como por el snapshot de red (misma clasificación).
+   */
+  get animState(): AvatarAnimState {
     if (!this.grounded) return 'air';
     const speed = Math.hypot(this.velocity.x, this.velocity.z);
     if (speed < 0.5) return 'idle';

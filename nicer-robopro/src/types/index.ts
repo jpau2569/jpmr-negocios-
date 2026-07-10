@@ -1,6 +1,12 @@
 /** Estados globales del juego. */
 export type GameStateName = 'loading' | 'title' | 'playing' | 'paused' | 'won';
 
+/**
+ * Estado de locomoción del avatar. Única fuente de verdad de "qué está haciendo
+ * el jugador": lo consume el animador (poses) y el snapshot de red (replicación).
+ */
+export type AvatarAnimState = 'idle' | 'walk' | 'run' | 'air';
+
 /** Estado visible de una misión (para HUD y persistencia). */
 export interface MissionInfo {
   id: string;
