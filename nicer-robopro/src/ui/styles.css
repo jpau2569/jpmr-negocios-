@@ -162,6 +162,8 @@ h2 { color: var(--text); font-size: 34px; letter-spacing: 1.5px; text-transform:
 .cz-hat.sel { border-color: var(--teal); color: var(--teal); }
 
 .customize-card .btn { margin-top: 6px; min-width: 0; }
+.cz-owned { color: rgba(238, 247, 245, 0.7); font-size: 13px; }
+.cz-owned b { color: #5bc8f0; }
 
 .stats {
   display: flex;
@@ -265,11 +267,16 @@ h2 { color: var(--text); font-size: 34px; letter-spacing: 1.5px; text-transform:
 
 .hud-score { top: 66px; right: 18px; color: var(--teal); font-variant-numeric: tabular-nums; }
 
-/* Barra de agua de la pistola */
-.hud-water {
+/* Munición de agua: barra del depósito + cargadores */
+.hud-ammo {
   position: absolute;
-  bottom: 54px;
+  bottom: 52px;
   right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hud-water-bar {
   width: 140px;
   height: 14px;
   background: rgba(19, 32, 40, 0.7);
@@ -283,6 +290,16 @@ h2 { color: var(--text); font-size: 34px; letter-spacing: 1.5px; text-transform:
   background: linear-gradient(90deg, #3a7bd5, #5bc8f0);
   transition: width 0.1s linear;
 }
+.hud-cartridges {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  background: rgba(19, 32, 40, 0.7);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 3px 8px;
+}
+.hud-cartridges b { color: #5bc8f0; }
 
 /* ---- Misiones ---- */
 

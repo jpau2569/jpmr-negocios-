@@ -30,6 +30,7 @@ export interface GameEvents {
   'mission-completed': { id: string; title: string };
   'checkpoint-reached': { index: number };
   'coins-changed': { coins: number };
+  'cartridges-changed': { cartridges: number; awarded: boolean };
 }
 
 /** Snapshot del input de un frame, ya normalizado. */

@@ -181,7 +181,18 @@ export class Game {
   /** Dispara una gota de agua desde el jugador hacia donde mira la cámara. */
   private fireWater(): void {
     const gun = WATER_GUNS[this.currentWeaponId];
-    if (!gun || this.fireCooldownTimer > 0 || this.waterTank < 1) return;
+    if (!gun || this.fireCooldownTimer > 0) return;
+    if (this.waterTank < 1) {
+      // Depósito vacío: recargar con un cargador si hay; si no, avisar.
+      if (this.inventory.useCartridge()) {
+        this.waterTank = this.waterMax;
+        this.audio.boing();
+        this.ui.notify('💧 ¡Recargado!');
+      } else {
+        this.ui.notify('¡Sin agua! Compra cargadores en la tienda');
+        return;
+      }
+    }
     this.fireCooldownTimer = gun.cooldown;
     this.waterTank -= 1;
     const dir = new THREE.Vector3();
@@ -281,7 +292,17 @@ export class Game {
     this.ui.onCustomizeClose = () => this.cameraRig.setPortrait(false);
     // Tienda: saldo, desbloqueos y compra de artículos (gorros, botas, arma).
     this.ui.getCoins = () => this.inventory.coins;
+    this.ui.getCartridges = () => this.inventory.cartridges;
     this.ui.isItemUnlocked = (itemId) => this.inventory.isUnlocked(itemId);
+    // Compra de cargador de agua (75 monedas → +1 cargador).
+    this.ui.onBuyCartridge = () => {
+      if (this.inventory.spend(75)) {
+        this.inventory.addCartridge();
+        this.audio.coin();
+        return true;
+      }
+      return false;
+    };
     this.ui.onBuyItem = (itemId, price) => {
       if (this.inventory.spend(price)) {
         this.inventory.unlock(itemId);
@@ -408,10 +429,9 @@ export class Game {
     this.checkObbyProgress();
     this.checkBouncePads(dt);
 
-    // Pistola de agua: recarga del depósito, cooldown y vuelo de las gotas.
+    // Pistola de agua: cooldown de disparo y vuelo de las gotas (sin autorrecarga).
     this.fireCooldownTimer = Math.max(0, this.fireCooldownTimer - dt);
-    if (this.waterTank < this.waterMax) this.waterTank = Math.min(this.waterMax, this.waterTank + 5 * dt);
-    this.ui.setWater(this.waterTank / this.waterMax, this.player.weapon === 'water');
+    this.ui.setWater(this.waterTank / this.waterMax, this.player.weapon === 'water', this.inventory.cartridges);
     this.waterGun.update(dt, (pos) => {
       const hit = this.coins.tryHit(pos, 1.2, this.elapsed);
       if (hit) {

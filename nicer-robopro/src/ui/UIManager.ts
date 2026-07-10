@@ -22,6 +22,9 @@ export class UIManager {
   onBuyItem: ((itemId: string, price: number) => boolean) | null = null;
   isItemUnlocked: ((itemId: string) => boolean) | null = null;
   getCoins: (() => number) | null = null;
+  getCartridges: (() => number) | null = null;
+  /** Comprar un cargador de agua; devuelve true si se realiza. */
+  onBuyCartridge: (() => boolean) | null = null;
   /** Abrir/cerrar el personalizador (el juego lo usa para el encuadre de cámara). */
   onCustomizeOpen: (() => void) | null = null;
   onCustomizeClose: (() => void) | null = null;
@@ -31,6 +34,7 @@ export class UIManager {
   private czHats!: HTMLElement;
   private czBoots!: HTMLElement;
   private czWeapon!: HTMLElement;
+  private czCartridges!: HTMLElement;
 
   private screens: Record<string, HTMLElement>;
   private hud: HTMLElement;
@@ -46,6 +50,7 @@ export class UIManager {
   private scoreEl: HTMLElement;
   private waterEl: HTMLElement;
   private waterFill: HTMLElement;
+  private cartridgesEl: HTMLElement;
   private score = 0;
 
   constructor(events: EventBus) {
@@ -73,6 +78,11 @@ export class UIManager {
     this.scoreEl = get('hud-score');
     this.waterEl = get('hud-water');
     this.waterFill = get('hud-water-fill');
+    this.cartridgesEl = get('hud-cartridges');
+    events.on('cartridges-changed', ({ cartridges, awarded }) => {
+      this.cartridgesEl.textContent = String(cartridges);
+      if (awarded) this.showToast('🎁 ¡Cargador de agua gratis!');
+    });
 
     get('btn-play').addEventListener('click', () => this.onPlay?.());
     get('btn-resume').addEventListener('click', () => this.onResume?.());
@@ -101,6 +111,12 @@ export class UIManager {
     this.buildColorSwatches(get('cz-torso'), TORSO_COLORS, 'torso');
     this.buildColorSwatches(get('cz-legs'), LEG_COLORS, 'legs');
     this.buildColorSwatches(get('cz-skin'), SKIN_COLORS, 'skin');
+
+    this.czCartridges = get('cz-cartridges');
+    get('btn-buy-cartridge').addEventListener('click', () => {
+      if (this.onBuyCartridge?.()) this.czCartridges.textContent = String(this.getCartridges?.() ?? 0);
+      else this.showToast('Te faltan monedas');
+    });
 
     // El saldo mostrado en la tienda se refresca al cambiar las monedas.
     events.on('coins-changed', () => { this.czCoins.textContent = String(this.getCoins?.() ?? 0); });
@@ -167,10 +183,16 @@ export class UIManager {
     this.winTime.textContent = formatTime(seconds);
   }
 
-  /** Barra de agua de la pistola: fracción 0..1 y si debe mostrarse (arma de agua). */
-  setWater(fraction: number, visible: boolean): void {
+  /** Munición de la pistola: nivel del depósito, visibilidad y nº de cargadores. */
+  setWater(fraction: number, visible: boolean, cartridges: number): void {
     this.waterEl.classList.toggle('hidden', !visible);
     this.waterFill.style.width = `${Math.round(fraction * 100)}%`;
+    this.cartridgesEl.textContent = String(cartridges);
+  }
+
+  /** Aviso breve genérico (recarga, sin agua…). */
+  notify(text: string): void {
+    this.showToast(text);
   }
 
   setWinBest(text: string): void {
@@ -207,6 +229,7 @@ export class UIManager {
   /** Refresca la tienda (saldo + gorros + botas + arma) según monedas/desbloqueos. */
   private refreshShop(): void {
     this.czCoins.textContent = String(this.getCoins?.() ?? 0);
+    this.czCartridges.textContent = String(this.getCartridges?.() ?? 0);
     this.buildOptionRow(this.czHats, HATS, HAT_PRICES, 'hat');
     this.buildOptionRow(this.czBoots, BOOTS, BOOTS_PRICES, 'boots');
     this.buildOptionRow(this.czWeapon, WEAPONS, WEAPON_PRICES, 'weapon');

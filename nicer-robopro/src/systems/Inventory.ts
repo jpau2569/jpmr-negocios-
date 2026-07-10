@@ -11,12 +11,17 @@ export interface SaveData {
   bestTimes: Record<string, number>; // worldId → mejor tiempo (s)
   trophies: string[];
   unlocked: string[]; // ids de cosméticos comprados
+  cartridges: number; // cargadores de agua para recargar la pistola
+  lifetimeCoins: number; // monedas totales recogidas (para el cargador gratis cada 100)
 }
 
 const STORAGE_KEY = 'nicer-robopro:save-v1';
+const FREE_CARTRIDGE_EVERY = 100;
 
 export class Inventory {
-  private data: SaveData = { coins: 0, bestTimes: {}, trophies: [], unlocked: [] };
+  private data: SaveData = {
+    coins: 0, bestTimes: {}, trophies: [], unlocked: [], cartridges: 2, lifetimeCoins: 0,
+  };
 
   constructor(private events: EventBus) {
     this.load();
@@ -25,6 +30,12 @@ export class Inventory {
       // Solo las recogidas reales (collected>0) suman; los resets emiten 0.
       if (collected > 0) {
         this.data.coins++;
+        this.data.lifetimeCoins++;
+        // Cargador de agua gratis cada 100 monedas recogidas.
+        if (this.data.lifetimeCoins % FREE_CARTRIDGE_EVERY === 0) {
+          this.data.cartridges++;
+          this.events.emit('cartridges-changed', { cartridges: this.data.cartridges, awarded: true });
+        }
         this.save();
         this.emitCoins();
       }
@@ -40,6 +51,26 @@ export class Inventory {
 
   get coins(): number {
     return this.data.coins;
+  }
+
+  get cartridges(): number {
+    return this.data.cartridges;
+  }
+
+  /** Añade cargadores (compra en tienda). */
+  addCartridge(n = 1): void {
+    this.data.cartridges += n;
+    this.save();
+    this.events.emit('cartridges-changed', { cartridges: this.data.cartridges, awarded: false });
+  }
+
+  /** Consume un cargador si hay; devuelve true si se pudo recargar. */
+  useCartridge(): boolean {
+    if (this.data.cartridges <= 0) return false;
+    this.data.cartridges--;
+    this.save();
+    this.events.emit('cartridges-changed', { cartridges: this.data.cartridges, awarded: false });
+    return true;
   }
 
   get trophyCount(): number {
@@ -108,6 +139,8 @@ export class Inventory {
           bestTimes: p.bestTimes && typeof p.bestTimes === 'object' ? p.bestTimes : {},
           trophies: Array.isArray(p.trophies) ? p.trophies.filter((t) => typeof t === 'string') : [],
           unlocked: Array.isArray(p.unlocked) ? p.unlocked.filter((t) => typeof t === 'string') : [],
+          cartridges: typeof p.cartridges === 'number' ? p.cartridges : 2,
+          lifetimeCoins: typeof p.lifetimeCoins === 'number' ? p.lifetimeCoins : 0,
         };
       }
     } catch {
