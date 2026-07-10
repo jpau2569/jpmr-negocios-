@@ -20,6 +20,8 @@
         <div class="hud-panel hud-timer">
           <span id="hud-time">0:00</span>
         </div>
+        <div class="hud-panel hud-missions" id="hud-missions"></div>
+        <div id="hud-toast" class="hud-toast hidden"></div>
         <div class="hud-hint">
           <span><b>WASD</b> mover</span>
           <span><b>Espacio</b> saltar</span>
@@ -42,6 +44,7 @@
       <div id="screen-pause" class="screen hidden">
         <div class="screen-card">
           <h2>Pausa</h2>
+          <div class="stats" id="pause-stats"></div>
           <button id="btn-resume" class="btn btn-primary">Continuar</button>
           <button id="btn-restart" class="btn btn-ghost">Reiniciar</button>
         </div>
@@ -52,6 +55,7 @@
         <div class="screen-card">
           <h2>¡Meta completada!</h2>
           <p class="win-detail">Has recogido las 12 monedas en <b id="win-time">0:00</b></p>
+          <p class="win-best" id="win-best"></p>
           <button id="btn-win-restart" class="btn btn-primary">Jugar otra vez</button>
         </div>
       </div>

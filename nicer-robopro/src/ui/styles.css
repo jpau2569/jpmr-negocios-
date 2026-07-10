@@ -30,6 +30,15 @@ html, body { height: 100%; overflow: hidden; background: #0d161c; }
   justify-content: center;
   background: radial-gradient(ellipse at center, rgba(13, 22, 28, 0.55), rgba(13, 22, 28, 0.85));
   z-index: 10;
+  animation: screenIn 0.22s ease;
+}
+
+.screen-card { animation: cardIn 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+
+@keyframes screenIn { from { opacity: 0; } }
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
 }
 
 #screen-title {
@@ -71,6 +80,20 @@ h2 { color: var(--text); font-size: 34px; letter-spacing: 1.5px; text-transform:
 
 .win-detail { color: rgba(238, 247, 245, 0.8); font-size: 16px; }
 .win-detail b { color: var(--gold); }
+
+.win-best { color: var(--gold); font-size: 14px; letter-spacing: 1px; min-height: 18px; }
+.win-best:empty { display: none; }
+
+.stats {
+  display: flex;
+  gap: 26px;
+  color: rgba(238, 247, 245, 0.75);
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+.stats b { color: var(--teal); font-size: 18px; display: block; text-align: center; }
+.stats:empty { display: none; }
 
 .footnote { color: rgba(238, 247, 245, 0.35); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; }
 
@@ -150,6 +173,56 @@ h2 { color: var(--text); font-size: 34px; letter-spacing: 1.5px; text-transform:
 }
 
 .hud-timer { top: 18px; right: 18px; font-variant-numeric: tabular-nums; color: var(--gold); }
+
+/* ---- Misiones ---- */
+
+.hud-missions {
+  top: 74px;
+  left: 18px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  min-width: 210px;
+}
+
+.mission { display: flex; align-items: center; gap: 8px; color: rgba(238, 247, 245, 0.85); transition: color 0.3s; }
+.mission .check {
+  width: 14px; height: 14px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(53, 208, 186, 0.6);
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--ink);
+}
+.mission.done { color: rgba(238, 247, 245, 0.45); text-decoration: line-through; }
+.mission.done .check { background: var(--teal); border-color: var(--teal); }
+.mission .prog { margin-left: auto; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* Toast de misión completada */
+.hud-toast {
+  position: absolute;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 24px;
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  color: var(--gold);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  animation: toastIn 2.6s ease forwards;
+}
+
+@keyframes toastIn {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  10%, 80% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+}
 
 .hud-hint {
   position: absolute;

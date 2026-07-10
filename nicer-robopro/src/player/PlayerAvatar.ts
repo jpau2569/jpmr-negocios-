@@ -15,6 +15,7 @@ export class PlayerAvatar {
   private rightLeg: THREE.Group;
   private body: THREE.Group;
   private walkPhase = 0;
+  private stretch = 0; // -1 aplastado (aterrizar) .. +1 estirado (saltar)
 
   constructor() {
     this.group = new THREE.Group();
@@ -87,8 +88,23 @@ export class PlayerAvatar {
    * @param horizontalSpeed velocidad horizontal actual (m/s)
    * @param grounded si está apoyado en el suelo
    */
+  /** Impulso visual al despegar: estiramiento vertical breve. */
+  triggerJump(): void {
+    this.stretch = 1;
+  }
+
+  /** Impulso visual al aterrizar: aplastamiento breve proporcional al impacto. */
+  triggerLand(impact: number): void {
+    this.stretch = -Math.min(impact / 18, 1);
+  }
+
   update(dt: number, horizontalSpeed: number, grounded: boolean, time: number): void {
     const moving = horizontalSpeed > 0.5;
+
+    // Squash & stretch: decae hacia 0 y se aplica conservando el volumen aparente.
+    this.stretch *= Math.exp(-8 * dt);
+    this.body.scale.y = 1 + this.stretch * 0.18;
+    this.body.scale.x = this.body.scale.z = 1 - this.stretch * 0.1;
 
     if (grounded && moving) {
       this.walkPhase += dt * horizontalSpeed * 1.6;

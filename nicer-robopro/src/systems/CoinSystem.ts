@@ -81,6 +81,7 @@ export class CoinSystem {
         this.events.emit('coin-collected', {
           collected: this.collectedCount,
           total: this.coins.length,
+          position: { x: coin.mesh.position.x, y: coin.mesh.position.y, z: coin.mesh.position.z },
         });
         if (this.collectedCount === this.coins.length) {
           this.events.emit('all-coins-collected', { timeSeconds: elapsedSeconds });

@@ -21,7 +21,12 @@ export class PlayerController {
 
   private velocity = new THREE.Vector3();
   private grounded = false;
+  private wasGrounded = false;
   private timeSinceGrounded = 999;
+
+  /** Hooks de game feel: el juego conecta aquí audio, partículas y squash & stretch. */
+  onJump: (() => void) | null = null;
+  onLand: ((impactSpeed: number) => void) | null = null;
 
   // Posiciones del paso físico anterior/actual para interpolar el visual.
   private prevPos = new THREE.Vector3();
@@ -99,6 +104,7 @@ export class PlayerController {
     if (input.jump && this.timeSinceGrounded <= p.coyoteTime && this.velocity.y <= 0.1) {
       this.velocity.y = p.jumpSpeed;
       this.timeSinceGrounded = 999;
+      this.onJump?.();
     }
     this.velocity.y += CONFIG.physics.gravity * dt;
     this.velocity.y = Math.max(this.velocity.y, -40); // velocidad terminal
@@ -111,7 +117,12 @@ export class PlayerController {
     };
     this.controller.computeColliderMovement(this.collider, desired);
     const move = this.controller.computedMovement();
+    const impactSpeed = -this.velocity.y; // velocidad de caída antes de tocar suelo
     this.grounded = this.controller.computedGrounded();
+    if (this.grounded && !this.wasGrounded && impactSpeed > 3) {
+      this.onLand?.(impactSpeed);
+    }
+    this.wasGrounded = this.grounded;
     if (this.grounded && this.velocity.y < 0) this.velocity.y = 0;
 
     const pos = this.body.translation();
@@ -142,6 +153,18 @@ export class PlayerController {
     this.animTime += dt;
     const horizSpeed = Math.hypot(this.velocity.x, this.velocity.z);
     this.avatar.update(dt, horizSpeed, this.grounded, this.animTime);
+  }
+
+  /** Estado de animación replicable (para snapshots de red). */
+  get animState(): 'idle' | 'walk' | 'run' | 'air' {
+    if (!this.grounded) return 'air';
+    const speed = Math.hypot(this.velocity.x, this.velocity.z);
+    if (speed < 0.5) return 'idle';
+    return speed > CONFIG.player.walkSpeed + 0.5 ? 'run' : 'walk';
+  }
+
+  get heading(): number {
+    return this.avatar.group.rotation.y;
   }
 
   respawn(): void {

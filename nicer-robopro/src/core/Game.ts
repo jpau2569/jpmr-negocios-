@@ -9,7 +9,13 @@ import { PlayerController } from '../player/PlayerController';
 import { setupEnvironment } from '../world/Environment';
 import { Lobby } from '../world/Lobby';
 import { CoinSystem } from '../systems/CoinSystem';
-import { UIManager } from '../ui/UIManager';
+import { AudioSystem } from '../systems/AudioSystem';
+import { ParticleSystem } from '../systems/ParticleSystem';
+import { MissionSystem } from '../systems/MissionSystem';
+import { Inventory } from '../systems/Inventory';
+import { LocalNetworkAdapter, type NetworkAdapter } from '../net/NetworkAdapter';
+import { UIManager, formatTime } from '../ui/UIManager';
+import { PALETTE } from '../assets/palette';
 import type { GameStateName } from '../types';
 
 /**
@@ -30,10 +36,16 @@ export class Game {
   private player!: PlayerController;
   private coins!: CoinSystem;
   private ui!: UIManager;
+  private audio = new AudioSystem();
+  private particles = new ParticleSystem();
+  private missions!: MissionSystem;
+  private inventory!: Inventory;
+  private network: NetworkAdapter = new LocalNetworkAdapter();
 
   private accumulator = 0;
   private lastTime = 0;
   private elapsed = 0; // tiempo de partida (solo avanza en 'playing')
+  private snapshotTimer = 0;
 
   constructor(private canvas: HTMLCanvasElement) {}
 
@@ -55,8 +67,17 @@ export class Game {
 
     this.coins = new CoinSystem(lobby.coinSpots, this.events);
     this.scene.add(this.coins.group);
+    this.scene.add(this.particles.points);
+
+    // El inventario se suscribe antes que los handlers de wireGameFeel para que
+    // récords y trofeos ya estén actualizados cuando estos los lean.
+    this.inventory = new Inventory(this.events);
+    this.missions = new MissionSystem(this.events, this.coins.total);
 
     this.wireUI();
+    this.wireGameFeel();
+    this.missions.emitState();
+    void this.network.connect();
 
     window.addEventListener('resize', () => this.renderer.onResize(this.cameraRig.camera));
 
@@ -86,9 +107,64 @@ export class Game {
       this.input.exitPointerLock();
       this.setState('won');
     });
+
+    // Estadísticas del inventario al entrar en pausa o victoria.
+    this.events.on('state-changed', ({ state }) => {
+      if (state === 'paused' || state === 'won') {
+        this.ui.setStats(
+          this.inventory.totalCoins,
+          this.inventory.trophyCount,
+          this.inventory.bestTimeSeconds,
+        );
+      }
+    });
+  }
+
+  /** Conexiones de game feel: audio, partículas y squash & stretch. */
+  private wireGameFeel(): void {
+    this.player.onJump = () => {
+      this.audio.jump();
+      this.player.avatar.triggerJump();
+    };
+    this.player.onLand = (impact) => {
+      this.audio.land(impact);
+      this.player.avatar.triggerLand(impact);
+      this.particles.burst(this.player.avatar.group.position, 0xd8cfba, {
+        count: Math.min(6 + Math.floor(impact), 18),
+        speed: 1.6,
+        spread: 0.35,
+        life: 0.45,
+        gravity: -2,
+        upBias: 0.8,
+      });
+    };
+
+    this.events.on('coin-collected', ({ position }) => {
+      if (!position) return; // resets
+      this.audio.coin();
+      this.particles.burst(new THREE.Vector3(position.x, position.y, position.z), PALETTE.coin, {
+        count: 16,
+        speed: 3,
+        life: 0.7,
+        gravity: -3,
+        upBias: 2,
+      });
+    });
+
+    this.events.on('mission-completed', () => this.audio.missionComplete());
+    this.events.on('all-coins-collected', ({ timeSeconds }) => {
+      this.audio.win();
+      this.ui.setWinBest(
+        this.inventory.isBestTime(timeSeconds)
+          ? '¡Nuevo récord personal!'
+          : `Mejor tiempo: ${formatTime(this.inventory.bestTimeSeconds ?? timeSeconds)}`,
+      );
+    });
   }
 
   private startPlaying(): void {
+    this.audio.unlock(); // los botones son gestos de usuario: momento válido para WebAudio
+    this.audio.click();
     this.setState('playing');
     this.input.requestPointerLock();
   }
@@ -96,8 +172,10 @@ export class Game {
   private restart(): void {
     this.elapsed = 0;
     this.coins.reset();
+    this.missions.reset();
     this.player.respawn();
     this.ui.updateTimer(0);
+    this.ui.setWinBest('');
     this.startPlaying();
   }
 
@@ -131,6 +209,22 @@ export class Game {
       const alpha = this.accumulator / step;
       this.player.syncVisual(alpha, dt);
       this.coins.update(dt, this.player.visualPos, this.elapsed);
+      this.particles.update(dt);
+      this.missions.update(this.player.visualPos);
+
+      // Publica el estado local a ~10 Hz por la capa de red (loopback en Fase 1).
+      this.snapshotTimer += dt;
+      if (this.snapshotTimer >= 0.1) {
+        this.snapshotTimer = 0;
+        this.network.sendSnapshot({
+          id: 'local',
+          x: this.player.visualPos.x,
+          y: this.player.visualPos.y,
+          z: this.player.visualPos.z,
+          heading: this.player.heading,
+          anim: this.player.animState,
+        });
+      }
 
       this.elapsed += dt;
       this.ui.updateTimer(this.elapsed);
