@@ -44,9 +44,10 @@ Rama de trabajo: `claude/nicer-robopro-mvp-el56jp`. Commits clave:
 - **Máquina de estados explícita** (`core/StateMachine.ts`): solo el estado activo recibe
   `update(dt)`. 'playing' delega en `Game.simulate()`. Estados triviales son literales;
   los pesados del Sprint 2 (racing/build) deben ser su propio módulo que implemente `GameState`.
-- **Mundos dirigidos por datos** (`world/LevelData.ts`): registro `WORLDS` (hub, plaza,
-  islas) de `LevelDefinition` planas (spawn, plataformas, monedas, zonas, torre opcional,
-  portales). `Game.loadWorld(id)` carga/descarga mundos EN CALIENTE: `Lobby.dispose()` quita
+- **Mundos dirigidos por datos** (`world/LevelData.ts`): registro `WORLDS` de 6 mundos (hub,
+  plaza/Parque, islas, obby, cielo, desafío) como `LevelDefinition` planas (spawn, plataformas,
+  monedas, zonas, torre/checkpoints/finish/bouncePads opcionales, portales; `noGround`/`killY`/
+  `centerPlaza`). El hub tiene 5 portales en arco (selector de mundos). `Game.loadWorld(id)` carga/descarga mundos EN CALIENTE: `Lobby.dispose()` quita
   colliders (`PhysicsWorld.removeCollider`) y libera geometrías; `CoinSystem`/`MissionSystem`
   se recrean por mundo (con `dispose()` para desuscribirse). El jugador y el `Inventory`
   persisten. Portales: arcos que brillan; `Game.checkPortals` viaja por proximidad (con
@@ -75,8 +76,14 @@ Rama de trabajo: `claude/nicer-robopro-mvp-el56jp`. Commits clave:
   por mundo (`Inventory.recordBestTime/getBestTime`).
 - **Economía + tienda**: `Inventory` guarda saldo gastable (`coins`), desbloqueos (`unlocked`)
   y mejores tiempos por mundo; `spend/canAfford/isUnlocked/unlock`. La pantalla "Personalizar"
-  es también tienda: gorros de pago (`HAT_PRICES`: corona 15, fiesta 8) con candado y precio;
-  comprar descuenta monedas y desbloquea. Evento `coins-changed` refresca el saldo.
+  es también tienda (gorros, botas, arma) con candado/precio; `buildOptionRow` genérico,
+  ids `hat.*`/`boots.*`/`weapon.*`. Evento `coins-changed` refresca el saldo.
+- **Gear con efecto**: botas saltarinas (+salto) / veloces (+velocidad) → `PlayerController.applyGear`
+  (multiplicadores `JUMP_MUL`/`SPEED_MUL`); espada (mano derecha, `swing()` con clic, `AvatarAnimator.triggerSwing`).
+  7 gorros (incl. Cascos/Mago/Aureola). `PlayerAvatar` renderiza botas y espada en slots.
+- **Trampolines** (`bouncePads` en LevelData → `PlayerController.bounce`) y **motas ambientales**
+  (`systems/AmbientMotes`, un `THREE.Points` que flota). **Preview en vivo** del avatar en el
+  personalizador vía `CameraRig.setPortrait` (encuadre frontal).
 - **Animación desacoplada**: `PlayerAvatar` = solo el rig (meshes + `parts`); `AvatarAnimator`
   = lógica de poses driven por `AvatarAnimState` (idle/walk/run/air). El estado de locomoción
   lo calcula `PlayerController.animState` UNA vez y alimenta animación y red por igual. Para

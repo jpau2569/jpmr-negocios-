@@ -80,10 +80,13 @@ const HUB: LevelDefinition = {
   platforms: [],
   coins: [],
   zones: [],
+  // Cinco portales en arco frente al spawn (mira a -Z), radio 10.
   portals: [
-    { pos: [-9, 0.9, -6], target: 'plaza', label: 'Parque', color: PALETTE.brickRed },
-    { pos: [9, 0.9, -6], target: 'islas', label: 'Islas', color: PALETTE.brickTeal },
-    { pos: [0, 0.9, -9], target: 'obby', label: 'Obby', color: PALETTE.brickYellow },
+    { pos: [-8.7, 0.9, -5], target: 'plaza', label: 'Parque', color: PALETTE.brickRed },
+    { pos: [-5, 0.9, -8.7], target: 'islas', label: 'Islas', color: PALETTE.brickTeal },
+    { pos: [0, 0.9, -10], target: 'obby', label: 'Obby', color: PALETTE.brickYellow },
+    { pos: [5, 0.9, -8.7], target: 'cielo', label: 'Cielo', color: PALETTE.brickBlue },
+    { pos: [8.7, 0.9, -5], target: 'desafio', label: 'Desafío', color: PALETTE.brickPurple },
   ],
 };
 
@@ -176,6 +179,60 @@ const OBBY: LevelDefinition = {
   portals: [{ pos: [-3, 0.9, 13], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
 };
 
+// --- CIELO: islas flotantes que ascienden, con trampolines y monedas. ---
+const CIELO: LevelDefinition = {
+  id: 'cielo',
+  name: 'Cielo',
+  spawn: [0, 3, 8],
+  noGround: true,
+  killY: -3,
+  platforms: [
+    { size: [6, 1, 6], pos: [0, 0.5, 8], color: PALETTE.brickBlue },
+    { size: [4, 1, 4], pos: [0, 1.6, 2], color: PALETTE.brickTeal },
+    { size: [4, 1, 4], pos: [-5, 2.6, -3], color: PALETTE.brickPurple },
+    { size: [4, 1, 4], pos: [5, 3.4, -3], color: PALETTE.brickYellow },
+    { size: [5, 1, 5], pos: [0, 4.4, -9], color: PALETTE.brickRed },
+    { size: [5, 1, 5], pos: [0, 6, -15], color: PALETTE.brickTeal },
+    { size: [6, 1, 6], pos: [0, 8, -21], color: PALETTE.brickBlue },
+  ],
+  coins: [
+    [0, 2.7, 2], [-5, 3.7, -3], [5, 4.5, -3],
+    [0, 6, -9], [0, 8, -15], [0, 10, -21], [0, 5.5, -9],
+  ],
+  zones: [],
+  bouncePads: [[0, 4.4, -9], [0, 6, -15]],
+  portals: [{ pos: [-3, 0.9, 9], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
+};
+
+// --- DESAFÍO: obby exigente de plataformas pequeñas (las botas veloces ayudan). ---
+const DESAFIO: LevelDefinition = {
+  id: 'desafio',
+  name: 'Desafío',
+  spawn: [0, 3, 12],
+  noGround: true,
+  killY: -3,
+  platforms: [
+    { size: [5, 1, 5], pos: [0, 0.5, 12], color: PALETTE.brickPurple }, // inicio
+    { size: [2, 1, 2], pos: [0, 1.2, 6], color: PALETTE.brickRed },
+    { size: [1.8, 1, 1.8], pos: [4, 2, 3], color: PALETTE.brickYellow },
+    { size: [1.8, 1, 1.8], pos: [0, 2.8, 0], color: PALETTE.brickTeal }, // checkpoint 1
+    { size: [1.8, 1, 1.8], pos: [-4, 3.6, -3], color: PALETTE.brickBlue },
+    { size: [1.6, 1, 1.6], pos: [0, 4.4, -7], color: PALETTE.brickRed },
+    { size: [1.6, 1, 1.6], pos: [4, 5.2, -11], color: PALETTE.brickYellow },
+    { size: [1.8, 1, 1.8], pos: [0, 6, -15], color: PALETTE.brickTeal }, // checkpoint 2
+    { size: [1.6, 1, 1.6], pos: [-4, 6.8, -19], color: PALETTE.brickPurple },
+    { size: [1.6, 1, 1.6], pos: [0, 7.6, -23], color: PALETTE.brickBlue },
+    { size: [6, 1, 6], pos: [0, 8.4, -29], color: PALETTE.brickTeal }, // meta
+  ],
+  coins: [],
+  zones: [],
+  checkpoints: [[0, 3.3, 0], [0, 6.5, -15]],
+  finish: [0, 8.9, -29],
+  portals: [{ pos: [-3, 0.9, 13], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
+};
+
 /** Registro de mundos y mundo inicial. */
-export const WORLDS: Record<string, LevelDefinition> = { hub: HUB, plaza: PLAZA, islas: ISLAS, obby: OBBY };
+export const WORLDS: Record<string, LevelDefinition> = {
+  hub: HUB, plaza: PLAZA, islas: ISLAS, obby: OBBY, cielo: CIELO, desafio: DESAFIO,
+};
 export const START_WORLD = 'hub';
