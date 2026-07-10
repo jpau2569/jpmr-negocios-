@@ -6,7 +6,7 @@ import { PALETTE } from '../assets/palette';
  * remoto (Fase online). Los catálogos de opciones alimentan el personalizador.
  */
 
-export type HatId = 'none' | 'cap' | 'crown' | 'party';
+export type HatId = 'none' | 'cap' | 'crown' | 'party' | 'headphones' | 'wizard' | 'halo';
 export type BootsId = 'none' | 'jump' | 'speed';
 export type WeaponId = 'none' | 'sword';
 
@@ -52,12 +52,17 @@ export const SKIN_COLORS = [0xf5c542, 0xf0d0b0, 0xd9a066, 0x9c6b4a, 0x8fd46a, 0x
 export const HATS: { id: HatId; label: string }[] = [
   { id: 'none', label: 'Sin gorro' },
   { id: 'cap', label: 'Gorra' },
-  { id: 'crown', label: 'Corona' },
+  { id: 'headphones', label: 'Cascos' },
   { id: 'party', label: 'Fiesta' },
+  { id: 'wizard', label: 'Mago' },
+  { id: 'crown', label: 'Corona' },
+  { id: 'halo', label: 'Aureola' },
 ];
 
 /** Precio en monedas de cada gorro (0 = gratis). Los de pago se compran en la tienda. */
-export const HAT_PRICES: Record<HatId, number> = { none: 0, cap: 0, crown: 15, party: 8 };
+export const HAT_PRICES: Record<HatId, number> = {
+  none: 0, cap: 0, headphones: 5, party: 8, wizard: 12, crown: 15, halo: 18,
+};
 
 /** Id de desbloqueo persistido para un gorro. */
 export const hatUnlockId = (hat: HatId): string => `hat.${hat}`;
@@ -73,7 +78,7 @@ export function loadAvatar(): AvatarConfig {
         torso: typeof p.torso === 'number' ? p.torso : DEFAULT_AVATAR.torso,
         legs: typeof p.legs === 'number' ? p.legs : DEFAULT_AVATAR.legs,
         skin: typeof p.skin === 'number' ? p.skin : DEFAULT_AVATAR.skin,
-        hat: (['none', 'cap', 'crown', 'party'] as HatId[]).includes(p.hat as HatId)
+        hat: (['none', 'cap', 'crown', 'party', 'headphones', 'wizard', 'halo'] as HatId[]).includes(p.hat as HatId)
           ? (p.hat as HatId)
           : 'none',
         boots: (['none', 'jump', 'speed'] as BootsId[]).includes(p.boots as BootsId)

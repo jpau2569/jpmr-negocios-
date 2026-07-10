@@ -223,6 +223,9 @@ export class Game {
       this.player.applyGear(cfg);
     };
     this.ui.onAvatarDone = (cfg) => saveAvatar(cfg);
+    // Encuadre frontal del avatar mientras se personaliza.
+    this.ui.onCustomizeOpen = () => this.cameraRig.setPortrait(true);
+    this.ui.onCustomizeClose = () => this.cameraRig.setPortrait(false);
     // Tienda: saldo, desbloqueos y compra de artículos (gorros, botas, arma).
     this.ui.getCoins = () => this.inventory.coins;
     this.ui.isItemUnlocked = (itemId) => this.inventory.isUnlocked(itemId);

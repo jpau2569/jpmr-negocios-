@@ -213,6 +213,37 @@ export class PlayerAvatar {
         new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }),
       );
       add(pom, 0.54);
+    } else if (hat === 'headphones') {
+      const mat = new THREE.MeshStandardMaterial({ color: 0x2b2f3a, roughness: 0.5 });
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.04, 8, 16, Math.PI), mat);
+      band.rotation.z = Math.PI; // arco sobre la cabeza
+      add(band, 0.05);
+      for (const side of [-1, 1]) {
+        const cup = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.18, 0.18), mat);
+        cup.position.set(side * 0.28, -0.12, 0);
+        cup.castShadow = true;
+        this.hatSlot.add(cup);
+      }
+    } else if (hat === 'wizard') {
+      const mat = new THREE.MeshStandardMaterial({ color: 0x6b4fb0, roughness: 0.6 });
+      const hat3 = new THREE.Mesh(new THREE.ConeGeometry(0.26, 0.7, 16), mat);
+      hat3.position.y = 0.38;
+      hat3.castShadow = true;
+      this.hatSlot.add(hat3);
+      const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.05, 16), mat);
+      add(brim, 0.04);
+      const star = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 8, 8),
+        new THREE.MeshStandardMaterial({ color: PALETTE.coin, emissive: PALETTE.coinEmissive, emissiveIntensity: 1.5 }),
+      );
+      add(star, 0.72);
+    } else if (hat === 'halo') {
+      const halo = new THREE.Mesh(
+        new THREE.TorusGeometry(0.22, 0.045, 10, 24),
+        new THREE.MeshStandardMaterial({ color: PALETTE.coin, emissive: PALETTE.coinEmissive, emissiveIntensity: 2.2 }),
+      );
+      halo.rotation.x = Math.PI / 2;
+      add(halo, 0.34);
     }
   }
 }

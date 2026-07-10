@@ -18,6 +18,7 @@ export class CameraRig {
   private currentDistance = CONFIG.camera.startDistance;
   private smoothedTarget = new THREE.Vector3();
   private initialized = false;
+  private portrait = false; // encuadre frontal del avatar (personalizador)
 
   // Scratch reutilizables: update() corre cada frame y no debe alocar.
   private scratchTarget = new THREE.Vector3();
@@ -51,8 +52,21 @@ export class CameraRig {
     }
   }
 
+  /** Encuadre frontal fijo del avatar (para verlo mientras se personaliza). */
+  setPortrait(on: boolean): void {
+    this.portrait = on;
+  }
+
   update(dt: number, playerFeet: THREE.Vector3, excludeCollider: RAPIER.Collider): void {
     const c = CONFIG.camera;
+
+    // Modo retrato: cámara fija delante del avatar (su cara mira a -Z en reposo),
+    // desplazada para dejarlo a la derecha, junto al panel del personalizador.
+    if (this.portrait) {
+      this.camera.position.set(playerFeet.x - 1.15, playerFeet.y + 1.6, playerFeet.z - 2.9);
+      this.camera.lookAt(playerFeet.x - 0.15, playerFeet.y + 1.05, playerFeet.z);
+      return;
+    }
     const target = this.scratchTarget.set(
       playerFeet.x,
       playerFeet.y + c.heightOffset,

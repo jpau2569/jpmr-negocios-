@@ -22,6 +22,9 @@ export class UIManager {
   onBuyItem: ((itemId: string, price: number) => boolean) | null = null;
   isItemUnlocked: ((itemId: string) => boolean) | null = null;
   getCoins: (() => number) | null = null;
+  /** Abrir/cerrar el personalizador (el juego lo usa para el encuadre de cámara). */
+  onCustomizeOpen: (() => void) | null = null;
+  onCustomizeClose: (() => void) | null = null;
 
   private avatarConfig: AvatarConfig = loadAvatar();
   private czCoins!: HTMLElement;
@@ -80,11 +83,13 @@ export class UIManager {
       this.refreshShop();
       screenTitle.classList.add('hidden');
       screenCustomize.classList.remove('hidden');
+      this.onCustomizeOpen?.();
     });
     get('btn-customize-done').addEventListener('click', () => {
       screenCustomize.classList.add('hidden');
       screenTitle.classList.remove('hidden');
       this.onAvatarDone?.(this.avatarConfig);
+      this.onCustomizeClose?.();
     });
     this.buildColorSwatches(get('cz-torso'), TORSO_COLORS, 'torso');
     this.buildColorSwatches(get('cz-legs'), LEG_COLORS, 'legs');
