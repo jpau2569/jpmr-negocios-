@@ -116,6 +116,13 @@ h2 { color: var(--text); font-size: 34px; letter-spacing: 1.5px; text-transform:
 
 .customize-card h2 { font-size: 26px; margin-bottom: 4px; }
 
+.cz-coins { display: flex; align-items: center; gap: 8px; color: var(--gold); font-weight: 700; font-size: 16px; }
+.cz-coins b { color: var(--gold); }
+
+.cz-hat.locked { opacity: 0.75; }
+.cz-hat .price { color: var(--gold); font-size: 11px; margin-left: 6px; }
+.cz-hat.locked::before { content: '🔒 '; font-size: 11px; }
+
 .cz-row { display: flex; align-items: center; gap: 14px; }
 
 .cz-label {

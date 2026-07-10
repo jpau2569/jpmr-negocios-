@@ -1,7 +1,7 @@
 import type { EventBus } from '../core/EventBus';
 import type { GameStateName, MissionInfo } from '../types';
 import {
-  type AvatarConfig, loadAvatar, TORSO_COLORS, LEG_COLORS, SKIN_COLORS, HATS,
+  type AvatarConfig, type HatId, loadAvatar, TORSO_COLORS, LEG_COLORS, SKIN_COLORS, HATS, HAT_PRICES,
 } from '../player/AvatarConfig';
 
 /**
@@ -17,8 +17,14 @@ export class UIManager {
   onAvatarChange: ((config: AvatarConfig) => void) | null = null;
   /** Al pulsar "Listo": persistir la configuración elegida. */
   onAvatarDone: ((config: AvatarConfig) => void) | null = null;
+  /** Tienda: intenta comprar un gorro; devuelve true si la compra se realiza. */
+  onBuyHat: ((hat: HatId, price: number) => boolean) | null = null;
+  isHatUnlocked: ((hat: HatId) => boolean) | null = null;
+  getCoins: (() => number) | null = null;
 
   private avatarConfig: AvatarConfig = loadAvatar();
+  private czCoins!: HTMLElement;
+  private czHats!: HTMLElement;
 
   private screens: Record<string, HTMLElement>;
   private hud: HTMLElement;
@@ -63,7 +69,10 @@ export class UIManager {
     // --- Personalizador ---
     const screenCustomize = get('screen-customize');
     const screenTitle = this.screens.title;
+    this.czCoins = get('cz-coins');
+    this.czHats = get('cz-hats');
     get('btn-customize').addEventListener('click', () => {
+      this.refreshShop();
       screenTitle.classList.add('hidden');
       screenCustomize.classList.remove('hidden');
     });
@@ -75,7 +84,9 @@ export class UIManager {
     this.buildColorSwatches(get('cz-torso'), TORSO_COLORS, 'torso');
     this.buildColorSwatches(get('cz-legs'), LEG_COLORS, 'legs');
     this.buildColorSwatches(get('cz-skin'), SKIN_COLORS, 'skin');
-    this.buildHatButtons(get('cz-hats'));
+
+    // El saldo mostrado en la tienda se refresca al cambiar las monedas.
+    events.on('coins-changed', () => { this.czCoins.textContent = String(this.getCoins?.() ?? 0); });
 
     events.on('state-changed', ({ state }) => this.showState(state));
     events.on('coin-collected', ({ collected, total }) => {
@@ -166,18 +177,42 @@ export class UIManager {
     }
   }
 
+  /** Refresca la tienda (saldo + gorros) según monedas y desbloqueos actuales. */
+  private refreshShop(): void {
+    this.czCoins.textContent = String(this.getCoins?.() ?? 0);
+    this.buildHatButtons(this.czHats);
+  }
+
   private buildHatButtons(container: HTMLElement): void {
+    container.replaceChildren();
     const buttons: HTMLButtonElement[] = [];
     for (const { id, label } of HATS) {
+      const price = HAT_PRICES[id];
+      const owned = price === 0 || (this.isHatUnlocked?.(id) ?? false);
       const btn = document.createElement('button');
       btn.className = 'cz-hat';
       btn.textContent = label;
+      if (!owned) {
+        btn.classList.add('locked');
+        const tag = document.createElement('span');
+        tag.className = 'price';
+        tag.textContent = `${price}🪙`;
+        btn.appendChild(tag);
+      }
       if (this.avatarConfig.hat === id) btn.classList.add('sel');
+
       btn.addEventListener('click', () => {
+        // Si es de pago y no se posee, intentar comprarlo.
+        if (!(price === 0 || (this.isHatUnlocked?.(id) ?? false))) {
+          const bought = this.onBuyHat?.(id, price) ?? false;
+          if (!bought) {
+            this.showToast('Te faltan monedas');
+            return;
+          }
+        }
         this.avatarConfig = { ...this.avatarConfig, hat: id };
-        for (const b of buttons) b.classList.remove('sel');
-        btn.classList.add('sel');
         this.onAvatarChange?.(this.avatarConfig);
+        this.refreshShop(); // re-render: quita el candado y marca selección
       });
       buttons.push(btn);
       container.appendChild(btn);

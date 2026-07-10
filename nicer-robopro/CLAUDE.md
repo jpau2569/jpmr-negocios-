@@ -69,6 +69,14 @@ Rama de trabajo: `claude/nicer-robopro-mvp-el56jp`. Commits clave:
   materiales propios recoloreables + slot de gorro; `applyConfig()` aplica en caliente.
   Pantalla "Personalizar" en el título (swatches + gorros) con preview en vivo. Semilla del
   perfil online. PENDIENTE de pulido: encuadre de cámara para ver el avatar mientras se edita.
+- **Obby con checkpoints** (mundo `obby`): parkour flotante (`noGround`, `killY`), checkpoints
+  que actualizan la reaparición (`PlayerController.setRespawnPoint`) y meta (`finish`) que
+  completa el mundo. Victoria unificada en `Game.completeWorld` (monedas o meta) con récord
+  por mundo (`Inventory.recordBestTime/getBestTime`).
+- **Economía + tienda**: `Inventory` guarda saldo gastable (`coins`), desbloqueos (`unlocked`)
+  y mejores tiempos por mundo; `spend/canAfford/isUnlocked/unlock`. La pantalla "Personalizar"
+  es también tienda: gorros de pago (`HAT_PRICES`: corona 15, fiesta 8) con candado y precio;
+  comprar descuenta monedas y desbloquea. Evento `coins-changed` refresca el saldo.
 - **Animación desacoplada**: `PlayerAvatar` = solo el rig (meshes + `parts`); `AvatarAnimator`
   = lógica de poses driven por `AvatarAnimState` (idle/walk/run/air). El estado de locomoción
   lo calcula `PlayerController.animState` UNA vez y alimenta animación y red por igual. Para

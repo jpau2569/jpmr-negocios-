@@ -6,7 +6,7 @@ import { CameraRig } from '../engine/CameraRig';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { InputManager } from '../player/InputManager';
 import { PlayerController } from '../player/PlayerController';
-import { saveAvatar } from '../player/AvatarConfig';
+import { saveAvatar, hatUnlockId } from '../player/AvatarConfig';
 import { setupEnvironment } from '../world/Environment';
 import { Lobby } from '../world/Lobby';
 import { WORLDS, START_WORLD, type LevelDefinition } from '../world/LevelData';
@@ -220,6 +220,17 @@ export class Game {
     // Personalizador: preview en vivo sobre el avatar + persistencia al confirmar.
     this.ui.onAvatarChange = (cfg) => this.player.avatar.applyConfig(cfg);
     this.ui.onAvatarDone = (cfg) => saveAvatar(cfg);
+    // Tienda: saldo, desbloqueos y compra de gorros con monedas.
+    this.ui.getCoins = () => this.inventory.coins;
+    this.ui.isHatUnlocked = (hat) => this.inventory.isUnlocked(hatUnlockId(hat));
+    this.ui.onBuyHat = (hat, price) => {
+      if (this.inventory.spend(price)) {
+        this.inventory.unlock(hatUnlockId(hat));
+        this.audio.coin();
+        return true;
+      }
+      return false;
+    };
 
     // Perder el pointer lock (Esc del navegador) equivale a pausar.
     this.input.onPointerLockLost = () => {

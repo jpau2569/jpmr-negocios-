@@ -33,6 +33,12 @@ export const HATS: { id: HatId; label: string }[] = [
   { id: 'party', label: 'Fiesta' },
 ];
 
+/** Precio en monedas de cada gorro (0 = gratis). Los de pago se compran en la tienda. */
+export const HAT_PRICES: Record<HatId, number> = { none: 0, cap: 0, crown: 15, party: 8 };
+
+/** Id de desbloqueo persistido para un gorro. */
+export const hatUnlockId = (hat: HatId): string => `hat.${hat}`;
+
 const STORAGE_KEY = 'nicer-robopro:avatar-v1';
 
 export function loadAvatar(): AvatarConfig {
