@@ -7,6 +7,9 @@ import { PALETTE } from '../assets/palette';
  */
 
 export type HatId = 'none' | 'cap' | 'crown' | 'party' | 'headphones' | 'wizard' | 'halo';
+export type HeadId = 'normal' | 'dragon' | 'croc' | 'lion' | 'bear' | 'dino';
+export type HairId = 'none' | 'militar' | 'largo' | 'punki';
+export type OutfitId = 'normal' | 'militar';
 export type BootsId = 'none' | 'jump' | 'speed';
 export type WeaponId = 'none' | 'sword' | 'pistola' | 'chorro' | 'super' | 'mega';
 
@@ -30,6 +33,9 @@ export interface AvatarConfig {
   legs: number;
   skin: number; // color de cabeza + manos
   hat: HatId;
+  head: HeadId; // cabeza humana o de animal
+  hair: HairId;
+  outfit: OutfitId; // ropa normal o militar
   boots: BootsId; // gear con efecto: salto o velocidad
   weapon: WeaponId;
 }
@@ -39,9 +45,45 @@ export const DEFAULT_AVATAR: AvatarConfig = {
   legs: PALETTE.playerLegs,
   skin: PALETTE.playerHead,
   hat: 'none',
+  head: 'normal',
+  hair: 'none',
+  outfit: 'normal',
   boots: 'none',
   weapon: 'none',
 };
+
+/** Color base de cada cabeza de animal. */
+export const ANIMAL_COLORS: Record<string, number> = {
+  dragon: 0x4da653, croc: 0x3f7d3f, lion: 0xe0a03a, bear: 0x8a5a2b, dino: 0x66bf62,
+};
+
+export const HEADS: { id: HeadId; label: string }[] = [
+  { id: 'normal', label: 'Normal' },
+  { id: 'bear', label: 'Oso' },
+  { id: 'croc', label: 'Cocodrilo' },
+  { id: 'lion', label: 'León' },
+  { id: 'dino', label: 'Dino' },
+  { id: 'dragon', label: 'Dragón' },
+];
+export const HEAD_PRICES: Record<HeadId, number> = {
+  normal: 0, bear: 14, croc: 16, lion: 18, dino: 20, dragon: 22,
+};
+
+export const HAIRS: { id: HairId; label: string }[] = [
+  { id: 'none', label: 'Sin pelo' },
+  { id: 'militar', label: 'Militar' },
+  { id: 'largo', label: 'Melena' },
+  { id: 'punki', label: 'Cresta' },
+];
+export const HAIR_PRICES: Record<HairId, number> = { none: 0, militar: 6, largo: 8, punki: 8 };
+
+export const OUTFITS: { id: OutfitId; label: string }[] = [
+  { id: 'normal', label: 'Normal' },
+  { id: 'militar', label: 'Militar' },
+];
+export const OUTFIT_PRICES: Record<OutfitId, number> = { normal: 0, militar: 20 };
+export const MILITARY_TORSO = 0x5a6b3a;
+export const MILITARY_LEGS = 0x3d4a28;
 
 /** Multiplicadores de gameplay del gear (botas). El resto es cosmético. */
 export const JUMP_MUL: Record<BootsId, number> = { none: 1, jump: 1.38, speed: 1 };
@@ -102,6 +144,15 @@ export function loadAvatar(): AvatarConfig {
         hat: (['none', 'cap', 'crown', 'party', 'headphones', 'wizard', 'halo'] as HatId[]).includes(p.hat as HatId)
           ? (p.hat as HatId)
           : 'none',
+        head: (['normal', 'dragon', 'croc', 'lion', 'bear', 'dino'] as HeadId[]).includes(p.head as HeadId)
+          ? (p.head as HeadId)
+          : 'normal',
+        hair: (['none', 'militar', 'largo', 'punki'] as HairId[]).includes(p.hair as HairId)
+          ? (p.hair as HairId)
+          : 'none',
+        outfit: (['normal', 'militar'] as OutfitId[]).includes(p.outfit as OutfitId)
+          ? (p.outfit as OutfitId)
+          : 'normal',
         boots: (['none', 'jump', 'speed'] as BootsId[]).includes(p.boots as BootsId)
           ? (p.boots as BootsId)
           : 'none',

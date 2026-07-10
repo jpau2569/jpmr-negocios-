@@ -85,9 +85,14 @@ Rama de trabajo: `claude/nicer-robopro-mvp-el56jp`. Commits clave:
   clic dispara gotas (`systems/WaterGun`, pool) hacia donde mira la cámara; impactar una moneda la
   recoge (`CoinSystem.tryHit`). Depósito de agua que se recarga (HUD barra, `UIManager.setWater`).
   Marcador de **puntos** en el HUD (10 pts/moneda). Game.fireWater orquesta disparo+cooldown+tanque.
-  PENDIENTE (plan del usuario): cargadores de agua comprables, cabezas de animal, ropa/pelo militar,
-  monedas premium/sorpresas, power-ups (imán, doble salto), dianas para la espada, mundo de carreras
-  con ranking, rival IA "Iyan".
+- **Cargadores de agua**: `Inventory` guarda `cartridges`+`lifetimeCoins`; recarga al vaciar el
+  depósito (auto-consume), compra a 75 monedas y uno gratis cada 100 monedas recogidas. HUD de munición.
+- **Cabezas de animal + militar**: `AvatarConfig` gana `head` (normal/dragon/croc/lion/bear/dino),
+  `hair` (militar/largo/punki) y `outfit` (militar). `PlayerAvatar` construye rasgos de animal
+  (hocico, cuernos, melena, orejas) ocultando la cara humana; chaleco militar + recolor. Filas nuevas
+  en el personalizador (scrollable). `buildOptionRow` genérico ahora cubre hat/head/hair/outfit/boots/weapon.
+  PENDIENTE (plan del usuario): monedas premium/sorpresas (D), power-ups imán/doble salto (E),
+  dianas para la espada (F), mundo de carreras con ranking (G), rival IA "Iyan" (H).
 - **Trampolines** (`bouncePads` en LevelData → `PlayerController.bounce`) y **motas ambientales**
   (`systems/AmbientMotes`, un `THREE.Points` que flota). **Preview en vivo** del avatar en el
   personalizador vía `CameraRig.setPortrait` (encuadre frontal).

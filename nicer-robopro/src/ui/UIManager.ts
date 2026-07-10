@@ -3,6 +3,7 @@ import type { GameStateName, MissionInfo } from '../types';
 import {
   type AvatarConfig, loadAvatar, TORSO_COLORS, LEG_COLORS, SKIN_COLORS,
   HATS, HAT_PRICES, BOOTS, BOOTS_PRICES, WEAPONS, WEAPON_PRICES,
+  HEADS, HEAD_PRICES, HAIRS, HAIR_PRICES, OUTFITS, OUTFIT_PRICES,
 } from '../player/AvatarConfig';
 
 /**
@@ -34,6 +35,9 @@ export class UIManager {
   private czHats!: HTMLElement;
   private czBoots!: HTMLElement;
   private czWeapon!: HTMLElement;
+  private czHead!: HTMLElement;
+  private czHair!: HTMLElement;
+  private czOutfit!: HTMLElement;
   private czCartridges!: HTMLElement;
 
   private screens: Record<string, HTMLElement>;
@@ -96,6 +100,9 @@ export class UIManager {
     this.czHats = get('cz-hats');
     this.czBoots = get('cz-boots');
     this.czWeapon = get('cz-weapon');
+    this.czHead = get('cz-head');
+    this.czHair = get('cz-hair');
+    this.czOutfit = get('cz-outfit');
     get('btn-customize').addEventListener('click', () => {
       this.refreshShop();
       screenTitle.classList.add('hidden');
@@ -230,7 +237,10 @@ export class UIManager {
   private refreshShop(): void {
     this.czCoins.textContent = String(this.getCoins?.() ?? 0);
     this.czCartridges.textContent = String(this.getCartridges?.() ?? 0);
+    this.buildOptionRow(this.czHead, HEADS, HEAD_PRICES, 'head');
+    this.buildOptionRow(this.czHair, HAIRS, HAIR_PRICES, 'hair');
     this.buildOptionRow(this.czHats, HATS, HAT_PRICES, 'hat');
+    this.buildOptionRow(this.czOutfit, OUTFITS, OUTFIT_PRICES, 'outfit');
     this.buildOptionRow(this.czBoots, BOOTS, BOOTS_PRICES, 'boots');
     this.buildOptionRow(this.czWeapon, WEAPONS, WEAPON_PRICES, 'weapon');
   }
@@ -243,7 +253,7 @@ export class UIManager {
     container: HTMLElement,
     options: { id: string; label: string }[],
     prices: Record<string, number>,
-    slot: 'hat' | 'boots' | 'weapon',
+    slot: 'hat' | 'head' | 'hair' | 'outfit' | 'boots' | 'weapon',
   ): void {
     container.replaceChildren();
     for (const { id, label } of options) {

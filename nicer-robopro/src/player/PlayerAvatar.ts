@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { PALETTE } from '../assets/palette';
 import {
-  DEFAULT_AVATAR, type AvatarConfig, type HatId, type BootsId, type WeaponId, weaponKind, WATER_GUNS,
+  DEFAULT_AVATAR, type AvatarConfig, type HatId, type HeadId, type HairId, type OutfitId,
+  type BootsId, type WeaponId, weaponKind, WATER_GUNS, ANIMAL_COLORS, MILITARY_TORSO, MILITARY_LEGS,
 } from './AvatarConfig';
 
 /**
@@ -30,7 +31,13 @@ export class PlayerAvatar {
   private torsoMat: THREE.MeshStandardMaterial;
   private legMat: THREE.MeshStandardMaterial;
   private skinMat: THREE.MeshStandardMaterial;
+  private animalMat: THREE.MeshStandardMaterial;
   private hatSlot: THREE.Group;
+  private headExtras!: THREE.Group; // rasgos de cabeza de animal
+  private hairSlot!: THREE.Group;
+  private outfitSlot!: THREE.Group; // chaleco militar
+  private skull!: THREE.Mesh;
+  private faceParts: THREE.Mesh[] = []; // ojos + boca humanos (se ocultan en animales)
   private leftBootSlot!: THREE.Group;
   private rightBootSlot!: THREE.Group;
   private weaponSlot!: THREE.Group;
@@ -43,27 +50,37 @@ export class PlayerAvatar {
     this.torsoMat = new THREE.MeshStandardMaterial({ color: config.torso, roughness: 0.75 });
     this.legMat = new THREE.MeshStandardMaterial({ color: config.legs, roughness: 0.8 });
     this.skinMat = new THREE.MeshStandardMaterial({ color: config.skin, roughness: 0.7 });
+    this.animalMat = new THREE.MeshStandardMaterial({ color: 0x4da653, roughness: 0.6 });
     const faceMat = new THREE.MeshStandardMaterial({ color: PALETTE.playerFace, roughness: 0.6 });
 
-    // Torso
+    // Torso + slot de ropa (chaleco militar).
     const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.65, 0.4), this.torsoMat);
     torso.position.y = 0.75 + 0.325;
     body.add(torso);
+    this.outfitSlot = new THREE.Group();
+    this.outfitSlot.position.y = 0.75 + 0.325;
+    body.add(this.outfitSlot);
 
-    // Cabeza (piel) con ojos, boca (cara fija) y slot de gorro.
+    // Cabeza con ojos y boca humanos (se ocultan al poner cabeza de animal).
     const head = new THREE.Group();
     head.position.y = 0.75 + 0.65 + 0.28;
-    const skull = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.48, 0.45), this.skinMat);
-    head.add(skull);
+    this.skull = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.48, 0.45), this.skinMat);
+    head.add(this.skull);
     const eyeGeo = new THREE.BoxGeometry(0.09, 0.11, 0.03);
     for (const side of [-1, 1]) {
       const eye = new THREE.Mesh(eyeGeo, faceMat);
       eye.position.set(side * 0.12, 0.05, 0.235);
       head.add(eye);
+      this.faceParts.push(eye);
     }
     const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.03), faceMat);
     mouth.position.set(0, -0.12, 0.235);
     head.add(mouth);
+    this.faceParts.push(mouth);
+    this.headExtras = new THREE.Group();
+    head.add(this.headExtras);
+    this.hairSlot = new THREE.Group();
+    head.add(this.hairSlot);
     this.hatSlot = new THREE.Group();
     this.hatSlot.position.y = 0.26;
     head.add(this.hatSlot);
@@ -97,6 +114,9 @@ export class PlayerAvatar {
     this.weaponSlot.position.set(0, -0.58, 0.12);
     rightArm.add(this.weaponSlot);
 
+    this.buildHead(config.head);
+    this.buildHair(config.hair);
+    this.buildOutfit(config.outfit, config.torso, config.legs);
     this.buildHat(config.hat);
     this.buildBoots(config.boots);
     this.buildWeapon(config.weapon);
@@ -122,12 +142,142 @@ export class PlayerAvatar {
 
   /** Aplica una configuración cosmética en caliente (recolorea + reconstruye gorro). */
   applyConfig(config: AvatarConfig): void {
-    this.torsoMat.color.setHex(config.torso);
-    this.legMat.color.setHex(config.legs);
     this.skinMat.color.setHex(config.skin);
+    // buildOutfit fija torso/piernas (color elegido o militar); buildHead maneja el cráneo.
+    this.buildOutfit(config.outfit, config.torso, config.legs);
+    this.buildHead(config.head);
+    this.buildHair(config.hair);
     this.buildHat(config.hat);
     this.buildBoots(config.boots);
     this.buildWeapon(config.weapon);
+  }
+
+  private buildHead(head: HeadId): void {
+    this.clearSlot(this.headExtras);
+    if (head === 'normal') {
+      this.skull.material = this.skinMat;
+      for (const f of this.faceParts) f.visible = true;
+      return;
+    }
+    // Cabeza de animal: cráneo recoloreado, cara humana oculta, rasgos propios.
+    this.animalMat = new THREE.MeshStandardMaterial({ color: ANIMAL_COLORS[head], roughness: 0.6 });
+    this.skull.material = this.animalMat;
+    for (const f of this.faceParts) f.visible = false;
+    this.buildAnimalFeatures(head, this.animalMat);
+  }
+
+  private buildAnimalFeatures(head: HeadId, mat: THREE.MeshStandardMaterial): void {
+    const slot = this.headExtras;
+    const dark = new THREE.MeshStandardMaterial({ color: 0x161c22, roughness: 0.5 });
+    const white = new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.5 });
+    const add = (m: THREE.Mesh) => { m.castShadow = true; slot.add(m); };
+    // Ojos comunes a todos los animales.
+    for (const s of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), dark);
+      eye.position.set(s * 0.13, 0.08, 0.22);
+      add(eye);
+    }
+    if (head === 'croc' || head === 'dino' || head === 'dragon') {
+      // Hocico alargado con dientes.
+      const snout = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.18, 0.4), mat);
+      snout.position.set(0, -0.08, 0.32);
+      add(snout);
+      for (let i = -1; i <= 1; i++) {
+        const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.08, 4), white);
+        tooth.position.set(i * 0.1, -0.16, 0.48);
+        tooth.rotation.x = Math.PI;
+        add(tooth);
+      }
+    } else {
+      // Oso/León: hocico corto redondeado.
+      const snout = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.18, 0.18), mat);
+      snout.position.set(0, -0.06, 0.28);
+      add(snout);
+      const nose = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.07, 0.05), dark);
+      nose.position.set(0, -0.02, 0.38);
+      add(nose);
+    }
+    if (head === 'dragon' || head === 'dino') {
+      // Cuernos / crestas hacia atrás.
+      for (const s of [-1, 1]) {
+        const horn = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.2, 6), head === 'dragon' ? new THREE.MeshStandardMaterial({ color: 0xe8c04a, roughness: 0.4 }) : mat);
+        horn.position.set(s * 0.14, 0.28, -0.05);
+        horn.rotation.x = -0.5;
+        add(horn);
+      }
+    } else if (head === 'bear') {
+      for (const s of [-1, 1]) {
+        const ear = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 10), mat);
+        ear.position.set(s * 0.18, 0.26, 0);
+        add(ear);
+      }
+    } else if (head === 'lion') {
+      // Melena: anillo de "pelo" alrededor de la cabeza.
+      const mane = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.12, 8, 18), new THREE.MeshStandardMaterial({ color: 0x9a5a1e, roughness: 0.8 }));
+      mane.position.z = -0.02;
+      add(mane);
+      for (const s of [-1, 1]) {
+        const ear = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), mat);
+        ear.position.set(s * 0.2, 0.24, 0);
+        add(ear);
+      }
+    } else if (head === 'croc') {
+      for (const s of [-1, 1]) {
+        const bump = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), mat);
+        bump.position.set(s * 0.12, 0.18, 0.1);
+        add(bump);
+      }
+    }
+  }
+
+  private buildHair(hair: HairId): void {
+    this.clearSlot(this.hairSlot);
+    if (hair === 'none') return;
+    const mat = new THREE.MeshStandardMaterial({ color: 0x2c1e12, roughness: 0.85 });
+    if (hair === 'militar') {
+      const buzz = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.12, 0.47), new THREE.MeshStandardMaterial({ color: 0x3a3f2a, roughness: 0.9 }));
+      buzz.position.y = 0.22;
+      buzz.castShadow = true;
+      this.hairSlot.add(buzz);
+    } else if (hair === 'largo') {
+      const top = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.16, 0.5), mat);
+      top.position.y = 0.2;
+      this.hairSlot.add(top);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.12), mat);
+      back.position.set(0, -0.02, -0.24);
+      this.hairSlot.add(back);
+      this.hairSlot.children.forEach((c) => { c.castShadow = true; });
+    } else if (hair === 'punki') {
+      const mohMat = new THREE.MeshStandardMaterial({ color: 0xe8467e, roughness: 0.6 });
+      for (let i = 0; i < 4; i++) {
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.22, 5), mohMat);
+        spike.position.set(0, 0.3, 0.15 - i * 0.12);
+        spike.castShadow = true;
+        this.hairSlot.add(spike);
+      }
+    }
+  }
+
+  private buildOutfit(outfit: OutfitId, torsoColor: number, legsColor: number): void {
+    this.clearSlot(this.outfitSlot);
+    if (outfit === 'militar') {
+      this.torsoMat.color.setHex(MILITARY_TORSO);
+      this.legMat.color.setHex(MILITARY_LEGS);
+      // Chaleco táctico oscuro con bolsillos.
+      const vestMat = new THREE.MeshStandardMaterial({ color: 0x3a4028, roughness: 0.8 });
+      const vest = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.5, 0.46), vestMat);
+      vest.position.y = 0.02;
+      vest.castShadow = true;
+      this.outfitSlot.add(vest);
+      for (const s of [-1, 1]) {
+        const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.06), new THREE.MeshStandardMaterial({ color: 0x2a3018, roughness: 0.8 }));
+        pouch.position.set(s * 0.2, -0.1, 0.24);
+        this.outfitSlot.add(pouch);
+      }
+    } else {
+      this.torsoMat.color.setHex(torsoColor);
+      this.legMat.color.setHex(legsColor);
+    }
   }
 
   private clearSlot(slot: THREE.Group): void {

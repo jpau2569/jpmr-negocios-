@@ -104,8 +104,10 @@ h2 { color: var(--text); font-size: 34px; letter-spacing: 1.5px; text-transform:
   margin-left: 5vw;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 32px 36px;
+  gap: 12px;
+  padding: 24px 30px;
+  max-height: 92vh;
+  overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: 18px;
@@ -113,6 +115,8 @@ h2 { color: var(--text); font-size: 34px; letter-spacing: 1.5px; text-transform:
   text-align: left;
   animation: cardIn 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
+.customize-card::-webkit-scrollbar { width: 8px; }
+.customize-card::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 4px; }
 
 .customize-card h2 { font-size: 26px; margin-bottom: 4px; }
 
