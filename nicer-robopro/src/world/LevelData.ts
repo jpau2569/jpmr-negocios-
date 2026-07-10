@@ -208,6 +208,11 @@ const OBBY: LevelDefinition = {
   zones: [],
   checkpoints: [[5, 2.9, -5], [-5, 5.3, -19]],
   finish: [0, 7.5, -33],
+  medalTimes: { gold: 20, silver: 28, bronze: 38 },
+  rivalPath: [
+    [0, 1, 12], [0, 1.5, 5], [5, 2.1, 1], [5, 2.9, -5], [0, 3.7, -9],
+    [-5, 4.5, -13], [-5, 5.3, -19], [0, 6.1, -23], [5, 6.9, -27], [0, 7.5, -33],
+  ],
   portals: [{ pos: [-3, 0.9, 13], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
 };
 
@@ -260,6 +265,11 @@ const DESAFIO: LevelDefinition = {
   zones: [],
   checkpoints: [[0, 3.3, 0], [0, 6.5, -15]],
   finish: [0, 8.9, -29],
+  medalTimes: { gold: 26, silver: 36, bronze: 48 },
+  rivalPath: [
+    [0, 1, 12], [0, 1.7, 6], [4, 2.5, 3], [0, 3.3, 0], [-4, 4.1, -3], [0, 4.9, -7],
+    [4, 5.7, -11], [0, 6.5, -15], [-4, 7.3, -19], [0, 8.1, -23], [0, 8.9, -29],
+  ],
   portals: [{ pos: [-3, 0.9, 13], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
 };
 

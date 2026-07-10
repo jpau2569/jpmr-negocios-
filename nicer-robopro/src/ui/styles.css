@@ -292,6 +292,16 @@ h2 { color: var(--text); font-size: 34px; letter-spacing: 1.5px; text-transform:
   letter-spacing: 1px;
 }
 
+.hud-rival {
+  top: 108px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #e0705f;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+}
+
 /* Munición de agua: barra del depósito + cargadores */
 .hud-ammo {
   position: absolute;

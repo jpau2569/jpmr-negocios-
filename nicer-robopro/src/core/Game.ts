@@ -14,6 +14,7 @@ import { CoinSystem, type CoinDef } from '../systems/CoinSystem';
 import { GiftSystem } from '../systems/GiftSystem';
 import { PowerupSystem, type PowerupKind } from '../systems/PowerupSystem';
 import { TargetSystem } from '../systems/TargetSystem';
+import { RivalRacer } from '../systems/RivalRacer';
 import { AudioSystem } from '../systems/AudioSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
 import { RingFx } from '../systems/RingFx';
@@ -52,6 +53,8 @@ export class Game {
   private currentGifts: GiftSystem | null = null;
   private currentPowerups: PowerupSystem | null = null;
   private currentTargets: TargetSystem | null = null;
+  private currentRival: RivalRacer | null = null;
+  private rivalAnnounced = false;
   private magnetTimer = 0; // imán de monedas activo (s)
   private djumpTimer = 0; // doble salto activo (s)
   private portalCooldown = 0; // evita re-disparar el portal justo al llegar
@@ -162,6 +165,11 @@ export class Game {
       this.scene.remove(this.currentTargets.group);
       this.currentTargets.dispose();
     }
+    if (this.currentRival) {
+      this.scene.remove(this.currentRival.group);
+      this.currentRival.dispose();
+      this.currentRival = null;
+    }
 
     this.currentLevel = level;
     this.currentLobby = new Lobby(this.physics, level);
@@ -198,6 +206,17 @@ export class Game {
     );
     this.scene.add(this.currentTargets.group);
 
+    // Rival "Iyan": corre la ruta hacia la meta al ritmo del tiempo de oro.
+    if (level.rivalPath && level.rivalPath.length > 1) {
+      const targetTime = level.medalTimes?.gold ?? 20;
+      this.currentRival = new RivalRacer(
+        level.rivalPath.map((v) => new THREE.Vector3(v[0], v[1], v[2])),
+        targetTime,
+      );
+      this.scene.add(this.currentRival.group);
+    }
+    this.rivalAnnounced = false;
+
     this.missions = new MissionSystem(this.events, this.coins.total, level);
     this.missions.emitState();
     // Refresca el contador del HUD al conteo del nuevo mundo (0 = se oculta).
@@ -219,9 +238,14 @@ export class Game {
     this.audio.win();
     this.ui.setWinTime(timeSeconds);
     const best = this.inventory.getBestTime(this.currentLevel.id);
-    this.ui.setWinBest(
-      isRecord ? '¡Nuevo récord!' : best !== null ? `Mejor tiempo: ${formatTime(best)}` : '',
-    );
+    let bestMsg = isRecord ? '¡Nuevo récord!' : best !== null ? `Mejor tiempo: ${formatTime(best)}` : '';
+    // Resultado del duelo contra Iyan (si compite en este mundo).
+    if (this.currentRival) {
+      const beatIyan = !this.currentRival.finished;
+      const rivalMsg = beatIyan ? '🏆 ¡Ganaste a Iyan!' : '🤖 Iyan llegó antes — ¡otra vez!';
+      bestMsg = bestMsg ? `${rivalMsg} · ${bestMsg}` : rivalMsg;
+    }
+    this.ui.setWinBest(bestMsg);
     // Ranking de carreras: medalla según el tiempo + tiempos objetivo.
     const mt = this.currentLevel.medalTimes;
     if (mt) {
@@ -541,6 +565,17 @@ export class Game {
     this.coins.update(dt, this.player.visualPos, this.elapsed, this.magnetTimer > 0 ? 6 : 0);
     this.currentGifts?.update(dt, this.player.visualPos);
     this.currentTargets?.update(dt);
+    // Rival Iyan: corre hacia la meta; se anuncia al llegar.
+    if (this.currentRival) {
+      this.currentRival.update(dt);
+      this.ui.setRival(this.currentRival.progress);
+      if (this.currentRival.finished && !this.rivalAnnounced) {
+        this.rivalAnnounced = true;
+        this.ui.notify('🤖 ¡Iyan ha llegado a la meta!');
+      }
+    } else {
+      this.ui.setRival(null);
+    }
     this.particles.update(dt);
     this.ringFx.update(dt, this.cameraRig.camera);
     this.missions.update(this.player.visualPos);

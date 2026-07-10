@@ -91,8 +91,18 @@ Rama de trabajo: `claude/nicer-robopro-mvp-el56jp`. Commits clave:
   `hair` (militar/largo/punki) y `outfit` (militar). `PlayerAvatar` construye rasgos de animal
   (hocico, cuernos, melena, orejas) ocultando la cara humana; chaleco militar + recolor. Filas nuevas
   en el personalizador (scrollable). `buildOptionRow` genérico ahora cubre hat/head/hair/outfit/boots/weapon.
-  PENDIENTE (plan del usuario): monedas premium/sorpresas (D), power-ups imán/doble salto (E),
-  dianas para la espada (F), mundo de carreras con ranking (G), rival IA "Iyan" (H).
+- **Monedas premium + regalos** (D): `CoinSystem` con `CoinDef` (color/valor/premium), disco+aro;
+  gemas (`LevelData.gemCoins`) valen más puntos; `GiftSystem` (`LevelData.gifts`) da recompensa
+  aleatoria (monedas/cargador/puntos). Puntos por moneda en el evento; `UIManager.addScore`.
+- **Power-ups** (E): `PowerupSystem` (`LevelData.powerups`) — imán (`CoinSystem.update` con radio de
+  atracción) y doble salto (`PlayerController.setDoubleJump`/`maxAirJumps`), temporales con HUD.
+- **Combate** (F): `TargetSystem` (`LevelData.targets`) — enemigos slime que rompe la espada
+  (`Game.trySwordAttack`) o el agua; +15 pts al romper.
+- **Carreras + ranking** (G): mundo `carrera` + `LevelData.medalTimes` (oro/plata/bronce);
+  `Game.completeWorld` da medalla; pantalla de victoria con medalla y ranking (`UIManager.setWinMedal`).
+- **Rival Iyan** (H): `RivalRacer` (`LevelData.rivalPath`) — avatar rojo que corre la ruta al ritmo
+  del tiempo de oro; HUD de progreso (`setRival`); la victoria dice si le ganaste. Compite en
+  carrera/obby/desafío. TODOS los bloques del plan del usuario (A–H) están hechos.
 - **Trampolines** (`bouncePads` en LevelData → `PlayerController.bounce`) y **motas ambientales**
   (`systems/AmbientMotes`, un `THREE.Points` que flota). **Preview en vivo** del avatar en el
   personalizador vía `CameraRig.setPortrait` (encuadre frontal).

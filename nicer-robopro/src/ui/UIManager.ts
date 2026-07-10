@@ -56,6 +56,7 @@ export class UIManager {
   private waterFill: HTMLElement;
   private cartridgesEl: HTMLElement;
   private powerupsEl: HTMLElement;
+  private rivalEl: HTMLElement;
   private score = 0;
 
   constructor(events: EventBus) {
@@ -85,6 +86,7 @@ export class UIManager {
     this.waterFill = get('hud-water-fill');
     this.cartridgesEl = get('hud-cartridges');
     this.powerupsEl = get('hud-powerups');
+    this.rivalEl = get('hud-rival');
     events.on('cartridges-changed', ({ cartridges, awarded }) => {
       this.cartridgesEl.textContent = String(cartridges);
       if (awarded) this.showToast('🎁 ¡Cargador de agua gratis!');
@@ -205,6 +207,16 @@ export class UIManager {
     if (djump > 0) parts.push(`⏫ ${Math.ceil(djump)}s`);
     this.powerupsEl.textContent = parts.join('   ');
     this.powerupsEl.classList.toggle('hidden', parts.length === 0);
+  }
+
+  /** Progreso del rival Iyan hacia la meta (null = ocultar). */
+  setRival(progress: number | null): void {
+    if (progress === null) {
+      this.rivalEl.classList.add('hidden');
+      return;
+    }
+    this.rivalEl.classList.remove('hidden');
+    this.rivalEl.textContent = `🤖 Iyan ${Math.round(progress * 100)}%`;
   }
 
   /** Suma puntos al marcador (monedas, regalos). */
