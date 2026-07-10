@@ -19,13 +19,19 @@ export class CameraRig {
   private smoothedTarget = new THREE.Vector3();
   private initialized = false;
 
-  constructor(private physicsWorld: RAPIER.World, private rapier: typeof RAPIER) {
+  // Scratch reutilizables: update() corre cada frame y no debe alocar.
+  private scratchTarget = new THREE.Vector3();
+  private scratchDir = new THREE.Vector3();
+  private ray: RAPIER.Ray;
+
+  constructor(private physicsWorld: RAPIER.World, rapier: typeof RAPIER) {
     this.camera = new THREE.PerspectiveCamera(
       CONFIG.camera.fov,
       window.innerWidth / window.innerHeight,
       0.1,
       400,
     );
+    this.ray = new rapier.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
   }
 
   applyLook(input: InputFrame): void {
@@ -47,7 +53,7 @@ export class CameraRig {
 
   update(dt: number, playerFeet: THREE.Vector3, excludeCollider: RAPIER.Collider): void {
     const c = CONFIG.camera;
-    const target = new THREE.Vector3(
+    const target = this.scratchTarget.set(
       playerFeet.x,
       playerFeet.y + c.heightOffset,
       playerFeet.z,
@@ -63,7 +69,7 @@ export class CameraRig {
     }
 
     // Offset esférico a partir de yaw/pitch.
-    const dir = new THREE.Vector3(
+    const dir = this.scratchDir.set(
       Math.sin(this.yaw) * Math.cos(this.pitch),
       Math.sin(this.pitch),
       Math.cos(this.yaw) * Math.cos(this.pitch),
@@ -71,12 +77,14 @@ export class CameraRig {
 
     // Anticolisión: si hay algo entre el objetivo y la cámara, acercarla.
     let desired = this.distance;
-    const ray = new this.rapier.Ray(
-      { x: this.smoothedTarget.x, y: this.smoothedTarget.y, z: this.smoothedTarget.z },
-      { x: dir.x, y: dir.y, z: dir.z },
-    );
+    this.ray.origin.x = this.smoothedTarget.x;
+    this.ray.origin.y = this.smoothedTarget.y;
+    this.ray.origin.z = this.smoothedTarget.z;
+    this.ray.dir.x = dir.x;
+    this.ray.dir.y = dir.y;
+    this.ray.dir.z = dir.z;
     const hit = this.physicsWorld.castRay(
-      ray,
+      this.ray,
       this.distance + c.collisionMargin,
       true,
       undefined,

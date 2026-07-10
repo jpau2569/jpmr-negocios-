@@ -37,6 +37,12 @@ export class PlayerController {
   private targetHeading = Math.PI; // de espaldas a la cámara inicial (mirando a la plaza)
   private animTime = 0;
 
+  // Scratch reutilizables: fixedUpdate corre 60 veces/s y no debe alocar.
+  private scratchWish = new THREE.Vector3();
+  private scratchForward = new THREE.Vector3();
+  private scratchRight = new THREE.Vector3();
+  private scratchDelta = new THREE.Vector3();
+
   constructor(physics: PhysicsWorld) {
     const p = CONFIG.player;
     const R = physics.rapier;
@@ -77,10 +83,10 @@ export class PlayerController {
 
     // --- Dirección deseada en espacio de cámara ---
     const inputLen = Math.hypot(input.moveX, input.moveZ);
-    const wish = new THREE.Vector3();
+    const wish = this.scratchWish.set(0, 0, 0);
     if (inputLen > 0) {
-      const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
-      const right = new THREE.Vector3(-forward.z, 0, forward.x);
+      const forward = this.scratchForward.set(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+      const right = this.scratchRight.set(-forward.z, 0, forward.x);
       wish
         .addScaledVector(forward, -input.moveZ / Math.max(inputLen, 1))
         .addScaledVector(right, input.moveX / Math.max(inputLen, 1));
@@ -90,10 +96,12 @@ export class PlayerController {
     const maxSpeed = input.run ? p.runSpeed : p.walkSpeed;
     const control = this.grounded ? 1 : p.airControl;
 
-    // Aceleración hacia la velocidad horizontal objetivo.
-    const targetVel = wish.clone().multiplyScalar(inputLen > 0 ? maxSpeed : 0);
-    const horiz = new THREE.Vector3(this.velocity.x, 0, this.velocity.z);
-    const delta = targetVel.sub(horiz);
+    // Aceleración hacia la velocidad horizontal objetivo (delta = objetivo - actual).
+    const delta = this.scratchDelta
+      .copy(wish)
+      .multiplyScalar(inputLen > 0 ? maxSpeed : 0)
+      .sub(this.velocity)
+      .setY(0);
     const maxDelta = p.accel * control * dt;
     if (delta.length() > maxDelta) delta.setLength(maxDelta);
     this.velocity.x += delta.x;

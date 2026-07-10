@@ -12,11 +12,17 @@ no tocarla).
 
 ## Estado actual (2026-07-10)
 
-**Fases 0–3 del plan de ejecución COMPLETADAS y verificadas. Fase 4 diseñada.**
+**Fases 0–3 del plan de ejecución COMPLETADAS y verificadas. Fase 4 diseñada.
+Los 6 Bloques de la lista de tareas están CERRADOS** (incluida la limpieza de
+código —hot paths sin allocations— y la documentación del sprint siguiente en
+`docs/sprint-02.md`).
+
 Rama de trabajo: `claude/nicer-robopro-mvp-el56jp`. Commits clave:
 - `3de52e0` — Fases 0–1: MVP jugable (lobby, jugador, cámara, físicas, monedas, HUD, pausa, win)
 - `738bb1d` — Fases 2–3: game feel (audio, partículas, squash & stretch, transiciones) +
   sistemas (misiones, inventario persistente, capa de red abstracta) + diseño online
+- (último) — Limpieza: scratch vectors en CameraRig/PlayerController (cero allocations
+  por frame en caminos calientes) + plan del Sprint 2
 
 ### Qué funciona (verificado en Chromium headless con Playwright)
 - Pantalla de inicio → Jugar → pointer lock → lobby 3D con HUD
@@ -68,17 +74,17 @@ docs/online-design.md (diseño Fase 4)
   `/opt/node22/lib/node_modules/playwright/index.mjs`), `npx vite preview` + capturas.
 - No usar `pkill -f "vite preview"` desde la tool Bash (mata la propia shell).
 
-## Próximos pasos (en orden sugerido)
+## Próximos pasos
 
-1. **Fase 2 del roadmap original**: construcción básica de bloques, inventario de
-   piezas, minijuego (p. ej. carrera de plataformas contrarreloj usando el timer ya
-   existente).
-2. **Migración online paso 1** (ver `docs/online-design.md`): extraer la simulación de
+**El siguiente sprint está planificado en `docs/sprint-02.md`** (construcción de
+bloques con preview fantasma, hotbar de piezas con economía de monedas y save v2,
+minijuego contrarreloj con checkpoints; deuda técnica: code-splitting y táctil).
+Empezar por ahí.
+
+Después del Sprint 2:
+1. **Migración online paso 1** (ver `docs/online-design.md`): extraer la simulación de
    movimiento de `PlayerController` a un módulo puro sin Three, compartible con servidor.
-3. **Pendientes de pulido**: code-splitting del bundle (~890 KB gzip: Rapier WASM + Three,
-   usar `manualChunks`), controles táctiles móviles (joystick virtual), más partículas
-   ambientales (motas flotando en el lobby).
-4. **Fase 4**: `ColyseusAdapter` + `LobbyRoom` mínimo con posiciones, avatares remotos
+2. **Fase 4**: `ColyseusAdapter` + `LobbyRoom` mínimo con posiciones, avatares remotos
    interpolados reutilizando `PlayerAvatar`.
 
 ## Cómo trabajar
