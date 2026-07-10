@@ -95,4 +95,8 @@ export class AudioSystem {
   click(): void {
     this.tone(900, 0.04, 'triangle', 0, 0.3);
   }
+
+  swoosh(): void {
+    this.tone(720, 0.14, 'sawtooth', 0, 0.22, 150);
+  }
 }

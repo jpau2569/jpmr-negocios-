@@ -6,7 +6,7 @@ import { CameraRig } from '../engine/CameraRig';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { InputManager } from '../player/InputManager';
 import { PlayerController } from '../player/PlayerController';
-import { saveAvatar, hatUnlockId } from '../player/AvatarConfig';
+import { saveAvatar } from '../player/AvatarConfig';
 import { setupEnvironment } from '../world/Environment';
 import { Lobby } from '../world/Lobby';
 import { WORLDS, START_WORLD, type LevelDefinition } from '../world/LevelData';
@@ -217,15 +217,18 @@ export class Game {
     this.ui.onPlay = () => this.startPlaying();
     this.ui.onResume = () => this.startPlaying();
     this.ui.onRestart = () => this.restart();
-    // Personalizador: preview en vivo sobre el avatar + persistencia al confirmar.
-    this.ui.onAvatarChange = (cfg) => this.player.avatar.applyConfig(cfg);
+    // Personalizador: preview en vivo (cosmética + efectos de gear) + persistencia.
+    this.ui.onAvatarChange = (cfg) => {
+      this.player.avatar.applyConfig(cfg);
+      this.player.applyGear(cfg);
+    };
     this.ui.onAvatarDone = (cfg) => saveAvatar(cfg);
-    // Tienda: saldo, desbloqueos y compra de gorros con monedas.
+    // Tienda: saldo, desbloqueos y compra de artículos (gorros, botas, arma).
     this.ui.getCoins = () => this.inventory.coins;
-    this.ui.isHatUnlocked = (hat) => this.inventory.isUnlocked(hatUnlockId(hat));
-    this.ui.onBuyHat = (hat, price) => {
+    this.ui.isItemUnlocked = (itemId) => this.inventory.isUnlocked(itemId);
+    this.ui.onBuyItem = (itemId, price) => {
       if (this.inventory.spend(price)) {
-        this.inventory.unlock(hatUnlockId(hat));
+        this.inventory.unlock(itemId);
         this.audio.coin();
         return true;
       }
@@ -265,6 +268,11 @@ export class Game {
     this.player.onJump = () => {
       this.audio.jump();
     };
+    this.player.onSwing = () => this.audio.swoosh();
+    // Clic izquierdo durante el juego → espadazo (solo si hay arma equipada).
+    window.addEventListener('mousedown', (e) => {
+      if (e.button === 0 && this.machine.is('playing')) this.player.swing();
+    });
     this.player.onLand = (impact) => {
       this.audio.land(impact);
       this.particles.burst(this.player.avatar.group.position, 0xd8cfba, {

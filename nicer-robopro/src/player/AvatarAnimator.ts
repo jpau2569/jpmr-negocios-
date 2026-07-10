@@ -14,8 +14,14 @@ import type { AvatarAnimState } from '../types';
 export class AvatarAnimator {
   private walkPhase = 0;
   private stretch = 0; // -1 aplastado (aterrizar) .. +1 estirado (saltar)
+  private swingTime = 0; // >0 mientras dura el golpe de espada
 
   constructor(private rig: AvatarRig) {}
+
+  /** Lanza una animación de espadazo con el brazo derecho. */
+  triggerSwing(): void {
+    this.swingTime = 0.35;
+  }
 
   /** Impulso visual al despegar: estiramiento vertical breve. */
   triggerJump(): void {
@@ -58,6 +64,13 @@ export class AvatarAnimator {
       this.lerpLimbs(dt, 0, 0, 0, 0);
       body.position.y = Math.sin(time * 1.8) * 0.02;
       this.walkPhase = 0;
+    }
+
+    // Espadazo: sobrescribe el brazo derecho con un arco rápido hacia delante.
+    if (this.swingTime > 0) {
+      this.swingTime -= dt;
+      const t = 1 - Math.max(this.swingTime, 0) / 0.35;
+      rightArm.rotation.x -= Math.sin(t * Math.PI) * 2.3;
     }
   }
 

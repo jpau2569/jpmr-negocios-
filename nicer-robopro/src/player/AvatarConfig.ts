@@ -7,12 +7,16 @@ import { PALETTE } from '../assets/palette';
  */
 
 export type HatId = 'none' | 'cap' | 'crown' | 'party';
+export type BootsId = 'none' | 'jump' | 'speed';
+export type WeaponId = 'none' | 'sword';
 
 export interface AvatarConfig {
   torso: number; // color de torso + brazos
   legs: number;
   skin: number; // color de cabeza + manos
   hat: HatId;
+  boots: BootsId; // gear con efecto: salto o velocidad
+  weapon: WeaponId;
 }
 
 export const DEFAULT_AVATAR: AvatarConfig = {
@@ -20,7 +24,26 @@ export const DEFAULT_AVATAR: AvatarConfig = {
   legs: PALETTE.playerLegs,
   skin: PALETTE.playerHead,
   hat: 'none',
+  boots: 'none',
+  weapon: 'none',
 };
+
+/** Multiplicadores de gameplay del gear (botas). El resto es cosmético. */
+export const JUMP_MUL: Record<BootsId, number> = { none: 1, jump: 1.38, speed: 1 };
+export const SPEED_MUL: Record<BootsId, number> = { none: 1, jump: 1, speed: 1.42 };
+
+export const BOOTS: { id: BootsId; label: string }[] = [
+  { id: 'none', label: 'Ninguna' },
+  { id: 'jump', label: 'Botas saltarinas' },
+  { id: 'speed', label: 'Botas veloces' },
+];
+export const BOOTS_PRICES: Record<BootsId, number> = { none: 0, jump: 14, speed: 14 };
+
+export const WEAPONS: { id: WeaponId; label: string }[] = [
+  { id: 'none', label: 'Ninguna' },
+  { id: 'sword', label: 'Espada' },
+];
+export const WEAPON_PRICES: Record<WeaponId, number> = { none: 0, sword: 20 };
 
 /** Catálogos de opciones para el personalizador (colores amables tipo bloques). */
 export const TORSO_COLORS = [0x35d0ba, 0xd9634f, 0x5b8fd9, 0x9b7fd4, 0x66bf62, 0xe8934a, 0xe86fa8];
@@ -52,6 +75,12 @@ export function loadAvatar(): AvatarConfig {
         skin: typeof p.skin === 'number' ? p.skin : DEFAULT_AVATAR.skin,
         hat: (['none', 'cap', 'crown', 'party'] as HatId[]).includes(p.hat as HatId)
           ? (p.hat as HatId)
+          : 'none',
+        boots: (['none', 'jump', 'speed'] as BootsId[]).includes(p.boots as BootsId)
+          ? (p.boots as BootsId)
+          : 'none',
+        weapon: (['none', 'sword'] as WeaponId[]).includes(p.weapon as WeaponId)
+          ? (p.weapon as WeaponId)
           : 'none',
       };
     }

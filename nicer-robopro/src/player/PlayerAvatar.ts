@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PALETTE } from '../assets/palette';
-import { DEFAULT_AVATAR, type AvatarConfig, type HatId } from './AvatarConfig';
+import { DEFAULT_AVATAR, type AvatarConfig, type HatId, type BootsId, type WeaponId } from './AvatarConfig';
 
 /**
  * Partes articuladas del avatar que el animador rota/escala.
@@ -29,6 +29,9 @@ export class PlayerAvatar {
   private legMat: THREE.MeshStandardMaterial;
   private skinMat: THREE.MeshStandardMaterial;
   private hatSlot: THREE.Group;
+  private leftBootSlot!: THREE.Group;
+  private rightBootSlot!: THREE.Group;
+  private weaponSlot!: THREE.Group;
 
   constructor(config: AvatarConfig = DEFAULT_AVATAR) {
     this.group = new THREE.Group();
@@ -80,7 +83,21 @@ export class PlayerAvatar {
     });
 
     this.parts = { body, leftArm, rightArm, leftLeg, rightLeg };
+
+    // Slots de gear: botas al pie de cada pierna, arma en la mano derecha.
+    this.leftBootSlot = new THREE.Group();
+    this.leftBootSlot.position.y = -0.75;
+    leftLeg.add(this.leftBootSlot);
+    this.rightBootSlot = new THREE.Group();
+    this.rightBootSlot.position.y = -0.75;
+    rightLeg.add(this.rightBootSlot);
+    this.weaponSlot = new THREE.Group();
+    this.weaponSlot.position.set(0, -0.58, 0.12);
+    rightArm.add(this.weaponSlot);
+
     this.buildHat(config.hat);
+    this.buildBoots(config.boots);
+    this.buildWeapon(config.weapon);
   }
 
   private makeLimb(
@@ -107,6 +124,52 @@ export class PlayerAvatar {
     this.legMat.color.setHex(config.legs);
     this.skinMat.color.setHex(config.skin);
     this.buildHat(config.hat);
+    this.buildBoots(config.boots);
+    this.buildWeapon(config.weapon);
+  }
+
+  private clearSlot(slot: THREE.Group): void {
+    for (const child of [...slot.children]) {
+      if (child instanceof THREE.Mesh) child.geometry.dispose();
+    }
+    slot.clear();
+  }
+
+  private buildBoots(boots: BootsId): void {
+    this.clearSlot(this.leftBootSlot);
+    this.clearSlot(this.rightBootSlot);
+    if (boots === 'none') return;
+    // Salto = teal brillante; velocidad = naranja. Emisivas para florecer con el bloom.
+    const color = boots === 'jump' ? 0x35d0ba : 0xe8934a;
+    for (const slot of [this.leftBootSlot, this.rightBootSlot]) {
+      const boot = new THREE.Mesh(
+        new THREE.BoxGeometry(0.32, 0.2, 0.46),
+        new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.6, roughness: 0.5 }),
+      );
+      boot.position.set(0, -0.02, 0.07);
+      boot.castShadow = true;
+      slot.add(boot);
+    }
+  }
+
+  private buildWeapon(weapon: WeaponId): void {
+    this.clearSlot(this.weaponSlot);
+    if (weapon === 'none') return;
+    const bladeMat = new THREE.MeshStandardMaterial({
+      color: 0xe2eaf0, metalness: 0.7, roughness: 0.25, emissive: 0x223a4a, emissiveIntensity: 0.3,
+    });
+    const hiltMat = new THREE.MeshStandardMaterial({ color: 0x8a5a2b, roughness: 0.7 });
+    const sword = new THREE.Group();
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.95, 0.03), bladeMat);
+    blade.position.y = 0.5;
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.07, 0.07), hiltMat);
+    guard.position.y = 0.03;
+    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.22, 0.07), hiltMat);
+    grip.position.y = -0.1;
+    sword.add(blade, guard, grip);
+    sword.rotation.x = -Math.PI / 2; // la hoja apunta hacia delante desde la mano
+    sword.traverse((o) => { if (o instanceof THREE.Mesh) o.castShadow = true; });
+    this.weaponSlot.add(sword);
   }
 
   private buildHat(hat: HatId): void {

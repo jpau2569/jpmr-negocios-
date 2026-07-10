@@ -4,7 +4,7 @@ import { CONFIG } from '../core/Config';
 import type { InputFrame, AvatarAnimState } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { AvatarAnimator } from './AvatarAnimator';
-import type { AvatarConfig } from './AvatarConfig';
+import { type AvatarConfig, JUMP_MUL, SPEED_MUL } from './AvatarConfig';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 
 /**
@@ -30,6 +30,12 @@ export class PlayerController {
   /** Hooks de game feel: el juego conecta aquí audio, partículas y squash & stretch. */
   onJump: (() => void) | null = null;
   onLand: ((impactSpeed: number) => void) | null = null;
+  onSwing: (() => void) | null = null;
+
+  // Modificadores de gear (botas). El arma solo habilita el espadazo.
+  private jumpMul = 1;
+  private speedMul = 1;
+  private hasWeapon = false;
 
   // Posiciones del paso físico anterior/actual para interpolar el visual.
   private prevPos = new THREE.Vector3();
@@ -71,6 +77,7 @@ export class PlayerController {
 
     this.avatar = new PlayerAvatar(avatarConfig);
     this.animator = new AvatarAnimator(this.avatar.parts);
+    if (avatarConfig) this.applyGear(avatarConfig);
     this.avatar.group.rotation.y = this.targetHeading;
 
     this.currPos.set(spawn.x, spawn.y, spawn.z);
@@ -99,7 +106,7 @@ export class PlayerController {
       wish.normalize();
     }
 
-    const maxSpeed = input.run ? p.runSpeed : p.walkSpeed;
+    const maxSpeed = (input.run ? p.runSpeed : p.walkSpeed) * this.speedMul;
     const control = this.grounded ? 1 : p.airControl;
 
     // Aceleración hacia la velocidad horizontal objetivo (delta = objetivo - actual).
@@ -116,7 +123,7 @@ export class PlayerController {
     // --- Salto y gravedad ---
     this.timeSinceGrounded = this.grounded ? 0 : this.timeSinceGrounded + dt;
     if (input.jump && this.timeSinceGrounded <= p.coyoteTime && this.velocity.y <= 0.1) {
-      this.velocity.y = p.jumpSpeed;
+      this.velocity.y = p.jumpSpeed * this.jumpMul;
       this.timeSinceGrounded = 999;
       this.animator.triggerJump(); // respuesta visual (squash & stretch)
       this.onJump?.(); // game feel externo (audio, partículas) que orquesta Game
@@ -201,6 +208,21 @@ export class PlayerController {
   /** Umbral de caída del mundo actual (por debajo se reaparece). */
   setKillY(y: number): void {
     this.killY = y;
+  }
+
+  /** Aplica los efectos del gear equipado (botas → salto/velocidad; arma → espadazo). */
+  applyGear(config: AvatarConfig): void {
+    this.jumpMul = JUMP_MUL[config.boots];
+    this.speedMul = SPEED_MUL[config.boots];
+    this.hasWeapon = config.weapon !== 'none';
+  }
+
+  /** Intenta blandir el arma (solo si hay una equipada). */
+  swing(): void {
+    if (this.hasWeapon) {
+      this.animator.triggerSwing();
+      this.onSwing?.();
+    }
   }
 
   respawn(): void {
