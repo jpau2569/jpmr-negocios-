@@ -1,5 +1,8 @@
 import type { EventBus } from '../core/EventBus';
 import type { GameStateName, MissionInfo } from '../types';
+import {
+  type AvatarConfig, loadAvatar, TORSO_COLORS, LEG_COLORS, SKIN_COLORS, HATS,
+} from '../player/AvatarConfig';
 
 /**
  * Gestión de toda la UI HTML: pantallas (inicio, pausa, victoria, carga) y HUD.
@@ -10,6 +13,12 @@ export class UIManager {
   onPlay: (() => void) | null = null;
   onResume: (() => void) | null = null;
   onRestart: (() => void) | null = null;
+  /** Preview en vivo al cambiar una opción del avatar. */
+  onAvatarChange: ((config: AvatarConfig) => void) | null = null;
+  /** Al pulsar "Listo": persistir la configuración elegida. */
+  onAvatarDone: ((config: AvatarConfig) => void) | null = null;
+
+  private avatarConfig: AvatarConfig = loadAvatar();
 
   private screens: Record<string, HTMLElement>;
   private hud: HTMLElement;
@@ -50,6 +59,23 @@ export class UIManager {
     get('btn-resume').addEventListener('click', () => this.onResume?.());
     get('btn-restart').addEventListener('click', () => this.onRestart?.());
     get('btn-win-restart').addEventListener('click', () => this.onRestart?.());
+
+    // --- Personalizador ---
+    const screenCustomize = get('screen-customize');
+    const screenTitle = this.screens.title;
+    get('btn-customize').addEventListener('click', () => {
+      screenTitle.classList.add('hidden');
+      screenCustomize.classList.remove('hidden');
+    });
+    get('btn-customize-done').addEventListener('click', () => {
+      screenCustomize.classList.add('hidden');
+      screenTitle.classList.remove('hidden');
+      this.onAvatarDone?.(this.avatarConfig);
+    });
+    this.buildColorSwatches(get('cz-torso'), TORSO_COLORS, 'torso');
+    this.buildColorSwatches(get('cz-legs'), LEG_COLORS, 'legs');
+    this.buildColorSwatches(get('cz-skin'), SKIN_COLORS, 'skin');
+    this.buildHatButtons(get('cz-hats'));
 
     events.on('state-changed', ({ state }) => this.showState(state));
     events.on('coin-collected', ({ collected, total }) => {
@@ -109,6 +135,51 @@ export class UIManager {
 
   setWinBest(text: string): void {
     this.winBest.textContent = text;
+  }
+
+  /** Configuración de avatar cargada (para crear el jugador con ella). */
+  get avatar(): AvatarConfig {
+    return this.avatarConfig;
+  }
+
+  private buildColorSwatches(
+    container: HTMLElement,
+    colors: number[],
+    slot: 'torso' | 'legs' | 'skin',
+  ): void {
+    const buttons: HTMLButtonElement[] = [];
+    for (const color of colors) {
+      const btn = document.createElement('button');
+      btn.className = 'cz-swatch';
+      btn.style.background = '#' + color.toString(16).padStart(6, '0');
+      if (this.avatarConfig[slot] === color) btn.classList.add('sel');
+      btn.addEventListener('click', () => {
+        this.avatarConfig = { ...this.avatarConfig, [slot]: color };
+        for (const b of buttons) b.classList.remove('sel');
+        btn.classList.add('sel');
+        this.onAvatarChange?.(this.avatarConfig);
+      });
+      buttons.push(btn);
+      container.appendChild(btn);
+    }
+  }
+
+  private buildHatButtons(container: HTMLElement): void {
+    const buttons: HTMLButtonElement[] = [];
+    for (const { id, label } of HATS) {
+      const btn = document.createElement('button');
+      btn.className = 'cz-hat';
+      btn.textContent = label;
+      if (this.avatarConfig.hat === id) btn.classList.add('sel');
+      btn.addEventListener('click', () => {
+        this.avatarConfig = { ...this.avatarConfig, hat: id };
+        for (const b of buttons) b.classList.remove('sel');
+        btn.classList.add('sel');
+        this.onAvatarChange?.(this.avatarConfig);
+      });
+      buttons.push(btn);
+      container.appendChild(btn);
+    }
   }
 
   /** Muestra/oculta el aviso de portal cercano (null = ocultar). */

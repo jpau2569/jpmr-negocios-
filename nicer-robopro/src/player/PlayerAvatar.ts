@@ -1,10 +1,9 @@
 import * as THREE from 'three';
 import { PALETTE } from '../assets/palette';
-import { matte } from '../assets/materials';
+import { DEFAULT_AVATAR, type AvatarConfig, type HatId } from './AvatarConfig';
 
 /**
- * Partes articuladas del avatar que el animador rota/escala. Grupos con el
- * pivote en el hombro/cadera (brazos y piernas) y el tronco completo (body).
+ * Partes articuladas del avatar que el animador rota/escala.
  */
 export interface AvatarRig {
   body: THREE.Group;
@@ -15,34 +14,41 @@ export interface AvatarRig {
 }
 
 /**
- * Avatar por bloques (cabeza, torso, brazos, piernas): SOLO construcción del
- * rig y exposición de sus partes. Ninguna lógica de animación vive aquí — de eso
- * se encarga `AvatarAnimator`, de modo que el rig es reemplazable (p. ej. por un
- * modelo GLTF con esqueleto) sin tocar al controlador ni la animación.
+ * Avatar por bloques con COSMÉTICA aplicable en caliente. Construye el rig una
+ * vez y guarda sus materiales propios (torso+brazos, piernas, piel=cabeza+manos)
+ * para recolorear sin recrear la geometría ni invalidar las referencias del
+ * animador. El gorro vive en un slot sobre la cabeza que se reconstruye al
+ * cambiar. La lógica de animación sigue en `AvatarAnimator`.
  */
 export class PlayerAvatar {
   readonly group: THREE.Group;
   readonly parts: AvatarRig;
 
-  constructor() {
+  // Materiales propios (no cacheados) para poder recolorear este avatar aislado.
+  private torsoMat: THREE.MeshStandardMaterial;
+  private legMat: THREE.MeshStandardMaterial;
+  private skinMat: THREE.MeshStandardMaterial;
+  private hatSlot: THREE.Group;
+
+  constructor(config: AvatarConfig = DEFAULT_AVATAR) {
     this.group = new THREE.Group();
     const body = new THREE.Group();
     this.group.add(body);
 
-    const torsoMat = matte(PALETTE.playerTorso, 0.75);
-    const legMat = matte(PALETTE.playerLegs, 0.8);
-    const headMat = matte(PALETTE.playerHead, 0.7);
-    const faceMat = matte(PALETTE.playerFace, 0.6);
+    this.torsoMat = new THREE.MeshStandardMaterial({ color: config.torso, roughness: 0.75 });
+    this.legMat = new THREE.MeshStandardMaterial({ color: config.legs, roughness: 0.8 });
+    this.skinMat = new THREE.MeshStandardMaterial({ color: config.skin, roughness: 0.7 });
+    const faceMat = new THREE.MeshStandardMaterial({ color: PALETTE.playerFace, roughness: 0.6 });
 
-    // Torso: 0.7 x 0.65 x 0.4, con la base a la altura de la cadera (0.75)
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.65, 0.4), torsoMat);
+    // Torso
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.65, 0.4), this.torsoMat);
     torso.position.y = 0.75 + 0.325;
     body.add(torso);
 
-    // Cabeza con ojos y boca (bloques pequeños, sin texturas)
+    // Cabeza (piel) con ojos, boca (cara fija) y slot de gorro.
     const head = new THREE.Group();
     head.position.y = 0.75 + 0.65 + 0.28;
-    const skull = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.48, 0.45), headMat);
+    const skull = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.48, 0.45), this.skinMat);
     head.add(skull);
     const eyeGeo = new THREE.BoxGeometry(0.09, 0.11, 0.03);
     for (const side of [-1, 1]) {
@@ -53,16 +59,19 @@ export class PlayerAvatar {
     const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.03), faceMat);
     mouth.position.set(0, -0.12, 0.235);
     head.add(mouth);
+    this.hatSlot = new THREE.Group();
+    this.hatSlot.position.y = 0.26;
+    head.add(this.hatSlot);
     body.add(head);
 
-    // Extremidades: grupos con pivote en el hombro/cadera para rotarlas al andar.
-    const leftArm = this.makeLimb(0.22, 0.6, matte(PALETTE.playerArms, 0.75), matte(PALETTE.playerHands, 0.7));
+    // Extremidades (brazos usan piel en las manos; piernas, color de piernas).
+    const leftArm = this.makeLimb(0.22, 0.6, this.torsoMat, this.skinMat);
     leftArm.position.set(-0.47, 0.75 + 0.6, 0);
-    const rightArm = this.makeLimb(0.22, 0.6, matte(PALETTE.playerArms, 0.75), matte(PALETTE.playerHands, 0.7));
+    const rightArm = this.makeLimb(0.22, 0.6, this.torsoMat, this.skinMat);
     rightArm.position.set(0.47, 0.75 + 0.6, 0);
-    const leftLeg = this.makeLimb(0.28, 0.75, legMat);
+    const leftLeg = this.makeLimb(0.28, 0.75, this.legMat);
     leftLeg.position.set(-0.19, 0.75, 0);
-    const rightLeg = this.makeLimb(0.28, 0.75, legMat);
+    const rightLeg = this.makeLimb(0.28, 0.75, this.legMat);
     rightLeg.position.set(0.19, 0.75, 0);
     body.add(leftArm, rightArm, leftLeg, rightLeg);
 
@@ -71,9 +80,9 @@ export class PlayerAvatar {
     });
 
     this.parts = { body, leftArm, rightArm, leftLeg, rightLeg };
+    this.buildHat(config.hat);
   }
 
-  /** Extremidad con pivote arriba; opcionalmente con "mano" de otro color en la punta. */
   private makeLimb(
     width: number,
     length: number,
@@ -90,5 +99,57 @@ export class PlayerAvatar {
       pivot.add(tip);
     }
     return pivot;
+  }
+
+  /** Aplica una configuración cosmética en caliente (recolorea + reconstruye gorro). */
+  applyConfig(config: AvatarConfig): void {
+    this.torsoMat.color.setHex(config.torso);
+    this.legMat.color.setHex(config.legs);
+    this.skinMat.color.setHex(config.skin);
+    this.buildHat(config.hat);
+  }
+
+  private buildHat(hat: HatId): void {
+    // Limpia el gorro anterior liberando su geometría.
+    for (const child of [...this.hatSlot.children]) {
+      if (child instanceof THREE.Mesh) child.geometry.dispose();
+    }
+    this.hatSlot.clear();
+    if (hat === 'none') return;
+
+    const add = (mesh: THREE.Mesh, y: number) => {
+      mesh.position.y = y;
+      mesh.castShadow = true;
+      this.hatSlot.add(mesh);
+    };
+
+    if (hat === 'cap') {
+      const mat = new THREE.MeshStandardMaterial({ color: 0xd94f4f, roughness: 0.6 });
+      add(new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.16, 0.44), mat), 0.08);
+      const brim = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.3), mat);
+      brim.position.set(0, 0.02, 0.34);
+      brim.castShadow = true;
+      this.hatSlot.add(brim);
+    } else if (hat === 'crown') {
+      const mat = new THREE.MeshStandardMaterial({
+        color: PALETTE.coin, emissive: PALETTE.coinEmissive, emissiveIntensity: 0.6, roughness: 0.3, metalness: 0.6,
+      });
+      add(new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.16, 12, 1, true), mat), 0.1);
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.14, 6), mat);
+        spike.position.set(Math.cos(a) * 0.26, 0.22, Math.sin(a) * 0.26);
+        spike.castShadow = true;
+        this.hatSlot.add(spike);
+      }
+    } else if (hat === 'party') {
+      const mat = new THREE.MeshStandardMaterial({ color: 0xe86fa8, roughness: 0.5 });
+      add(new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.5, 14), mat), 0.28);
+      const pom = new THREE.Mesh(
+        new THREE.SphereGeometry(0.07, 10, 10),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }),
+      );
+      add(pom, 0.54);
+    }
   }
 }

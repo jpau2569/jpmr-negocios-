@@ -4,6 +4,7 @@ import { CONFIG } from '../core/Config';
 import type { InputFrame, AvatarAnimState } from '../types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { AvatarAnimator } from './AvatarAnimator';
+import type { AvatarConfig } from './AvatarConfig';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 
 /**
@@ -46,7 +47,7 @@ export class PlayerController {
   private scratchRight = new THREE.Vector3();
   private scratchDelta = new THREE.Vector3();
 
-  constructor(physics: PhysicsWorld) {
+  constructor(physics: PhysicsWorld, avatarConfig?: AvatarConfig) {
     const p = CONFIG.player;
     const R = physics.rapier;
 
@@ -67,7 +68,7 @@ export class PlayerController {
     this.controller.setMinSlopeSlideAngle((55 * Math.PI) / 180);
     this.controller.setApplyImpulsesToDynamicBodies(true);
 
-    this.avatar = new PlayerAvatar();
+    this.avatar = new PlayerAvatar(avatarConfig);
     this.animator = new AvatarAnimator(this.avatar.parts);
     this.avatar.group.rotation.y = this.targetHeading;
 

@@ -6,6 +6,7 @@ import { CameraRig } from '../engine/CameraRig';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { InputManager } from '../player/InputManager';
 import { PlayerController } from '../player/PlayerController';
+import { saveAvatar } from '../player/AvatarConfig';
 import { setupEnvironment } from '../world/Environment';
 import { Lobby } from '../world/Lobby';
 import { WORLDS, START_WORLD, type LevelDefinition } from '../world/LevelData';
@@ -68,7 +69,7 @@ export class Game {
     this.cameraRig = new CameraRig(this.physics.world, this.physics.rapier);
     setupEnvironment(this.scene, this.renderer.renderer);
 
-    this.player = new PlayerController(this.physics);
+    this.player = new PlayerController(this.physics, this.ui.avatar);
     this.scene.add(this.player.avatar.group);
     this.scene.add(this.particles.points);
     this.scene.add(this.ringFx.group);
@@ -178,6 +179,9 @@ export class Game {
     this.ui.onPlay = () => this.startPlaying();
     this.ui.onResume = () => this.startPlaying();
     this.ui.onRestart = () => this.restart();
+    // Personalizador: preview en vivo sobre el avatar + persistencia al confirmar.
+    this.ui.onAvatarChange = (cfg) => this.player.avatar.applyConfig(cfg);
+    this.ui.onAvatarDone = (cfg) => saveAvatar(cfg);
 
     // Perder el pointer lock (Esc del navegador) equivale a pausar.
     this.input.onPointerLockLost = () => {

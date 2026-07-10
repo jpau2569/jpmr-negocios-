@@ -64,6 +64,11 @@ Rama de trabajo: `claude/nicer-robopro-mvp-el56jp`. Commits clave:
   FogExp2 sutil, e IBL suave (`RoomEnvironment` vía PMREM, `environmentIntensity` 0.35).
   ¡OJO! subir emisivos <1 o bajar el umbral <1 relava toda la escena.
 - El avatar mira hacia +Z local (la cara está en z positivo); heading = atan2(wish.x, wish.z).
+- **Personalización de avatar** (`player/AvatarConfig.ts`): `AvatarConfig` plano (torso, legs,
+  skin, hat) persistido en `localStorage` (`nicer-robopro:avatar-v1`). `PlayerAvatar` tiene
+  materiales propios recoloreables + slot de gorro; `applyConfig()` aplica en caliente.
+  Pantalla "Personalizar" en el título (swatches + gorros) con preview en vivo. Semilla del
+  perfil online. PENDIENTE de pulido: encuadre de cámara para ver el avatar mientras se edita.
 - **Animación desacoplada**: `PlayerAvatar` = solo el rig (meshes + `parts`); `AvatarAnimator`
   = lógica de poses driven por `AvatarAnimState` (idle/walk/run/air). El estado de locomoción
   lo calcula `PlayerController.animState` UNA vez y alimenta animación y red por igual. Para
