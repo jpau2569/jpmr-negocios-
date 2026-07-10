@@ -39,7 +39,8 @@ export class PlayerController {
 
   private targetHeading = Math.PI; // de espaldas a la cámara inicial (mirando a la plaza)
   private animTime = 0;
-  private spawn = { ...CONFIG.player.spawn }; // punto de reaparición (lo fija cada mundo)
+  private spawn = { ...CONFIG.player.spawn }; // punto de reaparición (lo fija cada mundo/checkpoint)
+  private killY = CONFIG.player.killPlaneY; // altura de caída (la fija cada mundo)
 
   // Scratch reutilizables: fixedUpdate corre 60 veces/s y no debe alocar.
   private scratchWish = new THREE.Vector3();
@@ -150,8 +151,8 @@ export class PlayerController {
     // Orientación del avatar hacia la dirección de movimiento.
     if (inputLen > 0) this.targetHeading = Math.atan2(wish.x, wish.z);
 
-    // Kill plane → respawn.
-    if (next.y < p.killPlaneY) this.respawn();
+    // Caída bajo el umbral → reaparecer (en el mundo o en el último checkpoint).
+    if (next.y < this.killY) this.respawn();
   }
 
   /** Interpola el visual entre el paso físico anterior y el actual. */
@@ -190,6 +191,16 @@ export class PlayerController {
   setSpawn(x: number, y: number, z: number): void {
     this.spawn = { x, y, z };
     this.respawn();
+  }
+
+  /** Actualiza el punto de reaparición SIN teletransportar (checkpoints de obby). */
+  setRespawnPoint(x: number, y: number, z: number): void {
+    this.spawn = { x, y, z };
+  }
+
+  /** Umbral de caída del mundo actual (por debajo se reaparece). */
+  setKillY(y: number): void {
+    this.killY = y;
   }
 
   respawn(): void {

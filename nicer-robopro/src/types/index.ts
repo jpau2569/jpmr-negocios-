@@ -28,6 +28,8 @@ export interface GameEvents {
   'all-coins-collected': { timeSeconds: number };
   'missions-updated': { missions: MissionInfo[] };
   'mission-completed': { id: string; title: string };
+  'checkpoint-reached': { index: number };
+  'coins-changed': { coins: number };
 }
 
 /** Snapshot del input de un frame, ya normalizado. */

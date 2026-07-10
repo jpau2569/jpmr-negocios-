@@ -24,12 +24,14 @@ export class Lobby {
 
   constructor(private physics: PhysicsWorld, level: LevelDefinition) {
     this.portals = level.portals;
-    this.buildGround();
-    this.buildPlaza();
+    if (!level.noGround) this.buildGround();
+    if (level.centerPlaza) this.buildPlaza();
     this.buildPlatforms(level);
     if (level.tower) this.buildTower(level.tower);
-    this.buildTrees();
+    if (!level.noGround) this.buildTrees();
     this.buildPortals(level.portals);
+    if (level.checkpoints) this.buildCheckpoints(level.checkpoints);
+    if (level.finish) this.buildFinish(level.finish);
   }
 
   /** Retira colliders del mundo físico y libera geometrías. */
@@ -209,5 +211,42 @@ export class Lobby {
 
       this.group.add(arch);
     }
+  }
+
+  /** Banderines de checkpoint (poste + bandera teal). No sólidos. */
+  private buildCheckpoints(checkpoints: import('./LevelData').Vec3[]): void {
+    for (const [x, y, z] of checkpoints) {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.6, 8), matte(PALETTE.stone));
+      pole.position.set(x, y + 0.8, z);
+      pole.castShadow = true;
+      this.group.add(pole);
+      const flag = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 0.4, 0.05),
+        new THREE.MeshStandardMaterial({ color: PALETTE.brickTeal, emissive: PALETTE.brickTeal, emissiveIntensity: 0.4 }),
+      );
+      flag.position.set(x + 0.33, y + 1.35, z);
+      flag.castShadow = true;
+      this.group.add(flag);
+    }
+  }
+
+  /** Arco de meta dorado y brillante (florece con el bloom). No sólido. */
+  private buildFinish(finish: import('./LevelData').Vec3): void {
+    const [fx, fy, fz] = finish;
+    const arch = new THREE.Group();
+    arch.position.set(fx, fy - 1.5, fz);
+    const mat = new THREE.MeshStandardMaterial({
+      color: PALETTE.coin, emissive: PALETTE.coinEmissive, emissiveIntensity: 2, roughness: 0.3, metalness: 0.6,
+    });
+    for (const side of [-1, 1]) {
+      const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3, 0.4), mat);
+      pillar.position.set(side * 1.6, 1.5, 0);
+      pillar.castShadow = true;
+      arch.add(pillar);
+    }
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(3.9, 0.4, 0.4), mat);
+    bar.position.set(0, 3.2, 0);
+    arch.add(bar);
+    this.group.add(arch);
   }
 }

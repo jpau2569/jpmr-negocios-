@@ -84,11 +84,9 @@ export class UIManager {
       this.coinCount.parentElement?.classList.toggle('hidden', total === 0);
       if (collected > 0) this.pulseCoins();
     });
-    events.on('all-coins-collected', ({ timeSeconds }) => {
-      this.winTime.textContent = formatTime(timeSeconds);
-    });
     events.on('missions-updated', ({ missions }) => this.renderMissions(missions));
     events.on('mission-completed', ({ title }) => this.showToast(`✔ ${title}`));
+    events.on('checkpoint-reached', () => this.showToast('🚩 ¡Checkpoint!'));
   }
 
   private renderMissions(missions: MissionInfo[]): void {
@@ -131,6 +129,10 @@ export class UIManager {
       statBlock(String(trophies), 'trofeos'),
       statBlock(bestTime === null ? '—' : formatTime(bestTime), 'mejor tiempo'),
     );
+  }
+
+  setWinTime(seconds: number): void {
+    this.winTime.textContent = formatTime(seconds);
   }
 
   setWinBest(text: string): void {

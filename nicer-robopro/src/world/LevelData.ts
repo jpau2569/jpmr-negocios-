@@ -57,6 +57,16 @@ export interface LevelDefinition {
   zones: ZoneDef[];
   portals: PortalDef[];
   tower?: TowerDef;
+  /** Plaza central decorativa (hub y parque social). */
+  centerPlaza?: boolean;
+  /** Checkpoints de obby: al tocarlos se actualiza el punto de reaparición. */
+  checkpoints?: Vec3[];
+  /** Meta del obby: al alcanzarla se completa el mundo (con tiempo/récord). */
+  finish?: Vec3;
+  /** Sin suelo (mundos flotantes tipo obby: caerse cuenta). */
+  noGround?: boolean;
+  /** Altura por debajo de la cual se reaparece (obby: justo bajo las plataformas). */
+  killY?: number;
 }
 
 // --- HUB: lobby social central. Sin monedas ni misiones; solo portales. ---
@@ -64,12 +74,14 @@ const HUB: LevelDefinition = {
   id: 'hub',
   name: 'Plaza Central',
   spawn: [0, 3, 0],
+  centerPlaza: true,
   platforms: [],
   coins: [],
   zones: [],
   portals: [
     { pos: [-9, 0.9, -6], target: 'plaza', label: 'Parque', color: PALETTE.brickRed },
     { pos: [9, 0.9, -6], target: 'islas', label: 'Islas', color: PALETTE.brickTeal },
+    { pos: [0, 0.9, -9], target: 'obby', label: 'Obby', color: PALETTE.brickYellow },
   ],
 };
 
@@ -78,6 +90,7 @@ const PLAZA: LevelDefinition = {
   id: 'plaza',
   name: 'Parque',
   spawn: [0, 3, 8],
+  centerPlaza: true,
   platforms: [
     // Zona norte (-Z): escalones rojos hacia una isla flotante.
     { size: [5, 1, 5], pos: [0, 0.5, -16], color: PALETTE.brickRed },
@@ -134,6 +147,32 @@ const ISLAS: LevelDefinition = {
   portals: [{ pos: [0, 1.4, 11], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
 };
 
+// --- OBBY: circuito de parkour flotante con checkpoints y meta. ---
+const OBBY: LevelDefinition = {
+  id: 'obby',
+  name: 'Obby',
+  spawn: [0, 3, 12],
+  noGround: true, // flotante: caerse reaparece en el último checkpoint
+  killY: -3,
+  platforms: [
+    { size: [6, 1, 6], pos: [0, 0.5, 12], color: PALETTE.brickTeal }, // inicio
+    { size: [3, 1, 3], pos: [0, 1, 5], color: PALETTE.brickYellow },
+    { size: [2.6, 1, 2.6], pos: [5, 1.6, 1], color: PALETTE.brickBlue },
+    { size: [2.6, 1, 2.6], pos: [5, 2.4, -5], color: PALETTE.brickRed }, // checkpoint 1
+    { size: [2.6, 1, 2.6], pos: [0, 3.2, -9], color: PALETTE.brickPurple },
+    { size: [2.6, 1, 2.6], pos: [-5, 4, -13], color: PALETTE.brickYellow },
+    { size: [2.6, 1, 2.6], pos: [-5, 4.8, -19], color: PALETTE.brickRed }, // checkpoint 2
+    { size: [2.6, 1, 2.6], pos: [0, 5.6, -23], color: PALETTE.brickBlue },
+    { size: [2.6, 1, 2.6], pos: [5, 6.4, -27], color: PALETTE.brickPurple },
+    { size: [6, 1, 6], pos: [0, 7, -33], color: PALETTE.brickTeal }, // meta
+  ],
+  coins: [],
+  zones: [],
+  checkpoints: [[5, 2.9, -5], [-5, 5.3, -19]],
+  finish: [0, 7.5, -33],
+  portals: [{ pos: [-3, 0.9, 13], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
+};
+
 /** Registro de mundos y mundo inicial. */
-export const WORLDS: Record<string, LevelDefinition> = { hub: HUB, plaza: PLAZA, islas: ISLAS };
+export const WORLDS: Record<string, LevelDefinition> = { hub: HUB, plaza: PLAZA, islas: ISLAS, obby: OBBY };
 export const START_WORLD = 'hub';

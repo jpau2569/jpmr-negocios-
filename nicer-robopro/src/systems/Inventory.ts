@@ -1,30 +1,32 @@
 import type { EventBus } from '../core/EventBus';
 
 /**
- * Inventario/progreso local persistido en localStorage: monedas totales
- * acumuladas entre partidas, trofeos de misiones y mejor tiempo.
- * Es la semilla del futuro perfil de jugador online (Fase 4): el mismo
- * shape de datos podrá vivir en el servidor.
+ * Progreso local persistido en localStorage: saldo de monedas (gastable en la
+ * tienda), mejores tiempos por mundo, trofeos de misiones y cosméticos
+ * desbloqueados. Es la semilla del futuro perfil online: el mismo shape podrá
+ * vivir en el servidor.
  */
 export interface SaveData {
-  totalCoins: number;
-  bestTimeSeconds: number | null;
+  coins: number; // saldo gastable
+  bestTimes: Record<string, number>; // worldId → mejor tiempo (s)
   trophies: string[];
+  unlocked: string[]; // ids de cosméticos comprados
 }
 
 const STORAGE_KEY = 'nicer-robopro:save-v1';
 
 export class Inventory {
-  private data: SaveData = { totalCoins: 0, bestTimeSeconds: null, trophies: [] };
+  private data: SaveData = { coins: 0, bestTimes: {}, trophies: [], unlocked: [] };
 
-  constructor(events: EventBus) {
+  constructor(private events: EventBus) {
     this.load();
 
     events.on('coin-collected', ({ collected }) => {
+      // Solo las recogidas reales (collected>0) suman; los resets emiten 0.
       if (collected > 0) {
-        // Cada evento real de recogida es exactamente una moneda (los resets emiten collected=0).
-        this.data.totalCoins++;
+        this.data.coins++;
         this.save();
+        this.emitCoins();
       }
     });
 
@@ -34,42 +36,78 @@ export class Inventory {
         this.save();
       }
     });
-
-    events.on('all-coins-collected', ({ timeSeconds }) => {
-      if (this.data.bestTimeSeconds === null || timeSeconds < this.data.bestTimeSeconds) {
-        this.data.bestTimeSeconds = timeSeconds;
-        this.save();
-      }
-    });
   }
 
-  get totalCoins(): number {
-    return this.data.totalCoins;
+  get coins(): number {
+    return this.data.coins;
   }
 
   get trophyCount(): number {
     return this.data.trophies.length;
   }
 
+  /** Mejor tiempo global (mínimo entre mundos) para la pantalla de pausa. */
   get bestTimeSeconds(): number | null {
-    return this.data.bestTimeSeconds;
+    const times = Object.values(this.data.bestTimes);
+    return times.length ? Math.min(...times) : null;
   }
 
-  /** ¿Es este tiempo el récord guardado? (para celebrarlo en la UI) */
-  isBestTime(timeSeconds: number): boolean {
-    return this.data.bestTimeSeconds !== null && timeSeconds <= this.data.bestTimeSeconds;
+  getBestTime(worldId: string): number | null {
+    return this.data.bestTimes[worldId] ?? null;
+  }
+
+  /** Registra un tiempo; devuelve true si es nuevo récord del mundo. */
+  recordBestTime(worldId: string, seconds: number): boolean {
+    const prev = this.data.bestTimes[worldId];
+    if (prev === undefined || seconds < prev) {
+      this.data.bestTimes[worldId] = seconds;
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  // --- Tienda ---
+  canAfford(price: number): boolean {
+    return this.data.coins >= price;
+  }
+
+  /** Gasta monedas si hay saldo; devuelve true si se realizó la compra. */
+  spend(price: number): boolean {
+    if (this.data.coins < price) return false;
+    this.data.coins -= price;
+    this.save();
+    this.emitCoins();
+    return true;
+  }
+
+  isUnlocked(id: string): boolean {
+    return this.data.unlocked.includes(id);
+  }
+
+  unlock(id: string): void {
+    if (!this.data.unlocked.includes(id)) {
+      this.data.unlocked.push(id);
+      this.save();
+    }
+  }
+
+  /** Reemite el saldo como evento de moneda para refrescar HUD/tienda. */
+  private emitCoins(): void {
+    this.events.emit('coins-changed', { coins: this.data.coins });
   }
 
   private load(): void {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as Partial<SaveData>;
+        const p = JSON.parse(raw) as Partial<SaveData> & { totalCoins?: number };
         this.data = {
-          totalCoins: typeof parsed.totalCoins === 'number' ? parsed.totalCoins : 0,
-          bestTimeSeconds:
-            typeof parsed.bestTimeSeconds === 'number' ? parsed.bestTimeSeconds : null,
-          trophies: Array.isArray(parsed.trophies) ? parsed.trophies.filter((t) => typeof t === 'string') : [],
+          // Migración: saves antiguos guardaban `totalCoins`.
+          coins: typeof p.coins === 'number' ? p.coins : typeof p.totalCoins === 'number' ? p.totalCoins : 0,
+          bestTimes: p.bestTimes && typeof p.bestTimes === 'object' ? p.bestTimes : {},
+          trophies: Array.isArray(p.trophies) ? p.trophies.filter((t) => typeof t === 'string') : [],
+          unlocked: Array.isArray(p.unlocked) ? p.unlocked.filter((t) => typeof t === 'string') : [],
         };
       }
     } catch {

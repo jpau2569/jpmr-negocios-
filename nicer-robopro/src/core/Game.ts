@@ -45,6 +45,7 @@ export class Game {
   private currentLevel!: LevelDefinition;
   private currentLobby: Lobby | null = null;
   private portalCooldown = 0; // evita re-disparar el portal justo al llegar
+  private reachedCheckpoints = new Set<number>(); // checkpoints del obby ya tocados
   private audio = new AudioSystem();
   private particles = new ParticleSystem();
   private ringFx = new RingFx();
@@ -141,12 +142,49 @@ export class Game {
     // Refresca el contador del HUD al conteo del nuevo mundo (0 = se oculta).
     this.events.emit('coin-collected', { collected: 0, total: this.coins.total });
 
+    this.player.setKillY(level.killY ?? CONFIG.player.killPlaneY);
     this.player.setSpawn(level.spawn[0], level.spawn[1], level.spawn[2]);
+    this.reachedCheckpoints.clear();
     this.elapsed = 0;
     this.snapshotTimer = 0;
     this.portalCooldown = 0.8; // gracia para no re-disparar el portal al aparecer
     this.ui.updateTimer(0);
     this.ui.setPortalPrompt(null);
+  }
+
+  /** Completa el mundo actual (recoger todo o llegar a meta): récord + victoria. */
+  private completeWorld(timeSeconds: number): void {
+    const isRecord = this.inventory.recordBestTime(this.currentLevel.id, timeSeconds);
+    this.audio.win();
+    this.ui.setWinTime(timeSeconds);
+    const best = this.inventory.getBestTime(this.currentLevel.id);
+    this.ui.setWinBest(
+      isRecord ? '¡Nuevo récord!' : best !== null ? `Mejor tiempo: ${formatTime(best)}` : '',
+    );
+    this.machine.transition('won');
+  }
+
+  /** Obby: checkpoints (actualizan reaparición) y meta (completa el mundo). */
+  private checkObbyProgress(): void {
+    const level = this.currentLevel;
+    const p = this.player.visualPos;
+    if (level.checkpoints) {
+      for (let i = 0; i < level.checkpoints.length; i++) {
+        if (this.reachedCheckpoints.has(i)) continue;
+        const [cx, cy, cz] = level.checkpoints[i];
+        if ((p.x - cx) ** 2 + (p.z - cz) ** 2 < 4 && Math.abs(p.y - cy) < 2) {
+          this.reachedCheckpoints.add(i);
+          this.player.setRespawnPoint(cx, cy + 0.6, cz);
+          this.events.emit('checkpoint-reached', { index: i });
+        }
+      }
+    }
+    if (level.finish) {
+      const [fx, fy, fz] = level.finish;
+      if ((p.x - fx) ** 2 + (p.z - fz) ** 2 < 6.25 && Math.abs(p.y - fy) < 2.5) {
+        this.completeWorld(this.elapsed);
+      }
+    }
   }
 
   /**
@@ -195,13 +233,13 @@ export class Game {
       else if (this.machine.is('paused')) this.startPlaying();
     });
 
-    this.events.on('all-coins-collected', () => this.machine.transition('won'));
+    this.events.on('all-coins-collected', ({ timeSeconds }) => this.completeWorld(timeSeconds));
 
     // Estadísticas del inventario al entrar en pausa o victoria.
     this.events.on('state-changed', ({ state }) => {
       if (state === 'paused' || state === 'won') {
         this.ui.setStats(
-          this.inventory.totalCoins,
+          this.inventory.coins,
           this.inventory.trophyCount,
           this.inventory.bestTimeSeconds,
         );
@@ -243,14 +281,7 @@ export class Game {
     });
 
     this.events.on('mission-completed', () => this.audio.missionComplete());
-    this.events.on('all-coins-collected', ({ timeSeconds }) => {
-      this.audio.win();
-      this.ui.setWinBest(
-        this.inventory.isBestTime(timeSeconds)
-          ? '¡Nuevo récord personal!'
-          : `Mejor tiempo: ${formatTime(this.inventory.bestTimeSeconds ?? timeSeconds)}`,
-      );
-    });
+    this.events.on('checkpoint-reached', () => this.audio.missionComplete());
   }
 
   private startPlaying(): void {
@@ -297,6 +328,7 @@ export class Game {
     this.particles.update(dt);
     this.ringFx.update(dt, this.cameraRig.camera);
     this.missions.update(this.player.visualPos);
+    this.checkObbyProgress();
 
     // Publica el estado local a ~10 Hz por la capa de red (loopback en Fase 1).
     this.snapshotTimer += dt;
