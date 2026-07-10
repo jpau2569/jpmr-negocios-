@@ -41,6 +41,13 @@ Rama de trabajo: `claude/nicer-robopro-mvp-el56jp`. Commits clave:
   snap-to-ground 0.4, gravedad manual, kill-plane y=-25 con respawn.
 - **EventBus tipado** (`core/EventBus.ts` + eventos en `types/index.ts`): juego y UI no se
   conocen; TODO acoplamiento cruzado va por eventos. Pensado para sustituirse por red.
+- **Máquina de estados explícita** (`core/StateMachine.ts`): solo el estado activo recibe
+  `update(dt)`. 'playing' delega en `Game.simulate()`. Estados triviales son literales;
+  los pesados del Sprint 2 (racing/build) deben ser su propio módulo que implemente `GameState`.
+- **Niveles dirigidos por datos** (`world/LevelData.ts`): plataformas, monedas, zonas y torre
+  en una `LevelDefinition` plana serializable — única fuente de verdad. `Lobby` construye
+  geometría de gameplay desde ahí (lo decorativo sigue procedural); `CoinSystem` y
+  `MissionSystem` la consumen. Base del futuro editor de mapas y de replicar nivel por red.
 - **Tuning centralizado** en `core/Config.ts`; **paleta única** en `assets/palette.ts`;
   materiales cacheados por color en `assets/materials.ts`.
 - **Capa de red abstracta** en `net/NetworkAdapter.ts`: el juego ya publica
@@ -66,8 +73,8 @@ docs/online-design.md (diseño Fase 4)
   ignorar ese caso (Inventory y el pulso del HUD ya lo hacen).
 - El orden de suscripción al EventBus importa: Inventory se suscribe antes que los
   handlers de `wireGameFeel` para que récords/trofeos estén frescos al leerlos.
-- Los coinSpots y las zonas de misiones están acoplados a la geometría de `Lobby.ts`
-  (ZONES en MissionSystem debe coincidir con las 4 zonas del lobby; torre en (-20, 2) top y≈8.2).
+- (RESUELTO) El acoplamiento de coinSpots/zonas con la geometría se eliminó: ahora todo
+  vive en `world/LevelData.ts`. Editar el nivel = editar esos datos.
 - En headless/SwiftShader el juego va a pocos FPS y el clamp de dt (0.1 s) ralentiza el
   tiempo de juego — no es un bug; en GPU real va fluido.
 - Verificación: script Playwright con chromium de `/opt/pw-browsers` (import
