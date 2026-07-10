@@ -10,29 +10,45 @@ NO un clon de Roblox). MVP premium offline jugable en navegador. Vive en el
 subdirectorio `nicer-robopro/` de este repo (la raíz contiene otra app, LimpiaFotos —
 no tocarla).
 
-## Estado actual (2026-07-10)
+## Estado actual (2026-07-10) — PUNTO DE CONTINUACIÓN
 
-**Fases 0–3 del plan de ejecución COMPLETADAS y verificadas. Fase 4 diseñada.
-Los 6 Bloques de la lista de tareas están CERRADOS** (incluida la limpieza de
-código —hot paths sin allocations— y la documentación del sprint siguiente en
-`docs/sprint-02.md`).
+**Juego "estilo Roblox" muy avanzado y jugable.** MVP + todos los pilares y bloques
+pedidos por el usuario (A–H) COMPLETADOS y verificados uno a uno en navegador.
+Rama de trabajo: `claude/nicer-robopro-mvp-el56jp` (todo pusheado).
 
-Rama de trabajo: `claude/nicer-robopro-mvp-el56jp`. Commits clave:
-- `3de52e0` — Fases 0–1: MVP jugable (lobby, jugador, cámara, físicas, monedas, HUD, pausa, win)
-- `738bb1d` — Fases 2–3: game feel (audio, partículas, squash & stretch, transiciones) +
-  sistemas (misiones, inventario persistente, capa de red abstracta) + diseño online
-- (último) — Limpieza: scratch vectors en CameraRig/PlayerController (cero allocations
-  por frame en caminos calientes) + plan del Sprint 2
+### Qué hay ahora (todo verificado en Chromium headless con Playwright)
+- **Hub con 7 mundos por portales** (arco de 6 portales): Parque, Islas, Obby, Cielo,
+  Desafío, Carrera (+ el hub). Carga/descarga en caliente (`Game.loadWorld`).
+- **Jugador**: WASD relativo a cámara, salto (coyote), correr, cámara 3ª persona suave.
+- **Personalización + tienda** (pantalla "Personalizar", scrollable, con preview en vivo
+  de cámara): colores (camiseta/piernas/piel), 7 gorros, **5 cabezas de animal**
+  (dragón/cocodrilo/león/oso/dino), **pelo y ropa militar**, **botas** (salto/velocidad),
+  **espada** y **4 pistolas de agua**. Todo con precios y candado; se compra con monedas.
+- **Pistolas de agua**: disparas (clic) y derribas monedas; **cargadores** (compra 75,
+  gratis cada 100 monedas); depósito + puntos en HUD.
+- **Monedas premium** (gemas), **regalos sorpresa**, **power-ups** (imán, doble salto),
+  **enemigos slime** (espada/agua), **medallas** de carrera + **ranking**, y el **rival
+  "Iyan"** que compite en carrera/obby/desafío.
+- **Progresión persistida** (`localStorage` `nicer-robopro:save-v1`): monedas, cargadores,
+  mejores tiempos por mundo, trofeos, desbloqueos. Avatar en `nicer-robopro:avatar-v1`.
+- Sin errores de consola; build limpio (`npm run build` = tsc + vite).
 
-### Qué funciona (verificado en Chromium headless con Playwright)
-- Pantalla de inicio → Jugar → pointer lock → lobby 3D con HUD
-- Movimiento WASD relativo a cámara, salto (coyote time), correr con Shift
-- 12 monedas con pickup por proximidad; win screen al recogerlas todas, con tiempo
-- Misiones: recoger monedas / visitar 4 zonas / subir a la torre + toasts
-- Pausa (Esc, con fallback sin pointer lock) con stats de inventario
-- Inventario persistente en localStorage (`nicer-robopro:save-v1`): monedas totales,
-  trofeos, mejor tiempo
-- Sin errores de consola; build limpio (`npm run build` = tsc + vite)
+### Historial de bloques (todos hechos, cada uno su commit)
+Fases 0–3 (MVP) → Fases 2–3 (game feel + sistemas) → refactors (LevelData, StateMachine,
+AvatarAnimator) → pulido premium (bloom/IBL/niebla) → Pilares 1–4 (hub/mundos,
+personalización, obby, tienda) → A: pistolas de agua → B: cargadores → C: cabezas
+animal/militar → D: monedas premium/regalos → E: power-ups → F: combate → G: carreras/
+ranking → H: rival Iyan. Ver `git log` para los hashes.
+
+### PENDIENTE (próximo día)
+- **Multijugador real (jugar con amigos online)**: es el único que falta. Necesita
+  desplegar un servidor Node + Colyseus (no se activa solo en el navegador). El seam ya
+  existe: `net/NetworkAdapter` + `LocalNetworkAdapter`; diseño en `docs/online-design.md`
+  y `docs/scaling-proposal.md`. Pasos: extraer sim pura → InputCommand con seq →
+  ColyseusAdapter + LobbyRoom → avatares remotos interpolados (reutilizar `PlayerAvatar` +
+  `AvatarAnimator`, ya usados por `RivalRacer`).
+- Ideas de pulido: ajustar dificultad de Iyan (velocidad = longitud_ruta / tiempo_oro),
+  más mundos/gorros, sonido de ambiente, controles táctiles móviles.
 
 ## Arquitectura (decisiones clave — NO romper)
 
