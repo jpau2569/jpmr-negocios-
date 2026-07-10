@@ -1,13 +1,16 @@
 import * as THREE from 'three';
 import { CONFIG } from '../core/Config';
 import { PALETTE } from '../assets/palette';
+import { createSky } from './Sky';
 
 /**
- * Atmósfera del mundo: cielo, niebla ligera e iluminación suave
+ * Atmósfera del mundo: cielo con degradado, niebla ligera e iluminación suave
  * (hemisférica para el relleno + direccional cálida con sombras).
  */
 export function setupEnvironment(scene: THREE.Scene): void {
+  // Cúpula con degradado; el color de fondo queda como fallback bajo ella.
   scene.background = new THREE.Color(PALETTE.sky);
+  scene.add(createSky());
   scene.fog = new THREE.Fog(CONFIG.world.fogColor, CONFIG.world.fogNear, CONFIG.world.fogFar);
 
   const hemi = new THREE.HemisphereLight(PALETTE.ambientSky, PALETTE.ambientGround, 0.8);

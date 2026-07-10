@@ -4,7 +4,8 @@
  * Todo el color del mundo sale de aquí para mantener coherencia visual.
  */
 export const PALETTE = {
-  sky: 0xa8d8ef,
+  sky: 0xa8d8ef, // horizonte (parte baja del degradado)
+  skyTop: 0x4f97d6, // cenit (parte alta, azul más saturado)
   fog: 0xcfe6f2,
   sunlight: 0xfff3dd,
   ambientSky: 0xbfd9e8,
