@@ -1,28 +1,45 @@
 import * as THREE from 'three';
+import type RAPIER from '@dimforge/rapier3d-compat';
 import { CONFIG } from '../core/Config';
 import { PALETTE } from '../assets/palette';
 import { matte } from '../assets/materials';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
-import type { LevelDefinition, TowerDef } from './LevelData';
+import type { LevelDefinition, TowerDef, PortalDef } from './LevelData';
 
 /**
- * Construcción del lobby a partir de una `LevelDefinition`:
- * - geometría de gameplay (plataformas, torre) leída de datos → `LevelData`
- * - geometría decorativa/procedural (suelo, plaza, árboles) generada aquí
+ * Construye un mundo a partir de una `LevelDefinition`:
+ * - geometría de gameplay (plataformas, torre opcional) leída de datos
+ * - geometría decorativa/procedural (suelo, plaza, árboles)
+ * - portales visuales a otros mundos (arcos que brillan)
  *
- * Cada pieza sólida registra su collider estático en el mundo físico. Las
- * posiciones de moneda y las zonas de misión ya NO viven aquí: son datos del
- * nivel que consumen directamente CoinSystem y MissionSystem.
+ * Es DESCARGABLE: `dispose()` retira todos los colliders del mundo físico y
+ * libera las geometrías, de modo que el hub puede cargar y descargar mundos en
+ * caliente sin fugas. Los materiales cacheados (compartidos) no se liberan.
  */
 export class Lobby {
   readonly group = new THREE.Group();
+  /** Datos de portal (posición + destino) para que el juego dispare el viaje. */
+  readonly portals: PortalDef[];
+  private colliders: RAPIER.Collider[] = [];
 
   constructor(private physics: PhysicsWorld, level: LevelDefinition) {
+    this.portals = level.portals;
     this.buildGround();
     this.buildPlaza();
     this.buildPlatforms(level);
-    this.buildTower(level.tower);
+    if (level.tower) this.buildTower(level.tower);
     this.buildTrees();
+    this.buildPortals(level.portals);
+  }
+
+  /** Retira colliders del mundo físico y libera geometrías. */
+  dispose(): void {
+    for (const c of this.colliders) this.physics.removeCollider(c);
+    this.colliders.length = 0;
+    this.group.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) obj.geometry.dispose();
+    });
+    this.group.clear();
   }
 
   /** Caja visual + collider estático. rotY en radianes sobre el eje Y. */
@@ -41,17 +58,18 @@ export class Lobby {
     this.group.add(mesh);
 
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rotY, rotZ));
-    this.physics.addStaticBox(
-      { x: w / 2, y: h / 2, z: d / 2 },
-      { x, y, z },
-      { x: q.x, y: q.y, z: q.z, w: q.w },
+    this.colliders.push(
+      this.physics.addStaticBox(
+        { x: w / 2, y: h / 2, z: d / 2 },
+        { x, y, z },
+        { x: q.x, y: q.y, z: q.z, w: q.w },
+      ),
     );
     return mesh;
   }
 
   private buildGround(): void {
     const size = CONFIG.world.size;
-    // Baseplate de hierba con borde más oscuro (marco visual clásico).
     const border = new THREE.Mesh(
       new THREE.BoxGeometry(size + 6, 1, size + 6),
       matte(PALETTE.grassDark),
@@ -64,19 +82,19 @@ export class Lobby {
     ground.position.y = -0.5;
     ground.receiveShadow = true;
     this.group.add(ground);
-    this.physics.addStaticBox({ x: size / 2 + 3, y: 0.5, z: size / 2 + 3 }, { x: 0, y: -0.55, z: 0 });
+    this.colliders.push(
+      this.physics.addStaticBox({ x: size / 2 + 3, y: 0.5, z: size / 2 + 3 }, { x: 0, y: -0.55, z: 0 }),
+    );
   }
 
   private buildPlaza(): void {
-    // Plaza circular central: punto de spawn social del lobby.
     const plaza = new THREE.Mesh(new THREE.CylinderGeometry(8, 8.6, 0.6, 32), matte(PALETTE.plaza));
     plaza.position.y = 0.3;
     plaza.castShadow = true;
     plaza.receiveShadow = true;
     this.group.add(plaza);
-    this.physics.addStaticCylinder(0.3, 8.2, { x: 0, y: 0.3, z: 0 });
+    this.colliders.push(this.physics.addStaticCylinder(0.3, 8.2, { x: 0, y: 0.3, z: 0 }));
 
-    // Anillo decorativo y cuatro pilares con luces cálidas.
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(6.4, 0.12, 10, 48),
       matte(PALETTE.plazaTrim, 0.6),
@@ -95,7 +113,7 @@ export class Lobby {
         new THREE.MeshStandardMaterial({
           color: PALETTE.coin,
           emissive: PALETTE.coinEmissive,
-          emissiveIntensity: 2.5, // lámparas: brillo fuerte para un halo de bloom marcado
+          emissiveIntensity: 2.5,
         }),
       );
       lamp.position.set(x, 3.5, z);
@@ -103,7 +121,6 @@ export class Lobby {
     }
   }
 
-  /** Plataformas jugables (norte/este/sur) leídas del nivel. */
   private buildPlatforms(level: LevelDefinition): void {
     for (const p of level.platforms) {
       this.box(
@@ -116,7 +133,6 @@ export class Lobby {
     }
   }
 
-  /** Torre teal con escalera de caracol: base + espiral procedural + plataforma cima. */
   private buildTower(tower: TowerDef): void {
     const { x, z } = tower;
     this.box(6, 1, 6, x, 0.5, z, PALETTE.brickTeal);
@@ -139,9 +155,8 @@ export class Lobby {
       trunk.position.set(x, trunkH / 2, z);
       trunk.castShadow = true;
       this.group.add(trunk);
-      this.physics.addStaticCylinder(trunkH / 2, 0.45, { x, y: trunkH / 2, z });
+      this.colliders.push(this.physics.addStaticCylinder(trunkH / 2, 0.45, { x, y: trunkH / 2, z }));
 
-      // Copa en dos bolas achatadas: silueta low-poly amable.
       const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1.7, 1), matte(PALETTE.leaves));
       crown.position.set(x, trunkH + 1.1, z);
       crown.scale.y = 0.8;
@@ -151,6 +166,48 @@ export class Lobby {
       crown2.position.set(x + 0.7, trunkH + 1.9, z - 0.4);
       crown2.castShadow = true;
       this.group.add(crown2);
+    }
+  }
+
+  /**
+   * Portales: arco de dos pilares + dintel con un plano central emisivo que
+   * "florece" con el bloom. No son sólidos (se cruzan para viajar); el disparo
+   * lo gestiona el juego por proximidad a `portal.pos`.
+   */
+  private buildPortals(portals: PortalDef[]): void {
+    for (const portal of portals) {
+      const [px, , pz] = portal.pos;
+      const arch = new THREE.Group();
+      arch.position.set(px, 0, pz);
+
+      const frameMat = matte(PALETTE.stone, 0.7);
+      for (const side of [-1, 1]) {
+        const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.2, 0.4), frameMat);
+        pillar.position.set(side * 1.5, 1.6, 0);
+        pillar.castShadow = true;
+        arch.add(pillar);
+      }
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.4, 0.4), frameMat);
+      lintel.position.set(0, 3.4, 0);
+      lintel.castShadow = true;
+      arch.add(lintel);
+
+      // Plano central brillante del color del mundo destino.
+      const glow = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.6, 3),
+        new THREE.MeshStandardMaterial({
+          color: portal.color,
+          emissive: portal.color,
+          emissiveIntensity: 1.6,
+          transparent: true,
+          opacity: 0.72,
+          side: THREE.DoubleSide,
+        }),
+      );
+      glow.position.set(0, 1.7, 0);
+      arch.add(glow);
+
+      this.group.add(arch);
     }
   }
 }

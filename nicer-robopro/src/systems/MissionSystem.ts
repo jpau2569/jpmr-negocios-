@@ -14,17 +14,29 @@ import type { LevelDefinition } from '../world/LevelData';
 export class MissionSystem {
   private missions: MissionInfo[] = [];
   private visitedZones = new Set<string>();
+  private unsubscribe: () => void;
 
   constructor(private events: EventBus, coinTotal: number, private level: LevelDefinition) {
-    this.missions = [
-      { id: 'coleccionista', title: 'Recoge todas las monedas', progress: 0, target: coinTotal, done: false },
-      { id: 'explorador', title: 'Visita las 4 zonas', progress: 0, target: level.zones.length, done: false },
-      { id: 'escalador', title: 'Sube a la torre', progress: 0, target: 1, done: false },
-    ];
+    // Solo se crean las misiones para el contenido que el mundo realmente tiene
+    // (el hub, sin monedas ni zonas ni torre, no genera ninguna).
+    if (coinTotal > 0) {
+      this.missions.push({ id: 'coleccionista', title: 'Recoge todas las monedas', progress: 0, target: coinTotal, done: false });
+    }
+    if (level.zones.length > 0) {
+      this.missions.push({ id: 'explorador', title: `Visita las ${level.zones.length} zonas`, progress: 0, target: level.zones.length, done: false });
+    }
+    if (level.tower) {
+      this.missions.push({ id: 'escalador', title: 'Sube a la torre', progress: 0, target: 1, done: false });
+    }
 
-    events.on('coin-collected', ({ collected }) => {
+    this.unsubscribe = events.on('coin-collected', ({ collected }) => {
       this.setProgress('coleccionista', collected);
     });
+  }
+
+  /** Desuscribe del bus (al descargar el mundo) para no acumular handlers. */
+  dispose(): void {
+    this.unsubscribe();
   }
 
   /** Chequeos por posición; llamar cada frame durante la partida. */
@@ -40,10 +52,12 @@ export class MissionSystem {
     }
 
     const tower = this.level.tower;
-    const dxT = playerPos.x - tower.x;
-    const dzT = playerPos.z - tower.z;
-    if (playerPos.y > tower.topY && dxT * dxT + dzT * dzT < 9) {
-      this.setProgress('escalador', 1);
+    if (tower) {
+      const dxT = playerPos.x - tower.x;
+      const dzT = playerPos.z - tower.z;
+      if (playerPos.y > tower.topY && dxT * dxT + dzT * dzT < 9) {
+        this.setProgress('escalador', 1);
+      }
     }
   }
 

@@ -43,6 +43,17 @@ export class CoinSystem {
     }
   }
 
+  /** Libera geometrías/materiales de las monedas (al descargar el mundo). */
+  dispose(): void {
+    this.group.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) {
+        obj.geometry.dispose();
+        (obj.material as THREE.Material).dispose();
+      }
+    });
+    this.group.clear();
+  }
+
   get total(): number {
     return this.coins.length;
   }

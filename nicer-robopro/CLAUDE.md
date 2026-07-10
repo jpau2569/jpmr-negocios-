@@ -44,10 +44,13 @@ Rama de trabajo: `claude/nicer-robopro-mvp-el56jp`. Commits clave:
 - **Máquina de estados explícita** (`core/StateMachine.ts`): solo el estado activo recibe
   `update(dt)`. 'playing' delega en `Game.simulate()`. Estados triviales son literales;
   los pesados del Sprint 2 (racing/build) deben ser su propio módulo que implemente `GameState`.
-- **Niveles dirigidos por datos** (`world/LevelData.ts`): plataformas, monedas, zonas y torre
-  en una `LevelDefinition` plana serializable — única fuente de verdad. `Lobby` construye
-  geometría de gameplay desde ahí (lo decorativo sigue procedural); `CoinSystem` y
-  `MissionSystem` la consumen. Base del futuro editor de mapas y de replicar nivel por red.
+- **Mundos dirigidos por datos** (`world/LevelData.ts`): registro `WORLDS` (hub, plaza,
+  islas) de `LevelDefinition` planas (spawn, plataformas, monedas, zonas, torre opcional,
+  portales). `Game.loadWorld(id)` carga/descarga mundos EN CALIENTE: `Lobby.dispose()` quita
+  colliders (`PhysicsWorld.removeCollider`) y libera geometrías; `CoinSystem`/`MissionSystem`
+  se recrean por mundo (con `dispose()` para desuscribirse). El jugador y el `Inventory`
+  persisten. Portales: arcos que brillan; `Game.checkPortals` viaja por proximidad (con
+  cooldown al aparecer) y muestra aviso en el HUD. Hook de depuración: `window.roboproGame`.
 - **Tuning centralizado** en `core/Config.ts`; **paleta única** en `assets/palette.ts`;
   materiales cacheados por color en `assets/materials.ts`.
 - **Capa de red abstracta** en `net/NetworkAdapter.ts`: el juego ya publica

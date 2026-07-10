@@ -21,6 +21,7 @@ export class UIManager {
   private pauseStats: HTMLElement;
   private toast: HTMLElement;
   private toastTimer = 0;
+  private portalPrompt: HTMLElement;
 
   constructor(events: EventBus) {
     const get = (id: string): HTMLElement => {
@@ -43,6 +44,7 @@ export class UIManager {
     this.missionsPanel = get('hud-missions');
     this.pauseStats = get('pause-stats');
     this.toast = get('hud-toast');
+    this.portalPrompt = get('hud-portal');
 
     get('btn-play').addEventListener('click', () => this.onPlay?.());
     get('btn-resume').addEventListener('click', () => this.onResume?.());
@@ -52,6 +54,8 @@ export class UIManager {
     events.on('state-changed', ({ state }) => this.showState(state));
     events.on('coin-collected', ({ collected, total }) => {
       this.coinCount.textContent = `${collected} / ${total}`;
+      // Mundos sin monedas (el hub) ocultan el contador.
+      this.coinCount.parentElement?.classList.toggle('hidden', total === 0);
       if (collected > 0) this.pulseCoins();
     });
     events.on('all-coins-collected', ({ timeSeconds }) => {
@@ -62,6 +66,8 @@ export class UIManager {
   }
 
   private renderMissions(missions: MissionInfo[]): void {
+    // Mundos sin misiones (el hub) ocultan el panel entero.
+    this.missionsPanel.classList.toggle('hidden', missions.length === 0);
     this.missionsPanel.replaceChildren(
       ...missions.map((m) => {
         const row = document.createElement('div');
@@ -103,6 +109,16 @@ export class UIManager {
 
   setWinBest(text: string): void {
     this.winBest.textContent = text;
+  }
+
+  /** Muestra/oculta el aviso de portal cercano (null = ocultar). */
+  setPortalPrompt(label: string | null): void {
+    if (label) {
+      this.portalPrompt.innerHTML = `▶ <b>${label}</b>`;
+      this.portalPrompt.classList.remove('hidden');
+    } else {
+      this.portalPrompt.classList.add('hidden');
+    }
   }
 
   private showState(state: GameStateName): void {

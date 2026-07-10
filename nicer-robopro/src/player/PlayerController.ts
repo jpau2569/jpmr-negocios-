@@ -38,6 +38,7 @@ export class PlayerController {
 
   private targetHeading = Math.PI; // de espaldas a la cámara inicial (mirando a la plaza)
   private animTime = 0;
+  private spawn = { ...CONFIG.player.spawn }; // punto de reaparición (lo fija cada mundo)
 
   // Scratch reutilizables: fixedUpdate corre 60 veces/s y no debe alocar.
   private scratchWish = new THREE.Vector3();
@@ -184,12 +185,19 @@ export class PlayerController {
     return this.avatar.group.rotation.y;
   }
 
+  /** Fija el punto de reaparición del mundo actual y teletransporta allí. */
+  setSpawn(x: number, y: number, z: number): void {
+    this.spawn = { x, y, z };
+    this.respawn();
+  }
+
   respawn(): void {
-    const s = CONFIG.player.spawn;
+    const s = this.spawn;
     this.velocity.set(0, 0, 0);
     this.body.setNextKinematicTranslation({ x: s.x, y: s.y, z: s.z });
     this.body.setTranslation({ x: s.x, y: s.y, z: s.z }, true);
     this.currPos.set(s.x, s.y, s.z);
     this.prevPos.copy(this.currPos);
+    this.visualPos.set(s.x, s.y, s.z);
   }
 }

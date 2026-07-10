@@ -8,7 +8,7 @@ import { InputManager } from '../player/InputManager';
 import { PlayerController } from '../player/PlayerController';
 import { setupEnvironment } from '../world/Environment';
 import { Lobby } from '../world/Lobby';
-import { LOBBY_LEVEL } from '../world/LevelData';
+import { WORLDS, START_WORLD, type LevelDefinition } from '../world/LevelData';
 import { CoinSystem } from '../systems/CoinSystem';
 import { AudioSystem } from '../systems/AudioSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
@@ -39,6 +39,11 @@ export class Game {
   private player!: PlayerController;
   private coins!: CoinSystem;
   private ui!: UIManager;
+
+  // Mundo actual (hub/plaza/islas) y sus sistemas descargables.
+  private currentLevel!: LevelDefinition;
+  private currentLobby: Lobby | null = null;
+  private portalCooldown = 0; // evita re-disparar el portal justo al llegar
   private audio = new AudioSystem();
   private particles = new ParticleSystem();
   private ringFx = new RingFx();
@@ -63,33 +68,25 @@ export class Game {
     this.cameraRig = new CameraRig(this.physics.world, this.physics.rapier);
     setupEnvironment(this.scene, this.renderer.renderer);
 
-    // El nivel se define como datos (LevelData); geometría, monedas y misiones
-    // consumen la MISMA fuente de verdad.
-    const level = LOBBY_LEVEL;
-    const lobby = new Lobby(this.physics, level);
-    this.scene.add(lobby.group);
-
     this.player = new PlayerController(this.physics);
     this.scene.add(this.player.avatar.group);
-
-    // Los spots del nivel son tuplas planas; se convierten a Vector3 en el
-    // límite con el sistema de render (LevelData se mantiene serializable).
-    const coinSpots = level.coins.map((c) => new THREE.Vector3(c[0], c[1], c[2]));
-    this.coins = new CoinSystem(coinSpots, this.events);
-    this.scene.add(this.coins.group);
     this.scene.add(this.particles.points);
     this.scene.add(this.ringFx.group);
 
-    // El inventario se suscribe antes que los handlers de wireGameFeel para que
-    // récords y trofeos ya estén actualizados cuando estos los lean.
+    // El inventario es global (persiste entre mundos) y se suscribe antes que
+    // los handlers de wireGameFeel para que récords/trofeos estén frescos.
     this.inventory = new Inventory(this.events);
-    this.missions = new MissionSystem(this.events, this.coins.total, level);
 
     this.registerStates();
     this.wireUI();
     this.wireGameFeel();
-    this.missions.emitState();
     void this.network.connect();
+
+    // Carga el mundo inicial (hub). Monedas y misiones se crean por mundo.
+    this.loadWorld(START_WORLD);
+
+    // Hook de depuración: permite inspeccionar/forzar estado desde la consola.
+    (window as unknown as { roboproGame: Game }).roboproGame = this;
 
     window.addEventListener('resize', () => this.renderer.onResize(this.cameraRig.camera));
 
@@ -110,6 +107,71 @@ export class Game {
       { name: 'paused' },
       { name: 'won', onEnter: () => this.input.exitPointerLock() },
     );
+  }
+
+  /**
+   * Carga un mundo por id: descarga el actual (colliders, mallas y misiones del
+   * mundo anterior), construye el nuevo desde datos y reaparece al jugador en su
+   * spawn. El inventario y el jugador persisten entre mundos; monedas, misiones
+   * y geometría son por mundo.
+   */
+  private loadWorld(id: string): void {
+    const level = WORLDS[id];
+    if (!level) throw new Error(`Mundo desconocido: ${id}`);
+
+    if (this.currentLobby) {
+      this.scene.remove(this.currentLobby.group);
+      this.currentLobby.dispose();
+      this.scene.remove(this.coins.group);
+      this.coins.dispose();
+      this.missions.dispose();
+    }
+
+    this.currentLevel = level;
+    this.currentLobby = new Lobby(this.physics, level);
+    this.scene.add(this.currentLobby.group);
+
+    const coinSpots = level.coins.map((c) => new THREE.Vector3(c[0], c[1], c[2]));
+    this.coins = new CoinSystem(coinSpots, this.events);
+    this.scene.add(this.coins.group);
+
+    this.missions = new MissionSystem(this.events, this.coins.total, level);
+    this.missions.emitState();
+    // Refresca el contador del HUD al conteo del nuevo mundo (0 = se oculta).
+    this.events.emit('coin-collected', { collected: 0, total: this.coins.total });
+
+    this.player.setSpawn(level.spawn[0], level.spawn[1], level.spawn[2]);
+    this.elapsed = 0;
+    this.snapshotTimer = 0;
+    this.portalCooldown = 0.8; // gracia para no re-disparar el portal al aparecer
+    this.ui.updateTimer(0);
+    this.ui.setPortalPrompt(null);
+  }
+
+  /**
+   * Portales: muestra el aviso al acercarse y viaja al cruzarlos. Devuelve true
+   * si se cargó otro mundo este frame (para abortar el resto de la simulación).
+   */
+  private checkPortals(dt: number): boolean {
+    if (this.portalCooldown > 0) {
+      this.portalCooldown -= dt;
+      this.ui.setPortalPrompt(null);
+      return false;
+    }
+    const p = this.player.visualPos;
+    let nearLabel: string | null = null;
+    for (const portal of this.currentLobby!.portals) {
+      const dx = p.x - portal.pos[0];
+      const dz = p.z - portal.pos[2];
+      const d2 = dx * dx + dz * dz;
+      if (d2 < 1.6 * 1.6) {
+        this.loadWorld(portal.target);
+        return true;
+      }
+      if (d2 < 4 * 4) nearLabel = portal.label;
+    }
+    this.ui.setPortalPrompt(nearLabel);
+    return false;
   }
 
   private wireUI(): void {
@@ -195,11 +257,8 @@ export class Game {
   }
 
   private restart(): void {
-    this.elapsed = 0;
-    this.coins.reset();
-    this.missions.reset();
-    this.player.respawn();
-    this.ui.updateTimer(0);
+    // Recarga el mundo actual desde cero (monedas, misiones, spawn y timer).
+    this.loadWorld(this.currentLevel.id);
     this.ui.setWinBest('');
     this.startPlaying();
   }
@@ -210,6 +269,8 @@ export class Game {
    * Solo se ejecuta cuando el estado 'playing' está activo (lo llama la máquina).
    */
   private simulate(dt: number): void {
+    if (this.checkPortals(dt)) return; // viajó a otro mundo: aborta el resto del frame
+
     const input = this.input.consumeFrame();
     this.cameraRig.applyLook(input);
 

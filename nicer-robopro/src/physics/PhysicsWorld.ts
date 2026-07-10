@@ -21,6 +21,11 @@ export class PhysicsWorld {
     this.world.step();
   }
 
+  /** Elimina un collider estático (al descargar un mundo). */
+  removeCollider(collider: RAPIER.Collider): void {
+    this.world.removeCollider(collider, false);
+  }
+
   /** Caja estática (suelos, plataformas, rampas). Rotación opcional como cuaternión. */
   addStaticBox(
     halfExtents: { x: number; y: number; z: number },
