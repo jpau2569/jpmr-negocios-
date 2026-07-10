@@ -77,6 +77,10 @@ export interface LevelDefinition {
   powerups?: { pos: Vec3; kind: 'magnet' | 'djump' }[];
   /** Enemigos "slime" que se rompen con la espada o el agua. */
   targets?: Vec3[];
+  /** Tiempos de medalla (s) para el ranking de carreras contrarreloj. */
+  medalTimes?: { gold: number; silver: number; bronze: number };
+  /** Ruta de waypoints que sigue el rival "Iyan" hacia la meta. */
+  rivalPath?: Vec3[];
 }
 
 // --- HUB: lobby social central. Sin monedas ni misiones; solo portales. ---
@@ -88,13 +92,14 @@ const HUB: LevelDefinition = {
   platforms: [],
   coins: [],
   zones: [],
-  // Cinco portales en arco frente al spawn (mira a -Z), radio 10.
+  // Seis portales en arco frente al spawn (mira a -Z), radio 10.
   portals: [
-    { pos: [-8.7, 0.9, -5], target: 'plaza', label: 'Parque', color: PALETTE.brickRed },
-    { pos: [-5, 0.9, -8.7], target: 'islas', label: 'Islas', color: PALETTE.brickTeal },
-    { pos: [0, 0.9, -10], target: 'obby', label: 'Obby', color: PALETTE.brickYellow },
-    { pos: [5, 0.9, -8.7], target: 'cielo', label: 'Cielo', color: PALETTE.brickBlue },
-    { pos: [8.7, 0.9, -5], target: 'desafio', label: 'Desafío', color: PALETTE.brickPurple },
+    { pos: [-9.7, 0.9, -2.6], target: 'plaza', label: 'Parque', color: PALETTE.brickRed },
+    { pos: [-7.1, 0.9, -7.1], target: 'islas', label: 'Islas', color: PALETTE.brickTeal },
+    { pos: [-2.6, 0.9, -9.7], target: 'obby', label: 'Obby', color: PALETTE.brickYellow },
+    { pos: [2.6, 0.9, -9.7], target: 'cielo', label: 'Cielo', color: PALETTE.brickBlue },
+    { pos: [7.1, 0.9, -7.1], target: 'desafio', label: 'Desafío', color: PALETTE.brickPurple },
+    { pos: [9.7, 0.9, -2.6], target: 'carrera', label: 'Carrera', color: 0xffd94a },
   ],
 };
 
@@ -258,8 +263,37 @@ const DESAFIO: LevelDefinition = {
   portals: [{ pos: [-3, 0.9, 13], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
 };
 
+// --- CARRERA: pista contrarreloj con medallas; el rival Iyan compite aquí. ---
+const CARRERA: LevelDefinition = {
+  id: 'carrera',
+  name: 'Carrera',
+  spawn: [0, 3, 16],
+  noGround: true,
+  killY: -3,
+  platforms: [
+    { size: [9, 1, 8], pos: [0, 0.5, 16], color: PALETTE.brickYellow }, // salida
+    { size: [7, 1, 5], pos: [0, 1, 8], color: PALETTE.brickTeal },
+    { size: [7, 1, 5], pos: [0, 1.5, 1], color: PALETTE.brickBlue },
+    { size: [6, 1, 5], pos: [4, 2, -6], color: PALETTE.brickRed },
+    { size: [7, 1, 5], pos: [-2, 2.5, -13], color: PALETTE.brickPurple }, // checkpoint 1
+    { size: [6, 1, 5], pos: [2, 3, -20], color: PALETTE.brickTeal },
+    { size: [7, 1, 5], pos: [0, 3.5, -27], color: PALETTE.brickRed }, // checkpoint 2
+    { size: [9, 1, 8], pos: [0, 4, -34], color: PALETTE.brickYellow }, // meta
+  ],
+  coins: [],
+  zones: [],
+  checkpoints: [[-2, 3, -13], [0, 4, -27]],
+  finish: [0, 4.5, -34],
+  medalTimes: { gold: 15, silver: 22, bronze: 30 },
+  rivalPath: [
+    [0, 1, 16], [0, 1.5, 8], [0, 2, 1], [4, 2.5, -6],
+    [-2, 3, -13], [2, 3.5, -20], [0, 4, -27], [0, 5, -34],
+  ],
+  portals: [{ pos: [-3.5, 0.9, 17], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
+};
+
 /** Registro de mundos y mundo inicial. */
 export const WORLDS: Record<string, LevelDefinition> = {
-  hub: HUB, plaza: PLAZA, islas: ISLAS, obby: OBBY, cielo: CIELO, desafio: DESAFIO,
+  hub: HUB, plaza: PLAZA, islas: ISLAS, obby: OBBY, cielo: CIELO, desafio: DESAFIO, carrera: CARRERA,
 };
 export const START_WORLD = 'hub';

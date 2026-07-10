@@ -222,6 +222,18 @@ export class Game {
     this.ui.setWinBest(
       isRecord ? '¡Nuevo récord!' : best !== null ? `Mejor tiempo: ${formatTime(best)}` : '',
     );
+    // Ranking de carreras: medalla según el tiempo + tiempos objetivo.
+    const mt = this.currentLevel.medalTimes;
+    if (mt) {
+      let medal: string;
+      if (timeSeconds <= mt.gold) medal = '🥇 ¡Medalla de ORO!';
+      else if (timeSeconds <= mt.silver) medal = '🥈 ¡Medalla de PLATA!';
+      else if (timeSeconds <= mt.bronze) medal = '🥉 ¡Medalla de BRONCE!';
+      else medal = 'Sin medalla — ¡más rápido!';
+      this.ui.setWinMedal(medal, mt);
+    } else {
+      this.ui.setWinMedal('', null);
+    }
     this.machine.transition('won');
   }
 

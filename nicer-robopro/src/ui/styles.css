@@ -93,6 +93,18 @@ h2 { color: var(--text); font-size: 34px; letter-spacing: 1.5px; text-transform:
 .win-best { color: var(--gold); font-size: 14px; letter-spacing: 1px; min-height: 18px; }
 .win-best:empty { display: none; }
 
+.win-medal { font-size: 22px; font-weight: 800; color: var(--text); min-height: 26px; }
+.win-medal:empty { display: none; }
+
+.win-ranking {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  color: rgba(238, 247, 245, 0.75);
+  font-size: 13px;
+}
+.win-ranking span b { display: block; color: var(--gold); font-size: 15px; }
+
 /* ---- Personalización: panel a la izquierda, avatar visible a la derecha ---- */
 
 .screen-side {

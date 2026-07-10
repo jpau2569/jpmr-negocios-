@@ -222,6 +222,23 @@ export class UIManager {
     this.winBest.textContent = text;
   }
 
+  /** Medalla y ranking (tiempos objetivo) en la pantalla de victoria de una carrera. */
+  setWinMedal(medal: string, times: { gold: number; silver: number; bronze: number } | null): void {
+    const winMedal = document.getElementById('win-medal');
+    const winRanking = document.getElementById('win-ranking');
+    if (winMedal) winMedal.textContent = medal;
+    if (!winRanking) return;
+    if (!times) {
+      winRanking.classList.add('hidden');
+      return;
+    }
+    winRanking.classList.remove('hidden');
+    winRanking.innerHTML =
+      `<span>🥇<b>${formatTime(times.gold)}</b></span>` +
+      `<span>🥈<b>${formatTime(times.silver)}</b></span>` +
+      `<span>🥉<b>${formatTime(times.bronze)}</b></span>`;
+  }
+
   /** Configuración de avatar cargada (para crear el jugador con ella). */
   get avatar(): AvatarConfig {
     return this.avatarConfig;
