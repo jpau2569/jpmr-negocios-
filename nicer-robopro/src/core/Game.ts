@@ -13,6 +13,7 @@ import { WORLDS, START_WORLD, type LevelDefinition } from '../world/LevelData';
 import { CoinSystem, type CoinDef } from '../systems/CoinSystem';
 import { GiftSystem } from '../systems/GiftSystem';
 import { PowerupSystem, type PowerupKind } from '../systems/PowerupSystem';
+import { TargetSystem } from '../systems/TargetSystem';
 import { AudioSystem } from '../systems/AudioSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
 import { RingFx } from '../systems/RingFx';
@@ -50,6 +51,7 @@ export class Game {
   private currentLobby: Lobby | null = null;
   private currentGifts: GiftSystem | null = null;
   private currentPowerups: PowerupSystem | null = null;
+  private currentTargets: TargetSystem | null = null;
   private magnetTimer = 0; // imán de monedas activo (s)
   private djumpTimer = 0; // doble salto activo (s)
   private portalCooldown = 0; // evita re-disparar el portal justo al llegar
@@ -156,6 +158,10 @@ export class Game {
       this.scene.remove(this.currentPowerups.group);
       this.currentPowerups.dispose();
     }
+    if (this.currentTargets) {
+      this.scene.remove(this.currentTargets.group);
+      this.currentTargets.dispose();
+    }
 
     this.currentLevel = level;
     this.currentLobby = new Lobby(this.physics, level);
@@ -184,6 +190,13 @@ export class Game {
     this.scene.add(this.currentPowerups.group);
     this.magnetTimer = 0;
     this.djumpTimer = 0;
+
+    // Enemigos que romper con la espada o el agua.
+    this.currentTargets = new TargetSystem(
+      (level.targets ?? []).map((t) => new THREE.Vector3(t[0], t[1], t[2])),
+      (pos) => this.onTargetBreak(pos),
+    );
+    this.scene.add(this.currentTargets.group);
 
     this.missions = new MissionSystem(this.events, this.coins.total, level);
     this.missions.emitState();
@@ -237,6 +250,21 @@ export class Game {
     this.waterGun.fire(origin, dir, gun.speed, gun.color);
     this.audio.squirt();
     this.player.triggerShootAnim();
+  }
+
+  /** Espadazo: rompe los enemigos cercanos al jugador. */
+  private trySwordAttack(): void {
+    if (!this.currentTargets) return;
+    const chest = this.player.visualPos.clone();
+    chest.y += 1;
+    this.currentTargets.trySwordHit(chest, 2.4);
+  }
+
+  /** Recompensa al romper un enemigo: puntos, sonido y estallido. */
+  private onTargetBreak(pos: THREE.Vector3): void {
+    this.ui.addScore(15);
+    this.audio.swoosh();
+    this.particles.burst(pos, 0x9b4fd4, { count: 18, speed: 3, life: 0.6, upBias: 2, gravity: -3 });
   }
 
   /** Activa un power-up temporal (imán de monedas o doble salto). */
@@ -416,8 +444,10 @@ export class Game {
     // Clic izquierdo durante el juego → espadazo o disparo de agua, según el arma.
     window.addEventListener('mousedown', (e) => {
       if (e.button !== 0 || !this.machine.is('playing')) return;
-      if (this.player.weapon === 'sword') this.player.swing();
-      else if (this.player.weapon === 'water') this.fireWater();
+      if (this.player.weapon === 'sword') {
+        this.player.swing();
+        this.trySwordAttack();
+      } else if (this.player.weapon === 'water') this.fireWater();
     });
     this.player.onLand = (impact) => {
       this.audio.land(impact);
@@ -498,6 +528,7 @@ export class Game {
 
     this.coins.update(dt, this.player.visualPos, this.elapsed, this.magnetTimer > 0 ? 6 : 0);
     this.currentGifts?.update(dt, this.player.visualPos);
+    this.currentTargets?.update(dt);
     this.particles.update(dt);
     this.ringFx.update(dt, this.cameraRig.camera);
     this.missions.update(this.player.visualPos);
@@ -508,12 +539,13 @@ export class Game {
     this.fireCooldownTimer = Math.max(0, this.fireCooldownTimer - dt);
     this.ui.setWater(this.waterTank / this.waterMax, this.player.weapon === 'water', this.inventory.cartridges);
     this.waterGun.update(dt, (pos) => {
-      const hit = this.coins.tryHit(pos, 1.2, this.elapsed);
-      if (hit) {
+      if (this.coins.tryHit(pos, 1.2, this.elapsed)) {
         this.audio.coin();
         this.particles.burst(pos, 0x8fd0ff, { count: 12, speed: 2.4, life: 0.45, upBias: 1.2, gravity: -4 });
+        return true;
       }
-      return hit;
+      if (this.currentTargets?.tryHit(pos, 1.0)) return true; // enemigo roto por el agua
+      return false;
     });
 
     // Publica el estado local a ~10 Hz por la capa de red (loopback en Fase 1).

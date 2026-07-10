@@ -75,6 +75,8 @@ export interface LevelDefinition {
   gifts?: Vec3[];
   /** Power-ups temporales flotantes (imán de monedas, doble salto). */
   powerups?: { pos: Vec3; kind: 'magnet' | 'djump' }[];
+  /** Enemigos "slime" que se rompen con la espada o el agua. */
+  targets?: Vec3[];
 }
 
 // --- HUB: lobby social central. Sin monedas ni misiones; solo portales. ---
@@ -141,6 +143,7 @@ const PLAZA: LevelDefinition = {
     { pos: [0, 1.4, -16], kind: 'magnet' },
     { pos: [-4, 2.1, 18], kind: 'djump' },
   ],
+  targets: [[10, 1.4, -2], [-11, 1.4, -6], [11, 1.4, -12], [3, 4, 22]],
   portals: [{ pos: [0, 0.9, 12], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
 };
 
