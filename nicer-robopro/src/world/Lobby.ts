@@ -3,23 +3,25 @@ import { CONFIG } from '../core/Config';
 import { PALETTE } from '../assets/palette';
 import { matte } from '../assets/materials';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
+import type { LevelDefinition, TowerDef } from './LevelData';
 
 /**
- * Construcción del lobby: baseplate, plaza central, plataformas de colores,
- * rampas, islas flotantes y árboles low-poly. Cada pieza sólida registra
- * su collider estático en el mundo físico.
+ * Construcción del lobby a partir de una `LevelDefinition`:
+ * - geometría de gameplay (plataformas, torre) leída de datos → `LevelData`
+ * - geometría decorativa/procedural (suelo, plaza, árboles) generada aquí
  *
- * Devuelve las posiciones sugeridas para las monedas, de modo que el
- * CoinSystem no necesite conocer la geometría del mundo.
+ * Cada pieza sólida registra su collider estático en el mundo físico. Las
+ * posiciones de moneda y las zonas de misión ya NO viven aquí: son datos del
+ * nivel que consumen directamente CoinSystem y MissionSystem.
  */
 export class Lobby {
   readonly group = new THREE.Group();
-  readonly coinSpots: THREE.Vector3[] = [];
 
-  constructor(private physics: PhysicsWorld) {
+  constructor(private physics: PhysicsWorld, level: LevelDefinition) {
     this.buildGround();
     this.buildPlaza();
-    this.buildPlatforms();
+    this.buildPlatforms(level);
+    this.buildTower(level.tower);
     this.buildTrees();
   }
 
@@ -101,52 +103,30 @@ export class Lobby {
     }
   }
 
-  private buildPlatforms(): void {
-    // Circuito de plataformas: cuatro zonas de color alrededor de la plaza,
-    // con alturas crecientes. Sobre cada pieza clave se anota un coinSpot.
-    const spot = (x: number, y: number, z: number) => this.coinSpots.push(new THREE.Vector3(x, y, z));
+  /** Plataformas jugables (norte/este/sur) leídas del nivel. */
+  private buildPlatforms(level: LevelDefinition): void {
+    for (const p of level.platforms) {
+      this.box(
+        p.size[0], p.size[1], p.size[2],
+        p.pos[0], p.pos[1], p.pos[2],
+        p.color,
+        p.rotY ?? 0,
+        p.rotZ ?? 0,
+      );
+    }
+  }
 
-    // Zona norte (-Z): escalones rojos hacia una isla flotante.
-    this.box(5, 1, 5, 0, 0.5, -16, PALETTE.brickRed);
-    this.box(4, 1, 4, 5, 1.6, -21, PALETTE.brickRed);
-    this.box(4, 1, 4, 0, 2.7, -26, PALETTE.brickRed);
-    this.box(6, 1, 6, -7, 3.9, -30, PALETTE.brickRed);
-    spot(0, 1.9, -16);
-    spot(0, 4.1, -26);
-    spot(-7, 5.3, -30);
-
-    // Zona este (+X): rampa azul larga hasta un mirador.
-    this.box(3.5, 0.5, 10, 16, 1.4, 6, PALETTE.brickBlue, 0, 0.28);
-    this.box(6, 1, 6, 16, 2.9, -2.2, PALETTE.brickBlue);
-    this.box(4, 1, 4, 22, 4.4, -7, PALETTE.brickBlue);
-    spot(16, 4.3, -2.2);
-    spot(22, 5.8, -7);
-
-    // Zona sur (+Z): plataformas amarillas bajas, salto fácil.
-    this.box(4, 1.2, 4, -4, 0.6, 18, PALETTE.brickYellow);
-    this.box(4, 2.2, 4, 3, 1.1, 22, PALETTE.brickYellow);
-    this.box(4, 3.2, 4, -3, 1.6, 27, PALETTE.brickYellow);
-    spot(-4, 2.1, 18);
-    spot(3, 3.1, 22);
-    spot(-3, 4.1, 27);
-
-    // Zona oeste (-X): torre teal con escalera de caracol de bloques.
-    const towerX = -20;
-    const towerZ = 2;
-    this.box(6, 1, 6, towerX, 0.5, towerZ, PALETTE.brickTeal);
+  /** Torre teal con escalera de caracol: base + espiral procedural + plataforma cima. */
+  private buildTower(tower: TowerDef): void {
+    const { x, z } = tower;
+    this.box(6, 1, 6, x, 0.5, z, PALETTE.brickTeal);
     for (let i = 1; i <= 5; i++) {
       const a = (i / 5) * Math.PI * 1.5;
-      const x = towerX + Math.cos(a) * 5;
-      const z = towerZ + Math.sin(a) * 5;
-      this.box(2.6, 0.6, 2.6, x, 0.5 + i * 1.15, z, i % 2 ? PALETTE.brickTeal : PALETTE.brickPurple);
+      const sx = x + Math.cos(a) * 5;
+      const sz = z + Math.sin(a) * 5;
+      this.box(2.6, 0.6, 2.6, sx, 0.5 + i * 1.15, sz, i % 2 ? PALETTE.brickTeal : PALETTE.brickPurple);
     }
-    this.box(5, 1, 5, towerX, 7.2, towerZ, PALETTE.brickPurple);
-    spot(towerX, 8.6, towerZ);
-
-    // Monedas a ras de suelo para arrancar la partida con recompensa inmediata.
-    spot(6, 1.1, 12);
-    spot(-10, 1.1, -6);
-    spot(11, 1.1, -12);
+    this.box(5, 1, 5, x, 7.2, z, PALETTE.brickPurple);
   }
 
   private buildTrees(): void {

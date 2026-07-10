@@ -8,6 +8,7 @@ import { InputManager } from '../player/InputManager';
 import { PlayerController } from '../player/PlayerController';
 import { setupEnvironment } from '../world/Environment';
 import { Lobby } from '../world/Lobby';
+import { LOBBY_LEVEL } from '../world/LevelData';
 import { CoinSystem } from '../systems/CoinSystem';
 import { AudioSystem } from '../systems/AudioSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
@@ -59,20 +60,26 @@ export class Game {
     this.cameraRig = new CameraRig(this.physics.world, this.physics.rapier);
     setupEnvironment(this.scene);
 
-    const lobby = new Lobby(this.physics);
+    // El nivel se define como datos (LevelData); geometría, monedas y misiones
+    // consumen la MISMA fuente de verdad.
+    const level = LOBBY_LEVEL;
+    const lobby = new Lobby(this.physics, level);
     this.scene.add(lobby.group);
 
     this.player = new PlayerController(this.physics);
     this.scene.add(this.player.avatar.group);
 
-    this.coins = new CoinSystem(lobby.coinSpots, this.events);
+    // Los spots del nivel son tuplas planas; se convierten a Vector3 en el
+    // límite con el sistema de render (LevelData se mantiene serializable).
+    const coinSpots = level.coins.map((c) => new THREE.Vector3(c[0], c[1], c[2]));
+    this.coins = new CoinSystem(coinSpots, this.events);
     this.scene.add(this.coins.group);
     this.scene.add(this.particles.points);
 
     // El inventario se suscribe antes que los handlers de wireGameFeel para que
     // récords y trofeos ya estén actualizados cuando estos los lean.
     this.inventory = new Inventory(this.events);
-    this.missions = new MissionSystem(this.events, this.coins.total);
+    this.missions = new MissionSystem(this.events, this.coins.total, level);
 
     this.wireUI();
     this.wireGameFeel();
