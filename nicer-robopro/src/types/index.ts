@@ -22,9 +22,12 @@ export interface GameEvents {
   'coin-collected': {
     collected: number;
     total: number;
+    /** Puntos que otorga la moneda (premium valen más). */
+    points?: number;
     /** Posición mundial de la moneda (para partículas). Ausente en resets. */
     position?: { x: number; y: number; z: number };
   };
+  'gift-opened': { reward: string; position: { x: number; y: number; z: number } };
   'all-coins-collected': { timeSeconds: number };
   'missions-updated': { missions: MissionInfo[] };
   'mission-completed': { id: string; title: string };

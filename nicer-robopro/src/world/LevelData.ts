@@ -69,6 +69,10 @@ export interface LevelDefinition {
   killY?: number;
   /** Trampolines: al pisarlos lanzan al jugador hacia arriba. */
   bouncePads?: Vec3[];
+  /** Monedas premium (gemas): color y valor en puntos propios. */
+  gemCoins?: { pos: Vec3; color: number; value: number }[];
+  /** Cajas regalo con sorpresa aleatoria al recogerlas. */
+  gifts?: Vec3[];
 }
 
 // --- HUB: lobby social central. Sin monedas ni misiones; solo portales. ---
@@ -125,6 +129,12 @@ const PLAZA: LevelDefinition = {
     { id: 'oeste', label: 'Zona oeste', x: -20, z: 2, radius: 8 },
   ],
   tower: { x: -20, z: 2, topY: 8.2 },
+  gemCoins: [
+    { pos: [22, 6, -7], color: 0xe0405f, value: 25 }, // rubí en el mirador este
+    { pos: [-7, 5.3, -30], color: 0x35d0a0, value: 25 }, // esmeralda en la isla norte
+    { pos: [-20, 9.8, 2], color: 0xa0e0ff, value: 50 }, // diamante en la cima de la torre
+  ],
+  gifts: [[7, 1.3, 6], [-7, 1.3, 6]],
   portals: [{ pos: [0, 0.9, 12], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
 };
 
@@ -150,6 +160,10 @@ const ISLAS: LevelDefinition = {
   ],
   zones: [],
   bouncePads: [[0, 1, 6], [0, 2.1, 0]],
+  gemCoins: [
+    { pos: [0, 8.7, -22], color: 0x9b7fd4, value: 25 }, // amatista en la isla alta
+  ],
+  gifts: [[0, 1.5, 8]],
   portals: [{ pos: [3.5, 1.4, 11], target: 'hub', label: 'Volver al hub', color: PALETTE.brickPurple }],
 };
 

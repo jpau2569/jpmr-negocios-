@@ -129,14 +129,13 @@ export class UIManager {
     events.on('coins-changed', () => { this.czCoins.textContent = String(this.getCoins?.() ?? 0); });
 
     events.on('state-changed', ({ state }) => this.showState(state));
-    events.on('coin-collected', ({ collected, total }) => {
+    events.on('coin-collected', ({ collected, total, points }) => {
       this.coinCount.textContent = `${collected} / ${total}`;
       // Mundos sin monedas (el hub) ocultan el contador.
       this.coinCount.parentElement?.classList.toggle('hidden', total === 0);
       if (collected > 0) {
         this.pulseCoins();
-        this.score += 10; // cada moneda vale 10 puntos
-        this.scoreEl.textContent = `${this.score} pts`;
+        this.addScore(points ?? 10); // premium valen más
       }
     });
     events.on('missions-updated', ({ missions }) => this.renderMissions(missions));
@@ -195,6 +194,12 @@ export class UIManager {
     this.waterEl.classList.toggle('hidden', !visible);
     this.waterFill.style.width = `${Math.round(fraction * 100)}%`;
     this.cartridgesEl.textContent = String(cartridges);
+  }
+
+  /** Suma puntos al marcador (monedas, regalos). */
+  addScore(n: number): void {
+    this.score += n;
+    this.scoreEl.textContent = `${this.score} pts`;
   }
 
   /** Aviso breve genérico (recarga, sin agua…). */

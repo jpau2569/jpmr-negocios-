@@ -57,6 +57,13 @@ export class Inventory {
     return this.data.cartridges;
   }
 
+  /** Añade monedas de bonificación (regalos). */
+  addCoins(n: number): void {
+    this.data.coins += n;
+    this.save();
+    this.emitCoins();
+  }
+
   /** Añade cargadores (compra en tienda). */
   addCartridge(n = 1): void {
     this.data.cartridges += n;

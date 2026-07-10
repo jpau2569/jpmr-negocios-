@@ -10,7 +10,8 @@ import { saveAvatar, WATER_GUNS } from '../player/AvatarConfig';
 import { setupEnvironment } from '../world/Environment';
 import { Lobby } from '../world/Lobby';
 import { WORLDS, START_WORLD, type LevelDefinition } from '../world/LevelData';
-import { CoinSystem } from '../systems/CoinSystem';
+import { CoinSystem, type CoinDef } from '../systems/CoinSystem';
+import { GiftSystem } from '../systems/GiftSystem';
 import { AudioSystem } from '../systems/AudioSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
 import { RingFx } from '../systems/RingFx';
@@ -46,6 +47,7 @@ export class Game {
   // Mundo actual (hub/plaza/islas) y sus sistemas descargables.
   private currentLevel!: LevelDefinition;
   private currentLobby: Lobby | null = null;
+  private currentGifts: GiftSystem | null = null;
   private portalCooldown = 0; // evita re-disparar el portal justo al llegar
   private reachedCheckpoints = new Set<number>(); // checkpoints del obby ya tocados
   private audio = new AudioSystem();
@@ -142,14 +144,29 @@ export class Game {
       this.coins.dispose();
       this.missions.dispose();
     }
+    if (this.currentGifts) {
+      this.scene.remove(this.currentGifts.group);
+      this.currentGifts.dispose();
+    }
 
     this.currentLevel = level;
     this.currentLobby = new Lobby(this.physics, level);
     this.scene.add(this.currentLobby.group);
 
-    const coinSpots = level.coins.map((c) => new THREE.Vector3(c[0], c[1], c[2]));
-    this.coins = new CoinSystem(coinSpots, this.events);
+    // Monedas normales (oro, 10 pts) + gemas premium (color y valor propios).
+    const coinDefs: CoinDef[] = [
+      ...level.coins.map((c) => ({ pos: new THREE.Vector3(c[0], c[1], c[2]), color: 0xffd94a, value: 10, premium: false })),
+      ...(level.gemCoins ?? []).map((g) => ({ pos: new THREE.Vector3(g.pos[0], g.pos[1], g.pos[2]), color: g.color, value: g.value, premium: true })),
+    ];
+    this.coins = new CoinSystem(coinDefs, this.events);
     this.scene.add(this.coins.group);
+
+    // Regalos con sorpresa aleatoria.
+    this.currentGifts = new GiftSystem(
+      (level.gifts ?? []).map((g) => new THREE.Vector3(g[0], g[1], g[2])),
+      (pos) => this.rollGiftReward(pos),
+    );
+    this.scene.add(this.currentGifts.group);
 
     this.missions = new MissionSystem(this.events, this.coins.total, level);
     this.missions.emitState();
@@ -203,6 +220,26 @@ export class Game {
     this.waterGun.fire(origin, dir, gun.speed, gun.color);
     this.audio.squirt();
     this.player.triggerShootAnim();
+  }
+
+  /** Recompensa aleatoria de un regalo: monedas, cargador o puntos. */
+  private rollGiftReward(pos: THREE.Vector3): void {
+    const roll = Math.random();
+    let text: string;
+    if (roll < 0.4) {
+      const c = 10 + Math.floor(Math.random() * 11);
+      this.inventory.addCoins(c);
+      text = `🎁 +${c} monedas`;
+    } else if (roll < 0.7) {
+      this.inventory.addCartridge();
+      text = '🎁 ¡Cargador de agua!';
+    } else {
+      this.ui.addScore(100);
+      text = '🎁 +100 puntos';
+    }
+    this.audio.coin();
+    this.ui.notify(text);
+    this.particles.burst(pos, 0xffd94a, { count: 22, speed: 3.5, life: 0.8, upBias: 3, gravity: -4 });
   }
 
   /** Trampolines: lanzan al jugador hacia arriba al pisarlos (con cooldown). */
@@ -423,6 +460,7 @@ export class Game {
     const alpha = this.accumulator / step;
     this.player.syncVisual(alpha, dt);
     this.coins.update(dt, this.player.visualPos, this.elapsed);
+    this.currentGifts?.update(dt, this.player.visualPos);
     this.particles.update(dt);
     this.ringFx.update(dt, this.cameraRig.camera);
     this.missions.update(this.player.visualPos);
