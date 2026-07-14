@@ -1,0 +1,8 @@
+{
+  "name": "jpmr-negocios",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.111.0"
+  }
+}

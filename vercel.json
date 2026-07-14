@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/clara.js": {
+      "maxDuration": 60
+    }
+  }
+}
