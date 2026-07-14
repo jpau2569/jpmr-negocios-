@@ -57,6 +57,8 @@
   .mode.active[data-mode="trabajo"]{background:linear-gradient(135deg,#0e7490,#22d3ee)}
   .mode.active[data-mode="estudios"]{background:linear-gradient(135deg,#5b3df0,#8b7cf7)}
   .mode.active[data-mode="psicologa"]{background:linear-gradient(135deg,#9d174d,#ff5c9d)}
+  .mode.active[data-mode="dev"]{background:linear-gradient(135deg,#047857,#2fe08d)}
+  .mode.active[data-mode="noticias"]{background:linear-gradient(135deg,#b45309,#ffc857)}
 
   /* ---- Chat ---- */
   main{flex:1;overflow-y:auto;padding:20px 14px 8px;scroll-behavior:smooth}
@@ -110,11 +112,13 @@
   <a class="back" href="index.html">← LimpiaFotos</a>
   <div class="logo">💬 CLARA IA</div>
   <h1>Clara, tu asistente IA avatar</h1>
-  <p>Asesora laboral · Profesora particular · Psicóloga y coach</p>
+  <p>Asesora laboral · Profesora · Psicóloga · Ingeniera de software · Investigadora</p>
   <div class="modes" id="modes">
     <button class="mode" data-mode="trabajo">💼 Trabajo y empleo</button>
     <button class="mode" data-mode="estudios">📚 Estudios y profesor</button>
     <button class="mode" data-mode="psicologa">🌱 Psicóloga y crecimiento</button>
+    <button class="mode" data-mode="dev">💻 Ingeniera de software</button>
+    <button class="mode" data-mode="noticias">📰 Noticias e investigación</button>
   </div>
 </header>
 
@@ -146,6 +150,8 @@
     trabajo: "Modo trabajo y empleo activado. 💼 Aquí puedo analizar tu currículum, reescribirlo en varias versiones, preparar candidaturas, mensajes de LinkedIn y entrevistas. ¿Empezamos? Pega tu CV o cuéntame tu experiencia.",
     estudios: "Modo estudios y profesor activado. 📚 Puedo explicarte cualquier materia paso a paso, prepararte exámenes, corregir tu inglés y crear ejercicios con soluciones. Dime tu nivel y qué quieres estudiar.",
     psicologa: "Modo psicóloga y crecimiento personal activado. 🌱 Este es un espacio tranquilo y sin juicios. Cuéntame cómo te sientes o qué te preocupa, y lo vemos juntos con calma. Recuerda que soy una IA: en casos graves, siempre te recomendaré ayuda profesional.",
+    dev: "Modo ingeniera de software activado. 💻 Soy tu ingeniera de cabecera: puedo crear aplicaciones completas (webs, APIs, bots, automatizaciones, integraciones con IA), explicarte el código paso a paso, depurar errores y ayudarte a desplegarlo en Vercel o GitHub. Cuéntame qué quieres construir.",
+    noticias: "Modo noticias e investigación activado. 📰 Puedo buscar en Internet noticias, precios, datos de empresas y ofertas actuales, siempre citando la fuente y la fecha, y separando hechos ✅ de estimaciones 📊 y opiniones 💬. ¿Qué quieres que investigue?",
   };
 
   function addMessage(role, text) {
@@ -256,7 +262,7 @@
 
   // ---- Saludo inicial ----
   const greeting =
-    "Hola, Pau, soy Clara, tu asistente IA avatar. 💜\n\n¿Qué modo quieres usar hoy?\n\n• 💼 Modo trabajo y empleo\n• 📚 Modo estudios y profesor\n• 🌱 Modo psicóloga y crecimiento personal\n\nPulsa un botón arriba o escríbeme directamente lo que necesitas y me adapto.";
+    "Hola, Pau, soy Clara, tu asistente IA avatar. 💜\n\n¿Qué modo quieres usar hoy?\n\n• 💼 Modo trabajo y empleo\n• 📚 Modo estudios y profesor\n• 🌱 Modo psicóloga y crecimiento personal\n• 💻 Modo ingeniera de software\n• 📰 Modo noticias e investigación\n\nPulsa un botón arriba o escríbeme directamente lo que necesitas y me adapto.";
   addMessage("assistant", greeting);
   history.push({ role: "user", content: "[Inicio de sesión: saluda a Pau]" });
   history.push({ role: "assistant", content: greeting });
