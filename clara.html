@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>CLARA — Tu asistente IA avatar</title>
+<meta name="description" content="Clara es tu asistente personal con IA: asesora laboral, profesora particular y coach de crecimiento personal, con la potencia de Claude." />
+<meta name="theme-color" content="#070b18" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<link rel="icon" href='data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" rx="24" fill="%23ff5c9d"/%3E%3Ctext x="50" y="68" font-size="52" text-anchor="middle"%3E%F0%9F%92%AC%3C/text%3E%3C/svg%3E' />
+<style>
+  :root{
+    --bg:#070b18; --fg:#eef2ff; --muted:#8b96b8; --muted-2:#5d6786;
+    --glass:rgba(255,255,255,.045); --glass-2:rgba(255,255,255,.07);
+    --stroke:rgba(255,255,255,.09); --stroke-2:rgba(255,255,255,.16);
+    --cyan:#22d3ee; --purple:#8b7cf7; --pink:#ff5c9d; --green:#2fe08d; --danger:#ff6b6b; --amber:#ffc857;
+    --r-lg:22px; --r-md:16px; --r-sm:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg); color:var(--fg); -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .aurora{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+  .aurora span{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;animation:float 16s ease-in-out infinite}
+  .aurora span:nth-child(1){width:520px;height:520px;left:-140px;top:-160px;background:#5b3df0}
+  .aurora span:nth-child(2){width:460px;height:460px;right:-120px;top:-80px;background:#9d174d;animation-delay:-5s}
+  .aurora span:nth-child(3){width:420px;height:420px;left:35%;bottom:-220px;background:#0e7490;animation-delay:-10s;opacity:.35}
+  @keyframes float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(46px) scale(1.08)}}
+  @media (prefers-reduced-motion: reduce){.aurora span{animation:none}}
+
+  header{
+    padding:14px 16px 10px; text-align:center; border-bottom:1px solid var(--stroke);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  }
+  .logo{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:12px;letter-spacing:.14em;
+    background:linear-gradient(135deg,var(--pink),var(--purple));padding:6px 14px;border-radius:999px;color:#fff;
+    box-shadow:0 8px 30px rgba(255,92,157,.3)}
+  h1{font-size:clamp(20px,4vw,28px);font-weight:900;margin:8px 0 2px;letter-spacing:-.02em;
+    background:linear-gradient(100deg,#ffdcec 10%,#ff9cc4 35%,#8b7cf7 75%,#22d3ee 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  header p{color:var(--muted);font-size:13px}
+  header a.back{position:absolute;left:14px;top:14px;color:var(--muted);font-size:12.5px;text-decoration:none;
+    border:1px solid var(--stroke);border-radius:999px;padding:6px 12px;background:var(--glass)}
+  header a.back:hover{color:var(--fg);border-color:var(--stroke-2)}
+
+  /* ---- Selector de modo ---- */
+  .modes{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+  .mode{border:1px solid var(--stroke);background:var(--glass);color:var(--muted);cursor:pointer;
+    border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:700;font-family:inherit;transition:.15s}
+  .mode:hover{color:var(--fg);border-color:var(--stroke-2)}
+  .mode.active{color:#fff;border-color:transparent}
+  .mode.active[data-mode="trabajo"]{background:linear-gradient(135deg,#0e7490,#22d3ee)}
+  .mode.active[data-mode="estudios"]{background:linear-gradient(135deg,#5b3df0,#8b7cf7)}
+  .mode.active[data-mode="psicologa"]{background:linear-gradient(135deg,#9d174d,#ff5c9d)}
+
+  /* ---- Chat ---- */
+  main{flex:1;overflow-y:auto;padding:20px 14px 8px;scroll-behavior:smooth}
+  .chat{max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  .msg{display:flex;gap:10px;max-width:88%}
+  .msg .avatar{flex:0 0 34px;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:16px;background:linear-gradient(135deg,var(--pink),var(--purple));box-shadow:0 6px 20px rgba(255,92,157,.3)}
+  .msg .bubble{background:var(--glass-2);border:1px solid var(--stroke);border-radius:var(--r-md);
+    padding:12px 15px;font-size:14.5px;line-height:1.65;white-space:pre-wrap;word-wrap:break-word;
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .msg.clara{align-self:flex-start}
+  .msg.user{align-self:flex-end;flex-direction:row-reverse}
+  .msg.user .avatar{background:linear-gradient(135deg,#0e7490,#22d3ee);box-shadow:0 6px 20px rgba(34,211,238,.25)}
+  .msg.user .bubble{background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.25)}
+  .bubble strong{color:#fff}
+  .bubble em{color:#ffd8ea}
+
+  .typing{display:inline-flex;gap:5px;align-items:center;padding:4px 2px}
+  .typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+  .typing i:nth-child(2){animation-delay:.2s}
+  .typing i:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+
+  .error{align-self:center;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.35);
+    color:#ffb3b3;border-radius:var(--r-md);padding:10px 16px;font-size:13px;max-width:88%;text-align:center}
+
+  /* ---- Entrada ---- */
+  footer{padding:10px 14px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--stroke)}
+  .inputrow{max-width:820px;margin:0 auto;display:flex;gap:10px;align-items:flex-end}
+  textarea{
+    flex:1;resize:none;border:1px solid var(--stroke);background:var(--glass);color:var(--fg);
+    border-radius:var(--r-md);padding:12px 15px;font-size:14.5px;font-family:inherit;line-height:1.5;
+    max-height:140px;outline:none;transition:border-color .15s;
+  }
+  textarea:focus{border-color:var(--purple)}
+  textarea::placeholder{color:var(--muted-2)}
+  #send{
+    border:none;cursor:pointer;border-radius:var(--r-md);padding:12px 20px;font-weight:800;font-size:14px;
+    font-family:inherit;color:#fff;background:linear-gradient(135deg,var(--pink),var(--purple));
+    box-shadow:0 8px 26px rgba(255,92,157,.35);transition:.15s;
+  }
+  #send:hover:not(:disabled){transform:translateY(-1px)}
+  #send:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .hint{max-width:820px;margin:6px auto 0;color:var(--muted-2);font-size:11.5px;text-align:center}
+</style>
+</head>
+<body>
+<div class="aurora"><span></span><span></span><span></span></div>
+
+<header>
+  <a class="back" href="index.html">← LimpiaFotos</a>
+  <div class="logo">💬 CLARA IA</div>
+  <h1>Clara, tu asistente IA avatar</h1>
+  <p>Asesora laboral · Profesora particular · Psicóloga y coach</p>
+  <div class="modes" id="modes">
+    <button class="mode" data-mode="trabajo">💼 Trabajo y empleo</button>
+    <button class="mode" data-mode="estudios">📚 Estudios y profesor</button>
+    <button class="mode" data-mode="psicologa">🌱 Psicóloga y crecimiento</button>
+  </div>
+</header>
+
+<main id="main">
+  <div class="chat" id="chat"></div>
+</main>
+
+<footer>
+  <div class="inputrow">
+    <textarea id="input" rows="1" placeholder="Escribe a Clara… (Enter para enviar, Shift+Enter para salto de línea)"></textarea>
+    <button id="send">Enviar</button>
+  </div>
+  <div class="hint">Clara es una IA y puede equivocarse. En temas graves de salud o emocionales, busca ayuda profesional.</div>
+</footer>
+
+<script>
+  const chatEl = document.getElementById("chat");
+  const mainEl = document.getElementById("main");
+  const inputEl = document.getElementById("input");
+  const sendEl = document.getElementById("send");
+  const modesEl = document.getElementById("modes");
+
+  // Historial que se envía a la API: [{role, content}]
+  const history = [];
+  let mode = null;
+  let busy = false;
+
+  const MODE_INTRO = {
+    trabajo: "Modo trabajo y empleo activado. 💼 Aquí puedo analizar tu currículum, reescribirlo en varias versiones, preparar candidaturas, mensajes de LinkedIn y entrevistas. ¿Empezamos? Pega tu CV o cuéntame tu experiencia.",
+    estudios: "Modo estudios y profesor activado. 📚 Puedo explicarte cualquier materia paso a paso, prepararte exámenes, corregir tu inglés y crear ejercicios con soluciones. Dime tu nivel y qué quieres estudiar.",
+    psicologa: "Modo psicóloga y crecimiento personal activado. 🌱 Este es un espacio tranquilo y sin juicios. Cuéntame cómo te sientes o qué te preocupa, y lo vemos juntos con calma. Recuerda que soy una IA: en casos graves, siempre te recomendaré ayuda profesional.",
+  };
+
+  function addMessage(role, text) {
+    const wrap = document.createElement("div");
+    wrap.className = "msg " + (role === "user" ? "user" : "clara");
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = role === "user" ? "🧑" : "✨";
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = text;
+    wrap.append(avatar, bubble);
+    chatEl.appendChild(wrap);
+    mainEl.scrollTop = mainEl.scrollHeight;
+    return bubble;
+  }
+
+  function addTyping() {
+    const wrap = document.createElement("div");
+    wrap.className = "msg clara";
+    wrap.id = "typing";
+    wrap.innerHTML = '<div class="avatar">✨</div><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div>';
+    chatEl.appendChild(wrap);
+    mainEl.scrollTop = mainEl.scrollHeight;
+  }
+
+  function removeTyping() {
+    document.getElementById("typing")?.remove();
+  }
+
+  function addError(text) {
+    const div = document.createElement("div");
+    div.className = "error";
+    div.textContent = text;
+    chatEl.appendChild(div);
+    mainEl.scrollTop = mainEl.scrollHeight;
+  }
+
+  async function send(text) {
+    if (busy || !text.trim()) return;
+    busy = true;
+    sendEl.disabled = true;
+
+    addMessage("user", text);
+    history.push({ role: "user", content: text });
+    addTyping();
+
+    try {
+      const res = await fetch("/api/clara", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history, mode }),
+      });
+      const data = await res.json().catch(() => ({}));
+      removeTyping();
+
+      if (!res.ok) {
+        history.pop(); // no guardamos el turno fallido
+        addError(data.error || "Error al hablar con Clara (" + res.status + "). Inténtalo de nuevo.");
+      } else {
+        addMessage("assistant", data.reply);
+        history.push({ role: "assistant", content: data.reply });
+      }
+    } catch (err) {
+      removeTyping();
+      history.pop();
+      addError("No hay conexión con el servidor. Comprueba tu red e inténtalo de nuevo.");
+    } finally {
+      busy = false;
+      sendEl.disabled = false;
+      inputEl.focus();
+    }
+  }
+
+  // ---- Selector de modo ----
+  modesEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".mode");
+    if (!btn || busy) return;
+    mode = btn.dataset.mode;
+    document.querySelectorAll(".mode").forEach((b) => b.classList.toggle("active", b === btn));
+    const intro = MODE_INTRO[mode];
+    addMessage("assistant", intro);
+    // Guardamos el cambio de modo en el historial para que Clara tenga contexto.
+    history.push({ role: "user", content: "[Pau ha activado el " + btn.textContent.trim() + "]" });
+    history.push({ role: "assistant", content: intro });
+    inputEl.focus();
+  });
+
+  // ---- Entrada ----
+  sendEl.addEventListener("click", () => {
+    const text = inputEl.value;
+    inputEl.value = "";
+    inputEl.style.height = "auto";
+    send(text);
+  });
+
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendEl.click();
+    }
+  });
+
+  inputEl.addEventListener("input", () => {
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + "px";
+  });
+
+  // ---- Saludo inicial ----
+  const greeting =
+    "Hola, Pau, soy Clara, tu asistente IA avatar. 💜\n\n¿Qué modo quieres usar hoy?\n\n• 💼 Modo trabajo y empleo\n• 📚 Modo estudios y profesor\n• 🌱 Modo psicóloga y crecimiento personal\n\nPulsa un botón arriba o escríbeme directamente lo que necesitas y me adapto.";
+  addMessage("assistant", greeting);
+  history.push({ role: "user", content: "[Inicio de sesión: saluda a Pau]" });
+  history.push({ role: "assistant", content: greeting });
+  inputEl.focus();
+</script>
+</body>
+</html>
