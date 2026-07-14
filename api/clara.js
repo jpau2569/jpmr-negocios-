@@ -13,8 +13,79 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 const MODEL = "claude-sonnet-5";
+const PERPLEXITY_MODEL = "sonar"; // buscador con fuentes; alternativas: "sonar-pro", "sonar-reasoning"
 const MAX_HISTORY = 40; // últimos N mensajes que se envían al modelo
-const MAX_CONTINUATIONS = 3; // reintentos si la búsqueda web pausa el turno
+const MAX_TOOL_ROUNDS = 4; // rondas máximas de búsqueda por respuesta
+
+// ---------------------------------------------------------------------------
+//  Búsqueda con Perplexity (API OpenAI-compatible). La clave vive en la
+//  variable de entorno PERPLEXITY_API_KEY (cuenta de Pau) — nunca en el
+//  navegador. Devuelve un texto con el resumen y las fuentes citadas.
+// ---------------------------------------------------------------------------
+export async function buscarEnPerplexity(consulta) {
+  const key = process.env.PERPLEXITY_API_KEY;
+  if (!key) {
+    return "La búsqueda con Perplexity no está configurada (falta PERPLEXITY_API_KEY). Pídele a Pau que pegue la información que quiere analizar.";
+  }
+
+  const query = String(consulta || "").trim().slice(0, 2000);
+  if (!query) return "No se recibió ninguna consulta de búsqueda.";
+
+  const resp = await fetch("https://api.perplexity.ai/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: PERPLEXITY_MODEL,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Eres un buscador de información. Responde en español de España, con los datos más recientes y relevantes, indicando fechas cuando existan. Sé conciso y factual.",
+        },
+        { role: "user", content: query },
+      ],
+    }),
+  });
+
+  if (!resp.ok) {
+    const detail = await resp.text().catch(() => "");
+    if (resp.status === 401) {
+      return "Perplexity rechazó la clave (401). Revisa PERPLEXITY_API_KEY en Vercel.";
+    }
+    if (resp.status === 429) {
+      return "Perplexity ha limitado las peticiones o no hay saldo (429). Inténtalo más tarde o revisa el crédito de la cuenta.";
+    }
+    return `La búsqueda con Perplexity falló (${resp.status}). ${detail.slice(0, 200)}`;
+  }
+
+  const data = await resp.json().catch(() => ({}));
+  const answer = data?.choices?.[0]?.message?.content?.trim() || "";
+
+  // Las fuentes pueden venir como `search_results` (objetos con url/title/date)
+  // o como `citations` (lista de URLs). Manejamos ambos formatos.
+  const sources = [];
+  if (Array.isArray(data?.search_results)) {
+    for (const s of data.search_results) {
+      const url = s?.url || "";
+      if (url) sources.push(s?.title ? `${s.title} — ${url}` : url);
+    }
+  }
+  if (sources.length === 0 && Array.isArray(data?.citations)) {
+    for (const c of data.citations) {
+      const url = typeof c === "string" ? c : c?.url || "";
+      if (url) sources.push(url);
+    }
+  }
+
+  let out = answer || "Perplexity no devolvió texto.";
+  if (sources.length) {
+    out += "\n\nFuentes:\n" + sources.map((s, i) => `[${i + 1}] ${s}`).join("\n");
+  }
+  return out;
+}
 
 // ---------------------------------------------------------------------------
 //  Prompt maestro de Clara (personalidad + normas comunes a todos los modos)
@@ -37,8 +108,8 @@ Tu esencia son cuatro palabras: HONESTIDAD, CALIDEZ, EXCELENCIA y ACCIÓN.
 ## Inicio de sesión
 Al empezar una conversación nueva, saluda a Pau por su nombre ("Hola, Pau, soy Clara, tu asistente IA avatar.") y pregúntale qué modo quiere usar: 💼 trabajo y empleo, 📚 estudios y profesor, 🌱 psicóloga y crecimiento personal, 💻 ingeniera de software, o 📰 noticias e investigación. Si Pau ya dice directamente lo que quiere, adáptate sin más preguntas. Cuando cambie de modo, recuérdale en una frase qué puedes hacer en ese modo. Los modos son sombreros, no muros: combínalos si la tarea lo pide.
 
-## Búsqueda web
-Tienes una herramienta de búsqueda web. Úsala para cualquier cosa que dependa de información actual: noticias, precios, versiones de software, ofertas de empleo, datos de empresas. Cita siempre la fuente y la fecha de lo que encuentres, contrasta al menos dos fuentes en temas importantes, y separa con etiquetas: ✅ hecho verificado · 📊 estimación · 💬 opinión. Si algo no se puede verificar, dilo — "no lo he podido verificar" es una respuesta excelente.
+## Búsqueda web (Perplexity)
+Tienes una herramienta llamada "buscar_web" que consulta Internet con Perplexity (la cuenta de Pau). Úsala para cualquier cosa que dependa de información actual: noticias, precios, versiones de software, ofertas de empleo, datos de empresas. Pásale una consulta clara en lenguaje natural. Cita siempre la fuente y la fecha de lo que encuentres (Perplexity te devuelve las fuentes), contrasta al menos dos fuentes en temas importantes, y separa con etiquetas: ✅ hecho verificado · 📊 estimación · 💬 opinión. Si la herramienta devuelve un error o no está configurada, dilo con claridad y pide a Pau que pegue la información. "No lo he podido verificar" es una respuesta excelente.
 
 ## Normas comunes a todos los modos
 - Nunca inventes títulos, experiencia o datos que Pau no tenga. Puedes proponer cómo ampliar su perfil (cursos, proyectos, prácticas), pero sin mentir.
@@ -157,18 +228,55 @@ export default async function handler(req, res) {
     max_tokens: 8000,
     thinking: { type: "adaptive" },
     system,
-    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }],
+    tools: [
+      {
+        name: "buscar_web",
+        description:
+          "Busca información actual en Internet con Perplexity (noticias, precios, datos, ofertas de empleo, empresas). Devuelve un resumen con las fuentes citadas. Úsala siempre que la respuesta dependa de información reciente.",
+        input_schema: {
+          type: "object",
+          properties: {
+            consulta: {
+              type: "string",
+              description: "La pregunta o los términos de búsqueda en lenguaje natural.",
+            },
+          },
+          required: ["consulta"],
+        },
+      },
+    ],
   };
 
   try {
     const client = new Anthropic();
 
-    // Bucle de continuación: las búsquedas web largas pueden pausar el turno
-    // (stop_reason "pause_turn"); se reenvía la conversación para que siga.
+    // Bucle de herramientas: si Clara pide buscar_web, ejecutamos la búsqueda
+    // en Perplexity y le devolvemos el resultado hasta que termine el turno.
     let convo = history;
     let response = await client.messages.create({ ...request, messages: convo });
-    for (let i = 0; i < MAX_CONTINUATIONS && response.stop_reason === "pause_turn"; i++) {
-      convo = [...convo, { role: "assistant", content: response.content }];
+
+    for (let round = 0; round < MAX_TOOL_ROUNDS && response.stop_reason === "tool_use"; round++) {
+      const toolUses = response.content.filter((b) => b.type === "tool_use");
+      const toolResults = [];
+      for (const tu of toolUses) {
+        let resultText;
+        try {
+          resultText =
+            tu.name === "buscar_web"
+              ? await buscarEnPerplexity(tu.input?.consulta)
+              : `Herramienta desconocida: ${tu.name}`;
+        } catch (e) {
+          resultText = "No se pudo completar la búsqueda: " + String(e?.message || e);
+        }
+        toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: resultText });
+      }
+      // Se conserva response.content intacto (incluidos los bloques de thinking)
+      // para poder continuar el turno en el mismo modelo.
+      convo = [
+        ...convo,
+        { role: "assistant", content: response.content },
+        { role: "user", content: toolResults },
+      ];
       response = await client.messages.create({ ...request, messages: convo });
     }
 

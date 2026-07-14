@@ -16,26 +16,30 @@ También genera guiones para vídeo/avatar en formato `SEGUNDOS · TEXTO EN PANT
 
 - **`clara_persona.md`** — el *prompt maestro* canónico de Clara (personalidad completa + los cinco modos). Es el que Claude Code / Cowork lee al trabajar en este repositorio (ver `CLAUDE.md`).
 - **`clara.html`** — interfaz de chat (misma estética que LimpiaFotos).
-- **`api/clara.js`** — función serverless de Vercel. Lleva la persona de Clara embebida (sincronizada con `clara_persona.md`) y llama a la API de Claude con el modelo `claude-sonnet-5` y **búsqueda web** activada (para el modo noticias y datos actuales). La clave nunca llega al navegador.
+- **`api/clara.js`** — función serverless de Vercel. Lleva la persona de Clara embebida (sincronizada con `clara_persona.md`) y llama a la API de Claude con el modelo `claude-sonnet-5`. La **búsqueda web la hace Perplexity** (cuenta de Pau) mediante una herramienta personalizada `buscar_web`: cuando Clara necesita datos actuales, la función consulta la API de Perplexity y le devuelve el resumen con fuentes. Ninguna clave llega al navegador.
 - **`CLAUDE.md`** — instrucciones para que Claude Code adopte la persona de Clara en este repositorio.
 - **`package.json`** — añade la dependencia `@anthropic-ai/sdk` (Vercel la instala automáticamente al desplegar).
 - **`vercel.json`** — amplía el tiempo máximo de la función a 60 segundos (las búsquedas web y respuestas largas tardan).
 
-## Configuración (un solo paso)
+## Configuración (dos claves)
 
-1. Consigue una clave de API en [platform.claude.com](https://platform.claude.com/) → **API Keys**.
-2. En Vercel: **Project → Settings → Environment Variables** y añade:
-   - **Name:** `ANTHROPIC_API_KEY`
-   - **Value:** tu clave (empieza por `sk-ant-...`)
-3. Vuelve a desplegar el proyecto (**Deployments → Redeploy**).
+En Vercel: **Project → Settings → Environment Variables**, añade estas dos variables y luego **redespliega** (**Deployments → Redeploy**):
+
+1. **`ANTHROPIC_API_KEY`** — el cerebro de Clara.
+   - Consíguela en [platform.claude.com](https://platform.claude.com/) → **API Keys** (empieza por `sk-ant-...`).
+
+2. **`PERPLEXITY_API_KEY`** — la búsqueda en Internet de Clara (tu cuenta de Perplexity, `jpaumoralejo@gmail.com`).
+   - Entra en [perplexity.ai/account/api](https://www.perplexity.ai/account/api/) con tu cuenta, ve a **API Keys** y **genera una clave** (empieza por `pplx-...`).
+   - Perplexity cobra la API por uso: necesitas **crédito o suscripción Pro** en tu cuenta. El correo por sí solo no basta — hace falta la clave que se genera ahí.
+   - Si no configuras esta clave, Clara sigue funcionando, pero en vez de buscar te pedirá que le pegues la información.
 
 Listo: abre `https://tu-proyecto.vercel.app/clara.html` y habla con Clara.
 
 ## Costes
 
-- Modelo `claude-sonnet-5`: buena calidad a precio contenido ($3 por millón de tokens de entrada, $15 de salida — con precio introductorio $2/$10 hasta agosto de 2026). Puedes cambiarlo en la constante `MODEL` de `api/clara.js` (`claude-opus-4-8` es más potente pero más caro; `claude-haiku-4-5` es más barato).
-- La búsqueda web cuesta aparte (~$10 por cada 1.000 búsquedas); Clara hace como máximo 5 búsquedas por mensaje.
-- Revisa el consumo en la consola de [platform.claude.com](https://platform.claude.com/).
+- **Claude** (`claude-sonnet-5`): buena calidad a precio contenido ($3 por millón de tokens de entrada, $15 de salida — con precio introductorio $2/$10 hasta agosto de 2026). Puedes cambiar el modelo en la constante `MODEL` de `api/clara.js` (`claude-opus-4-8` es más potente pero más caro; `claude-haiku-4-5` es más barato).
+- **Perplexity**: la búsqueda se cobra en tu cuenta de Perplexity según su tarifa por uso. Clara hace como máximo 4 rondas de búsqueda por respuesta. Puedes cambiar el modelo de búsqueda en la constante `PERPLEXITY_MODEL` de `api/clara.js` (`sonar` es el más barato; `sonar-pro` da respuestas más completas).
+- Revisa el consumo de Claude en [platform.claude.com](https://platform.claude.com/) y el de Perplexity en tu panel de [perplexity.ai](https://www.perplexity.ai/account/api/).
 
 ## Notas
 
