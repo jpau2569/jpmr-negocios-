@@ -1,0 +1,108 @@
+.card {
+  display: block;
+  flex: none;
+  scroll-snap-align: start;
+  width: clamp(300px, 44vw, 460px);
+  border-radius: var(--radius-xl);
+}
+
+.media {
+  aspect-ratio: 16 / 11;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+.card:hover .media {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.topRow {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  right: var(--space-4);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.playChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(12, 10, 9, 0.6);
+  backdrop-filter: blur(6px);
+  color: var(--c-beige-100);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+}
+
+.overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-8) var(--space-5) var(--space-5);
+  background: linear-gradient(180deg, transparent, rgba(10, 8, 7, 0.82) 62%);
+}
+
+.price {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--c-beige-50);
+}
+.price em {
+  font-style: normal;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  color: var(--c-beige-300);
+}
+
+.title {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-medium);
+  color: var(--c-beige-100);
+  line-height: var(--lh-snug);
+}
+
+.meta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--c-beige-300);
+}
+.sep {
+  width: 3px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: rgba(241, 235, 223, 0.4);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.tag {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  color: var(--c-beige-100);
+  background: rgba(241, 235, 223, 0.12);
+  border: 1px solid rgba(241, 235, 223, 0.16);
+  border-radius: var(--radius-pill);
+  padding: 2px 10px;
+  backdrop-filter: blur(4px);
+}

@@ -1,0 +1,27 @@
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: var(--radius-md);
+  background: linear-gradient(150deg, var(--c-walnut-500), var(--c-walnut-800));
+  border: 1px solid var(--border-strong);
+  color: var(--c-beige-100);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+:root[data-theme='light'] .avatar {
+  background: linear-gradient(150deg, var(--c-walnut-400), var(--c-walnut-600));
+  color: var(--c-beige-50);
+}
+
+.sm { width: 30px; height: 30px; font-size: var(--fs-2xs); }
+.md { width: 40px; height: 40px; font-size: var(--fs-sm); }
+.lg {
+  width: 52px;
+  height: 52px;
+  font-size: var(--fs-lg);
+  border-radius: var(--radius-lg);
+}

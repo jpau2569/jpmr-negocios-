@@ -1,0 +1,150 @@
+rules_version = '2';
+
+// ============================================================================
+// CASTRESANA — Reglas de Firestore (fase inicial)
+// ----------------------------------------------------------------------------
+// Principio: NADA es público. Todo requiere usuario autenticado, y la
+// escritura se limita por colección. Los datos internos de la inmobiliaria
+// (leads, propiedades, conversaciones…) son visibles para cualquier usuario
+// autenticado porque en esta fase todos los usuarios son empleados.
+//
+// ⚠️ ENDURECER ANTES DE PRODUCCIÓN (documentado también en docs/FIRESTORE.md):
+//   1. Roles reales: validar role/agentId contra users/{uid} (custom claims
+//      o lectura del doc) en vez de "cualquier autenticado escribe".
+//   2. Validación de esquema: tipos y campos obligatorios en create/update.
+//   3. Limitar updates a campos concretos (p. ej. solo stage/unread en leads).
+//   4. Si algún día hay usuarios externos (propietarios, compradores),
+//      separar colecciones internas con una condición isEmployee().
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ------------------------------------------------------------- users
+    // Cada usuario solo ve y edita su propio documento (y sus tokens FCM).
+    match /users/{uid} {
+      allow read, write: if isSelf(uid);
+
+      match /fcmTokens/{token} {
+        allow read, write: if isSelf(uid);
+      }
+    }
+
+    // ------------------------------------------------------------ agents
+    // Directorio interno: lectura para empleados; alta/baja solo por consola
+    // o Admin SDK (los agentes no se autogestionan desde el cliente).
+    match /agents/{agentId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ------------------------------------------------------------- leads
+    match /leads/{leadId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if false; // los leads se archivan, no se borran
+    }
+
+    // ---------------------------------------------------- conversations
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        allow update, delete: if false; // los mensajes son inmutables
+      }
+    }
+
+    // -------------------------------------------------------- properties
+    match /properties/{propertyId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if false;
+    }
+
+    // ------------------------------------------------------------ visits
+    match /visits/{visitId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if false;
+    }
+
+    // ------------------------------------------------------------- tasks
+    match /tasks/{taskId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // ----------------------------------------------------- notifications
+    // Solo el destinatario lee sus notificaciones; solo puede marcarlas
+    // como leídas (no crear a nombre de otros: eso lo hará el servidor).
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create, delete: if false; // las genera el backend (Functions/Admin)
+    }
+
+    // -------------------------------------------------- matchSuggestions
+    // Las genera el motor (Admin/Functions); el cliente solo lee y cambia estado.
+    match /matchSuggestions/{suggestionId} {
+      allow read: if isSignedIn();
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow create, delete: if false;
+    }
+
+    // ------------------------------------------------------ analyticsDaily
+    // Solo lectura para el dashboard; escribe el backend.
+    match /analyticsDaily/{dayId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ----------------------------------------------------- communications
+    // Registro de envíos WhatsApp/email. Inmutables una vez creados; el
+    // estado de entrega lo actualizará el backend (webhooks del proveedor).
+    match /communications/{communicationId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // -------------------------------------------- communicationTemplates
+    match /communicationTemplates/{templateId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); // TODO producción: solo admin
+    }
+
+    // ------------------------------------------------------- workflowRuns
+    // Auditoría de automatizaciones: las escribe el motor (backend).
+    match /workflowRuns/{runId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // -------------------------------------------------- generatedDocuments
+    match /generatedDocuments/{documentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // Denegación explícita para cualquier otra ruta.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
