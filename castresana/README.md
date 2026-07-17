@@ -4,8 +4,9 @@ PWA premium para **Asesoría Castresana** (Oviedo). Next.js App Router + TypeScr
 Estética sobria: negro carbón · marrón nogal pulido · beige roto · cobre suave.
 Temas oscuro y claro.
 
-> **Estado: fase 1.** Base escalable, layout global, design system, branding y
-> página **Inbox** completa con datos mock. Sin backend, sin Firebase, sin login.
+> **Estado: fase 3.** Base escalable, layout global, design system, branding,
+> **Inbox** completo, **Explorer** visual por rails y **ficha de inmueble**
+> con matching mock de leads. Sin backend, sin Firebase, sin login.
 
 ## Puesta en marcha
 
@@ -29,6 +30,8 @@ src/
     layout.tsx          Fuentes, metadata, anti-FOUC de tema, AppShell
     page.tsx            / → redirect a /inbox
     inbox/page.tsx      Server component: resuelve datos → InboxView
+    explorer/page.tsx   Descubrimiento visual: hero + rails horizontales
+    properties/[id]/    Ficha de inmueble (SSG con generateStaticParams)
     globals.css         Design tokens (2 capas, dark/light) + reset + base
     manifest.ts         Manifest PWA idiomático de Next
   components/
@@ -37,17 +40,27 @@ src/
     inbox/              InboxView · LeadList(+Item) · InboxToolbar ·
                         ConversationPanel · MessageComposer ·
                         LeadContextPanel · Timeline
+    explorer/           ExplorerHero · PropertyRail · PropertyCard ·
+                        PropertyFeaturedCard · VideoThumbCard ·
+                        RecommendationRail · SectionHeader
+    properties/         PropertyGallery · PropertySummary · PropertySpecs ·
+                        PropertyDescription · PropertyActions ·
+                        RelatedProperties · RelatedLeads · PropertyTimeline
     shared/             Button · IconButton · Badge · Avatar · SearchInput ·
-                        SegmentedControl · EmptyState · Icons · SW registrar
+                        SegmentedControl · EmptyState · MediaFrame · Icons ·
+                        SW registrar
   lib/
     utils/              cn · format (€, m², tiempo) · initials
     constants/          nav · stages (embudo) · channels
   hooks/                useTheme · useMediaQuery
   store/                inboxStore (Context + useReducer: selección, filtros,
                         panel activo en móvil)
-  types/                Modelo de dominio (Lead, Message, Property, TimelineEvent)
-  data/                 Mock realista de Oviedo/Asturias (leads, mensajes,
-                        propiedades, timeline) — punto único de acceso
+  types/                Modelo de dominio (Lead, Message, Property,
+                        PropertyVideo, TimelineEvent)
+  data/                 Mock realista de Oviedo/Asturias — punto único de
+                        acceso: leads, mensajes, mock-properties (14 inmuebles),
+                        mock-videos, mock-recommendations (rails + matching
+                        lead↔propiedad, futuro motor con IA)
 
 public/
   icons/                Iconos PWA (SVG any + maskable)

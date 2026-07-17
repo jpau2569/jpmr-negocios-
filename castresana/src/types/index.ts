@@ -55,17 +55,53 @@ export interface Message {
 
 export type PropertyKind = 'piso' | 'atico' | 'casa' | 'chalet' | 'local' | 'terreno';
 
+export type ListingStatus = 'disponible' | 'reservado' | 'vendido';
+
 export interface Property {
   id: ID;
   reference: string; // "CAS-0412"
   title: string;
   kind: PropertyKind;
   zone: string;
+  city: string;
   price: number;
   bedrooms: number;
   bathrooms: number;
   areaM2: number;
   operation: 'venta' | 'alquiler';
+  status: ListingStatus;
+  /** Etiquetas comerciales: "Reformado", "Terraza", "Inversión"… */
+  tags: string[];
+  /** Par de colores del placeholder de foto (gradiente cálido de la paleta). */
+  palette: [string, string];
+  /** Nº de fotos disponibles (mock). */
+  photos: number;
+  /** Tiene tour en vídeo asociado. */
+  hasVideo?: boolean;
+  /** Destacada para hero / rail premium. */
+  featured?: boolean;
+  description: string;
+  features: string[];
+  floor?: string;
+  yearBuilt?: number;
+  /** Rentabilidad estimada (solo inversión), en %. */
+  yieldPct?: number;
+  publishedAt: string; // ISO
+}
+
+/* ------------------------------------------------------------------ Vídeo */
+
+export type VideoKind = 'tour' | 'dron' | 'reel' | 'zona';
+
+export interface PropertyVideo {
+  id: ID;
+  propertyId: ID;
+  title: string;
+  subtitle: string;
+  kind: VideoKind;
+  /** Duración legible: "2:34". */
+  duration: string;
+  palette: [string, string];
 }
 
 /* ------------------------------------------------- Timeline / seguimiento */

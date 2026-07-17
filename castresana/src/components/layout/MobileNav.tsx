@@ -8,6 +8,7 @@ import {
   BuildingIcon,
   CalendarIcon,
   ChartIcon,
+  CompassIcon,
   InboxIcon,
   UsersIcon,
   type IconProps,
@@ -16,6 +17,7 @@ import styles from './MobileNav.module.css';
 
 const ICONS: Record<NavEntry['icon'], (p: IconProps) => React.ReactElement> = {
   inbox: InboxIcon,
+  compass: CompassIcon,
   building: BuildingIcon,
   users: UsersIcon,
   chart: ChartIcon,

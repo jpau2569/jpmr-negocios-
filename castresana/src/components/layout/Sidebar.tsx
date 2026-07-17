@@ -10,6 +10,7 @@ import {
   BuildingIcon,
   CalendarIcon,
   ChartIcon,
+  CompassIcon,
   InboxIcon,
   SettingsIcon,
   UsersIcon,
@@ -19,6 +20,7 @@ import styles from './Sidebar.module.css';
 
 const ICONS: Record<NavEntry['icon'], (p: IconProps) => React.ReactElement> = {
   inbox: InboxIcon,
+  compass: CompassIcon,
   building: BuildingIcon,
   users: UsersIcon,
   chart: ChartIcon,

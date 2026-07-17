@@ -219,6 +219,85 @@ export const NoteIcon = (p: IconProps) => (
   </I>
 );
 
+/* ------------------------------------------------------------- Explorer */
+
+export const CompassIcon = (p: IconProps) => (
+  <I {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M15.5 8.5 13.5 13.5 8.5 15.5 10.5 10.5Z" />
+  </I>
+);
+
+export const HeartIcon = (p: IconProps) => (
+  <I {...p}>
+    <path d="M12 20s-7-4.6-8.6-9A4.8 4.8 0 0 1 12 7.4 4.8 4.8 0 0 1 20.6 11C19 15.4 12 20 12 20Z" />
+  </I>
+);
+
+export const PlayIcon = (p: IconProps) => (
+  <I {...p}>
+    <path d="M8 5.5v13l11-6.5Z" fill="currentColor" stroke="none" />
+  </I>
+);
+
+export const CameraIcon = (p: IconProps) => (
+  <I {...p}>
+    <path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />
+    <circle cx="12" cy="13" r="3.2" />
+  </I>
+);
+
+export const ShareIcon = (p: IconProps) => (
+  <I {...p}>
+    <circle cx="6" cy="12" r="2.4" />
+    <circle cx="17.5" cy="6" r="2.4" />
+    <circle cx="17.5" cy="18" r="2.4" />
+    <path d="m8.2 10.9 7-3.8M8.2 13.1l7 3.8" />
+  </I>
+);
+
+export const FileIcon = (p: IconProps) => (
+  <I {...p}>
+    <path d="M6 3h8l4 4v14H6V3Z" />
+    <path d="M14 3v4h4M9.5 12h5M9.5 15.5h5" />
+  </I>
+);
+
+export const SparkleIcon = (p: IconProps) => (
+  <I {...p}>
+    <path d="M12 4c.6 3.6 2.4 5.4 6 6-3.6.6-5.4 2.4-6 6-.6-3.6-2.4-5.4-6-6 3.6-.6 5.4-2.4 6-6Z" />
+    <path d="M18.5 15.5c.3 1.6 1 2.4 2.5 2.7-1.5.3-2.2 1.1-2.5 2.7-.3-1.6-1-2.4-2.5-2.7 1.5-.3 2.2-1.1 2.5-2.7Z" />
+  </I>
+);
+
+export const ArrowRightIcon = (p: IconProps) => (
+  <I {...p}>
+    <path d="M4 12h16M14 6l6 6-6 6" />
+  </I>
+);
+
+export const BedIcon = (p: IconProps) => (
+  <I {...p}>
+    <path d="M3 8v11M3 12h18v7M21 19v-4a3 3 0 0 0-3-3H10V8h6" />
+    <circle cx="6.7" cy="10" r="1.5" />
+  </I>
+);
+
+export const BathIcon = (p: IconProps) => (
+  <I {...p}>
+    <path d="M4 12V6a2 2 0 0 1 3.4-1.4L9 6" />
+    <path d="M3 12h18v2a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-2Z" />
+    <path d="M6 18l-1 2M18 18l1 2" />
+  </I>
+);
+
+export const AreaIcon = (p: IconProps) => (
+  <I {...p}>
+    <rect x="4" y="4" width="16" height="16" rx="1.5" />
+    <path d="M8 4v4M4 8h4M16 20v-4M20 16h-4" />
+  </I>
+);
+
 /* --------------------------------------------------------------- Tema */
 
 export const SunIcon = (p: IconProps) => (
