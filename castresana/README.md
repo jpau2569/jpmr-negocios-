@@ -4,10 +4,31 @@ PWA premium para **Asesoría Castresana** (Oviedo). Next.js App Router + TypeScr
 Estética sobria: negro carbón · marrón nogal pulido · beige roto · cobre suave.
 Temas oscuro y claro.
 
-> **Estado: fase 4.** Inbox + Explorer + fichas + **Panel comercial**, con
-> **arquitectura Firebase completa** (Auth, Firestore, Storage, FCM): la app
-> funciona en **modo demo** sin configurar nada y pasa a datos reales al
-> rellenar `.env.local`. Esquema en `docs/FIRESTORE.md`.
+> **Estado: fase 5.** Inbox + Explorer + fichas + Panel comercial + firebase
+> (modo demo/real) + **capa de IA comercial**: scoring explicable, intención,
+> resumen, respuestas sugeridas, siguiente acción, matching lead↔inmueble,
+> alertas y panel de prioridades. Esquema Firestore en `docs/FIRESTORE.md`.
+
+## Capa de IA comercial
+
+- **Nivel 1 (activo)**: heurística determinista en `src/lib/ai/` — todo
+  resultado lleva **razones cortas visibles** (cero cajas negras):
+  `scoreLead` (0-100 + señales), `classifyIntent` (7 intenciones + confianza),
+  `summarizeLead` (briefing verificable), `suggestReply` (7 tipos de
+  plantilla contextual), `recommendNextAction` (árbol priorizado),
+  `matchProperty` (encaje presupuesto/zona/extras/urgencia),
+  `generateAlerts` (6 tipos con severidad).
+- **Nivel 2 (preparado)**: `lib/ai/provider.ts` define la interfaz
+  `AIProvider`; conectar Claude/OpenAI/Gemini = otra implementación de la
+  misma interfaz. Regla: el LLM redacta/resume; scoring y matching siguen
+  siendo deterministas y auditables.
+- **Servicios**: `aiLeadService` (LeadInsights agregado por lead),
+  `aiDashboardService` (pulso comercial: prioridades, alertas,
+  oportunidades, demanda por inmueble, carga por agente, tips del día).
+- **UI**: score en la lista del Inbox; resumen + siguiente acción + encaje
+  con stock en el panel del lead; chips de respuesta sugerida sobre el
+  composer; leads compatibles con score en la ficha de inmueble; bloque
+  «IA comercial» en el dashboard.
 
 ## Firebase
 

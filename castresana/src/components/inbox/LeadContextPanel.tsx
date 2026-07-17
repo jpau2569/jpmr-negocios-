@@ -1,11 +1,13 @@
 'use client';
 
 import type { Lead, Property, TimelineEvent } from '@/types';
+import type { LeadInsights } from '@/types/ai';
 import { formatArea, formatBudget, formatPrice } from '@/lib/utils/format';
 import { CHANNELS } from '@/lib/constants/channels';
 import { STAGES } from '@/lib/constants/stages';
 import { useInboxStore } from '@/store/inboxStore';
 import { Avatar, Badge, Button, IconButton } from '@/components/shared';
+import { LeadScoreBadge, LeadSummaryCard, MatchList, NextActionCard } from '@/components/ai';
 import {
   BuildingIcon,
   ChevronLeftIcon,
@@ -22,10 +24,12 @@ interface Props {
   lead: Lead;
   property?: Property;
   events: TimelineEvent[];
+  /** Análisis IA del lead (score, resumen, acción, matching). */
+  insights?: LeadInsights;
 }
 
 /** Panel derecho: contexto completo del lead activo. */
-export function LeadContextPanel({ lead, property, events }: Props) {
+export function LeadContextPanel({ lead, property, events, insights }: Props) {
   const { setMobilePane } = useInboxStore();
   const isRent = lead.intent === 'alquiler';
 
@@ -53,12 +57,15 @@ export function LeadContextPanel({ lead, property, events }: Props) {
 
         <div className={styles.badges}>
           <Badge stage={lead.stage}>{STAGES[lead.stage].label}</Badge>
+          {insights && <LeadScoreBadge score={insights.score} />}
           {lead.tags.map((tag) => (
             <Badge key={tag} tone="neutral">
               {tag}
             </Badge>
           ))}
         </div>
+
+        {insights && <NextActionCard action={insights.nextAction} />}
 
         <div className={styles.quickActions}>
           <Button variant="primary" size="sm" iconLeft={<PhoneIcon size={15} />} fullWidth>
@@ -68,6 +75,11 @@ export function LeadContextPanel({ lead, property, events }: Props) {
             Email
           </Button>
         </div>
+
+        {/* Resumen IA */}
+        {insights && (
+          <LeadSummaryCard summary={insights.summary} intent={insights.intent} />
+        )}
 
         {/* Datos clave */}
         <section className={styles.section}>
@@ -122,6 +134,13 @@ export function LeadContextPanel({ lead, property, events }: Props) {
                 </span>
               </div>
             </div>
+          </section>
+        )}
+
+        {/* Encaje con el stock (motor de matching) */}
+        {insights && insights.matches.length > 0 && (
+          <section className={styles.section}>
+            <MatchList matches={insights.matches} />
           </section>
         )}
 

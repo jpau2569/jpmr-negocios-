@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import type { Message, Property, TimelineEvent } from '@/types';
-import { conversationsRepository, leadsRepository, propertiesRepository } from '@/lib/repositories';
+import { conversationsRepository, propertiesRepository } from '@/lib/repositories';
 import { getTimelineByLead } from '@/data';
+import { getAllLeadInsights } from '@/lib/services/aiLeadService';
 import { InboxView } from '@/components/inbox/InboxView';
 
 export const metadata: Metadata = {
@@ -10,11 +11,11 @@ export const metadata: Metadata = {
 
 /**
  * Inbox — bandeja unificada de leads y conversaciones.
- * Los datos entran por la capa de repositorios (Firestore o seeds según
- * entorno); esta página solo los indexa para la vista.
+ * Los datos entran por la capa de repositorios y el análisis por la capa IA
+ * (score, resumen, siguiente acción, respuestas sugeridas, matching).
  */
 export default async function InboxPage() {
-  const leads = await leadsRepository.getLeads();
+  const { leads, insightsByLead } = await getAllLeadInsights();
 
   const messagesByLead: Record<string, Message[]> = {};
   const timelineByLead: Record<string, TimelineEvent[]> = {};
@@ -35,6 +36,7 @@ export default async function InboxPage() {
       messagesByLead={messagesByLead}
       propertiesById={propertiesById}
       timelineByLead={timelineByLead}
+      insightsByLead={insightsByLead}
     />
   );
 }

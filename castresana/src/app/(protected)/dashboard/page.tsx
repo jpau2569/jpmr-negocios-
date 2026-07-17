@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { dashboardRepository, leadsRepository, propertiesRepository } from '@/lib/repositories';
+import { getCommercialPulse } from '@/lib/services/aiDashboardService';
+import { AIInsightsPanel } from '@/components/ai';
 import { STAGES, STAGE_KEYS } from '@/lib/constants/stages';
 import { formatDay, formatTime } from '@/lib/utils/format';
 import { Badge } from '@/components/shared';
@@ -23,12 +25,13 @@ export const metadata: Metadata = {
  * Todos los datos entran por dashboardRepository (Firestore o seeds).
  */
 export default async function DashboardPage() {
-  const [summary, visits, tasks, leads, properties] = await Promise.all([
+  const [summary, visits, tasks, leads, properties, pulse] = await Promise.all([
     dashboardRepository.getDashboardSummary(),
     dashboardRepository.getUpcomingVisits(),
     dashboardRepository.getPendingTasks(),
     leadsRepository.getLeads(),
     propertiesRepository.getProperties(),
+    getCommercialPulse(),
   ]);
 
   const leadName = (id: string) => leads.find((l) => l.id === id)?.name ?? id;
@@ -50,6 +53,8 @@ export default async function DashboardPage() {
           <span className="eyebrow">Panel comercial</span>
           <h1 className={styles.title}>El día de un vistazo</h1>
         </header>
+
+        <AIInsightsPanel pulse={pulse} />
 
         <section className={styles.kpis} aria-label="Indicadores">
           {kpis.map(({ label, value, Icon }) => (

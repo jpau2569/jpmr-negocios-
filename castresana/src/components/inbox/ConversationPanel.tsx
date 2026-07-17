@@ -1,6 +1,7 @@
 'use client';
 
 import type { Lead, Message } from '@/types';
+import type { SuggestedReply } from '@/types/ai';
 import { cn } from '@/lib/utils/cn';
 import { formatTime } from '@/lib/utils/format';
 import { CHANNELS } from '@/lib/constants/channels';
@@ -14,10 +15,12 @@ import styles from './ConversationPanel.module.css';
 interface Props {
   lead: Lead;
   messages: Message[];
+  /** Respuestas sugeridas por la capa IA. */
+  replies?: SuggestedReply[];
 }
 
 /** Hilo de conversación del lead activo: cabecera, mensajes y composer. */
-export function ConversationPanel({ lead, messages }: Props) {
+export function ConversationPanel({ lead, messages, replies }: Props) {
   const { backToList, setMobilePane } = useInboxStore();
 
   return (
@@ -74,7 +77,7 @@ export function ConversationPanel({ lead, messages }: Props) {
         ))}
       </div>
 
-      <MessageComposer channel={lead.channel} />
+      <MessageComposer channel={lead.channel} replies={replies} />
     </section>
   );
 }

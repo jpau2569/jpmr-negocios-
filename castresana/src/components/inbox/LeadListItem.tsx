@@ -1,10 +1,12 @@
 'use client';
 
 import type { Lead } from '@/types';
+import type { LeadScore } from '@/types/ai';
 import { cn } from '@/lib/utils/cn';
 import { formatRelativeTime } from '@/lib/utils/format';
 import { STAGES } from '@/lib/constants/stages';
 import { Avatar, Badge } from '@/components/shared';
+import { LeadScoreBadge } from '@/components/ai';
 import {
   GlobeIcon,
   MailIcon,
@@ -29,9 +31,11 @@ interface Props {
   lead: Lead;
   selected: boolean;
   onSelect: (id: string) => void;
+  /** Score IA (opcional: la lista funciona también sin capa IA). */
+  score?: LeadScore;
 }
 
-export function LeadListItem({ lead, selected, onSelect }: Props) {
+export function LeadListItem({ lead, selected, onSelect, score }: Props) {
   const ChannelIcon = CHANNEL_ICONS[lead.channel];
   const hasUnread = lead.unread > 0;
 
@@ -65,6 +69,7 @@ export function LeadListItem({ lead, selected, onSelect }: Props) {
 
         <span className={styles.metaRow}>
           <Badge stage={lead.stage}>{STAGES[lead.stage].label}</Badge>
+          {score && <LeadScoreBadge score={score} compact />}
           {lead.tags[0] && <span className={styles.tag}>{lead.tags[0]}</span>}
         </span>
       </span>

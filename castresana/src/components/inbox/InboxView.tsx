@@ -1,6 +1,7 @@
 'use client';
 
 import type { Lead, Message, Property, TimelineEvent } from '@/types';
+import type { LeadInsights } from '@/types/ai';
 import { cn } from '@/lib/utils/cn';
 import { InboxProvider, useInboxStore } from '@/store/inboxStore';
 import { EmptyState } from '@/components/shared';
@@ -17,6 +18,7 @@ export interface InboxViewProps {
   messagesByLead: Record<string, Message[]>;
   propertiesById: Record<string, Property>;
   timelineByLead: Record<string, TimelineEvent[]>;
+  insightsByLead: Record<string, LeadInsights>;
 }
 
 export function InboxView(props: InboxViewProps) {
@@ -27,19 +29,30 @@ export function InboxView(props: InboxViewProps) {
   );
 }
 
-function InboxLayout({ leads, messagesByLead, propertiesById, timelineByLead }: InboxViewProps) {
+function InboxLayout({
+  leads,
+  messagesByLead,
+  propertiesById,
+  timelineByLead,
+  insightsByLead,
+}: InboxViewProps) {
   const { selectedLeadId, mobilePane } = useInboxStore();
   const lead = leads.find((l) => l.id === selectedLeadId) ?? null;
+  const insights = lead ? insightsByLead[lead.id] : undefined;
 
   return (
     <div className={cn(styles.grid, styles[`pane-${mobilePane}`])}>
       <div className={cn(styles.col, styles.listCol)}>
-        <LeadList leads={leads} />
+        <LeadList leads={leads} insightsByLead={insightsByLead} />
       </div>
 
       <div className={cn(styles.col, styles.conversationCol)}>
         {lead ? (
-          <ConversationPanel lead={lead} messages={messagesByLead[lead.id] ?? []} />
+          <ConversationPanel
+            lead={lead}
+            messages={messagesByLead[lead.id] ?? []}
+            replies={insights?.replies ?? []}
+          />
         ) : (
           <EmptyState
             icon={<InboxIcon size={22} />}
@@ -55,6 +68,7 @@ function InboxLayout({ leads, messagesByLead, propertiesById, timelineByLead }: 
             lead={lead}
             property={lead.propertyId ? propertiesById[lead.propertyId] : undefined}
             events={timelineByLead[lead.id] ?? []}
+            insights={insights}
           />
         )}
       </div>

@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getCompatibleLeads, getPropertyActivity, getRelatedProperties } from '@/data';
+import { getPropertyActivity, getRelatedProperties } from '@/data';
 import { seedProperties } from '@/data/seed';
 import { propertiesRepository } from '@/lib/repositories';
+import { getLeadMatchesForProperty } from '@/lib/services/aiLeadService';
 import { ChevronLeftIcon } from '@/components/shared/Icons';
 import { PropertyGallery } from '@/components/properties/PropertyGallery';
 import { PropertySummary } from '@/components/properties/PropertySummary';
@@ -36,7 +37,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   const property = await propertiesRepository.getPropertyById(id);
   if (!property) notFound();
 
-  const matches = getCompatibleLeads(property.id);
+  // Leads compatibles calculados por el motor de matching de la capa IA.
+  const matches = await getLeadMatchesForProperty(property.id);
   const related = getRelatedProperties(property.id);
   const activity = getPropertyActivity(property);
 

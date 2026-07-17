@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import type { Lead } from '@/types';
+import type { LeadInsights } from '@/types/ai';
 import { useInboxStore } from '@/store/inboxStore';
 import { EmptyState } from '@/components/shared';
 import { InboxIcon } from '@/components/shared/Icons';
@@ -11,10 +12,11 @@ import styles from './LeadList.module.css';
 
 interface Props {
   leads: Lead[];
+  insightsByLead?: Record<string, LeadInsights>;
 }
 
 /** Columna de leads: toolbar + listado filtrado y ordenado. */
-export function LeadList({ leads }: Props) {
+export function LeadList({ leads, insightsByLead }: Props) {
   const { selectedLeadId, selectLead, stageFilter, query } = useInboxStore();
 
   const visible = useMemo(() => {
@@ -49,6 +51,7 @@ export function LeadList({ leads }: Props) {
               lead={lead}
               selected={lead.id === selectedLeadId}
               onSelect={selectLead}
+              score={insightsByLead?.[lead.id]?.score}
             />
           ))
         ) : (
