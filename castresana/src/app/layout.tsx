@@ -1,33 +1,32 @@
 import type { Metadata, Viewport } from 'next';
-import { Fraunces, Inter } from 'next/font/google';
+import { Fraunces, Manrope } from 'next/font/google';
 import './globals.css';
-import { AppShell } from '@/components/layout';
-import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
+import { AppShell } from '@/components/layout/AppShell';
+import { ServiceWorkerRegistrar } from '@/components/shared';
 
-/* Tipografías: serif editorial para display (premium), sans neutra para UI. */
+/* Tipografía: Fraunces (serif editorial, display) + Manrope (sans humanista, UI).
+   Ninguna de las dos huele a plantilla; juntas dan el tono premium-cálido. */
 const fraunces = Fraunces({
   subsets: ['latin'],
-  variable: '--font-serif',
+  variable: '--font-fraunces',
   display: 'swap',
   axes: ['opsz'],
 });
 
-const inter = Inter({
+const manrope = Manrope({
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-inter',
+  variable: '--font-manrope',
   display: 'swap',
 });
 
 export const metadata: Metadata = {
   title: {
-    default: 'Castresana — Gestión inmobiliaria premium',
+    default: 'Castresana — Inbox inmobiliario',
     template: '%s · Castresana',
   },
   description:
-    'Inbox unificado, propiedades y leads para inmobiliaria premium. PWA rápida y sobria.',
+    'Software interno de Asesoría Castresana (Oviedo): leads, conversaciones y propiedades en un solo lugar.',
   applicationName: 'Castresana',
-  manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -41,17 +40,34 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#131110',
-  colorScheme: 'dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#100E0C' },
+    { media: '(prefers-color-scheme: light)', color: '#E7E0D2' },
+  ],
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
   viewportFit: 'cover',
 };
 
+/* Aplica el tema guardado ANTES del primer paint (evita flash de tema).
+   Debe coincidir con THEME_STORAGE_KEY de lib/constants/nav.ts. */
+const themeInitScript = `
+(function () {
+  try {
+    var t = localStorage.getItem('castresana-theme');
+    if (t === 'light' || t === 'dark') {
+      document.documentElement.setAttribute('data-theme', t);
+    }
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${fraunces.variable} ${inter.variable}`}>
+    <html lang="es" data-theme="dark" className={`${fraunces.variable} ${manrope.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>
         <AppShell>{children}</AppShell>
         <ServiceWorkerRegistrar />

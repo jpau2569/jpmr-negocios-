@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-/** La raíz entra directamente al Inbox, el centro de operación diario. */
+/** El Inbox es el centro de trabajo diario: la raíz entra directamente ahí. */
 export default function HomePage() {
   redirect('/inbox');
 }

@@ -1,109 +1,91 @@
 /* ============================================================================
-   CASTRESANA — Tipos de dominio
-   Modelo de datos base de la PWA inmobiliaria. Sin dependencias externas:
-   cuando conectemos el backend, estos tipos serán el contrato compartido.
+   CASTRESANA — Modelo de dominio
+   Contrato de datos compartido. Cuando conectemos Firebase, estos tipos
+   serán la única fuente de verdad entre la capa de datos y la UI.
    ============================================================================ */
 
 export type ID = string;
 
-/* ------------------------------------------------------------------ Canales */
+/* ---------------------------------------------------------------- Canales */
 
-export type Channel = 'whatsapp' | 'email' | 'portal' | 'phone' | 'web';
+export type Channel = 'whatsapp' | 'email' | 'portal' | 'telefono' | 'web';
 
-/* -------------------------------------------------------------------- Leads */
+/* ----------------------------------------------------------------- Embudo */
 
-export type LeadStage =
-  | 'nuevo'
-  | 'contactado'
-  | 'cualificado'
-  | 'visita'
-  | 'oferta'
-  | 'cerrado'
-  | 'perdido';
+export type LeadStage = 'nuevo' | 'seguimiento' | 'visita' | 'oferta' | 'cerrado';
 
-export type LeadTemperature = 'frio' | 'templado' | 'caliente';
+export type Intent = 'compra' | 'alquiler' | 'venta';
+
+/* ------------------------------------------------------------------ Leads */
 
 export interface Lead {
   id: ID;
   name: string;
-  initials: string;
-  email?: string;
   phone?: string;
+  email?: string;
   stage: LeadStage;
-  temperature: LeadTemperature;
+  intent: Intent;
   channel: Channel;
+  /** Zona de interés (barrios de Oviedo / Asturias). */
+  zone: string;
   budgetMin?: number;
   budgetMax?: number;
-  /** Referencias de propiedades de interés. */
-  interestedIn: ID[];
-  assignedTo?: string;
-  createdAt: string; // ISO
-  lastActivityAt: string; // ISO
-  notes?: string;
-}
-
-/* --------------------------------------------------------------- Propiedades */
-
-export type PropertyKind =
-  | 'piso'
-  | 'atico'
-  | 'casa'
-  | 'chalet'
-  | 'local'
-  | 'oficina'
-  | 'terreno';
-
-export type PropertyStatus = 'disponible' | 'reservado' | 'vendido' | 'borrador';
-export type Operation = 'venta' | 'alquiler';
-
-export interface Property {
-  id: ID;
-  reference: string; // p.ej. "CAS-0421"
-  title: string;
-  kind: PropertyKind;
-  operation: Operation;
-  status: PropertyStatus;
-  price: number;
-  currency: 'EUR';
-  address: string;
-  city: string;
-  neighborhood?: string;
-  bedrooms: number;
-  bathrooms: number;
-  areaBuilt: number; // m²
-  areaUsable?: number; // m²
-  features: string[];
-  description?: string;
+  tags: string[];
+  propertyId?: ID;
+  unread: number;
+  pinned?: boolean;
+  lastMessageAt: string; // ISO
+  lastMessagePreview: string;
   createdAt: string; // ISO
 }
 
-/* ------------------------------------------------------- Inbox / Mensajería */
+/* --------------------------------------------------------------- Mensajes */
 
-export type MessageDirection = 'inbound' | 'outbound';
+export type MessageDirection = 'in' | 'out';
 
 export interface Message {
   id: ID;
+  leadId: ID;
   direction: MessageDirection;
-  author: string;
   body: string;
   sentAt: string; // ISO
-  read: boolean;
 }
 
-export interface Conversation {
+/* ------------------------------------------------------------ Propiedades */
+
+export type PropertyKind = 'piso' | 'atico' | 'casa' | 'chalet' | 'local' | 'terreno';
+
+export interface Property {
+  id: ID;
+  reference: string; // "CAS-0412"
+  title: string;
+  kind: PropertyKind;
+  zone: string;
+  price: number;
+  bedrooms: number;
+  bathrooms: number;
+  areaM2: number;
+  operation: 'venta' | 'alquiler';
+}
+
+/* ------------------------------------------------- Timeline / seguimiento */
+
+export type TimelineKind =
+  | 'creado'
+  | 'mensaje'
+  | 'llamada'
+  | 'visita'
+  | 'oferta'
+  | 'nota'
+  | 'tarea';
+
+export interface TimelineEvent {
   id: ID;
   leadId: ID;
-  leadName: string;
-  initials: string;
-  channel: Channel;
-  subject: string;
-  preview: string;
-  unread: number;
-  pinned?: boolean;
-  temperature: LeadTemperature;
-  stage: LeadStage;
-  /** Referencia de propiedad asociada, si la hay. */
-  propertyRef?: string;
-  updatedAt: string; // ISO
-  messages: Message[];
+  kind: TimelineKind;
+  title: string;
+  detail?: string;
+  at: string; // ISO
+  /** Para tareas: pendiente o completada. */
+  done?: boolean;
 }

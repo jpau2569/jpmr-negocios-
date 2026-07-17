@@ -1,64 +1,59 @@
-.listPanel {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
+.grid {
+  display: grid;
+  grid-template-columns: var(--lead-list-width) minmax(0, 1fr) var(--context-width);
+  height: 100%;
+  overflow: hidden;
 }
 
-.filters {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
+.col {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
-.filterTabs {
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  background: var(--bg-inset);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
+.listCol { border-right: 1px solid var(--border-subtle); }
+.contextCol {
+  border-left: 1px solid var(--border-subtle);
+  background: var(--bg-app);
 }
 
-.filterTab {
-  padding: 5px var(--space-3);
-  border-radius: var(--radius-sm);
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-medium);
-  color: var(--text-muted);
-  transition:
-    color var(--dur-fast) var(--ease-standard),
-    background-color var(--dur-fast) var(--ease-standard);
-}
-.filterTab:hover {
-  color: var(--text-primary);
-}
-.filterTabActive {
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-xs);
+/* Tablet: se oculta el contexto (accesible vía botón en la conversación) */
+@media (max-width: 1200px) {
+  .grid { grid-template-columns: var(--lead-list-width) minmax(0, 1fr); }
+  .contextCol { display: none; }
+
+  /* …salvo que el usuario lo pida explícitamente */
+  .pane-context .contextCol {
+    display: block;
+    position: fixed;
+    inset: var(--topbar-height) 0 0 auto;
+    width: min(var(--context-width), 100%);
+    background: var(--bg-app);
+    border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-overlay);
+  }
 }
 
-.filterIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-}
-.filterIcon:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover);
-}
+/* Móvil: un panel cada vez, controlado por el store (mobilePane) */
+@media (max-width: 860px) {
+  .grid { grid-template-columns: 1fr; }
 
-.items {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-2);
-  flex: 1;
+  .listCol,
+  .conversationCol,
+  .contextCol {
+    display: none;
+    border: none;
+  }
+
+  .pane-list .listCol { display: block; }
+  .pane-conversation .conversationCol { display: block; }
+  .pane-context .contextCol {
+    display: block;
+    position: static;
+    inset: auto;
+    width: 100%;
+    box-shadow: none;
+  }
 }

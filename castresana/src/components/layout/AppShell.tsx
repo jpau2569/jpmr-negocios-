@@ -1,21 +1,21 @@
 import type { ReactNode } from 'react';
-import { NavRail } from './NavRail';
+import { Sidebar } from './Sidebar';
+import { Topbar } from './Topbar';
+import { MobileNav } from './MobileNav';
 import styles from './AppShell.module.css';
 
-export interface AppShellProps {
-  children: ReactNode;
-}
-
 /**
- * AppShell — armazón global de la aplicación.
- * Estructura en rejilla: [NavRail | área de trabajo]. El área de trabajo la
- * rellenan las páginas, normalmente con <Workspace> (layout de 3 paneles).
+ * AppShell — armazón global.
+ *   Desktop:  [ Sidebar | Topbar / main ]
+ *   Móvil:    [ Topbar / main / MobileNav ]
  */
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className={styles.shell}>
-      <NavRail />
-      <div className={styles.workspace}>{children}</div>
+      <Sidebar />
+      <Topbar />
+      <main className={styles.main}>{children}</main>
+      <MobileNav />
     </div>
   );
 }

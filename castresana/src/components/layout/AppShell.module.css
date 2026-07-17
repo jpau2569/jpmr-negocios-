@@ -1,22 +1,28 @@
 .shell {
   display: grid;
-  grid-template-columns: var(--rail-width) 1fr;
-  grid-template-areas: 'rail workspace';
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: var(--topbar-height) 1fr;
+  grid-template-areas:
+    'sidebar topbar'
+    'sidebar main';
   height: 100dvh;
-  width: 100%;
   overflow: hidden;
 }
 
-.workspace {
-  grid-area: workspace;
+.main {
+  grid-area: main;
   min-width: 0;
-  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
-/* En pantallas estrechas el rail se mantiene (iconos); el resto se adapta. */
-@media (max-width: 640px) {
+@media (max-width: 860px) {
   .shell {
-    grid-template-columns: var(--rail-width) 1fr;
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--topbar-height) 1fr var(--mobilenav-height);
+    grid-template-areas:
+      'topbar'
+      'main'
+      'mobilenav';
   }
 }

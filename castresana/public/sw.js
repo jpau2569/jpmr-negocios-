@@ -1,30 +1,48 @@
 /* ============================================================================
-   CASTRESANA — Service Worker (PLACEHOLDER)
+   CASTRESANA — Service Worker básico (fase 1)
    ----------------------------------------------------------------------------
-   Este SW aún NO implementa estrategia de caché. Solo se instala y activa para
-   dejar el terreno preparado y que la app sea instalable como PWA.
+   Alcance actual, deliberadamente mínimo:
+     · Precachea la página offline y los iconos.
+     · Para navegaciones: red primero; si falla, sirve /offline.html.
+     · Todo lo demás pasa directo a la red (sin caché de datos aún).
 
-   Próximo paso (cuando definamos offline real):
-     - Precache del App Shell (rutas base + estáticos críticos).
-     - Runtime caching (stale-while-revalidate para datos, cache-first para
-       imágenes de propiedades).
-     - Página offline de reserva.
-   Recomendado migrar a Workbox / serwist en ese momento.
+   Fase PWA completa (más adelante): precache del app shell, runtime caching
+   (stale-while-revalidate) y sincronización en segundo plano — idealmente
+   con Workbox/serwist.
    ============================================================================ */
 
-const VERSION = 'castresana-v0-placeholder';
+const CACHE_NAME = 'castresana-v1';
+const PRECACHE_URLS = ['/offline.html', '/icons/icon.svg', '/icons/icon-maskable.svg'];
 
-self.addEventListener('install', () => {
-  // Activa esta versión inmediatamente, sin esperar a que se cierren pestañas.
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)),
+  );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  // Toma control de las páginas ya abiertas.
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    (async () => {
+      // Limpia cachés de versiones anteriores.
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)));
+      await self.clients.claim();
+    })(),
+  );
 });
 
-self.addEventListener('fetch', () => {
-  // Placeholder: dejamos pasar todas las peticiones a la red (sin caché).
-  // No interceptamos nada todavía.
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+
+  // Solo interceptamos navegaciones de página; el resto va directo a red.
+  if (request.mode !== 'navigate') return;
+
+  event.respondWith(
+    fetch(request).catch(async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const offline = await cache.match('/offline.html');
+      return offline ?? Response.error();
+    }),
+  );
 });

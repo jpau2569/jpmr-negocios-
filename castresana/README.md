@@ -1,90 +1,88 @@
-# Castresana
+# Castresana — Inbox inmobiliario
 
-PWA inmobiliaria **premium** construida con **Next.js (App Router) + TypeScript**.
-Estética sobria: negro carbón, marrón nogal pulido, beige roto y cobre suave.
+PWA premium para **Asesoría Castresana** (Oviedo). Next.js App Router + TypeScript.
+Estética sobria: negro carbón · marrón nogal pulido · beige roto · cobre suave.
+Temas oscuro y claro.
 
-> Estado: **andamiaje inicial**. Estructura, layout global de 3 paneles, design
-> system, componentes base y la página **Inbox** con datos mock. Sin backend.
+> **Estado: fase 1.** Base escalable, layout global, design system, branding y
+> página **Inbox** completa con datos mock. Sin backend, sin Firebase, sin login.
 
 ## Puesta en marcha
 
 ```bash
 cd castresana
 npm install
-npm run dev      # http://localhost:3000  (redirige a /inbox)
+npm run dev        # http://localhost:3000 → redirige a /inbox
 ```
-
-Scripts útiles:
 
 ```bash
 npm run build      # build de producción
 npm run start      # sirve el build
-npm run typecheck  # comprobación de tipos (tsc --noEmit)
-npm run lint       # linter de Next
+npm run typecheck  # tsc --noEmit
 ```
 
-## Estructura
+## Arquitectura
 
 ```
-castresana/
-├── public/
-│   ├── manifest.webmanifest     # manifest PWA
-│   ├── sw.js                    # service worker PLACEHOLDER (sin caché aún)
-│   └── icons/                   # iconos de la app (SVG)
-└── src/
-    ├── app/                     # rutas (App Router)
-    │   ├── layout.tsx           # layout raíz: fuentes, metadata PWA, AppShell
-    │   ├── page.tsx             # raíz → redirige a /inbox
-    │   ├── globals.css          # reset + base + import de tokens
-    │   ├── inbox/               # ✅ Inbox con datos mock
-    │   ├── explorer/            # base
-    │   ├── dashboard/           # base (KPIs)
-    │   ├── properties/[id]/     # base (detalle propiedad)
-    │   └── leads/[id]/          # base (detalle lead)
-    ├── components/
-    │   ├── layout/              # AppShell, NavRail, Workspace (3 paneles), PanelHeader, Page
-    │   ├── ui/                  # Button, Badge, Card, Avatar, SearchField, Stat, EmptyState…
-    │   ├── inbox/               # InboxView, ConversationItem, MessageThread, InboxContext
-    │   └── icons/               # set de iconos SVG inline
-    ├── data/                    # datos mock (mockInbox.ts)
-    ├── lib/                     # utilidades (cn, format, channelMeta, registerServiceWorker)
-    ├── styles/                  # tokens.css (design tokens)
-    └── types/                   # tipos de dominio (Lead, Property, Conversation…)
+src/
+  app/                  Rutas (App Router)
+    layout.tsx          Fuentes, metadata, anti-FOUC de tema, AppShell
+    page.tsx            / → redirect a /inbox
+    inbox/page.tsx      Server component: resuelve datos → InboxView
+    globals.css         Design tokens (2 capas, dark/light) + reset + base
+    manifest.ts         Manifest PWA idiomático de Next
+  components/
+    layout/             AppShell · Sidebar · Topbar · MobileNav · ThemeToggle
+    branding/           Logo (SVG monograma) · Wordmark
+    inbox/              InboxView · LeadList(+Item) · InboxToolbar ·
+                        ConversationPanel · MessageComposer ·
+                        LeadContextPanel · Timeline
+    shared/             Button · IconButton · Badge · Avatar · SearchInput ·
+                        SegmentedControl · EmptyState · Icons · SW registrar
+  lib/
+    utils/              cn · format (€, m², tiempo) · initials
+    constants/          nav · stages (embudo) · channels
+  hooks/                useTheme · useMediaQuery
+  store/                inboxStore (Context + useReducer: selección, filtros,
+                        panel activo en móvil)
+  types/                Modelo de dominio (Lead, Message, Property, TimelineEvent)
+  data/                 Mock realista de Oviedo/Asturias (leads, mensajes,
+                        propiedades, timeline) — punto único de acceso
+
+public/
+  icons/                Iconos PWA (SVG any + maskable)
+  offline.html          Página de reserva sin conexión
+  sw.js                 SW básico: precache mínimo + fallback offline
 ```
 
-## Design system
+### Principios
 
-Dos capas de tokens en `src/styles/tokens.css`:
+- **La UI nunca importa datos directamente**: todo pasa por `src/data` (hoy mock).
+  Al conectar Firebase solo cambia esa capa.
+- **Tokens en dos capas**: primitivas (`--c-*`) → semánticos (`--bg-*`, `--text-*`,
+  `--stage-*`…). Los componentes consumen solo semánticos, por eso el tema claro
+  es un bloque de overrides y todo lo demás funciona igual.
+- **Responsive real**: desktop = 3 columnas (lista · conversación · contexto);
+  tablet = 2 (contexto bajo demanda); móvil = 1 panel cada vez gestionado por el
+  store + nav inferior.
+- **Estados del embudo** (`nuevo → seguimiento → visita → oferta → cerrado`) con
+  color propio vía tokens `--stage-*`, consumidos por `Badge stage={...}`.
 
-1. **Primitivas** — paleta cruda (`--c-carbon-*`, `--c-walnut-*`, `--c-beige-*`, `--c-copper-*`).
-2. **Semánticos** — intención de uso (`--bg-*`, `--text-*`, `--accent-*`, `--border-*`…).
+## Tipografía
 
-Los componentes consumen **solo tokens semánticos**. Tipografía: *Fraunces*
-(display, serif editorial) + *Inter* (UI). Estilado con **CSS Modules** por
-componente para mantener el CSS acotado y sin colisiones.
+**Fraunces** (serif editorial, títulos y marca) + **Manrope** (sans humanista, UI),
+servidas con `next/font` (self-hosted, sin peticiones a terceros).
 
-### Layout de 3 paneles
+## PWA (fase 1)
 
-`AppShell` = `NavRail` (barra de iconos) + área de trabajo. Las páginas usan
-`Workspace`, que ofrece tres columnas con scroll independiente:
+- `manifest.ts` → `/manifest.webmanifest` enlazado automáticamente.
+- `sw.js` básico: precachea `offline.html` + iconos; navegaciones con fallback
+  offline; **sin caché de datos todavía**. Registro solo en producción.
+- Siguiente fase: app shell precache + runtime caching (Workbox/serwist).
 
-```
-[ NavRail ] [ lista (opc.) | principal | contexto (opc.) ]
-```
+## Hoja de ruta
 
-El Inbox usa las tres: lista de conversaciones · hilo de mensajes · ficha del lead.
-
-## PWA
-
-- `manifest.webmanifest` con iconos, tema carbón y accesos directos.
-- `sw.js` es un **placeholder**: instala/activa pero **no cachea nada** todavía.
-  El registro (solo en producción) está en `src/lib/registerServiceWorker.ts`.
-- Siguiente paso PWA: estrategia de caché real (App Shell + runtime caching),
-  preferiblemente con Workbox / serwist.
-
-## Próximos pasos sugeridos
-
-1. Conectar catálogo real de propiedades en **Explorer**.
-2. Datos reales de leads y conversaciones (backend / Firebase — **aún no añadido**).
-3. Caché offline real en el service worker.
-4. Gráficos del Dashboard (embudo, actividad).
+1. Propiedades (galería con exploración visual tipo carrusel)
+2. Firebase (Auth + Firestore) sustituyendo `src/data`
+3. PWA completa (instalable, offline real, push)
+4. Agenda e informes
