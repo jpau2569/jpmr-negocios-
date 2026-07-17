@@ -20,6 +20,10 @@ const COLLECTIONS = [
   'notifications',
   'matchSuggestions',
   'analyticsDaily',
+  'communications',
+  'communicationTemplates',
+  'workflowRuns',
+  'generatedDocuments',
 ];
 
 async function main() {

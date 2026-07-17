@@ -4,10 +4,35 @@ PWA premium para **Asesoría Castresana** (Oviedo). Next.js App Router + TypeScr
 Estética sobria: negro carbón · marrón nogal pulido · beige roto · cobre suave.
 Temas oscuro y claro.
 
-> **Estado: fase 5.** Inbox + Explorer + fichas + Panel comercial + firebase
-> (modo demo/real) + **capa de IA comercial**: scoring explicable, intención,
-> resumen, respuestas sugeridas, siguiente acción, matching lead↔inmueble,
-> alertas y panel de prioridades. Esquema Firestore en `docs/FIRESTORE.md`.
+> **Estado: fase 6.** Inbox + Explorer + fichas + Panel + Firebase (demo/real)
+> + capa IA + **automatización comercial**: motor de workflows, WhatsApp y
+> email con plantillas, agenda de visitas, tareas automáticas, documentos
+> imprimibles y activity center. Esquema Firestore en `docs/FIRESTORE.md`.
+
+## Automatización comercial
+
+- **Motor de workflows** (`lib/automation/`): triggers detectados sobre el
+  estado del sistema (lead nuevo, caliente sin respuesta, visita solicitada/
+  confirmada, silencio 48 h, captación con demanda, vendedor detectado) ×
+  condiciones con motivo × acciones que producen **artefactos reales**
+  (tareas, alertas, visitas, recordatorios). Runs auditables con detalle;
+  los omitidos explican qué condición falló. Con Cloud Functions, los
+  mismos triggers pasarán a dispararse por eventos.
+- **WhatsApp y email** (`lib/integrations/`): providers como interfaz
+  (mock hoy; Twilio/Meta/Resend = otra implementación en ruta de servidor),
+  plantillas es-ES con variables `{{x}}` que **nunca se rellenan inventando**
+  (los huecos quedan visibles), registro de envíos con estados de entrega.
+- **Documentos** (`lib/documents/`): generadores → contenido estructurado →
+  HTML imprimible sobrio (imprimir = PDF). Ficha de inmueble, resumen de
+  lead, resumen de visita y propuesta listos; contratos marcados «en
+  preparación» (requieren revisión legal antes de activarse).
+- **Activity center** (`activityService`): timeline unificado por lead —
+  mensajes, WhatsApp/email con estado, tareas, visitas, hitos y workflows.
+- **UI**: plantillas en el composer del Inbox (botón 📄), historia comercial
+  + tareas + visitas + documentos + automatizaciones en la ficha de lead,
+  agenda de visitas agrupada y bloque «Automatización» en el dashboard
+  (workflows disparados, tareas vencidas, rendimiento por canal, leads sin
+  tocar). Preferencias en `lib/constants/automation.ts`.
 
 ## Capa de IA comercial
 

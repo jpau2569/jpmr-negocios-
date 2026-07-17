@@ -2,10 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { dashboardRepository, leadsRepository, propertiesRepository } from '@/lib/repositories';
 import { getCommercialPulse } from '@/lib/services/aiDashboardService';
+import { getAutomationSnapshot } from '@/lib/services/automationService';
 import { AIInsightsPanel } from '@/components/ai';
+import { AutomationPanel, VisitScheduler } from '@/components/automation';
 import { STAGES, STAGE_KEYS } from '@/lib/constants/stages';
 import { formatDay, formatTime } from '@/lib/utils/format';
-import { Badge } from '@/components/shared';
 import {
   BuildingIcon,
   CalendarIcon,
@@ -25,17 +26,16 @@ export const metadata: Metadata = {
  * Todos los datos entran por dashboardRepository (Firestore o seeds).
  */
 export default async function DashboardPage() {
-  const [summary, visits, tasks, leads, properties, pulse] = await Promise.all([
+  const nowIso = new Date().toISOString();
+  const [summary, tasks, leads, properties, pulse, automation] = await Promise.all([
     dashboardRepository.getDashboardSummary(),
-    dashboardRepository.getUpcomingVisits(),
     dashboardRepository.getPendingTasks(),
     leadsRepository.getLeads(),
     propertiesRepository.getProperties(),
     getCommercialPulse(),
+    getAutomationSnapshot(),
   ]);
 
-  const leadName = (id: string) => leads.find((l) => l.id === id)?.name ?? id;
-  const propertyRef = (id: string) => properties.find((p) => p.id === id)?.reference ?? id;
   const maxStage = Math.max(...STAGE_KEYS.map((s) => summary.byStage[s]), 1);
 
   const kpis = [
@@ -90,29 +90,14 @@ export default async function DashboardPage() {
             </ul>
           </section>
 
-          <section className={styles.card} aria-label="Próximas visitas">
-            <h2 className={styles.cardTitle}>Próximas visitas</h2>
-            <ul className={styles.list}>
-              {visits.length === 0 && <li className={styles.emptyRow}>Sin visitas programadas.</li>}
-              {visits.map((visit) => (
-                <li key={visit.id} className={styles.row}>
-                  <span className={styles.rowIcon}>
-                    <CalendarIcon size={15} />
-                  </span>
-                  <span className={styles.rowBody}>
-                    <span className={styles.rowTitle}>
-                      {leadName(visit.leadId)} · {propertyRef(visit.propertyId)}
-                    </span>
-                    <span className={styles.rowMeta}>
-                      {formatDay(visit.scheduledAt)} · {formatTime(visit.scheduledAt)}
-                    </span>
-                  </span>
-                  <Badge tone={visit.status === 'confirmada' ? 'success' : 'warning'} dot>
-                    {visit.status === 'confirmada' ? 'Confirmada' : 'Propuesta'}
-                  </Badge>
-                </li>
-              ))}
-            </ul>
+          <section className={styles.card} aria-label="Agenda de visitas">
+            <h2 className={styles.cardTitle}>Agenda de visitas</h2>
+            <VisitScheduler
+              visits={automation.allVisits}
+              leads={leads}
+              properties={properties}
+              now={nowIso}
+            />
           </section>
 
           <section className={styles.card} aria-label="Tareas pendientes">
@@ -140,6 +125,8 @@ export default async function DashboardPage() {
             </ul>
           </section>
         </div>
+
+        <AutomationPanel snapshot={automation} leads={leads} now={nowIso} />
       </div>
     </div>
   );

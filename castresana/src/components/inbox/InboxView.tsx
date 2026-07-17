@@ -51,6 +51,7 @@ function InboxLayout({
           <ConversationPanel
             lead={lead}
             messages={messagesByLead[lead.id] ?? []}
+            property={lead.propertyId ? propertiesById[lead.propertyId] : null}
             replies={insights?.replies ?? []}
           />
         ) : (

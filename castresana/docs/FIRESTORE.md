@@ -78,6 +78,26 @@ el cliente solo lee y actualiza `status`.
 `{ date, newLeads, messagesIn, messagesOut, visitsScheduled, visitsDone,
 offersActive, byStage }` — agregados que escribirá una Function programada.
 
+### `communications`
+`{ leadId, agentId?, channel: 'whatsapp'|'email', direction, templateId?,
+subject?, body, status: 'borrador'|'en-cola'|'enviado'|'entregado'|'leido'|
+'fallido', sentAt, origin: 'manual'|'workflow'|'ia' }` — inmutables; el
+estado de entrega lo actualiza el backend con los webhooks del proveedor
+(Twilio/Meta/Resend).
+
+### `communicationTemplates`
+`{ channel, name, description, subject?, body, variables[] }` — plantillas
+editables; las de fábrica viven en el código (whatsappTemplates/emailTemplates).
+
+### `workflowRuns`
+`{ ruleId, ruleName, trigger, leadId?, propertyId?, firedAt,
+actionsExecuted[], result: 'ok'|'parcial'|'omitido', detail }` — auditoría
+de automatizaciones; solo escribe el motor (backend).
+
+### `generatedDocuments`
+`{ kind, title, leadId?, propertyId?, visitId?, createdAt, storagePath?,
+status }` — el binario va a Storage; aquí el registro.
+
 ## Relaciones (por id lógico, sin referencias duras)
 
 ```

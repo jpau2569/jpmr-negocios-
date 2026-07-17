@@ -2,26 +2,31 @@
 
 import { useState } from 'react';
 import { CHANNELS } from '@/lib/constants/channels';
-import type { Channel } from '@/types';
+import type { Channel, Lead, Property } from '@/types';
 import type { SuggestedReply } from '@/types/ai';
 import { IconButton } from '@/components/shared';
-import { PaperclipIcon, SendIcon } from '@/components/shared/Icons';
+import { FileIcon, PaperclipIcon, SendIcon } from '@/components/shared/Icons';
 import { SuggestedReplies } from '@/components/ai';
+import { MessageTemplatePicker } from '@/components/automation';
 import styles from './MessageComposer.module.css';
 
 interface Props {
   channel: Channel;
+  /** Lead activo (para resolver variables de plantillas). */
+  lead?: Lead;
+  property?: Property | null;
   /** Respuestas sugeridas por la capa IA (chips sobre el composer). */
   replies?: SuggestedReply[];
 }
 
 /**
- * Composer de mensaje. En esta fase no envía nada real: mantiene el borrador
- * en estado local y lo limpia al "enviar". Las sugerencias IA se insertan
- * como borrador editable: la IA propone, el agente decide.
+ * Composer de mensaje con dos ayudas: respuestas sugeridas (IA) y plantillas
+ * (WhatsApp/email). Ambas insertan borrador editable — el agente decide.
+ * El envío real llegará con Firebase.
  */
-export function MessageComposer({ channel, replies = [] }: Props) {
+export function MessageComposer({ channel, lead, property, replies = [] }: Props) {
   const [draft, setDraft] = useState('');
+  const [showTemplates, setShowTemplates] = useState(false);
   const canSend = draft.trim().length > 0;
 
   const handleSend = () => {
@@ -31,26 +36,46 @@ export function MessageComposer({ channel, replies = [] }: Props) {
 
   return (
     <>
-      <SuggestedReplies replies={replies} onPick={setDraft} />
+      {showTemplates && lead ? (
+        <MessageTemplatePicker
+          lead={lead}
+          property={property}
+          onPick={setDraft}
+          onClose={() => setShowTemplates(false)}
+        />
+      ) : (
+        <SuggestedReplies replies={replies} onPick={setDraft} />
+      )}
+
       <div className={styles.composer}>
         <IconButton label="Adjuntar archivo" size="md">
           <PaperclipIcon size={18} />
         </IconButton>
+        {lead && (
+          <IconButton
+            label="Plantillas de mensaje"
+            size="md"
+            active={showTemplates}
+            onClick={() => setShowTemplates((v) => !v)}
+          >
+            <FileIcon size={17} />
+          </IconButton>
+        )}
 
-      <textarea
-        className={styles.input}
-        rows={1}
-        placeholder={`Responder por ${CHANNELS[channel].label}…`}
-        aria-label="Escribir mensaje"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-          }
-        }}
-      />
+        <textarea
+          className={styles.input}
+          rows={1}
+          placeholder={`Responder por ${CHANNELS[channel].label}…`}
+          aria-label="Escribir mensaje"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+        />
 
         <button
           type="button"

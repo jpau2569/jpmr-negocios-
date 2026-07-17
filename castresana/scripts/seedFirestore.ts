@@ -24,6 +24,7 @@ import {
 } from '../src/data/seed';
 import { messages } from '../src/data/messages';
 import { getCompatibleLeads } from '../src/data/mock-recommendations';
+import { seedCommunications } from '../src/data/communications';
 
 async function main() {
   const db = getAdminDb();
@@ -98,6 +99,12 @@ async function main() {
     // Hasta vincular agentes ↔ Auth, el destinatario es el id del agente.
     // Al activar cuentas reales: sustituir por el uid correspondiente.
     await put(['notifications', id], { ...data, userId: agentId });
+  }
+
+  console.log('→ Sembrando comunicaciones…');
+  for (const communication of seedCommunications) {
+    const { id, ...data } = communication;
+    await put(['communications', id], data);
   }
 
   console.log('→ Sembrando sugerencias de matching…');

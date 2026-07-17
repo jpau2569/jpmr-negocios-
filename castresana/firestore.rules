@@ -113,6 +113,35 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ----------------------------------------------------- communications
+    // Registro de envíos WhatsApp/email. Inmutables una vez creados; el
+    // estado de entrega lo actualizará el backend (webhooks del proveedor).
+    match /communications/{communicationId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // -------------------------------------------- communicationTemplates
+    match /communicationTemplates/{templateId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); // TODO producción: solo admin
+    }
+
+    // ------------------------------------------------------- workflowRuns
+    // Auditoría de automatizaciones: las escribe el motor (backend).
+    match /workflowRuns/{runId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // -------------------------------------------------- generatedDocuments
+    match /generatedDocuments/{documentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
     // Denegación explícita para cualquier otra ruta.
     match /{document=**} {
       allow read, write: if false;
