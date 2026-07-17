@@ -1,13 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import {
-  getCompatibleLeads,
-  getProperty,
-  getPropertyActivity,
-  getRelatedProperties,
-  properties,
-} from '@/data';
+import { getCompatibleLeads, getPropertyActivity, getRelatedProperties } from '@/data';
+import { seedProperties } from '@/data/seed';
+import { propertiesRepository } from '@/lib/repositories';
 import { ChevronLeftIcon } from '@/components/shared/Icons';
 import { PropertyGallery } from '@/components/properties/PropertyGallery';
 import { PropertySummary } from '@/components/properties/PropertySummary';
@@ -24,19 +20,20 @@ interface PageProps {
 }
 
 export function generateStaticParams() {
-  return properties.map((p) => ({ id: p.id }));
+  // El catálogo del seed (16) incluye el del Explorer (14).
+  return seedProperties.map((p) => ({ id: p.id }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const property = getProperty(id);
+  const property = await propertiesRepository.getPropertyById(id);
   return { title: property ? `${property.reference} · ${property.title}` : 'Propiedad' };
 }
 
 /** Ficha de inmueble: galería, resumen, CTAs, matching de leads y similares. */
 export default async function PropertyDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const property = getProperty(id);
+  const property = await propertiesRepository.getPropertyById(id);
   if (!property) notFound();
 
   const matches = getCompatibleLeads(property.id);

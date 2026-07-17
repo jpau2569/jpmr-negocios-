@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MAIN_NAV, type NavEntry } from '@/lib/constants/nav';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils/cn';
 import { Wordmark } from '@/components/branding/Wordmark';
 import { Avatar } from '@/components/shared';
@@ -30,6 +31,12 @@ const ICONS: Record<NavEntry['icon'], (p: IconProps) => React.ReactElement> = {
 /** Sidebar fija de escritorio: marca, navegación principal y cuenta. */
 export function Sidebar() {
   const pathname = usePathname();
+  const { user, demoMode } = useAuth();
+
+  const accountName = demoMode
+    ? 'Pau'
+    : (user?.displayName ?? user?.email?.split('@')[0] ?? 'Cuenta');
+  const accountRole = demoMode ? 'Asesoría Castresana · Demo' : (user?.email ?? 'Sesión activa');
 
   return (
     <aside className={styles.sidebar} aria-label="Navegación principal">
@@ -76,10 +83,10 @@ export function Sidebar() {
 
       <div className={styles.footer}>
         <button className={styles.account} type="button">
-          <Avatar name="Pau Castresana" size="sm" />
+          <Avatar name={accountName} size="sm" />
           <span className={styles.accountText}>
-            <span className={styles.accountName}>Pau</span>
-            <span className={styles.accountRole}>Asesoría Castresana</span>
+            <span className={styles.accountName}>{accountName}</span>
+            <span className={styles.accountRole}>{accountRole}</span>
           </span>
           <SettingsIcon size={17} className={styles.accountIcon} />
         </button>

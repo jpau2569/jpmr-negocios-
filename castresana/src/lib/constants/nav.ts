@@ -10,8 +10,8 @@ export interface NavEntry {
 export const MAIN_NAV: NavEntry[] = [
   { href: '/inbox', label: 'Inbox', icon: 'inbox' },
   { href: '/explorer', label: 'Explorer', icon: 'compass' },
+  { href: '/dashboard', label: 'Panel', icon: 'chart' },
   { href: '/properties', label: 'Propiedades', icon: 'building', disabled: true },
-  { href: '/leads', label: 'Leads', icon: 'users', disabled: true },
   { href: '/agenda', label: 'Agenda', icon: 'calendar', disabled: true },
 ];
 

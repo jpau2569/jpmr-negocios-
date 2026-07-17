@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Fraunces, Manrope } from 'next/font/google';
 import './globals.css';
-import { AppShell } from '@/components/layout/AppShell';
+import { FirebaseProvider } from '@/components/providers/FirebaseProvider';
+import { AuthProvider } from '@/components/providers/AuthProvider';
 import { ServiceWorkerRegistrar } from '@/components/shared';
 
 /* Tipografía: Fraunces (serif editorial, display) + Manrope (sans humanista, UI).
@@ -69,7 +70,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
-        <AppShell>{children}</AppShell>
+        <FirebaseProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </FirebaseProvider>
         <ServiceWorkerRegistrar />
       </body>
     </html>

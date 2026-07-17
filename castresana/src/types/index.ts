@@ -6,6 +6,9 @@
 
 export type ID = string;
 
+/* Modelo Firestore (agentes, visitas, tareas, notificaciones, matching…). */
+export * from './models';
+
 /* ---------------------------------------------------------------- Canales */
 
 export type Channel = 'whatsapp' | 'email' | 'portal' | 'telefono' | 'web';

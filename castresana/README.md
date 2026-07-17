@@ -4,9 +4,30 @@ PWA premium para **Asesoría Castresana** (Oviedo). Next.js App Router + TypeScr
 Estética sobria: negro carbón · marrón nogal pulido · beige roto · cobre suave.
 Temas oscuro y claro.
 
-> **Estado: fase 3.** Base escalable, layout global, design system, branding,
-> **Inbox** completo, **Explorer** visual por rails y **ficha de inmueble**
-> con matching mock de leads. Sin backend, sin Firebase, sin login.
+> **Estado: fase 4.** Inbox + Explorer + fichas + **Panel comercial**, con
+> **arquitectura Firebase completa** (Auth, Firestore, Storage, FCM): la app
+> funciona en **modo demo** sin configurar nada y pasa a datos reales al
+> rellenar `.env.local`. Esquema en `docs/FIRESTORE.md`.
+
+## Firebase
+
+- **Modo dual**: sin variables de entorno → modo demo con seeds locales;
+  con `.env.local` (ver `.env.example`) → Auth email/password + Firestore.
+- **Capa de repositorios** (`src/lib/repositories/`): `leadsRepository`,
+  `propertiesRepository`, `conversationsRepository`, `dashboardRepository`.
+  La UI nunca toca el SDK: la fuente (Firestore/seeds) se decide dentro.
+- **Rutas privadas**: grupo `(protected)` con `AuthGate` (demo pasa;
+  con Firebase, sin sesión → `/login`).
+- **Push (FCM)**: `usePushNotifications` + `public/firebase-messaging-sw.js`
+  (config por querystring, sin claves hardcodeadas). La campana de la topbar
+  activa el permiso cuando hay proyecto configurado.
+- **Reglas e índices**: `firestore.rules` + `firestore.indexes.json`
+  (desplegar con `firebase deploy --only firestore`). Endurecimientos
+  pendientes documentados en `docs/FIRESTORE.md`.
+- **Seeds**: `npm run seed` (12 leads, 16 propiedades, 2 agentes,
+  conversaciones+mensajes, 5 visitas, tareas, notificaciones, matching);
+  `npm run seed:clear` para limpiar (pide `--force` fuera del emulador).
+  Con emulador: `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npm run seed`.
 
 ## Puesta en marcha
 

@@ -2,16 +2,25 @@
 
 import { usePathname } from 'next/navigation';
 import { MAIN_NAV } from '@/lib/constants/nav';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { Wordmark } from '@/components/branding/Wordmark';
 import { IconButton } from '@/components/shared';
 import { BellIcon } from '@/components/shared/Icons';
 import { ThemeToggle } from './ThemeToggle';
+import { SessionBadge } from './SessionBadge';
 import styles from './Topbar.module.css';
 
-/** Topbar elegante: título de sección, notificaciones y toggle de tema. */
+/** Topbar: título de sección, sesión, notificaciones (push) y tema. */
 export function Topbar() {
   const pathname = usePathname();
   const current = MAIN_NAV.find((item) => pathname.startsWith(item.href));
+  const push = usePushNotifications();
+
+  const bellLabel = !push.supported
+    ? 'Notificaciones (push no disponible en este entorno)'
+    : push.permission === 'granted'
+      ? 'Notificaciones push activas'
+      : 'Activar notificaciones push';
 
   return (
     <header className={styles.topbar}>
@@ -32,9 +41,14 @@ export function Topbar() {
       </div>
 
       <div className={styles.actions}>
-        <IconButton label="Notificaciones">
+        <SessionBadge />
+        <IconButton
+          label={bellLabel}
+          onClick={push.supported ? push.enable : undefined}
+          disabled={push.enabling}
+        >
           <BellIcon size={18} />
-          <span className={styles.notifDot} aria-hidden="true" />
+          {push.permission !== 'granted' && <span className={styles.notifDot} aria-hidden="true" />}
         </IconButton>
         <ThemeToggle />
       </div>
