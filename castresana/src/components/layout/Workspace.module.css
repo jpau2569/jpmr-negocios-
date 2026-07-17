@@ -1,0 +1,62 @@
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr;
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+}
+
+.hasList {
+  grid-template-columns: var(--panel-list-width) 1fr;
+}
+
+.hasContext {
+  grid-template-columns: 1fr var(--context-width);
+}
+
+.hasList.hasContext {
+  grid-template-columns: var(--panel-list-width) 1fr var(--context-width);
+}
+
+.panel {
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.list {
+  background: var(--bg-canvas);
+  border-right: 1px solid var(--border-subtle);
+}
+
+.main {
+  background: var(--bg-base);
+}
+
+.context {
+  background: var(--bg-canvas);
+  border-left: 1px solid var(--border-subtle);
+}
+
+/* Colapso responsive: el panel de contexto se oculta primero, luego la lista.
+   La navegación entre paneles en móvil se resolverá con rutas dedicadas. */
+@media (max-width: 1200px) {
+  .hasContext,
+  .hasList.hasContext {
+    grid-template-columns: var(--panel-list-width) 1fr;
+  }
+  .context {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .hasList,
+  .hasList.hasContext {
+    grid-template-columns: 1fr;
+  }
+  .list {
+    display: none;
+  }
+}

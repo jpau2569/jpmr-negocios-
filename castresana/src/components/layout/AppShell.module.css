@@ -1,0 +1,22 @@
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail-width) 1fr;
+  grid-template-areas: 'rail workspace';
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+}
+
+.workspace {
+  grid-area: workspace;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* En pantallas estrechas el rail se mantiene (iconos); el resto se adapta. */
+@media (max-width: 640px) {
+  .shell {
+    grid-template-columns: var(--rail-width) 1fr;
+  }
+}

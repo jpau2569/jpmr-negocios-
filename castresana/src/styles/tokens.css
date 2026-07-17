@@ -1,0 +1,209 @@
+/* ============================================================================
+   CASTRESANA — DESIGN TOKENS
+   ----------------------------------------------------------------------------
+   Estética: premium sobria. Negro carbón, marrón nogal pulido, beige roto
+   y cobre suave. Nada de gradientes chillones ni azules SaaS.
+
+   Arquitectura de tokens en dos capas:
+     1. Primitivas  -> valores crudos de la paleta (--c-*, escalas).
+     2. Semánticos  -> intención de uso (--bg-*, --text-*, --accent-*...).
+   Los componentes SOLO deben consumir tokens semánticos.
+   ============================================================================ */
+
+:root {
+  /* ---------------------------------------------------------------------- */
+  /* 1. PRIMITIVAS — PALETA                                                  */
+  /* ---------------------------------------------------------------------- */
+
+  /* Negro carbón (base y superficies) */
+  --c-carbon-950: #0E0C0B;
+  --c-carbon-900: #131110;
+  --c-carbon-850: #191512;
+  --c-carbon-800: #1F1A16;
+  --c-carbon-750: #26201B;
+  --c-carbon-700: #2E2721;
+  --c-carbon-600: #3A322A;
+  --c-carbon-500: #4A4038;
+
+  /* Marrón nogal pulido (maderas, acentos cálidos, bordes) */
+  --c-walnut-800: #3B2A1D;
+  --c-walnut-700: #4C3626;
+  --c-walnut-600: #5C4433;
+  --c-walnut-500: #6E5238;
+  --c-walnut-400: #856445;
+
+  /* Beige roto (texto, papel, superficies claras puntuales) */
+  --c-beige-50:  #F5F1E9;
+  --c-beige-100: #EFE8DC;
+  --c-beige-200: #E1D8C7;
+  --c-beige-300: #C9BEA9;
+  --c-beige-400: #A99C85;
+  --c-beige-500: #877A64;
+
+  /* Cobre suave (acento principal, foco, acciones) */
+  --c-copper-600: #9C6236;
+  --c-copper-500: #B87847;
+  --c-copper-400: #C89163;
+  --c-copper-300: #D8AC85;
+
+  /* Estados (tonos apagados, coherentes con la paleta terrosa) */
+  --c-sage:      #7E8A5E; /* éxito / activo */
+  --c-amber:     #C79A4B; /* aviso */
+  --c-terra:     #B5674C; /* peligro / urgente */
+  --c-slate:     #6C7480; /* informativo neutro frío */
+
+  /* ---------------------------------------------------------------------- */
+  /* 2. SEMÁNTICOS                                                           */
+  /* ---------------------------------------------------------------------- */
+
+  /* Fondos y superficies (de más profundo a más elevado) */
+  --bg-base:     var(--c-carbon-950);
+  --bg-canvas:   var(--c-carbon-900);
+  --bg-surface:  var(--c-carbon-850);
+  --bg-elevated: var(--c-carbon-800);
+  --bg-inset:    var(--c-carbon-950);
+  --bg-hover:    rgba(200, 145, 99, 0.06);
+  --bg-active:   rgba(200, 145, 99, 0.10);
+  --bg-scrim:    rgba(8, 6, 5, 0.62);
+
+  /* Bordes y líneas */
+  --border-subtle:  rgba(233, 226, 212, 0.06);
+  --border-default: rgba(233, 226, 212, 0.10);
+  --border-strong:  rgba(233, 226, 212, 0.16);
+  --border-accent:  rgba(200, 145, 99, 0.45);
+
+  /* Texto */
+  --text-primary:   var(--c-beige-100);
+  --text-secondary: var(--c-beige-300);
+  --text-muted:     var(--c-beige-500);
+  --text-faint:     rgba(135, 122, 100, 0.55);
+  --text-inverse:   var(--c-carbon-950);
+  --text-on-accent: #1C130C;
+
+  /* Acento (cobre) */
+  --accent:          var(--c-copper-500);
+  --accent-hover:    var(--c-copper-400);
+  --accent-pressed:  var(--c-copper-600);
+  --accent-soft:     rgba(184, 120, 71, 0.14);
+  --accent-ring:     rgba(200, 145, 99, 0.55);
+  --accent-contrast: var(--text-on-accent);
+
+  /* Nogal como acento secundario / superficies cálidas */
+  --walnut:          var(--c-walnut-600);
+  --walnut-soft:     rgba(110, 82, 56, 0.22);
+
+  /* Estados semánticos */
+  --success:      var(--c-sage);
+  --success-soft: rgba(126, 138, 94, 0.16);
+  --warning:      var(--c-amber);
+  --warning-soft: rgba(199, 154, 75, 0.16);
+  --danger:       var(--c-terra);
+  --danger-soft:  rgba(181, 103, 76, 0.18);
+  --info:         var(--c-slate);
+  --info-soft:    rgba(108, 116, 128, 0.16);
+
+  /* ---------------------------------------------------------------------- */
+  /* 3. TIPOGRAFÍA                                                           */
+  /* ---------------------------------------------------------------------- */
+  --font-display: var(--font-serif, 'Fraunces'), 'Georgia', 'Times New Roman', serif;
+  --font-sans: var(--font-inter, 'Inter'), -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  /* Escala tipográfica (base 16px, ratio ~1.2) */
+  --fs-2xs: 0.6875rem; /* 11px */
+  --fs-xs:  0.75rem;   /* 12px */
+  --fs-sm:  0.8125rem; /* 13px */
+  --fs-md:  0.875rem;  /* 14px */
+  --fs-base:0.9375rem; /* 15px */
+  --fs-lg:  1.0625rem; /* 17px */
+  --fs-xl:  1.25rem;   /* 20px */
+  --fs-2xl: 1.5rem;    /* 24px */
+  --fs-3xl: 1.9375rem; /* 31px */
+  --fs-4xl: 2.4375rem; /* 39px */
+
+  --lh-tight: 1.15;
+  --lh-snug:  1.35;
+  --lh-normal:1.55;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+  --tracking-caps: 0.14em;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  /* ---------------------------------------------------------------------- */
+  /* 4. ESPACIADO (escala de 4px)                                           */
+  /* ---------------------------------------------------------------------- */
+  --space-0: 0;
+  --space-1: 0.25rem;  /* 4  */
+  --space-2: 0.5rem;   /* 8  */
+  --space-3: 0.75rem;  /* 12 */
+  --space-4: 1rem;     /* 16 */
+  --space-5: 1.25rem;  /* 20 */
+  --space-6: 1.5rem;   /* 24 */
+  --space-8: 2rem;     /* 32 */
+  --space-10: 2.5rem;  /* 40 */
+  --space-12: 3rem;    /* 48 */
+  --space-16: 4rem;    /* 64 */
+
+  /* ---------------------------------------------------------------------- */
+  /* 5. RADIOS                                                              */
+  /* ---------------------------------------------------------------------- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 13px;
+  --radius-xl: 18px;
+  --radius-pill: 999px;
+
+  /* ---------------------------------------------------------------------- */
+  /* 6. SOMBRAS Y ELEVACIÓN (suaves, cálidas — nunca negro puro)            */
+  /* ---------------------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(8, 6, 5, 0.40);
+  --shadow-sm: 0 2px 6px rgba(8, 6, 5, 0.38);
+  --shadow-md: 0 8px 22px rgba(8, 6, 5, 0.44);
+  --shadow-lg: 0 18px 46px rgba(8, 6, 5, 0.52);
+  --shadow-focus: 0 0 0 3px var(--accent-ring);
+  --shadow-inset: inset 0 1px 0 rgba(233, 226, 212, 0.04);
+
+  /* ---------------------------------------------------------------------- */
+  /* 7. LAYOUT — LAYOUT DE 3 PANELES                                        */
+  /* ---------------------------------------------------------------------- */
+  --rail-width: 68px;         /* barra de navegación vertical (iconos) */
+  --panel-list-width: 344px;  /* panel de lista (conversaciones, resultados) */
+  --context-width: 372px;     /* panel de contexto derecho */
+  --topbar-height: 60px;
+
+  /* ---------------------------------------------------------------------- */
+  /* 8. MOTION                                                              */
+  /* ---------------------------------------------------------------------- */
+  --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+
+  /* ---------------------------------------------------------------------- */
+  /* 9. Z-INDEX                                                             */
+  /* ---------------------------------------------------------------------- */
+  --z-base: 0;
+  --z-sticky: 20;
+  --z-overlay: 40;
+  --z-modal: 60;
+  --z-toast: 80;
+
+  color-scheme: dark;
+}
+
+/* Respeta a quien prefiere menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}

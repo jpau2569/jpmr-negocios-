@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Castresana">
+  <defs>
+    <linearGradient id="copperM" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C89163"/>
+      <stop offset="1" stop-color="#B87847"/>
+    </linearGradient>
+  </defs>
+  <!-- Fondo a sangre completa para zona de recorte segura (maskable) -->
+  <rect width="512" height="512" fill="#131110"/>
+  <g fill="none" stroke="url(#copperM)" stroke-linejoin="round" transform="translate(0 4)">
+    <path d="M256 140 L372 216 V328 L256 398 L140 328 V216 Z" stroke-width="14"/>
+    <path d="M256 140 V398 M140 216 L372 328 M372 216 L140 328" stroke-width="5" opacity="0.4"/>
+  </g>
+  <circle cx="256" cy="272" r="28" fill="url(#copperM)"/>
+</svg>
