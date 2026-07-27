@@ -140,7 +140,10 @@ Y en prueba de conformidad, las partes firman el presente contrato, por triplica
 
 Firmado en conformidad con el inventario:
 
-**La Arrendadora** &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **La Arrendataria**
+| La Arrendadora | La Arrendataria | La Avalista |
+|---|---|---|
+| <br><br><br> | <br><br><br> | <br><br><br> |
+| Fdo.: Patricia Ordás Pardo | Fdo.: Gloria N. Añasco Gómez | Fdo.: Derianyelis A. Sarmiento Ramírez |
 
 ---
 
