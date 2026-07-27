@@ -40,7 +40,7 @@ El destino de la vivienda será exclusivamente el de **vivienda de la arrendatar
 
 ### SEGUNDA — Duración
 
-El arrendamiento se pacta por un plazo de **ONCE (11) MESES**, comenzando el día **____ de ____________ de 2026** y finalizando el día **____ de ____________ de 202__**.
+El arrendamiento se pacta por un plazo de **ONCE (11) MESES**, comenzando el día **1 de septiembre de 2026** y finalizando el día **31 de julio de 2027**.
 
 Llegado el vencimiento, el contrato podrá **renovarse por períodos sucesivos de once (11) meses**, previo acuerdo expreso entre arrendadora y arrendataria, manteniéndose las mismas condiciones salvo pacto en contrario.
 
@@ -50,9 +50,9 @@ La arrendataria podrá desistir del contrato una vez transcurridos al menos seis
 
 ### TERCERA — Renta y forma de pago
 
-La renta se fija en **SETECIENTOS SETENTA EUROS (770 €) mensuales**.
+La renta se fija en **SETECIENTOS CINCUENTA EUROS (750 €) mensuales**.
 
-El pago se efectuará por meses anticipados, dentro de los **cinco primeros días de cada mes**, mediante **transferencia o ingreso** en la cuenta bancaria titularidad de la arrendadora:
+El pago se efectuará cada mes, **entre los días 1 y 10 del mes en curso**, mediante **transferencia o ingreso** en la cuenta bancaria titularidad de la arrendadora:
 
 **IBAN: ES91 1465 0100 9117 2940 6639**
 
@@ -60,7 +60,7 @@ El justificante de la transferencia servirá como recibo del pago de la renta.
 
 ### CUARTA — Fianza
 
-A la firma del presente contrato, la arrendataria entrega a la arrendadora, **en metálico**, la cantidad de **SETECIENTOS SETENTA EUROS (770 €)**, equivalente a una mensualidad de renta, en concepto de **fianza legal** (art. 36 LAU), sirviendo el presente documento como la más eficaz carta de pago.
+A la firma del presente contrato, la arrendataria entrega a la arrendadora, **en metálico**, la cantidad de **SETECIENTOS CINCUENTA EUROS (750 €)**, equivalente a una mensualidad de renta, en concepto de **fianza legal** (art. 36 LAU), sirviendo el presente documento como la más eficaz carta de pago.
 
 La fianza responderá del cumplimiento de las obligaciones de la arrendataria y del estado de la vivienda y su mobiliario, y será devuelta a la finalización del contrato, una vez entregadas las llaves y comprobado el estado de la vivienda, los muebles y el pago de suministros, en el plazo máximo de treinta días. La fianza no podrá destinarse al pago de las últimas mensualidades de renta.
 
@@ -101,6 +101,14 @@ Las comunicaciones entre las partes se realizarán por escrito o por cualquier m
 ### DUODÉCIMA — Jurisdicción
 
 Para cuantas cuestiones se susciten en la interpretación o el cumplimiento del presente contrato, las partes se someten a los Juzgados y Tribunales de **Oviedo**, lugar donde radica la vivienda arrendada.
+
+### DECIMOTERCERA — Observaciones: reserva, mes de agosto y entrada
+
+En concepto de **reserva** de la vivienda, la arrendataria abona en este acto la renta correspondiente al **mes de agosto de 2026 (750 €)**, quedando la vivienda reservada a su favor durante dicho mes.
+
+La **entrada en la vivienda** se producirá el **1 de septiembre de 2026**, fecha de inicio del contrato, en la que la arrendataria abonará igualmente la mensualidad de septiembre.
+
+A partir de entonces, la renta se abonará **cada mes entre los días 1 y 10 del mes en curso**, conforme a la Cláusula Tercera.
 
 ---
 
