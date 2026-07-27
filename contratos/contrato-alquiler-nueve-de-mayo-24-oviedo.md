@@ -60,7 +60,7 @@ El justificante de la transferencia servirá como recibo del pago de la renta.
 
 ### CUARTA — Fianza
 
-A la firma del presente contrato, la arrendataria entrega a la arrendadora, **en metálico**, la cantidad de **SETECIENTOS CINCUENTA EUROS (750 €)**, equivalente a una mensualidad de renta, en concepto de **fianza legal** (art. 36 LAU), sirviendo el presente documento como la más eficaz carta de pago.
+A la firma del presente contrato, la arrendataria entrega a la arrendadora la cantidad de **SETECIENTOS CINCUENTA EUROS (750 €)**, equivalente a una mensualidad de renta, en concepto de **fianza legal** (art. 36 LAU), mediante **ingreso o transferencia** en la cuenta bancaria de la arrendadora indicada en la Cláusula Tercera, sirviendo el justificante del ingreso como carta de pago.
 
 La fianza responderá del cumplimiento de las obligaciones de la arrendataria y del estado de la vivienda y su mobiliario, y será devuelta a la finalización del contrato, una vez entregadas las llaves y comprobado el estado de la vivienda, los muebles y el pago de suministros, en el plazo máximo de treinta días. La fianza no podrá destinarse al pago de las últimas mensualidades de renta.
 
