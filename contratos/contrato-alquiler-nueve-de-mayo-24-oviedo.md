@@ -14,7 +14,7 @@ Dña. **PATRICIA ORDÁS PARDO**, mayor de edad, con D.N.I. nº **09419845-B**, t
 
 **De otra parte, como ARRENDATARIA:**
 
-Dña. **____________________________________________**, mayor de edad, con D.N.I./N.I.E. nº **________________**, teléfono móvil **+34 610 14 76 16**, y domicilio, a partir de la firma del presente contrato, en la vivienda objeto del mismo.
+Dña. **GLORIA NATHALYN AÑASCO GÓMEZ**, mayor de edad, de nacionalidad española, con D.N.I. nº **70095286-A**, teléfono móvil **+34 610 14 76 16**, y domicilio, a partir de la firma del presente contrato, en la vivienda objeto del mismo.
 
 **Y como AVALISTA / FIADORA SOLIDARIA:**
 
@@ -119,8 +119,8 @@ Y en prueba de conformidad, las partes firman el presente contrato, por triplica
 | LA ARRENDADORA | LA ARRENDATARIA | LA AVALISTA |
 |---|---|---|
 | <br><br><br> | <br><br><br> | <br><br><br> |
-| Fdo.: Patricia Ordás Pardo | Fdo.: ____________________ | Fdo.: Derianyelis A. Sarmiento Ramírez |
-| D.N.I. 09419845-B | D.N.I./N.I.E. ____________ | N.I.E. Z-0571022-Y |
+| Fdo.: Patricia Ordás Pardo | Fdo.: Gloria N. Añasco Gómez | Fdo.: Derianyelis A. Sarmiento Ramírez |
+| D.N.I. 09419845-B | D.N.I. 70095286-A | N.I.E. Z-0571022-Y |
 
 ---
 
