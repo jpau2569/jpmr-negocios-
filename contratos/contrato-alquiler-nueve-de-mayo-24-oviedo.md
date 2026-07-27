@@ -24,7 +24,7 @@ Las partes se reconocen mutuamente la capacidad legal necesaria para otorgar el 
 
 ## EXPONEN
 
-**I.** Que Dña. Patricia Ordás Pardo es propietaria de la vivienda sita en **Calle Nueve de Mayo, nº 24, planta 3ª, Oviedo (Asturias)**, en edificio **sin ascensor**. La vivienda se arrienda **amueblada**, con el mobiliario y equipamiento que se relaciona en el inventario adjunto como **Anexo I**.
+**I.** Que Dña. Patricia Ordás Pardo es propietaria de la vivienda sita en **Calle Nueve de Mayo, nº 24, 3º izquierda, 33002 Oviedo (Asturias)**, en edificio **sin ascensor**. La vivienda se arrienda **amueblada**, con el mobiliario y equipamiento que se relaciona en el inventario adjunto como **Anexo I**.
 
 **II.** Que la arrendataria está interesada en el arrendamiento de dicha vivienda para satisfacer su necesidad de vivienda.
 
@@ -126,16 +126,15 @@ Y en prueba de conformidad, las partes firman el presente contrato, por triplica
 
 ## ANEXO I — INVENTARIO DE MOBILIARIO Y EQUIPAMIENTO
 
-La vivienda se entrega amueblada con los siguientes elementos, que la arrendataria declara recibir en buen estado:
+**Piso Calle Nueve de Mayo, 3º izda., 33002 Oviedo.** La vivienda se entrega amueblada con los siguientes elementos, que la arrendataria declara recibir en buen estado:
 
 | Estancia | Elementos |
 |---|---|
-| Salón | ________________________________________________ |
-| Cocina | ________________________________________________ |
-| Dormitorio(s) | ________________________________________________ |
-| Baño | ________________________________________________ |
-| Electrodomésticos | ________________________________________________ |
-| Otros | ________________________________________________ |
+| Balcón | Mesa y dos sillas de madera. Lavadora/secadora Indesit. Tendal plegable. |
+| Comedor / Cocina | Equipada con mesa de cristal, dos sillas y 2 taburetes, estantería de madera, mueble Ikea y carrito pequeño de madera. Microondas, nevera, vitrocerámica, cafetera. Menaje de cocina: 6 vasos de cristal; juego de 4 boles y 4 platos llanos grandes y pequeños de cerámica color crema; 4 tazas de cerámica; juego de 4 vasos, 4 boles y cuatro platos de plástico duro color crema; 3 boles de cocina de metal; 1 wok de metal; juego de utensilios de cocina; cacitos de medir; tabla de cortar; 1 sartén grande con tapa de cristal; cazo y sartén de teflón; juego de cazo, olla grande y mediana de acero con tapa de cristal; cubo de basura eléctrico; recogedor, escoba y fregona; cubo de fregar; escurreplatos; tres cuchillos de cocina; cubiertos para 6 personas de metal; cubiertos de plástico duro para cuatro personas; ventilador pequeño. |
+| Salón | Mesa estantería Ikea, televisor, sofá cama, cojín, mesilla, 2 mesitas de centro, alfombra, perchero, banco gris/zapatero. |
+| Habitación | Cama doble (1,35 m), 2 almohadas, protector de colchón, armario, mesita blanca de madera, lámpara de madera, cesto para la ropa, espejo de pared, cuadro, cabecero de madera, pequeño ventilador con cargador USB, alfombra amarilla, 10 perchas de madera negra. |
+| Otros | Mando de garaje. |
 
 <br>
 
