@@ -28,18 +28,28 @@
           padding:24mm 22mm; }
   .cover .brand{ font-weight:600; letter-spacing:.22em; text-transform:uppercase;
                  font-size:10pt; opacity:.85; }
-  .cover .hero{ margin-top:18mm; }
+  .cover .hero{ margin-top:6mm; }
   .cover .kicker{ color:var(--oro); text-transform:uppercase; letter-spacing:.16em;
                   font-size:10.5pt; font-weight:600; margin-bottom:6mm; }
   .cover h1{ color:#fff; font-size:33pt; line-height:1.12; margin:0 0 5mm; }
   .cover .sub{ color:#cfe0ec; font-size:13.5pt; font-weight:400; max-width:150mm; }
-  .badges{ display:flex; gap:5mm; margin-top:14mm; flex-wrap:wrap; }
+  .badges{ display:flex; gap:4mm; margin-top:9mm; }
   .badge{ border:1px solid rgba(255,255,255,.35); border-radius:6px;
-          padding:4mm 6mm; text-align:center; min-width:32mm; }
-  .badge .v{ font-family:'Playfair Display',serif; font-size:17pt; font-weight:800;
+          padding:3.5mm 3mm; text-align:center; flex:1; }
+  .badge .v{ font-family:'Playfair Display',serif; font-size:15pt; font-weight:800;
              color:var(--oro); display:block; }
   .badge .k{ font-size:8.5pt; text-transform:uppercase; letter-spacing:.1em; opacity:.8; }
   .cover .foot{ font-size:9.5pt; opacity:.8; display:flex; justify-content:space-between; }
+  .cover .cover-img{ width:100%; height:74mm; object-fit:cover; border-radius:6px;
+                     margin-top:10mm; display:block; }
+
+  /* ---------- GALERÍA ---------- */
+  .gallery{ display:grid; grid-template-columns:1fr 1fr; gap:5mm; margin-top:4mm; }
+  .gallery figure{ margin:0; }
+  .gallery img{ width:100%; height:62mm; object-fit:cover; border-radius:5px; display:block; }
+  .gallery figcaption{ font-size:9pt; color:var(--gris); padding-top:1.5mm; }
+  .gallery .wide{ grid-column:1 / -1; }
+  .gallery .wide img{ height:70mm; }
 
   /* ---------- ÍNDICE ---------- */
   .toc h2{ font-size:25pt; margin:0 0 12mm; }
@@ -102,6 +112,7 @@
     <h1>Piso en Calle Avilés,<br>en el corazón de Mieres</h1>
     <div class="sub">Guía completa para conocer la vivienda, la zona y los números:
       todo lo que necesitas saber antes de comprar o invertir, en un solo documento.</div>
+    <img class="cover-img" src="img/salon.jpeg" alt="Salón del piso">
     <div class="badges">
       <div class="badge"><span class="v">90 m²</span><span class="k">construidos</span></div>
       <div class="badge"><span class="v">80 m²</span><span class="k">útiles</span></div>
@@ -121,6 +132,7 @@
   <h2>Índice</h2>
   <ol>
     <li>La vivienda: ficha completa</li>
+    <li>La vivienda, en imágenes</li>
     <li>Cómo se vive en este piso</li>
     <li>Mieres y la Calle Avilés: la zona</li>
     <li>Guía del comprador: pasos y costes</li>
@@ -129,8 +141,8 @@
   </ol>
   <div class="callout note">
     <strong>Cómo usar este dossier:</strong> si buscas tu casa, céntrate en las
-    secciones 1 a 4. Si compras para alquilar, ve directo a la 5. Y en cualquier
-    caso, la sección 6 te deja lista la visita.
+    secciones 1 a 5. Si compras para alquilar, ve directo a la 6. Y en cualquier
+    caso, la sección 7 te deja lista la visita.
   </div>
   <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
 </section>
@@ -150,26 +162,47 @@
     <tr><td class="k">Superficie útil</td><td>80 m²</td></tr>
     <tr><td class="k">Habitaciones</td><td>3 dormitorios</td></tr>
     <tr><td class="k">Baños</td><td>1 baño completo</td></tr>
-    <tr><td class="k">Precio</td><td>Consultar ficha actualizada en asesoriacastresana.com o solicitar por teléfono</td></tr>
+    <tr><td class="k">Exterior</td><td>Balcón-terraza corrido a la calle, con vistas despejadas al monte</td></tr>
+    <tr><td class="k">Cocina</td><td>Amueblada y equipada (vitrocerámica, horno, campana, lavadora)</td></tr>
+    <tr><td class="k">Extras</td><td>Habitación con vestidor a medida · se entrega amueblado</td></tr>
+    <tr><td class="k">Precio</td><td>Consultar ficha actualizada en asesoriacastresana.com o en el 672 775 721</td></tr>
   </table>
 
   <div class="callout">
-    <strong>Dato clave:</strong> 80 m² útiles con 3 dormitorios es un formato que
-    escasea en el centro de Mieres: la mayoría del stock céntrico comparable ofrece
-    menos superficie útil o menos habitaciones.
+    <strong>Dato clave:</strong> 80 m² útiles con 3 dormitorios, balcón corrido
+    exterior y cocina ya equipada es un formato que escasea en el centro de
+    Mieres: entras a vivir sin obras ni inversión inicial en mobiliario.
   </div>
 
   <p class="fine">Los datos de superficie, distribución y ubicación proceden del
-     anuncio oficial del inmueble (ref. ES1765666). El resto de características
+     anuncio oficial del inmueble (ref. ES1765666); el equipamiento descrito, de
+     las fotografías actuales de la vivienda. El resto de características
      (planta, ascensor, estado, certificado energético, gastos de comunidad) se
      facilitan en la ficha completa y durante la visita.</p>
 
   <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
 </section>
 
-<!-- ========== 02 CÓMO SE VIVE ========== -->
+<!-- ========== 02 GALERÍA ========== -->
 <section class="page">
   <div class="num">02</div>
+  <h2 class="title">La vivienda, en imágenes</h2>
+  <div class="gallery">
+    <figure><img src="img/cocina.jpeg" alt="Cocina equipada">
+      <figcaption>Cocina amueblada y equipada: vitrocerámica, horno, campana y lavadora.</figcaption></figure>
+    <figure><img src="img/salita.jpeg" alt="Salita">
+      <figcaption>Segunda sala de estar, luminosa y con ventana a la calle.</figcaption></figure>
+    <figure><img src="img/vestidor.jpeg" alt="Vestidor">
+      <figcaption>Habitación con vestidor a medida en perfecto estado.</figcaption></figure>
+    <figure><img src="img/balcon.jpeg" alt="Balcón corrido">
+      <figcaption>Balcón-terraza corrido, exterior y con vistas despejadas al monte.</figcaption></figure>
+  </div>
+  <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
+</section>
+
+<!-- ========== 03 CÓMO SE VIVE ========== -->
+<section class="page">
+  <div class="num">03</div>
   <h2 class="title">Cómo se vive en este piso</h2>
   <p class="lead">Tres dormitorios reales dan mucho juego. Estas son las tres formas
      más habituales de aprovechar una vivienda así.</p>
@@ -187,7 +220,15 @@
   <h3>Para compartir</h3>
   <p>El formato de 3 dormitorios y baño completo funciona muy bien en convivencia:
      parejas que empiezan y comparten con un tercero, o hermanos que se independizan
-     juntos repartiendo gastos.</p>
+     juntos repartiendo gastos. Y al entregarse amueblado, se empieza a vivir
+     (o a alquilar) desde el primer día.</p>
+
+  <h3>Los detalles que marcan la diferencia</h3>
+  <ul class="check">
+    <li>Balcón-terraza corrido a la calle: café al sol, tendedero exterior y vistas al monte.</li>
+    <li>Vestidor a medida ya montado: un extra que normalmente cuesta miles de euros añadir.</li>
+    <li>Cocina completa con lavadora, horno y vitrocerámica: cero inversión inicial.</li>
+  </ul>
 
   <div class="callout">
     <strong>Consejo Castresana:</strong> en la visita, decide primero qué uso le
@@ -198,9 +239,9 @@
   <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
 </section>
 
-<!-- ========== 03 ZONA ========== -->
+<!-- ========== 04 ZONA ========== -->
 <section class="page">
-  <div class="num">03</div>
+  <div class="num">04</div>
   <h2 class="title">Mieres y la Calle Avilés: la zona</h2>
   <p class="lead">Vivir en el centro de Mieres significa hacer la vida andando y
      tener Oviedo a un paso.</p>
@@ -233,9 +274,9 @@
   <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
 </section>
 
-<!-- ========== 04 GUÍA COMPRADOR ========== -->
+<!-- ========== 05 GUÍA COMPRADOR ========== -->
 <section class="page">
-  <div class="num">04</div>
+  <div class="num">05</div>
   <h2 class="title">Guía del comprador: pasos y costes</h2>
   <p class="lead">Comprar vivienda en Asturias tiene un recorrido claro. Este es el
      mapa completo, sin sorpresas.</p>
@@ -275,9 +316,9 @@
   <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
 </section>
 
-<!-- ========== 05 INVERSOR ========== -->
+<!-- ========== 06 INVERSOR ========== -->
 <section class="page">
-  <div class="num">05</div>
+  <div class="num">06</div>
   <h2 class="title">Para el inversor: cómo hacer los números</h2>
   <p class="lead">No te pedimos que te fíes de una cifra de rentabilidad en un
      folleto. Te damos el método para calcularla tú, con los datos reales.</p>
@@ -321,9 +362,9 @@
   <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
 </section>
 
-<!-- ========== 06 CHECKLIST VISITA ========== -->
+<!-- ========== 07 CHECKLIST VISITA ========== -->
 <section class="page">
-  <div class="num">06</div>
+  <div class="num">07</div>
   <h2 class="title">Tu visita: checklist y próximos pasos</h2>
   <p class="lead">Una buena visita se prepara. Llévate esta lista impresa y sal del
      piso con todas las respuestas.</p>
@@ -368,6 +409,7 @@
   <p><strong>Sin compromiso y con respuestas claras a todas tus preguntas.</strong></p>
   <a class="btn">Reservar visita · Ref. ES1765666</a>
   <div class="contact">
+    📞 672 775 721 &nbsp;·&nbsp; 💬 WhatsApp: 672 775 721<br>
     🌐 www.asesoriacastresana.com<br>
     📍 Asturias · Zona centro y cuencas
   </div>
