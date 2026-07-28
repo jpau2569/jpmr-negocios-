@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Piso en Calle Avilés, Mieres — Dossier Castresana</title>
+<link href="fonts/fonts.css" rel="stylesheet">
+<style>
+  :root{
+    --azul:#0B3D5C;
+    --azul-osc:#08263a;
+    --oro:#E4A11B;
+    --tinta:#2B2B2B;
+    --gris:#6B7683;
+    --claro:#F4F6F8;
+  }
+  @page{ size:A4; margin:0; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Inter','Liberation Sans',sans-serif; color:var(--tinta);
+        font-size:11.5pt; line-height:1.55; }
+  h1,h2,h3{ font-family:'Playfair Display','Liberation Serif',serif; color:var(--azul); }
+  .page{ width:210mm; height:297mm; padding:22mm 22mm 26mm; position:relative;
+         page-break-after:always; overflow:hidden; }
+  .full-bleed{ padding:0; }
+
+  /* ---------- PORTADA ---------- */
+  .cover{ color:#fff; background:linear-gradient(150deg,var(--azul) 0%,var(--azul-osc) 70%);
+          display:flex; flex-direction:column; justify-content:space-between;
+          padding:24mm 22mm; }
+  .cover .brand{ font-weight:600; letter-spacing:.22em; text-transform:uppercase;
+                 font-size:10pt; opacity:.85; }
+  .cover .hero{ margin-top:18mm; }
+  .cover .kicker{ color:var(--oro); text-transform:uppercase; letter-spacing:.16em;
+                  font-size:10.5pt; font-weight:600; margin-bottom:6mm; }
+  .cover h1{ color:#fff; font-size:33pt; line-height:1.12; margin:0 0 5mm; }
+  .cover .sub{ color:#cfe0ec; font-size:13.5pt; font-weight:400; max-width:150mm; }
+  .badges{ display:flex; gap:5mm; margin-top:14mm; flex-wrap:wrap; }
+  .badge{ border:1px solid rgba(255,255,255,.35); border-radius:6px;
+          padding:4mm 6mm; text-align:center; min-width:32mm; }
+  .badge .v{ font-family:'Playfair Display',serif; font-size:17pt; font-weight:800;
+             color:var(--oro); display:block; }
+  .badge .k{ font-size:8.5pt; text-transform:uppercase; letter-spacing:.1em; opacity:.8; }
+  .cover .foot{ font-size:9.5pt; opacity:.8; display:flex; justify-content:space-between; }
+
+  /* ---------- ÍNDICE ---------- */
+  .toc h2{ font-size:25pt; margin:0 0 12mm; }
+  .toc ol{ list-style:none; padding:0; margin:0; counter-reset:s; }
+  .toc li{ counter-increment:s; display:flex; align-items:baseline; gap:6mm;
+           padding:4.5mm 0; border-bottom:1px solid var(--claro); font-size:12.5pt; }
+  .toc li::before{ content:counter(s,decimal-leading-zero); color:var(--oro);
+                   font-family:'Playfair Display',serif; font-weight:800;
+                   font-size:16pt; min-width:14mm; }
+  .toc .note{ margin-top:14mm; }
+
+  /* ---------- SECCIONES ---------- */
+  .num{ font-family:'Playfair Display',serif; font-weight:800; font-size:40pt;
+        color:var(--oro); line-height:1; }
+  h2.title{ font-size:21pt; margin:2mm 0 6mm; }
+  h3{ font-size:13.5pt; margin:7mm 0 2.5mm; }
+  p{ margin:0 0 3.5mm; }
+  .lead{ font-size:12.5pt; color:var(--gris); }
+  ul.check{ list-style:none; padding:0; margin:0 0 4mm; }
+  ul.check li{ padding:1.8mm 0 1.8mm 9mm; position:relative; }
+  ul.check li::before{ content:"✓"; position:absolute; left:0; color:var(--oro);
+                       font-weight:700; }
+  .callout{ background:var(--claro); border-left:4px solid var(--oro);
+            padding:4.5mm 6mm; border-radius:4px; margin:5mm 0; }
+  .warn{ border-left-color:var(--azul); }
+  table{ width:100%; border-collapse:collapse; margin:5mm 0; font-size:10.5pt; }
+  th{ background:var(--azul); color:#fff; text-align:left; padding:2.8mm 3mm; }
+  td{ padding:2.8mm 3mm; border-bottom:1px solid var(--claro); vertical-align:top; }
+  td.k{ color:var(--gris); width:42%; }
+  .foot-note{ position:absolute; bottom:11mm; left:22mm; right:22mm;
+              font-size:8pt; color:var(--gris);
+              display:flex; justify-content:space-between;
+              border-top:1px solid var(--claro); padding-top:2.5mm; }
+  .two-col{ display:flex; gap:8mm; }
+  .two-col > div{ flex:1; }
+  .step{ display:flex; gap:5mm; margin-bottom:4mm; }
+  .step .n{ font-family:'Playfair Display',serif; font-weight:800; color:var(--oro);
+            font-size:15pt; min-width:8mm; }
+  .fine{ font-size:8.5pt; color:var(--gris); }
+
+  /* ---------- CIERRE / CTA ---------- */
+  .cta{ color:#fff; background:linear-gradient(150deg,var(--azul),var(--azul-osc));
+        display:flex; flex-direction:column; justify-content:center;
+        text-align:center; padding:24mm 26mm; }
+  .cta h2{ color:#fff; font-size:27pt; margin:0 0 4mm; }
+  .cta p{ opacity:.9; max-width:130mm; margin:0 auto 3mm; }
+  .cta .btn{ display:inline-block; background:var(--oro); color:var(--azul-osc);
+             font-weight:700; padding:5mm 14mm; border-radius:40px;
+             margin:9mm auto 0; font-size:13pt; }
+  .cta .contact{ margin-top:11mm; font-size:11.5pt; opacity:.92; line-height:2; }
+</style>
+</head>
+<body>
+
+<!-- ========== PORTADA ========== -->
+<section class="page full-bleed cover">
+  <div class="brand">Asesoría Castresana · Inmobiliaria</div>
+  <div class="hero">
+    <div class="kicker">Dossier del inmueble · Ref. ES1765666</div>
+    <h1>Piso en Calle Avilés,<br>en el corazón de Mieres</h1>
+    <div class="sub">Guía completa para conocer la vivienda, la zona y los números:
+      todo lo que necesitas saber antes de comprar o invertir, en un solo documento.</div>
+    <div class="badges">
+      <div class="badge"><span class="v">90 m²</span><span class="k">construidos</span></div>
+      <div class="badge"><span class="v">80 m²</span><span class="k">útiles</span></div>
+      <div class="badge"><span class="v">3</span><span class="k">habitaciones</span></div>
+      <div class="badge"><span class="v">1</span><span class="k">baño completo</span></div>
+      <div class="badge"><span class="v">33600</span><span class="k">Mieres · centro</span></div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>2026 · Asturias</span>
+    <span>asesoriacastresana.com</span>
+  </div>
+</section>
+
+<!-- ========== ÍNDICE ========== -->
+<section class="page toc">
+  <h2>Índice</h2>
+  <ol>
+    <li>La vivienda: ficha completa</li>
+    <li>Cómo se vive en este piso</li>
+    <li>Mieres y la Calle Avilés: la zona</li>
+    <li>Guía del comprador: pasos y costes</li>
+    <li>Para el inversor: cómo hacer los números</li>
+    <li>Tu visita: checklist y próximos pasos</li>
+  </ol>
+  <div class="callout note">
+    <strong>Cómo usar este dossier:</strong> si buscas tu casa, céntrate en las
+    secciones 1 a 4. Si compras para alquilar, ve directo a la 5. Y en cualquier
+    caso, la sección 6 te deja lista la visita.
+  </div>
+  <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
+</section>
+
+<!-- ========== 01 FICHA ========== -->
+<section class="page">
+  <div class="num">01</div>
+  <h2 class="title">La vivienda: ficha completa</h2>
+  <p class="lead">Un piso de tres habitaciones con superficie real de vivienda familiar,
+     en plena Calle Avilés de Mieres.</p>
+
+  <table>
+    <tr><th colspan="2">Datos del inmueble · Ref. ES1765666</th></tr>
+    <tr><td class="k">Tipo</td><td>Piso</td></tr>
+    <tr><td class="k">Ubicación</td><td>Calle Avilés, Mieres (Asturias) · C.P. 33600</td></tr>
+    <tr><td class="k">Superficie construida</td><td>90 m²</td></tr>
+    <tr><td class="k">Superficie útil</td><td>80 m²</td></tr>
+    <tr><td class="k">Habitaciones</td><td>3 dormitorios</td></tr>
+    <tr><td class="k">Baños</td><td>1 baño completo</td></tr>
+    <tr><td class="k">Precio</td><td>Consultar ficha actualizada en asesoriacastresana.com o solicitar por teléfono</td></tr>
+  </table>
+
+  <div class="callout">
+    <strong>Dato clave:</strong> 80 m² útiles con 3 dormitorios es un formato que
+    escasea en el centro de Mieres: la mayoría del stock céntrico comparable ofrece
+    menos superficie útil o menos habitaciones.
+  </div>
+
+  <p class="fine">Los datos de superficie, distribución y ubicación proceden del
+     anuncio oficial del inmueble (ref. ES1765666). El resto de características
+     (planta, ascensor, estado, certificado energético, gastos de comunidad) se
+     facilitan en la ficha completa y durante la visita.</p>
+
+  <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
+</section>
+
+<!-- ========== 02 CÓMO SE VIVE ========== -->
+<section class="page">
+  <div class="num">02</div>
+  <h2 class="title">Cómo se vive en este piso</h2>
+  <p class="lead">Tres dormitorios reales dan mucho juego. Estas son las tres formas
+     más habituales de aprovechar una vivienda así.</p>
+
+  <h3>Para una familia</h3>
+  <p>Dormitorio principal, habitación para los niños y una tercera que crece con
+     vosotros: cuna hoy, escritorio mañana. Con 80 m² útiles, el día a día no se
+     hace pequeño: hay sitio para vivir, no solo para dormir.</p>
+
+  <h3>Para teletrabajar</h3>
+  <p>La tercera habitación como despacho cerrado —con puerta, no una esquina del
+     salón— es hoy uno de los criterios que más valoran los compradores. Este piso
+     lo resuelve sin renunciar a habitación de invitados.</p>
+
+  <h3>Para compartir</h3>
+  <p>El formato de 3 dormitorios y baño completo funciona muy bien en convivencia:
+     parejas que empiezan y comparten con un tercero, o hermanos que se independizan
+     juntos repartiendo gastos.</p>
+
+  <div class="callout">
+    <strong>Consejo Castresana:</strong> en la visita, decide primero qué uso le
+    darías a la tercera habitación. Es la pregunta que convierte "un piso más"
+    en <em>tu</em> piso.
+  </div>
+
+  <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
+</section>
+
+<!-- ========== 03 ZONA ========== -->
+<section class="page">
+  <div class="num">03</div>
+  <h2 class="title">Mieres y la Calle Avilés: la zona</h2>
+  <p class="lead">Vivir en el centro de Mieres significa hacer la vida andando y
+     tener Oviedo a un paso.</p>
+
+  <h3>Todo a pie</h3>
+  <ul class="check">
+    <li>Comercio de barrio, supermercados y hostelería en el propio entorno del centro.</li>
+    <li>Colegios, institutos y servicios administrativos del concejo a distancia caminable.</li>
+    <li>Sanidad pública de referencia en el concejo (atención primaria y hospital comarcal).</li>
+  </ul>
+
+  <h3>Bien comunicado</h3>
+  <ul class="check">
+    <li>Conexión por carretera con Oviedo por el corredor del Caudal (A-66/AS), en unos 20 minutos.</li>
+    <li>Tren de Cercanías con parada en Mieres: alternativa diaria al coche para trabajar o estudiar fuera.</li>
+  </ul>
+
+  <h3>Un dato que pocos compradores tienen en cuenta</h3>
+  <p>Mieres cuenta con campus universitario de la Universidad de Oviedo. Para un
+     comprador significa servicios y vida en el centro; para un inversor, un
+     perfil extra de demanda de alquiler (estudiantes y personal vinculado al
+     campus) que no existe en otros concejos del entorno.</p>
+
+  <div class="callout warn">
+    <strong>Verifícalo tú mismo:</strong> en la visita te acompañamos por el
+    entorno real del piso: dónde está el súper, la parada de tren y cuánto se
+    tarda de puerta a puerta a Oviedo. Sin humo: cronómetro en mano.
+  </div>
+
+  <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
+</section>
+
+<!-- ========== 04 GUÍA COMPRADOR ========== -->
+<section class="page">
+  <div class="num">04</div>
+  <h2 class="title">Guía del comprador: pasos y costes</h2>
+  <p class="lead">Comprar vivienda en Asturias tiene un recorrido claro. Este es el
+     mapa completo, sin sorpresas.</p>
+
+  <div class="step"><span class="n">1</span><div><strong>Visita y comprobación.</strong>
+    Ves el piso, revisas estado, comunidad y documentación. Nosotros te entregamos
+    la información del inmueble por escrito.</div></div>
+  <div class="step"><span class="n">2</span><div><strong>Oferta y reserva.</strong>
+    Presentamos tu oferta al propietario y, si hay acuerdo, se firma documento de
+    reserva o contrato de arras que fija precio y plazos.</div></div>
+  <div class="step"><span class="n">3</span><div><strong>Financiación.</strong>
+    Si necesitas hipoteca: tasación oficial, oferta vinculante (FEIN) y los 10 días
+    legales de reflexión antes de firmar.</div></div>
+  <div class="step"><span class="n">4</span><div><strong>Notaría y llaves.</strong>
+    Firma de escritura pública, pago, entrega de llaves y cambio de suministros.</div></div>
+
+  <h3>Cuánto cuesta comprar, además del precio</h3>
+  <table>
+    <tr><th>Concepto</th><th>Orientación</th></tr>
+    <tr><td>Impuesto de Transmisiones (ITP) en Asturias — vivienda usada</td>
+        <td>Tipo general del 8 % sobre el precio*</td></tr>
+    <tr><td>Notaría, registro y gestoría</td><td>Aprox. 1 – 2 % del precio*</td></tr>
+    <tr><td>Tasación (solo con hipoteca)</td><td>Coste fijo, según entidad*</td></tr>
+  </table>
+
+  <div class="callout">
+    <strong>Regla rápida:</strong> presupuesta en torno a un
+    <strong>9 – 10 % adicional</strong> sobre el precio de compra para impuestos y
+    gastos. Así la cifra que negocias es la cifra real.
+  </div>
+
+  <p class="fine">* Importes orientativos a fecha de este documento. Existen tipos
+     reducidos de ITP para determinados supuestos (jóvenes, familias numerosas,
+     vivienda protegida…). Verifica siempre tu caso concreto con tu asesor fiscal;
+     en Castresana te ayudamos a comprobarlo antes de hacer la oferta.</p>
+
+  <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
+</section>
+
+<!-- ========== 05 INVERSOR ========== -->
+<section class="page">
+  <div class="num">05</div>
+  <h2 class="title">Para el inversor: cómo hacer los números</h2>
+  <p class="lead">No te pedimos que te fíes de una cifra de rentabilidad en un
+     folleto. Te damos el método para calcularla tú, con los datos reales.</p>
+
+  <h3>Las tres cifras que importan</h3>
+  <table>
+    <tr><th>Métrica</th><th>Fórmula</th></tr>
+    <tr><td><strong>Rentabilidad bruta</strong></td>
+        <td>(alquiler mensual × 12) ÷ coste total de compra</td></tr>
+    <tr><td><strong>Rentabilidad neta</strong></td>
+        <td>(alquiler anual − IBI, comunidad, seguro, mantenimiento) ÷ coste total</td></tr>
+    <tr><td><strong>Coste total de compra</strong></td>
+        <td>precio + ITP (8 %) + gastos (1–2 %) + reforma si procede</td></tr>
+  </table>
+
+  <h3>Ejemplo ilustrativo del método</h3>
+  <p>Con números redondos —<strong>que no son los de este inmueble</strong>—: un
+     piso comprado por un coste total de 66.000 € (precio + impuestos + gastos)
+     y alquilado a 500 €/mes genera 6.000 € al año: un
+     <strong>9,1 % bruto</strong>. Restando 1.200 € anuales de gastos del
+     propietario, quedaría un <strong>7,3 % neto</strong>. Ese es el tipo de
+     cálculo que haremos contigo, con el precio real de este piso.</p>
+
+  <h3>Por qué este piso interesa a un perfil rentista</h3>
+  <ul class="check">
+    <li>3 dormitorios: admite alquiler familiar tradicional y también demanda de
+        estudiantes vinculada al campus universitario de Mieres.</li>
+    <li>Centro y servicios a pie: los pisos céntricos sufren menos vacancia que
+        los de periferia en concejos medianos.</li>
+    <li>Ticket de entrada de las cuencas: el capital necesario es una fracción del
+        que exige Oviedo, con alquileres proporcionalmente más resistentes.</li>
+  </ul>
+
+  <div class="callout warn">
+    <strong>Qué verificar antes de invertir (te lo preparamos nosotros):</strong>
+    estado de instalaciones y de la comunidad, derramas previstas, ITE del
+    edificio, gastos de comunidad e IBI reales, y alquiler de mercado de
+    comparables en Mieres a fecha de la operación.
+  </div>
+
+  <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
+</section>
+
+<!-- ========== 06 CHECKLIST VISITA ========== -->
+<section class="page">
+  <div class="num">06</div>
+  <h2 class="title">Tu visita: checklist y próximos pasos</h2>
+  <p class="lead">Una buena visita se prepara. Llévate esta lista impresa y sal del
+     piso con todas las respuestas.</p>
+
+  <h3>En el piso</h3>
+  <ul class="check">
+    <li>Orientación y luz natural en salón y dormitorios a la hora de la visita.</li>
+    <li>Estado de ventanas, instalación eléctrica, fontanería y calefacción.</li>
+    <li>Presión de agua y estado del baño.</li>
+    <li>Ruido: comprueba calle y vecinos, quédate 2 minutos en silencio.</li>
+  </ul>
+
+  <h3>Del edificio</h3>
+  <ul class="check">
+    <li>Portal, escalera y fachada: el estado común anticipa derramas.</li>
+    <li>Gastos de comunidad y última acta de la junta.</li>
+    <li>ITE (inspección técnica) del edificio: pídela, es tu derecho.</li>
+  </ul>
+
+  <h3>De los papeles</h3>
+  <ul class="check">
+    <li>Nota simple del Registro: cargas, titularidad y superficie inscrita.</li>
+    <li>Certificado energético y recibo del IBI.</li>
+    <li>Certificado de estar al corriente con la comunidad.</li>
+  </ul>
+
+  <div class="callout">
+    <strong>En Castresana esto lo hacemos por ti:</strong> preparamos toda la
+    documentación del inmueble antes de tu visita y la repasamos contigo,
+    punto por punto, sin prisa y sin letra pequeña.
+  </div>
+
+  <div class="foot-note"><span>Asesoría Castresana</span><span>Piso en Calle Avilés · Mieres · Ref. ES1765666</span></div>
+</section>
+
+<!-- ========== CIERRE / CTA ========== -->
+<section class="page full-bleed cta">
+  <h2>¿Lo vemos juntos?</h2>
+  <p>La Calle Avilés se entiende pisándola. Reserva tu visita al piso
+     (ref. ES1765666) y te acompañamos por la vivienda, el edificio y la zona,
+     con toda la documentación preparada.</p>
+  <p><strong>Sin compromiso y con respuestas claras a todas tus preguntas.</strong></p>
+  <a class="btn">Reservar visita · Ref. ES1765666</a>
+  <div class="contact">
+    🌐 www.asesoriacastresana.com<br>
+    📍 Asturias · Zona centro y cuencas
+  </div>
+  <p class="fine" style="opacity:.6; margin-top:12mm;">Documento informativo y
+     orientativo elaborado por Asesoría Castresana. No constituye oferta
+     contractual. Datos del inmueble según anuncio ref. ES1765666; precio y
+     condiciones actualizados en asesoriacastresana.com.</p>
+</section>
+
+</body>
+</html>
