@@ -193,8 +193,11 @@
 <div class="overlay" id="memOverlay">
   <div class="panel">
     <h2>🧠 Memoria de Clara</h2>
-    <p>Apunta aquí lo que quieras que Clara recuerde <strong>siempre</strong>, entre conversaciones: tu perfil, objetivos, preferencias, datos de tu negocio… Se guarda solo en este navegador y se le envía a Clara con cada mensaje.</p>
+    <p>Apunta aquí lo que quieras que Clara recuerde <strong>siempre</strong>, entre conversaciones: tu perfil, objetivos, preferencias, datos de tu negocio… Con la <strong>clave de sincronización</strong> puesta, la memoria vive en la nube y es la misma en todos tus dispositivos (y Clara puede apuntar cosas ella sola si se lo pides). Sin clave, se guarda solo en este navegador.</p>
     <textarea id="memText" placeholder="Ejemplos:&#10;- Mi objetivo este año es …&#10;- Prefiero respuestas cortas y directas.&#10;- Mi CV actual dice que …"></textarea>
+    <input type="password" id="memClave" placeholder="Clave de sincronización (opcional — la misma en todos tus dispositivos)"
+      style="width:100%;margin-top:10px;border:1px solid var(--stroke);background:var(--glass);color:var(--fg);border-radius:var(--r-md);padding:10px 14px;font-size:13px;font-family:inherit;outline:none" />
+    <div id="memEstado" style="margin-top:8px;font-size:12px;color:var(--muted)"></div>
     <div class="row">
       <button class="ghost" id="memClose">Cancelar</button>
       <button class="save" id="memSave">Guardar</button>
@@ -239,6 +242,7 @@
   const STORE_KEY = "clara_chat_v1";
   const MEM_KEY = "clara_memoria_v1";
   const VOICE_KEY = "clara_voz_v1";
+  const SYNC_KEY = "clara_sync_v1";
   function saveChat() {
     // Los adjuntos (base64) no se guardan en localStorage: pesan demasiado.
     const ligero = history.map((m) =>
@@ -251,6 +255,9 @@
   }
   function getMemoria() {
     try { return localStorage.getItem(MEM_KEY) || ""; } catch { return ""; }
+  }
+  function getClave() {
+    try { return localStorage.getItem(SYNC_KEY) || ""; } catch { return ""; }
   }
 
   // ---- Voz de Clara: lee sus respuestas en voz alta (es-ES) ----
@@ -494,7 +501,7 @@
       const res = await fetch("/api/clara", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: payload, mode, memoria: getMemoria(), stream: true }),
+        body: JSON.stringify({ messages: payload, mode, memoria: getMemoria(), clave: getClave(), stream: true }),
       });
       const tipo = res.headers.get("content-type") || "";
 
@@ -587,18 +594,66 @@
     location.reload();
   });
 
-  // ---- Panel 🧠 Memoria ----
+  // ---- Panel 🧠 Memoria (local + nube opcional con clave de sincronización) ----
   const memOverlay = document.getElementById("memOverlay");
   const memText = document.getElementById("memText");
-  document.getElementById("memory").addEventListener("click", () => {
+  const memClave = document.getElementById("memClave");
+  const memEstado = document.getElementById("memEstado");
+
+  async function memoriaNube(accion, contenido) {
+    const clave = memClave.value.trim();
+    if (!clave) return null;
+    const res = await fetch("/api/memoria", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clave, accion, contenido }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { const e = new Error(data.error || "Error " + res.status); e.status = res.status; throw e; }
+    return data.contenido ?? "";
+  }
+
+  document.getElementById("memory").addEventListener("click", async () => {
     memText.value = getMemoria();
+    memClave.value = getClave();
+    memEstado.textContent = "";
     memOverlay.classList.add("open");
     memText.focus();
+    if (memClave.value) {
+      memEstado.textContent = "☁️ Leyendo la memoria de la nube…";
+      try {
+        const nube = await memoriaNube("lee");
+        if (nube !== null) {
+          memText.value = nube;
+          try { localStorage.setItem(MEM_KEY, nube.slice(0, 8000)); } catch {}
+          memEstado.textContent = "☁️ Memoria sincronizada en la nube (todos tus dispositivos).";
+        }
+      } catch (e) {
+        memEstado.textContent = e.status === 401 ? "❌ La clave de sincronización no es correcta." :
+          e.status === 503 ? "ℹ️ Nube no configurada: la memoria se guarda solo en este navegador." :
+          "⚠️ No se pudo leer la nube (" + e.message + "). Se muestra la copia local.";
+      }
+    } else {
+      memEstado.textContent = "ℹ️ Sin clave de sincronización: la memoria se guarda solo en este navegador.";
+    }
   });
   document.getElementById("memClose").addEventListener("click", () => memOverlay.classList.remove("open"));
   memOverlay.addEventListener("click", (e) => { if (e.target === memOverlay) memOverlay.classList.remove("open"); });
-  document.getElementById("memSave").addEventListener("click", () => {
-    try { localStorage.setItem(MEM_KEY, memText.value.trim().slice(0, 4000)); } catch {}
+  document.getElementById("memSave").addEventListener("click", async () => {
+    const texto = memText.value.trim().slice(0, 8000);
+    try { localStorage.setItem(MEM_KEY, texto); } catch {}
+    try { localStorage.setItem(SYNC_KEY, memClave.value.trim()); } catch {}
+    if (memClave.value.trim()) {
+      memEstado.textContent = "☁️ Guardando en la nube…";
+      try {
+        await memoriaNube("guarda", texto);
+        memEstado.textContent = "✅ Guardada en la nube.";
+      } catch (e) {
+        memEstado.textContent = e.status === 401 ? "❌ La clave de sincronización no es correcta (guardada solo en local)." :
+          "⚠️ No se pudo guardar en la nube (" + e.message + "). Guardada solo en local.";
+        return; // deja el panel abierto para que Pau vea el aviso
+      }
+    }
     memOverlay.classList.remove("open");
   });
 

@@ -12,6 +12,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { obtenerCartera, resumenCartera } from "../lib/cartera.js";
+import { nubeConfigurada, leerMemoria, apuntarNota } from "../lib/memoria.js";
 
 // Permite emitir la respuesta en streaming (res.write) en Vercel.
 export const config = { supportsResponseStreaming: true };
@@ -170,7 +171,7 @@ Pau puede adjuntarte fotos (por ejemplo, de un inmueble o de un documento) y PDF
 - Nunca inventes datos concretos de empresas o salarios; búscalos y cítalos, o márcalos claramente como estimación.
 - Si Pau pega información de Internet, úsala como base del análisis y ayúdale a valorar si la fuente es seria, explicando brevemente por qué.
 - Mantén coherencia con lo hablado antes en la sesión (CV, estudios, proyectos, temas personales). No hagas preguntar dos veces lo mismo. La conversación se guarda en el navegador de Pau y continúa aunque recargue la página: retoma el hilo con naturalidad.
-- Memoria a largo plazo (🧠): Pau puede guardar notas persistentes en el panel "🧠 Memoria" del chat; si existen, las recibes como bloque de sistema en cada conversación. Úsalas con naturalidad y no vuelvas a preguntar lo que ya esté ahí. Cuando aparezca un dato personal estable e importante (una preferencia, un objetivo, un dato de su vida o de su negocio), sugiérele guardarlo: "¿Quieres que esto quede en mi 🧠 Memoria para que lo recuerde siempre?".
+- Memoria a largo plazo (🧠): Pau puede guardar notas persistentes en el panel "🧠 Memoria" del chat; si existen, las recibes como bloque de sistema en cada conversación. Con la clave de sincronización configurada, la memoria vive en la nube y es la misma en todos sus dispositivos, y además tienes la herramienta "recordar" para guardar tú misma una nota cuando Pau te lo pida o confirme que quiere recordar algo — confírmaselo en una línea cuando lo hagas. Úsala con criterio: datos estables e importantes, nunca trivialidades. Si no está la nube activa y aparece un dato importante, sugiérele guardarlo: "¿Quieres que esto quede en mi 🧠 Memoria para que lo recuerde siempre?".
 - Voz: Pau puede dictarte por micrófono y activar que tus respuestas se lean en voz alta. Si la conversación parece hablada (mensajes cortos, estilo oral), responde con frases naturales y fáciles de escuchar, y evita tablas o bloques de código salvo que los pida.
 - Cuando algo salga bien (modelo de CV, guion, rutina de estudio, estructura de proyecto), ofrece guardarlo como plantilla reutilizable.
 - Siempre que te dé un CV, una carta, un guion, un texto o una reflexión: devuélvelo mejorado, propón alternativas (más formal, más cercana, más técnica, más emocional) y pregunta si quiere llevarlo "aún a un nivel superior".
@@ -276,13 +277,20 @@ const ADJUNTO_TIPOS = {
 const MAX_ADJUNTO_B64 = 5_000_000; // ~3,7 MB reales por adjunto
 
 // Ejecuta una herramienta pedida por Clara y devuelve su resultado en texto.
-async function ejecutarHerramienta(tu) {
+async function ejecutarHerramienta(tu, claveSync) {
   try {
     if (tu.name === "buscar_web") return await buscarEnPerplexity(tu.input?.consulta);
     if (tu.name === "calcular") return calcular(tu.input?.expresion);
     if (tu.name === "mi_cartera") {
       const { items, errores } = await obtenerCartera();
       return resumenCartera(items, errores);
+    }
+    if (tu.name === "recordar") {
+      if (!claveSync || !nubeConfigurada()) {
+        return "La memoria en la nube no está activa en esta conversación; pídele a Pau que lo apunte él en el panel 🧠 Memoria.";
+      }
+      const nueva = await apuntarNota(claveSync, String(tu.input?.nota || "").slice(0, 500));
+      return "Nota guardada en la 🧠 memoria. Contenido actual de la memoria:\n" + nueva;
     }
     return `Herramienta desconocida: ${tu.name}`;
   } catch (e) {
@@ -294,6 +302,7 @@ const ESTADO_HERRAMIENTA = {
   buscar_web: "🔍 Buscando en Internet…",
   calcular: "🧮 Calculando…",
   mi_cartera: "🏠 Leyendo tu cartera…",
+  recordar: "🧠 Guardando en tu memoria…",
 };
 
 export default async function handler(req, res) {
@@ -308,7 +317,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const { messages, mode, memoria, stream } = req.body ?? {};
+  const { messages, mode, memoria, stream, clave } = req.body ?? {};
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: "Envía un array 'messages' con la conversación." });
   }
@@ -361,13 +370,31 @@ export default async function handler(req, res) {
     { type: "text", text: CLARA_SYSTEM, cache_control: { type: "ephemeral" } },
     { type: "text", text: `Hoy es ${fechaDeHoy()} (hora de Madrid).` },
   ];
-  const notas = typeof memoria === "string" ? memoria.trim().slice(0, 4000) : "";
-  if (notas) {
+  // Memoria: si hay clave de sincronización y Supabase configurado, manda la
+  // versión de la nube (compartida entre dispositivos); si no, la local.
+  let notas = typeof memoria === "string" ? memoria.trim().slice(0, 4000) : "";
+  let memoriaNube = false;
+  const claveSync = typeof clave === "string" ? clave.trim() : "";
+  if (claveSync && nubeConfigurada()) {
+    try {
+      notas = String((await leerMemoria(claveSync)) ?? "").trim().slice(0, 8000);
+      memoriaNube = true;
+    } catch (e) {
+      console.error("No se pudo leer la memoria en la nube:", String(e?.message || e));
+    }
+  }
+  if (notas || memoriaNube) {
     system.push({
       type: "text",
       text:
-        "## 🧠 Memoria a largo plazo de Pau\nPau mantiene estas notas en su navegador (panel 🧠 Memoria) y se envían en cada conversación:\n\n" +
-        notas +
+        "## 🧠 Memoria a largo plazo de Pau" +
+        (memoriaNube
+          ? " (sincronizada en la nube entre todos sus dispositivos; puedes ampliarla tú misma con la herramienta 'recordar')"
+          : " (guardada solo en este navegador)") +
+        "\n" +
+        (notas
+          ? "Notas actuales:\n\n" + notas
+          : "De momento está vacía.") +
         "\n\nÚsalas con naturalidad y no vuelvas a preguntar lo que ya esté aquí.",
     });
   }
@@ -420,6 +447,22 @@ export default async function handler(req, res) {
     ],
   };
 
+  // Con la memoria en la nube activa, Clara puede guardar recuerdos ella misma.
+  if (memoriaNube) {
+    request.tools.push({
+      name: "recordar",
+      description:
+        "Guarda una nota breve y estable en la 🧠 memoria a largo plazo de Pau (se añade al final y queda sincronizada entre sus dispositivos). Úsala cuando Pau te pida recordar algo o confirme que quiere guardar un dato importante. Una sola línea, concreta.",
+      input_schema: {
+        type: "object",
+        properties: {
+          nota: { type: "string", description: "La nota a recordar, en una línea. P. ej.: \"Prefiere respuestas cortas\" o \"Objetivo 2026: 20 exclusivas\"." },
+        },
+        required: ["nota"],
+      },
+    });
+  }
+
   const RESPUESTA_RECHAZO =
     "Lo siento, Pau, no puedo ayudarte con eso. ¿Quieres que lo enfoquemos de otra manera?";
 
@@ -454,7 +497,7 @@ export default async function handler(req, res) {
             toolResults.push({
               type: "tool_result",
               tool_use_id: tu.id,
-              content: await ejecutarHerramienta(tu),
+              content: await ejecutarHerramienta(tu, claveSync),
             });
           }
           convo = [
@@ -486,7 +529,7 @@ export default async function handler(req, res) {
         toolResults.push({
           type: "tool_result",
           tool_use_id: tu.id,
-          content: await ejecutarHerramienta(tu),
+          content: await ejecutarHerramienta(tu, claveSync),
         });
       }
       // Se conserva response.content intacto (incluidos los bloques de thinking)

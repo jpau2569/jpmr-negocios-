@@ -33,6 +33,16 @@ Este mandato vive también en `clara_persona.md` (sección "Lo que sabes de Pau"
 - **`api/clara.js`** — función serverless de Vercel. Lleva la persona de Clara embebida (sincronizada con `clara_persona.md`) y llama a la API de Claude con el modelo `claude-sonnet-5`. Responde en **streaming** (el texto aparece según lo escribe, con avisos de "🔍 Buscando…", "🧮 Calculando…", "🏠 Leyendo tu cartera…"), acepta **fotos y PDFs adjuntos** (los analiza de verdad: Claude es multimodal) y tiene tres herramientas: `buscar_web` (**Perplexity**, con fuentes), `calcular` (**calculadora exacta**) y `mi_cartera` (**lee en el momento los inmuebles reales publicados en asesoriacastresana.com**, con precios y referencias). Ninguna clave llega al navegador.
 - **`lib/cartera.js`** — lector compartido de la cartera de Asesoría Castresana (lo usan el escaparate, la herramienta `mi_cartera` de Clara y el briefing).
 - **`api/briefing.js`** — briefing proactivo: un cron de Vercel lo ejecuta cada mañana (08:00 en horario de verano; el horario del cron es UTC, `0 6 * * *`). Lee la cartera real, Clara redacta el resumen del día y, si configuras `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID` en Vercel, te llega al móvil por Telegram. Sin Telegram, puedes abrir `/api/briefing` en el navegador y leerlo ahí. Opcional: `CRON_SECRET` para que solo el cron pueda llamarlo.
+- **`lib/memoria.js` + `api/memoria.js`** — memoria en la nube (Supabase, proyecto `clara-memoria`, 0 €/mes). La tabla tiene RLS activado sin políticas: solo se accede por funciones RPC que exigen la **clave de sincronización** de Pau. Pau escribe esa clave una vez en el panel 🧠 de cada dispositivo y su memoria pasa a ser la misma en todos; además Clara gana la herramienta `recordar` para apuntar notas ella sola. Sin clave (o sin las variables de Supabase), todo sigue funcionando en modo local como antes.
+
+## Memoria en la nube (fase 3) — configuración
+
+En Vercel → Settings → Environment Variables, añade (además de las claves de siempre):
+
+- `SUPABASE_URL` = `https://hgwlowomttzbnbspdnkx.supabase.co`
+- `SUPABASE_ANON_KEY` = la clave **anon** del proyecto `clara-memoria` (Supabase → Project Settings → API Keys). Esta clave es *publicable por diseño*: la seguridad real la da la clave de sincronización, que no está en ningún archivo.
+
+Después, en el chat de Clara: pulsa **🧠 Memoria**, escribe tu **clave de sincronización** en el campo de abajo y guarda. Repite ese paso una vez en cada dispositivo (móvil, portátil…) y la memoria será la misma en todos. Puedes cambiar la clave cuando quieras pidiéndoselo a Clara en modo ingeniera (función `clara_cambia_clave` en Supabase).
 - **`test/clara.test.mjs`** — batería de pruebas de la API (calculadora, búsqueda, validación, flujo completo con herramientas simulando Claude). Se ejecuta con `npm test`, sin gastar API real.
 - **`test/ui.test.mjs`** — prueba de la interfaz con navegador real (Playwright + Chromium): saludo, modos, envío/respuesta, formato, persistencia, memoria y reinicio. Se ejecuta con `npm run test:ui`.
 - **`CLAUDE.md`** — instrucciones para que Claude Code adopte la persona de Clara en este repositorio.
