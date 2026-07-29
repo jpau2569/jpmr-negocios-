@@ -39,13 +39,18 @@ await new Promise((ok) => server.listen(PORT, ok));
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 const page = await browser.newPage();
 
-// /api/clara simulada: guarda cada petición para inspeccionarla.
+// /api/clara simulada en modo streaming (SSE): guarda cada petición para inspeccionarla.
+const RESPUESTA = "¡Hecho, Pau! La rentabilidad **bruta** es del `7,96%`. ✅";
 const peticiones = [];
 await page.route("**/api/clara", async (route) => {
   peticiones.push(route.request().postDataJSON());
   await route.fulfill({
-    contentType: "application/json",
-    body: JSON.stringify({ reply: "¡Hecho, Pau! La rentabilidad **bruta** es del `7,96%`. ✅" }),
+    contentType: "text/event-stream",
+    body:
+      'data: {"estado":"🧮 Calculando…"}\n\n' +
+      `data: ${JSON.stringify({ t: RESPUESTA.slice(0, 20) })}\n\n` +
+      `data: ${JSON.stringify({ t: RESPUESTA.slice(20) })}\n\n` +
+      `data: ${JSON.stringify({ done: true, reply: RESPUESTA })}\n\n`,
   });
 });
 
@@ -58,6 +63,7 @@ try {
   check("el saludo lista el modo inmobiliario", saludo.includes("negocio inmobiliario"));
   check("hay 6 botones de modo", (await page.$$(".mode")).length === 6);
   check("botones 🧠/🔊/⬇/🗑 presentes", (await page.$$("#memory, #voice, #export, #reset")).length === 4);
+  check("clip de adjuntos 📎 presente", (await page.$$("#attach, #fileattach")).length === 2);
 
   console.log("\n— modos —");
   await page.click('.mode[data-mode="inmobiliaria"]');
@@ -76,6 +82,7 @@ try {
   check("formato enriquecido: código renderizado", await page.evaluate(() => [...document.querySelectorAll(".msg.clara .bubble code")].some((c) => c.textContent === "7,96%")));
   check("la respuesta tiene botón copiar", (await page.$$(".msg.clara .copy")).length >= 1);
   check("la petición llevó el modo inmobiliario", peticiones.at(-1)?.mode === "inmobiliaria");
+  check("la petición pidió streaming", peticiones.at(-1)?.stream === true);
 
   console.log("\n— persistencia al recargar —");
   await page.reload();
