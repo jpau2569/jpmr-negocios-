@@ -5,6 +5,15 @@
     },
     "api/escaparate.js": {
       "maxDuration": 30
+    },
+    "api/briefing.js": {
+      "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/briefing",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

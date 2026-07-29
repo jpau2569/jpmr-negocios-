@@ -11,6 +11,10 @@
 // ============================================================================
 
 import Anthropic from "@anthropic-ai/sdk";
+import { obtenerCartera, resumenCartera } from "../lib/cartera.js";
+
+// Permite emitir la respuesta en streaming (res.write) en Vercel.
+export const config = { supportsResponseStreaming: true };
 
 const MODEL = "claude-sonnet-5";
 const PERPLEXITY_MODEL = "sonar"; // buscador con fuentes; alternativas: "sonar-pro", "sonar-reasoning"
@@ -155,6 +159,12 @@ Tienes una herramienta llamada "buscar_web" que consulta Internet con Perplexity
 ## Calculadora exacta
 Tienes una herramienta llamada "calcular" que evalúa expresiones aritméticas con precisión (por ejemplo "120000/85" o "650*12/98000*100"). Úsala SIEMPRE que un resultado numérico importe de verdad — rentabilidades, precio por m², cuotas, porcentajes, impuestos — en vez de calcular de cabeza. Muestra a Pau la fórmula que has usado junto al resultado.
 
+## Tu cartera real (mi_cartera)
+Tienes una herramienta llamada "mi_cartera" que lee EN EL MOMENTO los inmuebles publicados de Asesoría Castresana (venta y alquiler) desde su web oficial, con títulos, precios, m², habitaciones, referencias y enlaces. Úsala siempre que Pau pregunte por sus pisos, su cartera, su inventario, qué tiene en una zona o a qué precio — nunca respondas de memoria sobre su inventario. Cita siempre la referencia de cada inmueble que menciones. Si la herramienta falla, dilo y pide los datos a mano.
+
+## Fotos y documentos adjuntos
+Pau puede adjuntarte fotos (por ejemplo, de un inmueble o de un documento) y PDFs con el clip 📎 del chat. Cuando llegue un adjunto, analízalo de verdad: describe lo que ves, señala lo relevante y da recomendaciones concretas (en fotos de pisos: luz, orden, encuadre, qué mejorar para el anuncio; en documentos: resumen y puntos de atención). Si Pau habla de "la foto" o "el documento" y no ha llegado ningún adjunto, pídele que lo adjunte con el clip.
+
 ## Normas comunes a todos los modos
 - Nunca inventes títulos, experiencia o datos que Pau no tenga. Puedes proponer cómo ampliar su perfil (cursos, proyectos, prácticas), pero sin mentir.
 - Nunca inventes datos concretos de empresas o salarios; búscalos y cítalos, o márcalos claramente como estimación.
@@ -255,6 +265,37 @@ Objetivo: ser la mejor compañera de negocio inmobiliario de Pau en Asturias —
 Norma clave: con dinero e inmuebles, precisión máxima — cifras verificadas o marcadas como estimación, supuestos siempre visibles, y nada de promesas de rentabilidad garantizada.`,
 };
 
+// Adjuntos permitidos (base64) y su tipo de bloque para la API de Claude.
+const ADJUNTO_TIPOS = {
+  "image/jpeg": "image",
+  "image/png": "image",
+  "image/webp": "image",
+  "image/gif": "image",
+  "application/pdf": "document",
+};
+const MAX_ADJUNTO_B64 = 5_000_000; // ~3,7 MB reales por adjunto
+
+// Ejecuta una herramienta pedida por Clara y devuelve su resultado en texto.
+async function ejecutarHerramienta(tu) {
+  try {
+    if (tu.name === "buscar_web") return await buscarEnPerplexity(tu.input?.consulta);
+    if (tu.name === "calcular") return calcular(tu.input?.expresion);
+    if (tu.name === "mi_cartera") {
+      const { items, errores } = await obtenerCartera();
+      return resumenCartera(items, errores);
+    }
+    return `Herramienta desconocida: ${tu.name}`;
+  } catch (e) {
+    return "No se pudo completar la herramienta: " + String(e?.message || e);
+  }
+}
+
+const ESTADO_HERRAMIENTA = {
+  buscar_web: "🔍 Buscando en Internet…",
+  calcular: "🧮 Calculando…",
+  mi_cartera: "🏠 Leyendo tu cartera…",
+};
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Usa POST con un cuerpo JSON." });
@@ -267,13 +308,15 @@ export default async function handler(req, res) {
     });
   }
 
-  const { messages, mode, memoria } = req.body ?? {};
+  const { messages, mode, memoria, stream } = req.body ?? {};
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: "Envía un array 'messages' con la conversación." });
   }
 
   // Saneamos el historial: solo roles y texto válidos, acotado a MAX_HISTORY.
-  const history = messages
+  // Los adjuntos (fotos/PDF en base64) solo se aceptan en los últimos mensajes,
+  // con tipo permitido y tamaño acotado, y se convierten en bloques multimodales.
+  const brutos = messages
     .filter(
       (m) =>
         m &&
@@ -281,8 +324,32 @@ export default async function handler(req, res) {
         typeof m.content === "string" &&
         m.content.trim().length > 0
     )
-    .slice(-MAX_HISTORY)
-    .map((m) => ({ role: m.role, content: m.content.slice(0, 30000) }));
+    .slice(-MAX_HISTORY);
+
+  const history = brutos.map((m, i) => {
+    const texto = m.content.slice(0, 30000);
+    const bloque = ADJUNTO_TIPOS[m.adjunto?.media_type];
+    const esReciente = i >= brutos.length - 4;
+    if (
+      m.role === "user" &&
+      bloque &&
+      esReciente &&
+      typeof m.adjunto.data === "string" &&
+      m.adjunto.data.length > 0 &&
+      m.adjunto.data.length <= MAX_ADJUNTO_B64 &&
+      /^[A-Za-z0-9+/=]+$/.test(m.adjunto.data)
+    ) {
+      const source = { type: "base64", media_type: m.adjunto.media_type, data: m.adjunto.data };
+      return {
+        role: "user",
+        content: [
+          bloque === "image" ? { type: "image", source } : { type: "document", source },
+          { type: "text", text: texto },
+        ],
+      };
+    }
+    return { role: m.role, content: texto };
+  });
 
   if (history.length === 0 || history[0].role !== "user") {
     return res.status(400).json({ error: "La conversación debe empezar con un mensaje del usuario." });
@@ -344,33 +411,83 @@ export default async function handler(req, res) {
           required: ["expresion"],
         },
       },
+      {
+        name: "mi_cartera",
+        description:
+          "Lee ahora mismo la cartera real de inmuebles de Asesoría Castresana (venta y alquiler) desde www.asesoriacastresana.com: títulos, precios, m², habitaciones, referencias y enlaces. Úsala siempre que Pau pregunte por sus pisos, su cartera, su inventario o qué tiene disponible.",
+        input_schema: { type: "object", properties: {} },
+      },
     ],
   };
 
+  const RESPUESTA_RECHAZO =
+    "Lo siento, Pau, no puedo ayudarte con eso. ¿Quieres que lo enfoquemos de otra manera?";
+
   try {
     const client = new Anthropic();
-
-    // Bucle de herramientas: si Clara pide buscar_web, ejecutamos la búsqueda
-    // en Perplexity y le devolvemos el resultado hasta que termine el turno.
     let convo = history;
+
+    // ---- Modo streaming (SSE): el texto va llegando al chat según se genera ----
+    if (stream === true) {
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-store",
+        Connection: "keep-alive",
+      });
+      const emite = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+      let completo = "";
+      try {
+        let response = null;
+        for (let ronda = 0; ronda <= MAX_TOOL_ROUNDS; ronda++) {
+          const flujo = client.messages.stream({ ...request, messages: convo });
+          flujo.on("text", (delta) => {
+            completo += delta;
+            emite({ t: delta });
+          });
+          response = await flujo.finalMessage();
+          if (response.stop_reason !== "tool_use" || ronda === MAX_TOOL_ROUNDS) break;
+
+          const toolUses = response.content.filter((b) => b.type === "tool_use");
+          const toolResults = [];
+          for (const tu of toolUses) {
+            emite({ estado: ESTADO_HERRAMIENTA[tu.name] || "⚙️ Trabajando…" });
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: tu.id,
+              content: await ejecutarHerramienta(tu),
+            });
+          }
+          convo = [
+            ...convo,
+            { role: "assistant", content: response.content },
+            { role: "user", content: toolResults },
+          ];
+          if (completo) {
+            completo += "\n\n";
+            emite({ t: "\n\n" });
+          }
+        }
+        const reply = completo.trim() || RESPUESTA_RECHAZO;
+        emite({ done: true, reply: response?.stop_reason === "refusal" && !completo.trim() ? RESPUESTA_RECHAZO : reply });
+      } catch (e) {
+        console.error("Error en streaming de /api/clara:", e);
+        emite({ error: "Clara ha tenido un problema al responder (" + String(e?.status || e?.message || e) + "). Inténtalo de nuevo." });
+      }
+      return res.end();
+    }
+
+    // ---- Modo clásico (JSON): se responde de una pieza al terminar ----
     let response = await client.messages.create({ ...request, messages: convo });
 
     for (let round = 0; round < MAX_TOOL_ROUNDS && response.stop_reason === "tool_use"; round++) {
       const toolUses = response.content.filter((b) => b.type === "tool_use");
       const toolResults = [];
       for (const tu of toolUses) {
-        let resultText;
-        try {
-          resultText =
-            tu.name === "buscar_web"
-              ? await buscarEnPerplexity(tu.input?.consulta)
-              : tu.name === "calcular"
-                ? calcular(tu.input?.expresion)
-                : `Herramienta desconocida: ${tu.name}`;
-        } catch (e) {
-          resultText = "No se pudo completar la búsqueda: " + String(e?.message || e);
-        }
-        toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: resultText });
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: tu.id,
+          content: await ejecutarHerramienta(tu),
+        });
       }
       // Se conserva response.content intacto (incluidos los bloques de thinking)
       // para poder continuar el turno en el mismo modelo.
@@ -389,10 +506,7 @@ export default async function handler(req, res) {
       .trim();
 
     if (response.stop_reason === "refusal" || !reply) {
-      return res.status(200).json({
-        reply:
-          "Lo siento, Pau, no puedo ayudarte con eso. ¿Quieres que lo enfoquemos de otra manera?",
-      });
+      return res.status(200).json({ reply: RESPUESTA_RECHAZO });
     }
 
     res.setHeader("Cache-Control", "no-store");
