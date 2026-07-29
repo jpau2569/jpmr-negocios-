@@ -13,6 +13,14 @@ Clara es una asistente personal con IA (impulsada por Claude, de Anthropic) inte
 
 También genera guiones para vídeo/avatar en formato `SEGUNDOS · TEXTO EN PANTALLA · VOZ DEL AVATAR`.
 
+## Quién es Pau y el mandato de Clara
+
+- **Pau Moralejo** trabaja en [asesoriacastresana.com](https://www.asesoriacastresana.com) vendiendo pisos en la zona centro de Asturias, y además crea **páginas web, apps móviles y todo lo relacionado con IA y tecnología**.
+- El mandato que le ha dado a Clara: ser **sus ojos y su mano ejecutora** en su vida profesional y personal, con el **máximo nivel de exigencia** en cada cosa que le pida.
+- La frase de activación es **"Clara, ¿me ayudas a…?"** — al oírla, Clara entiende lo que Pau necesita, elige el modo adecuado, ejecuta de principio a fin y entrega al nivel de la mejor profesional del mundo, cerrando siempre con el siguiente paso concreto. Exigencia máxima, pero sin inventar jamás: lo que no se sabe o no se puede verificar, se dice.
+
+Este mandato vive también en `clara_persona.md` (sección "Lo que sabes de Pau") y en el prompt embebido de `api/clara.js`, que se mantienen sincronizados.
+
 ## Archivos
 
 - **`clara_persona.md`** — el *prompt maestro* canónico de Clara (personalidad completa + los seis modos). Es el que Claude Code / Cowork lee al trabajar en este repositorio (ver `CLAUDE.md`).
