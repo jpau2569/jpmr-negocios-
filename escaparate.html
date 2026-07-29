@@ -96,6 +96,10 @@
     font-size: 52px; line-height: 1.25; font-weight: 700; color: #ffffff;
     max-height: 200px; overflow: hidden;
   }
+  .descripcion {
+    margin-top: 14px; font-size: 32px; line-height: 1.35; color: #9fb3d1;
+    max-height: 130px; overflow: hidden;
+  }
   .precio { margin-top: 26px; font-size: 108px; font-weight: 800; color: #c9a227; }
   .precio small { font-size: 44px; font-weight: 600; color: #9fb3d1; }
   /* Sin "gap": los navegadores de TV antiguos no lo soportan en flexbox */
@@ -223,6 +227,7 @@
         "</div>" +
         '<div class="info">' +
           '<div class="titulo">' + escapa(it.titulo) + "</div>" +
+          (it.descripcion ? '<div class="descripcion">' + escapa(it.descripcion) + "…</div>" : "") +
           '<div class="precio">' + formateaPrecio(it.precio, it.operacion) + "</div>" +
           '<div class="rasgos">' + rasgos + "</div>" +
           (it.ref ? '<div class="ref">REF. ' + escapa(it.ref).toUpperCase() + "</div>" : "") +

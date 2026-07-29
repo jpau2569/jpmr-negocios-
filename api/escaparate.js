@@ -64,7 +64,9 @@ function parsearInmuebles(html, operacion) {
   // Cada ficha enlaza a una URL tipo "piso-en-oviedo-con-ascensor-es1616045.html".
   // Una misma ficha puede tener varios enlaces (foto + título): los agrupamos por
   // referencia consecutiva para delimitar bien dónde empieza y acaba cada tarjeta.
-  const enlaces = [...html.matchAll(/href=["']([^"']*?([a-z0-9-]+)-es(\d+)\.html)[^"']*["']/gi)];
+  // La tarjeta abre con data-url="...", así que lo contamos como marcador junto a href
+  // para que el trozo incluya la cabecera de la tarjeta (data-ref, etiquetas, etc.).
+  const enlaces = [...html.matchAll(/(?:href|data-url|data-enlace)=["']([^"']*?([a-z0-9-]+)-es(\d+)\.html)[^"']*["']/gi)];
   const grupos = [];
   for (const m of enlaces) {
     const ultimo = grupos[grupos.length - 1];
@@ -84,13 +86,27 @@ function parsearInmuebles(html, operacion) {
     const trozo = html.slice(inicio, fin);
     const texto = limpiarTexto(trozo);
 
-    // Título: atributo title del enlace si existe; si no, lo montamos desde el slug.
+    // Estructura real de las tarjetas Inmoweb de asesoriacastresana.com:
+    //   <div class="venta" data-url="..." title="Oviedo" id="1762095"> ... data-ref="PIS0210"
+    //   <h4 class="subTitulo">... <a title="Piso en Oviedo">Piso en Oviedo</a></h4>
+    //   <p class="descripcion ocultar"> Tu nuevo hogar ... </p>
+    //   <li class="habitaciones">...<span>Habitaciones:</span> 4</li>
+    //   <li class="banos">...<span>Baños:</span> 2</li>
+    //   <li class="supConstruida">...<span>Sup. Construida:</span> 165 m²</li>
+    //   <div class="precio"><p><span class="actual"> 780.000€ </span></p></div>
+    // Con regex genéricos de reserva por si cambian la plantilla.
     const conTitle = trozo.match(/<a[^>]+title=["']([^"']{6,120})["'][^>]*href=["'][^"']*-es\d+\.html/i) ||
       trozo.match(/href=["'][^"']*-es\d+\.html[^"']*["'][^>]*title=["']([^"']{6,120})["']/i);
 
-    const m2 = texto.match(/(\d{2,4})\s*m(?:2|²)?(?![\w²])/i);
-    const hab = texto.match(/(\d{1,2})\s*(?:hab|dorm)/i);
-    const banos = texto.match(/(\d{1,2})\s*(?:bañ|aseo)/i);
+    const m2 = texto.match(/Sup\.?\s*Construida:\s*(\d{2,4})/i) || texto.match(/(\d{2,4})\s*m(?:2|²)?(?![\w²])/i);
+    const hab = texto.match(/Habitaciones:\s*(\d{1,2})/i) || texto.match(/(\d{1,2})\s*(?:hab\b|dormitorio)/i);
+    const banos = texto.match(/(?:Baños|Aseos):\s*(\d{1,2})/i) || texto.match(/(\d{1,2})\s*(?:baño|aseo)/i);
+
+    const precioActual = trozo.match(/class=["']actual["'][^>]*>\s*([\d.,\s]+)\s*€/i);
+    const refComercial = trozo.match(/data-ref=["']([^"']{2,20})["']/i) ||
+      trozo.match(/class=["']numeroRef["']\s*>\s*([^<]{2,20})</i);
+    const localidad = trozo.match(/<h3>\s*([^<]{2,60})\s*<\/h3>/i);
+    const descripcion = trozo.match(/class=["']descripcion[^"']*["']\s*>\s*([^<]{20,400})/i);
 
     let url;
     try {
@@ -100,10 +116,12 @@ function parsearInmuebles(html, operacion) {
     }
 
     items.push({
-      ref: `es${g.ref}`,
+      ref: refComercial ? limpiarTexto(refComercial[1]) : `es${g.ref}`,
       operacion,
       titulo: conTitle ? limpiarTexto(conTitle[1]) : tituloDesdeSlug(g.slug + "-es" + g.ref),
-      precio: parsearPrecio(texto),
+      localidad: localidad ? limpiarTexto(localidad[1]) : null,
+      descripcion: descripcion ? limpiarTexto(descripcion[1]).replace(/\.\.\.$/, "").slice(0, 160) : null,
+      precio: precioActual ? parsearPrecio(precioActual[1] + "€") : parsearPrecio(texto),
       m2: m2 ? parseInt(m2[1], 10) : null,
       habitaciones: hab ? parseInt(hab[1], 10) : null,
       banos: banos ? parseInt(banos[1], 10) : null,
