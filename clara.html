@@ -322,6 +322,34 @@
     return t;
   }
 
+  // Si la respuesta contiene un documento HTML completo (ebook, web…), se
+  // ofrece descargarlo como archivo .html (abrir → Ctrl+P → guardar como PDF).
+  function extraeHtml(text) {
+    const m = String(text || "").match(/```html\s*\n([\s\S]*?)```/i);
+    if (m && /^\s*(<!doctype html|<html)/i.test(m[1])) return m[1].trim();
+    return null;
+  }
+  function botonDescargaHtml(wrap, texto) {
+    if (!wrap) return;
+    wrap.querySelector(".dlhtml")?.remove();
+    const html = extraeHtml(texto);
+    if (!html) return;
+    const b = document.createElement("button");
+    b.className = "copy dlhtml";
+    b.style.opacity = "1";
+    b.textContent = "⬇ Descargar HTML";
+    b.title = "Descarga el documento (ábrelo y usa Ctrl+P → Guardar como PDF)";
+    b.addEventListener("click", () => {
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "clara-" + new Date().toISOString().slice(0, 10) + ".html";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+    wrap.appendChild(b);
+  }
+
   function addMessage(role, text, adj) {
     const wrap = document.createElement("div");
     wrap.className = "msg " + (role === "user" ? "user" : "clara");
@@ -360,6 +388,7 @@
         });
       });
       wrap.appendChild(copy);
+      botonDescargaHtml(wrap, text);
     }
     chatEl.appendChild(wrap);
     mainEl.scrollTop = mainEl.scrollHeight;
@@ -545,6 +574,7 @@
         } else {
           bubble.innerHTML = renderRich(texto);
           bubble.rawText = texto;
+          botonDescargaHtml(bubble.closest(".msg"), texto);
           if (errorMsg) addError(errorMsg);
           finaliza(texto);
         }
