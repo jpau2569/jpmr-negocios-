@@ -11,9 +11,11 @@
   y se gira con CSS para que se vea derecho desde la calle.
 
   Parámetros por URL:
-    ?rot=90   giro por defecto (TV girada en sentido horario)
-    ?rot=270  si la TV está girada al revés y se ve boca abajo
-    ?rot=0    sin giro (si la TV ya se configura en modo retrato)
+    (sin parámetro) modo automático: pantalla vertical → derecho; pantalla
+                    horizontal → girado 90º (el caso de la TV del escaparate)
+    ?rot=90   fuerza el giro horario
+    ?rot=270  fuerza el giro antihorario (si en tu TV se ve boca abajo)
+    ?rot=0    fuerza sin giro
     ?secs=12  segundos por inmueble
     ?fuente=demo  fuerza los datos de muestra (sin llamar a la API)
 
@@ -152,21 +154,31 @@
     var m = new RegExp("[?&]" + nombre + "=([^&]+)").exec(window.location.search);
     return m ? decodeURIComponent(m[1]) : porDefecto;
   }
-  var ROTACION = parseInt(parametro("rot", "90"), 10);
-  if ([0, 90, 180, 270].indexOf(ROTACION) === -1) ROTACION = 90;
+  var ROT_PARAM = parametro("rot", "auto");
   var SEGUNDOS = Math.max(5, parseInt(parametro("secs", "12"), 10) || 12);
   var FUENTE = parametro("fuente", "api");
 
   // ---------- Giro y escalado del lienzo ----------
+  // Automático: si la pantalla ya es vertical (móvil, TV en modo retrato) no se
+  // gira nada; si es horizontal (la TV del escaparate pintando 1920x1080) se
+  // gira 90º. Con ?rot=0|90|180|270 se fuerza a mano.
+  function rotacionActual() {
+    if (ROT_PARAM !== "auto") {
+      var r = parseInt(ROT_PARAM, 10);
+      if ([0, 90, 180, 270].indexOf(r) !== -1) return r;
+    }
+    return window.innerHeight >= window.innerWidth ? 0 : 90;
+  }
   function encajar() {
     var vw = window.innerWidth, vh = window.innerHeight;
-    var girado = ROTACION === 90 || ROTACION === 270;
+    var rot = rotacionActual();
+    var girado = rot === 90 || rot === 270;
     // El lienzo es 1080x1920; girado ocupa 1920x1080 en pantalla.
     var ancho = girado ? 1920 : 1080;
     var alto = girado ? 1080 : 1920;
     var escala = Math.min(vw / ancho, vh / alto);
     document.getElementById("lienzo").style.transform =
-      "translate(-50%, -50%) rotate(" + ROTACION + "deg) scale(" + escala + ")";
+      "translate(-50%, -50%) rotate(" + rot + "deg) scale(" + escala + ")";
   }
   window.addEventListener("resize", encajar);
   encajar();

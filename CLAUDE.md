@@ -16,5 +16,5 @@ Reglas rápidas:
 - `index.html` + `api/process/[tool].js` → LimpiaFotos (Clipdrop; clave en `CLIPDROP_API_KEY`).
 - `clara.html` + `api/clara.js` → chat de CLARA (API de Claude; clave en `ANTHROPIC_API_KEY`).
 - La persona de Clara vive en `clara_persona.md` (canónica) y embebida en `api/clara.js` — **si cambias una, actualiza la otra**.
-- `escaparate.html` + `api/escaparate.js` → escaparate para la TV Samsung vertical del local: la API escrapea los inmuebles de www.asesoriacastresana.com y la página los muestra girados 90º (parámetros `?rot=90|270|0`, `?secs=N`, `?fuente=demo`).
+- `escaparate.html` + `api/escaparate.js` → escaparate para la TV Samsung vertical del local: la API escrapea los inmuebles de www.asesoriacastresana.com y la página gira el contenido automáticamente según la orientación de la pantalla (forzable con `?rot=90|270|0`; también `?secs=N`, `?fuente=demo`).
 - Documentación de configuración: `CLARA.md`.
