@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Escaparate · Asesoría Castresana</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!--
+  Escaparate para la TV Samsung del local (C/ Cabo Noval 8, Oviedo).
+  La tele está montada EN VERTICAL dentro del escaparate, pero el navegador de la TV
+  pinta en horizontal (1920x1080): por eso todo el contenido se diseña en 1080x1920
+  y se gira con CSS para que se vea derecho desde la calle.
+
+  Parámetros por URL:
+    ?rot=90   giro por defecto (TV girada en sentido horario)
+    ?rot=270  si la TV está girada al revés y se ve boca abajo
+    ?rot=0    sin giro (si la TV ya se configura en modo retrato)
+    ?secs=12  segundos por inmueble
+    ?fuente=demo  fuerza los datos de muestra (sin llamar a la API)
+
+  Los datos vienen de /api/escaparate (escrapea www.asesoriacastresana.com cada 30 min).
+  Si la API falla, se muestra la cartera de respaldo embebida abajo.
+-->
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #05080f; overflow: hidden; cursor: none;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  /* Lienzo vertical fijo; JS lo gira y escala para encajarlo en la pantalla */
+  #lienzo {
+    position: absolute; top: 50%; left: 50%;
+    width: 1080px; height: 1920px;
+    transform-origin: center center;
+    background: #0b1626;
+    display: flex; flex-direction: column;
+  }
+  /* ---------- Cabecera ---------- */
+  #cabecera {
+    height: 190px; flex: 0 0 auto; z-index: 5;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, #0b1626 0%, #10203a 100%);
+    border-bottom: 4px solid #c9a227;
+  }
+  #cabecera .marca {
+    font-size: 62px; font-weight: 800; letter-spacing: 6px; color: #ffffff;
+  }
+  #cabecera .marca span { color: #c9a227; }
+  #cabecera .sub {
+    margin-top: 8px; font-size: 24px; letter-spacing: 5px; color: #9fb3d1;
+    text-transform: uppercase; white-space: nowrap;
+  }
+  /* ---------- Zona de diapositivas ---------- */
+  #escena { position: relative; flex: 1 1 auto; overflow: hidden; }
+  .diapo {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    opacity: 0; transition: opacity 1.2s ease;
+    display: flex; flex-direction: column;
+  }
+  .diapo.activa { opacity: 1; }
+  .foto {
+    position: relative; height: 58%; overflow: hidden; background: #16263f;
+  }
+  .foto img {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: cover; display: block; z-index: 1;
+    animation: kenburns 26s ease-in-out infinite alternate;
+  }
+  @keyframes kenburns {
+    from { transform: scale(1); }
+    to   { transform: scale(1.09) translate(-1.5%, -1.5%); }
+  }
+  .foto .sin-foto {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; color: #c9a227;
+    background: radial-gradient(circle at 50% 35%, #1c3255 0%, #0b1626 75%);
+  }
+  .foto .sin-foto .icono { font-size: 220px; line-height: 1; }
+  .foto .sin-foto .texto { font-size: 34px; color: #9fb3d1; margin-top: 18px; letter-spacing: 4px; }
+  .foto .velo {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 180px; z-index: 2;
+    background: linear-gradient(180deg, rgba(11,22,38,0) 0%, #0b1626 100%);
+  }
+  .etiqueta {
+    position: absolute; top: 36px; left: 0; z-index: 3;
+    background: #c9a227; color: #10203a;
+    font-size: 34px; font-weight: 800; letter-spacing: 4px;
+    padding: 14px 44px 14px 36px; border-radius: 0 12px 12px 0;
+    text-transform: uppercase;
+  }
+  .etiqueta.alquiler { background: #3f8efc; color: #ffffff; }
+  .info {
+    flex: 1 1 auto; padding: 34px 64px 20px;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+  }
+  .titulo {
+    font-size: 52px; line-height: 1.25; font-weight: 700; color: #ffffff;
+    max-height: 200px; overflow: hidden;
+  }
+  .precio { margin-top: 26px; font-size: 108px; font-weight: 800; color: #c9a227; }
+  .precio small { font-size: 44px; font-weight: 600; color: #9fb3d1; }
+  /* Sin "gap": los navegadores de TV antiguos no lo soportan en flexbox */
+  .rasgos { margin-top: 30px; display: flex; justify-content: center; flex-wrap: wrap; }
+  .rasgo {
+    background: #16263f; border: 2px solid #24405f; border-radius: 16px; margin: 0 13px 13px;
+    padding: 18px 34px; font-size: 40px; color: #e8eef7; font-weight: 600;
+  }
+  .rasgo b { color: #c9a227; }
+  .ref { margin-top: 28px; font-size: 30px; color: #6c82a3; letter-spacing: 3px; }
+  /* ---------- Pie ---------- */
+  #pie {
+    height: 190px; flex: 0 0 auto; z-index: 5; text-align: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #10203a; border-top: 4px solid #c9a227;
+  }
+  #pie .contacto { font-size: 42px; color: #ffffff; font-weight: 700; white-space: nowrap; }
+  #pie .web { margin-top: 8px; font-size: 38px; color: #c9a227; font-weight: 700; white-space: nowrap; }
+  #pie .direccion { margin-top: 10px; font-size: 27px; color: #9fb3d1; letter-spacing: 1px; white-space: nowrap; }
+  /* ---------- Puntos de progreso ---------- */
+  #puntos {
+    position: absolute; left: 0; right: 0; bottom: 206px; z-index: 6;
+    display: flex; justify-content: center;
+  }
+  #puntos .punto { width: 16px; height: 16px; border-radius: 50%; background: #24405f; margin: 0 7px; }
+  #puntos .punto.activo { background: #c9a227; }
+</style>
+</head>
+<body>
+  <div id="lienzo">
+    <div id="cabecera">
+      <div class="marca">ASESORÍA <span>CASTRESANA</span></div>
+      <div class="sub">Inmobiliaria · Oviedo · desde hace más de 30 años</div>
+    </div>
+    <div id="escena"></div>
+    <div id="puntos"></div>
+    <div id="pie">
+      <div class="contacto">☎ 985 210 468 · 689 929 926</div>
+      <div class="web">www.asesoriacastresana.com</div>
+      <div class="direccion">C/ Cabo Noval, 8 · 33007 Oviedo · Entra y te informamos sin compromiso</div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Parámetros de URL ----------
+  function parametro(nombre, porDefecto) {
+    var m = new RegExp("[?&]" + nombre + "=([^&]+)").exec(window.location.search);
+    return m ? decodeURIComponent(m[1]) : porDefecto;
+  }
+  var ROTACION = parseInt(parametro("rot", "90"), 10);
+  if ([0, 90, 180, 270].indexOf(ROTACION) === -1) ROTACION = 90;
+  var SEGUNDOS = Math.max(5, parseInt(parametro("secs", "12"), 10) || 12);
+  var FUENTE = parametro("fuente", "api");
+
+  // ---------- Giro y escalado del lienzo ----------
+  function encajar() {
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var girado = ROTACION === 90 || ROTACION === 270;
+    // El lienzo es 1080x1920; girado ocupa 1920x1080 en pantalla.
+    var ancho = girado ? 1920 : 1080;
+    var alto = girado ? 1080 : 1920;
+    var escala = Math.min(vw / ancho, vh / alto);
+    document.getElementById("lienzo").style.transform =
+      "translate(-50%, -50%) rotate(" + ROTACION + "deg) scale(" + escala + ")";
+  }
+  window.addEventListener("resize", encajar);
+  encajar();
+
+  // ---------- Cartera de respaldo (si la API no responde) ----------
+  // Actualizada el 29/07/2026 con los inmuebles publicados en asesoriacastresana.com.
+  var RESPALDO = [
+    { titulo: "Piso 4º exterior en El Fontán, junto al casco antiguo", precio: 330000, m2: 99, habitaciones: 3, banos: 2, ref: "PIS0160", operacion: "venta" },
+    { titulo: "Piso súper céntrico en Plaza de América", precio: 270000, m2: 80, habitaciones: null, banos: null, ref: null, operacion: "venta" },
+    { titulo: "Ático con ascensor en Calle Rosal, 20 · zona Parque San Francisco", precio: 145000, m2: 51, habitaciones: 1, banos: 1, ref: null, operacion: "venta" },
+    { titulo: "Piso a reformar con ascensor en Calle Rosal, centro de Oviedo", precio: null, m2: 70, habitaciones: null, banos: null, ref: "es1616045", operacion: "venta" },
+    { titulo: "Piso 2º en zona Ayuntamiento con cocina independiente", precio: null, m2: 50, habitaciones: 1, banos: 1, ref: null, operacion: "venta" },
+    { titulo: "Piso de 3 habitaciones en San Pedro – Siana, Mieres", precio: 120000, m2: 90, habitaciones: 3, banos: 1, ref: null, operacion: "venta" },
+    { titulo: "Piso con 2 baños en pleno centro, Calle Avilés, Mieres", precio: null, m2: 85, habitaciones: 2, banos: 2, ref: null, operacion: "venta" }
+  ];
+
+  // ---------- Utilidades ----------
+  function escapa(t) {
+    return String(t == null ? "" : t)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function formateaPrecio(n, operacion) {
+    if (!n) return "Consultar precio";
+    var s = String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return s + " €" + (operacion === "alquiler" ? "<small>/mes</small>" : "");
+  }
+
+  // ---------- Construcción de diapositivas ----------
+  var escena = document.getElementById("escena");
+  var puntos = document.getElementById("puntos");
+  var indice = 0;
+  var temporizador = null;
+
+  function pinta(items) {
+    escena.innerHTML = "";
+    puntos.innerHTML = "";
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var rasgos = "";
+      if (it.m2) rasgos += '<div class="rasgo"><b>' + escapa(it.m2) + '</b> m²</div>';
+      if (it.habitaciones) rasgos += '<div class="rasgo"><b>' + escapa(it.habitaciones) + "</b> hab.</div>";
+      if (it.banos) rasgos += '<div class="rasgo"><b>' + escapa(it.banos) + "</b> baño" + (it.banos > 1 ? "s" : "") + "</div>";
+
+      // El panel "sin foto" va siempre debajo; si la imagen no carga, se oculta y queda el panel.
+      var foto = it.foto
+        ? '<img src="' + escapa(it.foto) + '" alt="" onerror="this.style.display=\'none\'" />'
+        : "";
+      var sinFoto = '<div class="sin-foto"><div class="icono">🏠</div><div class="texto">FOTOS EN OFICINA Y WEB</div></div>';
+
+      var d = document.createElement("div");
+      d.className = "diapo" + (i === 0 ? " activa" : "");
+      d.innerHTML =
+        '<div class="foto">' +
+          sinFoto + foto +
+          '<div class="velo"></div>' +
+          '<div class="etiqueta ' + (it.operacion === "alquiler" ? "alquiler" : "") + '">' +
+            (it.operacion === "alquiler" ? "Se alquila" : "Se vende") + "</div>" +
+        "</div>" +
+        '<div class="info">' +
+          '<div class="titulo">' + escapa(it.titulo) + "</div>" +
+          '<div class="precio">' + formateaPrecio(it.precio, it.operacion) + "</div>" +
+          '<div class="rasgos">' + rasgos + "</div>" +
+          (it.ref ? '<div class="ref">REF. ' + escapa(it.ref).toUpperCase() + "</div>" : "") +
+        "</div>";
+      escena.appendChild(d);
+
+      var p = document.createElement("div");
+      p.className = "punto" + (i === 0 ? " activo" : "");
+      puntos.appendChild(p);
+    }
+    indice = 0;
+    if (temporizador) clearInterval(temporizador);
+    if (items.length > 1) temporizador = setInterval(avanza, SEGUNDOS * 1000);
+  }
+
+  function avanza() {
+    var diapos = escena.children;
+    var marcas = puntos.children;
+    if (!diapos.length) return;
+    diapos[indice].className = "diapo";
+    marcas[indice].className = "punto";
+    indice = (indice + 1) % diapos.length;
+    diapos[indice].className = "diapo activa";
+    marcas[indice].className = "punto activo";
+  }
+
+  // ---------- Carga de datos ----------
+  function cargaDatos() {
+    if (FUENTE === "demo") { pinta(RESPALDO); return; }
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "/api/escaparate", true);
+    xhr.timeout = 20000;
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) return;
+      var items = null;
+      if (xhr.status === 200) {
+        try {
+          var datos = JSON.parse(xhr.responseText);
+          if (datos && datos.items && datos.items.length) items = datos.items;
+        } catch (e) { /* respuesta ilegible: usamos respaldo */ }
+      }
+      pinta(items || RESPALDO);
+    };
+    xhr.onerror = function () { pinta(RESPALDO); };
+    xhr.ontimeout = function () { pinta(RESPALDO); };
+    xhr.send();
+  }
+
+  cargaDatos();
+  // Refresco de datos cada 30 minutos y recarga completa de la página cada 24 h
+  // (a las teles les sienta bien empezar de cero una vez al día).
+  setInterval(cargaDatos, 30 * 60 * 1000);
+  setTimeout(function () { window.location.reload(); }, 24 * 60 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
