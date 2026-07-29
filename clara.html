@@ -47,6 +47,9 @@
   header a.back{position:absolute;left:14px;top:14px;color:var(--muted);font-size:12.5px;text-decoration:none;
     border:1px solid var(--stroke);border-radius:999px;padding:6px 12px;background:var(--glass)}
   header a.back:hover{color:var(--fg);border-color:var(--stroke-2)}
+  #reset{position:absolute;right:14px;top:14px;color:var(--muted);font-size:12.5px;cursor:pointer;
+    border:1px solid var(--stroke);border-radius:999px;padding:6px 12px;background:var(--glass);font-family:inherit}
+  #reset:hover{color:var(--fg);border-color:var(--stroke-2)}
 
   /* ---- Selector de modo ---- */
   .modes{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
@@ -59,6 +62,7 @@
   .mode.active[data-mode="psicologa"]{background:linear-gradient(135deg,#9d174d,#ff5c9d)}
   .mode.active[data-mode="dev"]{background:linear-gradient(135deg,#047857,#2fe08d)}
   .mode.active[data-mode="noticias"]{background:linear-gradient(135deg,#b45309,#ffc857)}
+  .mode.active[data-mode="inmobiliaria"]{background:linear-gradient(135deg,#7c2d12,#fb923c)}
 
   /* ---- Chat ---- */
   main{flex:1;overflow-y:auto;padding:20px 14px 8px;scroll-behavior:smooth}
@@ -75,6 +79,18 @@
   .msg.user .bubble{background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.25)}
   .bubble strong{color:#fff}
   .bubble em{color:#ffd8ea}
+  .bubble a{color:var(--cyan);text-decoration:underline;word-break:break-all}
+  .bubble code{background:rgba(255,255,255,.08);border:1px solid var(--stroke);border-radius:6px;
+    padding:1px 6px;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:13px}
+  .bubble pre{background:rgba(0,0,0,.35);border:1px solid var(--stroke);border-radius:10px;
+    padding:10px 12px;overflow-x:auto;margin:6px 0}
+  .bubble pre code{background:none;border:none;padding:0;font-size:12.5px;line-height:1.55}
+  .bubble strong.h{display:inline-block;margin-top:4px;font-size:15px}
+  .msg .copy{align-self:flex-end;flex:0 0 auto;border:1px solid var(--stroke);background:var(--glass);
+    color:var(--muted-2);border-radius:8px;font-size:11px;padding:3px 8px;cursor:pointer;font-family:inherit;
+    opacity:0;transition:.15s}
+  .msg:hover .copy{opacity:1}
+  .msg .copy:hover{color:var(--fg);border-color:var(--stroke-2)}
 
   .typing{display:inline-flex;gap:5px;align-items:center;padding:4px 2px}
   .typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
@@ -110,15 +126,17 @@
 
 <header>
   <a class="back" href="index.html">← LimpiaFotos</a>
+  <button id="reset" title="Borra esta conversación y empieza de cero">🗑 Nueva conversación</button>
   <div class="logo">💬 CLARA IA</div>
   <h1>Clara, tu asistente IA avatar</h1>
-  <p>Asesora laboral · Profesora · Psicóloga · Ingeniera de software · Investigadora</p>
+  <p>Asesora laboral · Profesora · Psicóloga · Ingeniera · Investigadora · Inmobiliaria</p>
   <div class="modes" id="modes">
     <button class="mode" data-mode="trabajo">💼 Trabajo y empleo</button>
     <button class="mode" data-mode="estudios">📚 Estudios y profesor</button>
     <button class="mode" data-mode="psicologa">🌱 Psicóloga y crecimiento</button>
     <button class="mode" data-mode="dev">💻 Ingeniera de software</button>
     <button class="mode" data-mode="noticias">📰 Noticias e investigación</button>
+    <button class="mode" data-mode="inmobiliaria">🏠 Negocio inmobiliario</button>
   </div>
 </header>
 
@@ -152,7 +170,34 @@
     psicologa: "Modo psicóloga y crecimiento personal activado. 🌱 Este es un espacio tranquilo y sin juicios. Cuéntame cómo te sientes o qué te preocupa, y lo vemos juntos con calma. Recuerda que soy una IA: en casos graves, siempre te recomendaré ayuda profesional.",
     dev: "Modo ingeniera de software activado. 💻 Soy tu ingeniera de cabecera: puedo crear aplicaciones completas (webs, APIs, bots, automatizaciones, integraciones con IA), explicarte el código paso a paso, depurar errores y ayudarte a desplegarlo en Vercel o GitHub. Cuéntame qué quieres construir.",
     noticias: "Modo noticias e investigación activado. 📰 Busco en Internet con Perplexity: noticias, precios, datos de empresas y ofertas actuales, siempre citando la fuente y la fecha, y separando hechos ✅ de estimaciones 📊 y opiniones 💬. ¿Qué quieres que investigue?",
+    inmobiliaria: "Modo negocio inmobiliario activado. 🏠 Soy tu mano derecha en Castresana: capto propietarios (mensajes y guiones de llamada), mejoro anuncios, preparo visitas y ofertas, analizo inversiones con números claros y creo el marketing de tus pisos. ¿Con qué inmueble o tarea empezamos?",
   };
+
+  // ---- Persistencia: la conversación vive en el navegador y sobrevive recargas ----
+  const STORE_KEY = "clara_chat_v1";
+  function saveChat() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ history, mode })); } catch {}
+  }
+  function loadChat() {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY) || "null"); } catch { return null; }
+  }
+
+  // ---- Formato ligero (negritas, código, enlaces…) sin librerías externas.
+  //      El texto se escapa SIEMPRE antes de transformarlo: nada de HTML crudo. ----
+  function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function renderRich(text) {
+    let t = escapeHtml(text);
+    t = t.replace(/```\w*\n?([\s\S]*?)```/g, (_m, code) => "<pre><code>" + code.replace(/\n$/, "") + "</code></pre>");
+    t = t.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+    t = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    t = t.replace(/^#{1,4}\s+(.+)$/gm, '<strong class="h">$1</strong>');
+    t = t.replace(/\[([^\]]+)\]\((https?:[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    t = t.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+    t = t.replace(/^[-*]\s+/gm, "• ");
+    return t;
+  }
 
   function addMessage(role, text) {
     const wrap = document.createElement("div");
@@ -162,8 +207,24 @@
     avatar.textContent = role === "user" ? "🧑" : "✨";
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-    bubble.textContent = text;
+    if (role === "user") {
+      bubble.textContent = text;
+    } else {
+      bubble.innerHTML = renderRich(text);
+    }
     wrap.append(avatar, bubble);
+    if (role !== "user") {
+      const copy = document.createElement("button");
+      copy.className = "copy";
+      copy.textContent = "⧉ copiar";
+      copy.addEventListener("click", () => {
+        navigator.clipboard?.writeText(text).then(() => {
+          copy.textContent = "✓ copiado";
+          setTimeout(() => (copy.textContent = "⧉ copiar"), 1500);
+        });
+      });
+      wrap.appendChild(copy);
+    }
     chatEl.appendChild(wrap);
     mainEl.scrollTop = mainEl.scrollHeight;
     return bubble;
@@ -214,6 +275,7 @@
       } else {
         addMessage("assistant", data.reply);
         history.push({ role: "assistant", content: data.reply });
+        saveChat();
       }
     } catch (err) {
       removeTyping();
@@ -237,7 +299,17 @@
     // Guardamos el cambio de modo en el historial para que Clara tenga contexto.
     history.push({ role: "user", content: "[Pau ha activado el " + btn.textContent.trim() + "]" });
     history.push({ role: "assistant", content: intro });
+    saveChat();
     inputEl.focus();
+  });
+
+  // ---- Nueva conversación ----
+  document.getElementById("reset").addEventListener("click", () => {
+    if (busy) return;
+    if (history.some((m) => m.role === "user" && !m.content.startsWith("[")) &&
+        !confirm("¿Borrar esta conversación y empezar de cero?")) return;
+    try { localStorage.removeItem(STORE_KEY); } catch {}
+    location.reload();
   });
 
   // ---- Entrada ----
@@ -260,12 +332,26 @@
     inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + "px";
   });
 
-  // ---- Saludo inicial ----
-  const greeting =
-    "Hola, Pau, soy Clara, tu asistente IA avatar. 💜\n\n¿Qué modo quieres usar hoy?\n\n• 💼 Modo trabajo y empleo\n• 📚 Modo estudios y profesor\n• 🌱 Modo psicóloga y crecimiento personal\n• 💻 Modo ingeniera de software\n• 📰 Modo noticias e investigación\n\nPulsa un botón arriba o escríbeme directamente lo que necesitas y me adapto.";
-  addMessage("assistant", greeting);
-  history.push({ role: "user", content: "[Inicio de sesión: saluda a Pau]" });
-  history.push({ role: "assistant", content: greeting });
+  // ---- Arranque: restaurar la conversación guardada o saludar de cero ----
+  const saved = loadChat();
+  if (saved && Array.isArray(saved.history) && saved.history.length > 0) {
+    for (const m of saved.history) {
+      history.push(m);
+      // Los marcadores internos ("[Inicio de sesión…]", "[Pau ha activado…]") no se pintan.
+      if (m.role === "user" && m.content.startsWith("[")) continue;
+      addMessage(m.role === "user" ? "user" : "assistant", m.content);
+    }
+    if (saved.mode && MODE_INTRO[saved.mode]) {
+      mode = saved.mode;
+      document.querySelectorAll(".mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
+    }
+  } else {
+    const greeting =
+      "Hola, Pau, soy Clara, tu asistente IA avatar. 💜\n\n¿Qué modo quieres usar hoy?\n\n• 💼 Modo trabajo y empleo\n• 📚 Modo estudios y profesor\n• 🌱 Modo psicóloga y crecimiento personal\n• 💻 Modo ingeniera de software\n• 📰 Modo noticias e investigación\n• 🏠 Modo negocio inmobiliario\n\nPulsa un botón arriba o escríbeme directamente lo que necesitas y me adapto. Tu conversación se guarda en este navegador: puedes cerrar y volver cuando quieras.";
+    addMessage("assistant", greeting);
+    history.push({ role: "user", content: "[Inicio de sesión: saluda a Pau]" });
+    history.push({ role: "assistant", content: greeting });
+  }
   inputEl.focus();
 </script>
 </body>
