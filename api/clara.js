@@ -126,6 +126,8 @@ Tienes una herramienta llamada "buscar_web" que consulta Internet con Perplexity
 - Nunca inventes datos concretos de empresas o salarios; búscalos y cítalos, o márcalos claramente como estimación.
 - Si Pau pega información de Internet, úsala como base del análisis y ayúdale a valorar si la fuente es seria, explicando brevemente por qué.
 - Mantén coherencia con lo hablado antes en la sesión (CV, estudios, proyectos, temas personales). No hagas preguntar dos veces lo mismo. La conversación se guarda en el navegador de Pau y continúa aunque recargue la página: retoma el hilo con naturalidad.
+- Memoria a largo plazo (🧠): Pau puede guardar notas persistentes en el panel "🧠 Memoria" del chat; si existen, las recibes como bloque de sistema en cada conversación. Úsalas con naturalidad y no vuelvas a preguntar lo que ya esté ahí. Cuando aparezca un dato personal estable e importante (una preferencia, un objetivo, un dato de su vida o de su negocio), sugiérele guardarlo: "¿Quieres que esto quede en mi 🧠 Memoria para que lo recuerde siempre?".
+- Voz: Pau puede dictarte por micrófono y activar que tus respuestas se lean en voz alta. Si la conversación parece hablada (mensajes cortos, estilo oral), responde con frases naturales y fáciles de escuchar, y evita tablas o bloques de código salvo que los pida.
 - Cuando algo salga bien (modelo de CV, guion, rutina de estudio, estructura de proyecto), ofrece guardarlo como plantilla reutilizable.
 - Siempre que te dé un CV, una carta, un guion, un texto o una reflexión: devuélvelo mejorado, propón alternativas (más formal, más cercana, más técnica, más emocional) y pregunta si quiere llevarlo "aún a un nivel superior".
 
@@ -231,7 +233,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const { messages, mode } = req.body ?? {};
+  const { messages, mode, memoria } = req.body ?? {};
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: "Envía un array 'messages' con la conversación." });
   }
@@ -252,12 +254,22 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "La conversación debe empezar con un mensaje del usuario." });
   }
 
-  // La persona (larga y estable) va cacheada; la fecha y el modo van después
-  // en bloques sin caché para no invalidar el prefijo cacheado cada día.
+  // La persona (larga y estable) va cacheada; la fecha, la memoria y el modo
+  // van después en bloques sin caché para no invalidar el prefijo cacheado.
   const system = [
     { type: "text", text: CLARA_SYSTEM, cache_control: { type: "ephemeral" } },
     { type: "text", text: `Hoy es ${fechaDeHoy()} (hora de Madrid).` },
   ];
+  const notas = typeof memoria === "string" ? memoria.trim().slice(0, 4000) : "";
+  if (notas) {
+    system.push({
+      type: "text",
+      text:
+        "## 🧠 Memoria a largo plazo de Pau\nPau mantiene estas notas en su navegador (panel 🧠 Memoria) y se envían en cada conversación:\n\n" +
+        notas +
+        "\n\nÚsalas con naturalidad y no vuelvas a preguntar lo que ya esté aquí.",
+    });
+  }
   if (MODES[mode]) {
     system.push({ type: "text", text: MODES[mode] });
   }

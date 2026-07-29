@@ -16,7 +16,10 @@ También genera guiones para vídeo/avatar en formato `SEGUNDOS · TEXTO EN PANT
 ## Archivos
 
 - **`clara_persona.md`** — el *prompt maestro* canónico de Clara (personalidad completa + los seis modos). Es el que Claude Code / Cowork lee al trabajar en este repositorio (ver `CLAUDE.md`).
-- **`clara.html`** — interfaz de chat (misma estética que LimpiaFotos). La conversación se guarda en el navegador (`localStorage`) y sobrevive a recargas; el botón **🗑 Nueva conversación** la borra. Las respuestas de Clara se muestran con formato (negritas, código, enlaces) y cada una tiene botón de copiar.
+- **`clara.html`** — interfaz de chat (misma estética que LimpiaFotos). La conversación se guarda en el navegador (`localStorage`) y sobrevive a recargas; el botón **🗑 Nueva** la borra. Las respuestas de Clara se muestran con formato (negritas, código, enlaces) y cada una tiene botón de copiar. Además:
+  - **🧠 Memoria** — notas persistentes que Clara recuerda entre conversaciones (perfil, objetivos, preferencias). Se guardan solo en tu navegador y se le envían con cada mensaje.
+  - **🔊 Voz** — Clara lee sus respuestas en voz alta (síntesis del navegador, español); el botón 🎙 junto al cuadro de texto permite dictarle por micrófono. Ambos se ocultan si el navegador no los soporta.
+  - **⬇ Exportar** — descarga la conversación como archivo Markdown.
 - **`api/clara.js`** — función serverless de Vercel. Lleva la persona de Clara embebida (sincronizada con `clara_persona.md`) y llama a la API de Claude con el modelo `claude-sonnet-5`. La **búsqueda web la hace Perplexity** (cuenta de Pau) mediante una herramienta personalizada `buscar_web`: cuando Clara necesita datos actuales, la función consulta la API de Perplexity y le devuelve el resumen con fuentes. Ninguna clave llega al navegador.
 - **`CLAUDE.md`** — instrucciones para que Claude Code adopte la persona de Clara en este repositorio.
 - **`package.json`** — añade la dependencia `@anthropic-ai/sdk` (Vercel la instala automáticamente al desplegar).
@@ -44,7 +47,7 @@ Listo: abre `https://tu-proyecto.vercel.app/clara.html` y habla con Clara.
 
 ## Notas
 
-- El historial de la conversación vive solo en tu navegador (`localStorage`): sobrevive a recargas y cierres, y se borra con el botón **🗑 Nueva conversación**. A la API se envían como máximo los últimos 60 mensajes.
+- El historial de la conversación vive solo en tu navegador (`localStorage`): sobrevive a recargas y cierres, y se borra con el botón **🗑 Nueva** (la 🧠 Memoria no se toca al reiniciar la conversación). A la API se envían como máximo los últimos 60 mensajes, más tus notas de 🧠 Memoria (hasta 4.000 caracteres).
 - Clara conoce la fecha de hoy (hora de Madrid): el servidor se la inyecta en cada petición, así que puede calcular plazos y saber si un dato está desactualizado.
 - Si cambias la persona en `clara_persona.md`, actualiza también el prompt embebido en `api/clara.js` (y viceversa).
 - Clara nunca inventa experiencia para tu CV ni datos de empresas, y en temas emocionales graves siempre recomienda ayuda profesional.

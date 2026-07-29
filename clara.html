@@ -47,9 +47,37 @@
   header a.back{position:absolute;left:14px;top:14px;color:var(--muted);font-size:12.5px;text-decoration:none;
     border:1px solid var(--stroke);border-radius:999px;padding:6px 12px;background:var(--glass)}
   header a.back:hover{color:var(--fg);border-color:var(--stroke-2)}
-  #reset{position:absolute;right:14px;top:14px;color:var(--muted);font-size:12.5px;cursor:pointer;
-    border:1px solid var(--stroke);border-radius:999px;padding:6px 12px;background:var(--glass);font-family:inherit}
-  #reset:hover{color:var(--fg);border-color:var(--stroke-2)}
+  .tools{position:absolute;right:14px;top:14px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:46vw}
+  .tbtn{color:var(--muted);font-size:12.5px;cursor:pointer;border:1px solid var(--stroke);
+    border-radius:999px;padding:6px 10px;background:var(--glass);font-family:inherit;transition:.15s}
+  .tbtn:hover{color:var(--fg);border-color:var(--stroke-2)}
+  .tbtn.on{color:#fff;border-color:transparent;background:linear-gradient(135deg,var(--pink),var(--purple))}
+
+  /* ---- Panel 🧠 Memoria ---- */
+  .overlay{position:fixed;inset:0;background:rgba(3,5,14,.6);backdrop-filter:blur(6px);
+    display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+  .overlay.open{display:flex}
+  .panel{background:#0d1226;border:1px solid var(--stroke-2);border-radius:var(--r-lg);
+    max-width:560px;width:100%;padding:18px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+  .panel h2{font-size:16px;margin-bottom:4px}
+  .panel p{color:var(--muted);font-size:12.5px;margin-bottom:10px;line-height:1.5}
+  .panel textarea{width:100%;min-height:180px;max-height:45vh;resize:vertical;border:1px solid var(--stroke);
+    background:var(--glass);color:var(--fg);border-radius:var(--r-md);padding:12px 15px;font-size:14px;
+    font-family:inherit;line-height:1.55;outline:none}
+  .panel textarea:focus{border-color:var(--purple)}
+  .panel .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  .panel .row button{border-radius:var(--r-sm);padding:9px 16px;font-weight:700;font-size:13px;
+    font-family:inherit;cursor:pointer}
+  .panel .row .ghost{background:var(--glass);border:1px solid var(--stroke);color:var(--muted)}
+  .panel .row .ghost:hover{color:var(--fg);border-color:var(--stroke-2)}
+  .panel .row .save{background:linear-gradient(135deg,var(--pink),var(--purple));border:none;color:#fff}
+
+  /* ---- Micrófono ---- */
+  #mic{border:1px solid var(--stroke);background:var(--glass);color:var(--muted);cursor:pointer;
+    border-radius:var(--r-md);padding:12px 14px;font-size:16px;font-family:inherit;transition:.15s}
+  #mic:hover{color:var(--fg);border-color:var(--stroke-2)}
+  #mic.rec{color:#fff;border-color:transparent;background:linear-gradient(135deg,#b91c1c,#ff6b6b);animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,.45)}50%{box-shadow:0 0 0 8px rgba(255,107,107,0)}}
 
   /* ---- Selector de modo ---- */
   .modes{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
@@ -126,7 +154,12 @@
 
 <header>
   <a class="back" href="index.html">← LimpiaFotos</a>
-  <button id="reset" title="Borra esta conversación y empieza de cero">🗑 Nueva conversación</button>
+  <div class="tools">
+    <button class="tbtn" id="voice" title="Activa o desactiva que Clara lea sus respuestas en voz alta">🔊 Voz</button>
+    <button class="tbtn" id="memory" title="Notas que Clara recuerda siempre, entre conversaciones">🧠 Memoria</button>
+    <button class="tbtn" id="export" title="Descarga la conversación como archivo Markdown">⬇ Exportar</button>
+    <button class="tbtn" id="reset" title="Borra esta conversación y empieza de cero">🗑 Nueva</button>
+  </div>
   <div class="logo">💬 CLARA IA</div>
   <h1>Clara, tu asistente IA avatar</h1>
   <p>Asesora laboral · Profesora · Psicóloga · Ingeniera · Investigadora · Inmobiliaria</p>
@@ -144,8 +177,21 @@
   <div class="chat" id="chat"></div>
 </main>
 
+<div class="overlay" id="memOverlay">
+  <div class="panel">
+    <h2>🧠 Memoria de Clara</h2>
+    <p>Apunta aquí lo que quieras que Clara recuerde <strong>siempre</strong>, entre conversaciones: tu perfil, objetivos, preferencias, datos de tu negocio… Se guarda solo en este navegador y se le envía a Clara con cada mensaje.</p>
+    <textarea id="memText" placeholder="Ejemplos:&#10;- Mi objetivo este año es …&#10;- Prefiero respuestas cortas y directas.&#10;- Mi CV actual dice que …"></textarea>
+    <div class="row">
+      <button class="ghost" id="memClose">Cancelar</button>
+      <button class="save" id="memSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <footer>
   <div class="inputrow">
+    <button id="mic" title="Dictar por voz (español)">🎙</button>
     <textarea id="input" rows="1" placeholder="Escribe a Clara… (Enter para enviar, Shift+Enter para salto de línea)"></textarea>
     <button id="send">Enviar</button>
   </div>
@@ -175,11 +221,61 @@
 
   // ---- Persistencia: la conversación vive en el navegador y sobrevive recargas ----
   const STORE_KEY = "clara_chat_v1";
+  const MEM_KEY = "clara_memoria_v1";
+  const VOICE_KEY = "clara_voz_v1";
   function saveChat() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify({ history, mode })); } catch {}
   }
   function loadChat() {
     try { return JSON.parse(localStorage.getItem(STORE_KEY) || "null"); } catch { return null; }
+  }
+  function getMemoria() {
+    try { return localStorage.getItem(MEM_KEY) || ""; } catch { return ""; }
+  }
+
+  // ---- Voz de Clara: lee sus respuestas en voz alta (es-ES) ----
+  let voiceOn = false;
+  try { voiceOn = localStorage.getItem(VOICE_KEY) === "1"; } catch {}
+  const voiceBtn = document.getElementById("voice");
+  const speechOK = "speechSynthesis" in window;
+  if (!speechOK) voiceBtn.style.display = "none";
+  function renderVoiceBtn() {
+    voiceBtn.classList.toggle("on", voiceOn);
+    voiceBtn.textContent = voiceOn ? "🔊 Voz ON" : "🔊 Voz";
+  }
+  function toTexto(text) {
+    // Versión "hablable": fuera código, símbolos de markdown, URLs y emojis.
+    return text
+      .replace(/```[\s\S]*?```/g, " (código omitido) ")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/\[([^\]]+)\]\(https?:[^\s)]+\)/g, "$1")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/[*#_>|]/g, "")
+      .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  function speak(text) {
+    if (!voiceOn || !speechOK) return;
+    const t = toTexto(text);
+    if (!t) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = "es-ES";
+    const voz = speechSynthesis.getVoices().find((v) => v.lang && v.lang.startsWith("es"));
+    if (voz) u.voice = voz;
+    u.rate = 1.02;
+    speechSynthesis.speak(u);
+  }
+  if (speechOK) {
+    renderVoiceBtn();
+    speechSynthesis.getVoices(); // fuerza la carga inicial de voces en algunos navegadores
+    voiceBtn.addEventListener("click", () => {
+      voiceOn = !voiceOn;
+      try { localStorage.setItem(VOICE_KEY, voiceOn ? "1" : "0"); } catch {}
+      renderVoiceBtn();
+      if (!voiceOn) speechSynthesis.cancel();
+    });
   }
 
   // ---- Formato ligero (negritas, código, enlaces…) sin librerías externas.
@@ -264,7 +360,7 @@
       const res = await fetch("/api/clara", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history, mode }),
+        body: JSON.stringify({ messages: history, mode, memoria: getMemoria() }),
       });
       const data = await res.json().catch(() => ({}));
       removeTyping();
@@ -276,6 +372,7 @@
         addMessage("assistant", data.reply);
         history.push({ role: "assistant", content: data.reply });
         saveChat();
+        speak(data.reply);
       }
     } catch (err) {
       removeTyping();
@@ -307,10 +404,72 @@
   document.getElementById("reset").addEventListener("click", () => {
     if (busy) return;
     if (history.some((m) => m.role === "user" && !m.content.startsWith("[")) &&
-        !confirm("¿Borrar esta conversación y empezar de cero?")) return;
+        !confirm("¿Borrar esta conversación y empezar de cero? (Tu 🧠 Memoria no se toca.)")) return;
     try { localStorage.removeItem(STORE_KEY); } catch {}
+    if (speechOK) speechSynthesis.cancel();
     location.reload();
   });
+
+  // ---- Panel 🧠 Memoria ----
+  const memOverlay = document.getElementById("memOverlay");
+  const memText = document.getElementById("memText");
+  document.getElementById("memory").addEventListener("click", () => {
+    memText.value = getMemoria();
+    memOverlay.classList.add("open");
+    memText.focus();
+  });
+  document.getElementById("memClose").addEventListener("click", () => memOverlay.classList.remove("open"));
+  memOverlay.addEventListener("click", (e) => { if (e.target === memOverlay) memOverlay.classList.remove("open"); });
+  document.getElementById("memSave").addEventListener("click", () => {
+    try { localStorage.setItem(MEM_KEY, memText.value.trim().slice(0, 4000)); } catch {}
+    memOverlay.classList.remove("open");
+  });
+
+  // ---- Exportar la conversación como Markdown ----
+  document.getElementById("export").addEventListener("click", () => {
+    const fecha = new Date().toISOString().slice(0, 10);
+    const lineas = ["# Conversación con Clara — " + fecha, ""];
+    for (const m of history) {
+      if (m.role === "user" && m.content.startsWith("[")) continue;
+      lineas.push((m.role === "user" ? "**Pau:**" : "**Clara:**") + "\n\n" + m.content, "", "---", "");
+    }
+    const blob = new Blob([lineas.join("\n")], { type: "text/markdown;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "clara-conversacion-" + fecha + ".md";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // ---- Dictado por voz (micrófono, es-ES) ----
+  const micBtn = document.getElementById("mic");
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    micBtn.style.display = "none";
+  } else {
+    const rec = new SR();
+    rec.lang = "es-ES";
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    let grabando = false;
+    rec.onresult = (e) => {
+      const texto = Array.from(e.results).map((r) => r[0].transcript).join(" ").trim();
+      if (texto) {
+        inputEl.value = (inputEl.value ? inputEl.value + " " : "") + texto;
+        inputEl.dispatchEvent(new Event("input"));
+      }
+    };
+    rec.onend = () => { grabando = false; micBtn.classList.remove("rec"); inputEl.focus(); };
+    rec.onerror = () => { grabando = false; micBtn.classList.remove("rec"); };
+    micBtn.addEventListener("click", () => {
+      if (grabando) { rec.stop(); return; }
+      try {
+        rec.start();
+        grabando = true;
+        micBtn.classList.add("rec");
+      } catch {}
+    });
+  }
 
   // ---- Entrada ----
   sendEl.addEventListener("click", () => {
