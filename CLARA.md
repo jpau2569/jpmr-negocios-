@@ -1,6 +1,6 @@
 # 💬 CLARA — Tu asistente IA avatar
 
-Clara es una asistente personal con IA (impulsada por Claude, de Anthropic) integrada en esta web. Tiene cinco modos:
+Clara es una asistente personal con IA (impulsada por Claude, de Anthropic) integrada en esta web. Tiene seis modos:
 
 | Modo | Qué hace |
 |---|---|
@@ -9,14 +9,30 @@ Clara es una asistente personal con IA (impulsada por Claude, de Anthropic) inte
 | 🌱 **Psicóloga y crecimiento** | Escucha activa, reencuadres y pequeños planes de acción (sin sustituir ayuda profesional) |
 | 💻 **Ingeniera de software** | Crea aplicaciones completas, explica el código, depura errores y ayuda a desplegar (nivel senior, 30 años de criterio) |
 | 📰 **Noticias e investigación** | Busca en Internet noticias, precios y datos actuales, citando siempre fuente y fecha |
+| 🏠 **Negocio inmobiliario** | Mano derecha de Inmo Castresana: captación de propietarios, venta de cartera, análisis de inversión, marketing y atención al cliente |
 
 También genera guiones para vídeo/avatar en formato `SEGUNDOS · TEXTO EN PANTALLA · VOZ DEL AVATAR`.
 
+## Quién es Pau y el mandato de Clara
+
+- **Pau Moralejo** trabaja en [asesoriacastresana.com](https://www.asesoriacastresana.com) vendiendo pisos en la zona centro de Asturias, y además crea **páginas web, apps móviles y todo lo relacionado con IA y tecnología**.
+- El mandato que le ha dado a Clara: ser **sus ojos y su mano ejecutora** en su vida profesional y personal, con el **máximo nivel de exigencia** en cada cosa que le pida.
+- La frase de activación es **"Clara, ¿me ayudas a…?"** — al oírla, Clara entiende lo que Pau necesita, elige el modo adecuado, ejecuta de principio a fin y entrega al nivel de la mejor profesional del mundo, cerrando siempre con el siguiente paso concreto. Exigencia máxima, pero sin inventar jamás: lo que no se sabe o no se puede verificar, se dice.
+
+Este mandato vive también en `clara_persona.md` (sección "Lo que sabes de Pau") y en el prompt embebido de `api/clara.js`, que se mantienen sincronizados.
+
 ## Archivos
 
-- **`clara_persona.md`** — el *prompt maestro* canónico de Clara (personalidad completa + los cinco modos). Es el que Claude Code / Cowork lee al trabajar en este repositorio (ver `CLAUDE.md`).
-- **`clara.html`** — interfaz de chat (misma estética que LimpiaFotos).
-- **`api/clara.js`** — función serverless de Vercel. Lleva la persona de Clara embebida (sincronizada con `clara_persona.md`) y llama a la API de Claude con el modelo `claude-sonnet-5`. La **búsqueda web la hace Perplexity** (cuenta de Pau) mediante una herramienta personalizada `buscar_web`: cuando Clara necesita datos actuales, la función consulta la API de Perplexity y le devuelve el resumen con fuentes. Ninguna clave llega al navegador.
+- **`clara_persona.md`** — el *prompt maestro* canónico de Clara (personalidad completa + los seis modos). Es el que Claude Code / Cowork lee al trabajar en este repositorio (ver `CLAUDE.md`).
+- **`clara.html`** — interfaz de chat (misma estética que LimpiaFotos). La conversación se guarda en el navegador (`localStorage`) y sobrevive a recargas; el botón **🗑 Nueva** la borra. Las respuestas de Clara se muestran con formato (negritas, código, enlaces) y cada una tiene botón de copiar. Además:
+  - **🧠 Memoria** — notas persistentes que Clara recuerda entre conversaciones (perfil, objetivos, preferencias). Se guardan solo en tu navegador y se le envían con cada mensaje.
+  - **🔊 Voz** — Clara lee sus respuestas en voz alta (síntesis del navegador, español); el botón 🎙 junto al cuadro de texto permite dictarle por micrófono. Ambos se ocultan si el navegador no los soporta.
+  - **⬇ Exportar** — descarga la conversación como archivo Markdown.
+  - **Instalable como app** — `clara.webmanifest` + `clara-icon.svg` permiten añadir Clara a la pantalla de inicio del móvil (Chrome/Android: menú → "Añadir a pantalla de inicio") y abrirla a pantalla completa como una app.
+  - Si un envío falla (red caída, error de la API), el mensaje **vuelve al cuadro de texto** para reenviarlo sin perder nada.
+- **`api/clara.js`** — función serverless de Vercel. Lleva la persona de Clara embebida (sincronizada con `clara_persona.md`) y llama a la API de Claude con el modelo `claude-sonnet-5`. La **búsqueda web la hace Perplexity** (cuenta de Pau) mediante una herramienta personalizada `buscar_web`: cuando Clara necesita datos actuales, la función consulta la API de Perplexity y le devuelve el resumen con fuentes. Además tiene una **calculadora exacta** (herramienta `calcular`) para rentabilidades, precio/m², cuotas y porcentajes — así los números importantes no dependen del cálculo mental del modelo. Ninguna clave llega al navegador.
+- **`test/clara.test.mjs`** — batería de pruebas de la API (calculadora, búsqueda, validación, flujo completo con herramientas simulando Claude). Se ejecuta con `npm test`, sin gastar API real.
+- **`test/ui.test.mjs`** — prueba de la interfaz con navegador real (Playwright + Chromium): saludo, modos, envío/respuesta, formato, persistencia, memoria y reinicio. Se ejecuta con `npm run test:ui`.
 - **`CLAUDE.md`** — instrucciones para que Claude Code adopte la persona de Clara en este repositorio.
 - **`package.json`** — añade la dependencia `@anthropic-ai/sdk` (Vercel la instala automáticamente al desplegar).
 - **`vercel.json`** — amplía el tiempo máximo de la función a 60 segundos (las búsquedas web y respuestas largas tardan).
@@ -38,11 +54,12 @@ Listo: abre `https://tu-proyecto.vercel.app/clara.html` y habla con Clara.
 ## Costes
 
 - **Claude** (`claude-sonnet-5`): buena calidad a precio contenido ($3 por millón de tokens de entrada, $15 de salida — con precio introductorio $2/$10 hasta agosto de 2026). Puedes cambiar el modelo en la constante `MODEL` de `api/clara.js` (`claude-opus-4-8` es más potente pero más caro; `claude-haiku-4-5` es más barato).
-- **Perplexity**: la búsqueda se cobra en tu cuenta de Perplexity según su tarifa por uso. Clara hace como máximo 4 rondas de búsqueda por respuesta. Puedes cambiar el modelo de búsqueda en la constante `PERPLEXITY_MODEL` de `api/clara.js` (`sonar` es el más barato; `sonar-pro` da respuestas más completas).
+- **Perplexity**: la búsqueda se cobra en tu cuenta de Perplexity según su tarifa por uso. Clara hace como máximo 6 rondas de búsqueda por respuesta. Puedes cambiar el modelo de búsqueda en la constante `PERPLEXITY_MODEL` de `api/clara.js` (`sonar` es el más barato; `sonar-pro` da respuestas más completas).
 - Revisa el consumo de Claude en [platform.claude.com](https://platform.claude.com/) y el de Perplexity en tu panel de [perplexity.ai](https://www.perplexity.ai/account/api/).
 
 ## Notas
 
-- El historial de la conversación vive solo en el navegador (se pierde al recargar la página) y se envían como máximo los últimos 40 mensajes a la API.
+- El historial de la conversación vive solo en tu navegador (`localStorage`): sobrevive a recargas y cierres, y se borra con el botón **🗑 Nueva** (la 🧠 Memoria no se toca al reiniciar la conversación). A la API se envían como máximo los últimos 60 mensajes, más tus notas de 🧠 Memoria (hasta 4.000 caracteres).
+- Clara conoce la fecha de hoy (hora de Madrid): el servidor se la inyecta en cada petición, así que puede calcular plazos y saber si un dato está desactualizado.
 - Si cambias la persona en `clara_persona.md`, actualiza también el prompt embebido en `api/clara.js` (y viceversa).
 - Clara nunca inventa experiencia para tu CV ni datos de empresas, y en temas emocionales graves siempre recomienda ayuda profesional.
