@@ -12,6 +12,7 @@ import handler, { buscarEnPerplexity, calcular } from "../api/clara.js";
 import briefing from "../api/briefing.js";
 import memoria from "../api/memoria.js";
 import { parsearInmuebles, resumenCartera } from "../lib/cartera.js";
+import { SKILLS_BASE, catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
 
 let pasados = 0;
 let fallados = 0;
@@ -177,8 +178,8 @@ check("system: persona cacheada", sys[0]?.cache_control?.type === "ephemeral");
 check("system: fecha de hoy inyectada", sysTexto.includes("Hoy es"));
 check("system: memoria de Pau inyectada", sysTexto.includes("invertir en Oviedo"));
 check("system: modo inmobiliario activo", sysTexto.includes("NEGOCIO INMOBILIARIO"));
-check("declara las 3 herramientas", (llamadasAnthropic[0]?.tools || []).length === 3);
-check("mi_cartera declarada", (llamadasAnthropic[0]?.tools || []).some((t) => t.name === "mi_cartera"));
+check("declara las 4 herramientas base", (llamadasAnthropic[0]?.tools || []).length === 4);
+check("mi_cartera y usar_skill declaradas", ["mi_cartera", "usar_skill"].every((n) => (llamadasAnthropic[0]?.tools || []).some((t) => t.name === n)));
 
 const segundaRonda = llamadasAnthropic[1]?.messages || [];
 const toolResult = JSON.stringify(segundaRonda);
@@ -384,9 +385,77 @@ const sysNube = (llamadasAnthropic[0]?.system || []).map((b) => b.text).join("\n
 check("respuesta 200 con nube activa", res.r.statusCode === 200, JSON.stringify(res.r.body));
 check("la memoria de la nube gana a la local", sysNube.includes("Le encanta Cudillero") && !sysNube.includes("no debería usarse"));
 check("el system dice que está sincronizada", sysNube.includes("sincronizada en la nube"));
-check("con nube activa hay 4 herramientas (recordar incluida)", (llamadasAnthropic[0]?.tools || []).length === 4 && llamadasAnthropic[0].tools.some((t) => t.name === "recordar"));
+check("con nube activa hay 6 herramientas (recordar y crear_skill incluidas)", (llamadasAnthropic[0]?.tools || []).length === 6 && ["recordar", "crear_skill"].every((n) => llamadasAnthropic[0].tools.some((t) => t.name === n)));
 check("recordar apuntó la nota en Supabase", llamadasSupabase.some((c) => c.fn === "clara_memoria_apunta" && c.args.nota === "Objetivo 2026: 20 exclusivas"));
 check("el tool_result confirma el guardado", JSON.stringify(llamadasAnthropic[1]?.messages || []).includes("Nota guardada"));
+// ---------------------------------------------------------------------------
+console.log("\n— lib/skills.js + herramientas usar_skill / crear_skill —");
+// ---------------------------------------------------------------------------
+check("hay 4 skills base", Object.keys(SKILLS_BASE).length === 4);
+check("skill de ebooks con método Higgsfield", (await leerSkill("", "ebook-lead-magnet")).includes("Higgsfield"));
+check("skill de apps móviles (PWA primero)", (await leerSkill("", "app-movil-profesional")).includes("PWA"));
+check("skill de webs 3D (Three.js)", (await leerSkill("", "web-3d-profesional")).includes("Three.js"));
+check("catálogo sin nube: solo las base", (await catalogoSkills("")).length === 4);
+let choco = "";
+try { await guardarSkill("mi-clave-sync", "ebook-lead-magnet", "x", "y".repeat(60)); } catch (e) { choco = e.message; }
+check("no deja sobrescribir una skill base", choco.includes("no se puede sobrescribir"));
+
+// Flujo completo: Clara consulta el catálogo y crea una skill nueva.
+llamadasSupabase.length = 0;
+llamadasAnthropic.length = 0;
+let rondaSkills = 0;
+globalThis.fetch = async (url, init) => {
+  const u = String(url);
+  if (u.includes("test.supabase.co")) {
+    const fn = u.split("/rpc/")[1];
+    const args = JSON.parse(init.body);
+    llamadasSupabase.push({ fn, args });
+    if (fn === "clara_memoria_lee") return new Response(JSON.stringify(""), { status: 200 });
+    if (fn === "clara_skills_lista") return new Response(JSON.stringify([{ nombre: "email-visitas", descripcion: "Emails tras visita" }]), { status: 200 });
+    if (fn === "clara_skills_guarda") return new Response("", { status: 200 });
+    return new Response("?", { status: 404 });
+  }
+  if (!u.includes("anthropic.com")) throw new Error("fetch inesperado: " + u);
+  llamadasAnthropic.push(JSON.parse(init.body));
+  rondaSkills++;
+  const body =
+    rondaSkills === 1
+      ? {
+          id: "msg_9", type: "message", role: "assistant", model: "claude-sonnet-5",
+          content: [{ type: "tool_use", id: "tu_11", name: "usar_skill", input: {} }],
+          stop_reason: "tool_use", usage: { input_tokens: 100, output_tokens: 20 },
+        }
+      : rondaSkills === 2
+        ? {
+            id: "msg_10", type: "message", role: "assistant", model: "claude-sonnet-5",
+            content: [{ type: "tool_use", id: "tu_12", name: "crear_skill", input: { nombre: "guiones-visita", descripcion: "Guiones de visita a inmuebles", contenido: "## Cuándo usarla\nCuando Pau prepare una visita.\n## Método\n1. Saludo...\n## Entrega estándar\nGuion completo.\n## Norma\nSin promesas falsas." } }],
+            stop_reason: "tool_use", usage: { input_tokens: 150, output_tokens: 40 },
+          }
+        : {
+            id: "msg_11", type: "message", role: "assistant", model: "claude-sonnet-5",
+            content: [{ type: "text", text: "Skill creada y aplicada, Pau. 🛠️" }],
+            stop_reason: "end_turn", usage: { input_tokens: 200, output_tokens: 30 },
+          };
+  return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+};
+
+res = mockRes();
+await handler(
+  {
+    method: "POST",
+    body: {
+      messages: [{ role: "user", content: "Crea una skill para guiones de visita y úsala." }],
+      clave: "mi-clave-sync",
+    },
+  },
+  res
+);
+check("flujo de skills → 200", res.r.statusCode === 200, JSON.stringify(res.r.body));
+const catalogoDevuelto = JSON.stringify(llamadasAnthropic[1]?.messages || []);
+check("el catálogo mezcla base + personalizadas", catalogoDevuelto.includes("ebook-lead-magnet") && catalogoDevuelto.includes("email-visitas"));
+check("crear_skill guardó en Supabase", llamadasSupabase.some((c) => c.fn === "clara_skills_guarda" && c.args.skill === "guiones-visita"));
+const confirmacion = JSON.stringify(llamadasAnthropic[2]?.messages || []);
+check("el tool_result confirma la skill creada", confirmacion.includes("guiones-visita") && confirmacion.includes("guardada"));
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_ANON_KEY;
 

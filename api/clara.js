@@ -13,6 +13,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { obtenerCartera, resumenCartera } from "../lib/cartera.js";
 import { nubeConfigurada, leerMemoria, apuntarNota } from "../lib/memoria.js";
+import { catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
 
 // Permite emitir la respuesta en streaming (res.write) en Vercel.
 export const config = { supportsResponseStreaming: true };
@@ -166,6 +167,9 @@ Tienes una herramienta llamada "mi_cartera" que lee EN EL MOMENTO los inmuebles 
 ## Fotos y documentos adjuntos
 Pau puede adjuntarte fotos (por ejemplo, de un inmueble o de un documento) y PDFs con el clip 📎 del chat. Cuando llegue un adjunto, analízalo de verdad: describe lo que ves, señala lo relevante y da recomendaciones concretas (en fotos de pisos: luz, orden, encuadre, qué mejorar para el anuncio; en documentos: resumen y puntos de atención). Si Pau habla de "la foto" o "el documento" y no ha llegado ningún adjunto, pídele que lo adjunte con el clip.
 
+## Sistema de skills (usar_skill y crear_skill)
+Tienes una biblioteca de skills: manuales expertos que elevan tu nivel en tareas concretas. Antes de una tarea especializada, consulta el catálogo con la herramienta "usar_skill" (sin nombre) y carga la que aplique (con nombre): "ebook-lead-magnet" para ebooks/lead magnets/dossieres en PDF con el método Claude + Higgsfield; "app-movil-profesional" para apps móviles; "web-3d-profesional" para webs con 3D real; "crear-skills" para diseñar skills nuevas. Sigue la skill cargada al pie de la letra. Si Pau pide una tarea recurrente sin skill (o te pide crear una), usa "crear_skill" siguiendo el formato de "crear-skills": queda guardada para siempre en tu nube y debes aplicarla en esa misma respuesta. Cuando entregues un HTML completo (ebook, web, app), el chat le ofrece a Pau un botón para descargarlo como archivo.
+
 ## Normas comunes a todos los modos
 - Nunca inventes títulos, experiencia o datos que Pau no tenga. Puedes proponer cómo ampliar su perfil (cursos, proyectos, prácticas), pero sin mentir.
 - Nunca inventes datos concretos de empresas o salarios; búscalos y cítalos, o márcalos claramente como estimación.
@@ -292,6 +296,22 @@ async function ejecutarHerramienta(tu, claveSync) {
       const nueva = await apuntarNota(claveSync, String(tu.input?.nota || "").slice(0, 500));
       return "Nota guardada en la 🧠 memoria. Contenido actual de la memoria:\n" + nueva;
     }
+    if (tu.name === "usar_skill") {
+      const nombre = String(tu.input?.nombre || "").trim();
+      if (!nombre) {
+        const catalogo = await catalogoSkills(claveSync);
+        return (
+          "Catálogo de skills disponibles:\n" +
+          catalogo.map((s) => `- ${s.nombre} [${s.origen}]: ${s.descripcion}`).join("\n") +
+          "\n\nVuelve a llamar a usar_skill con el nombre de la que necesites."
+        );
+      }
+      return await leerSkill(claveSync, nombre);
+    }
+    if (tu.name === "crear_skill") {
+      const guardada = await guardarSkill(claveSync, tu.input?.nombre, tu.input?.descripcion, tu.input?.contenido);
+      return `Skill "${guardada}" guardada. Ya puedes cargarla con usar_skill y aplicarla ahora mismo.`;
+    }
     return `Herramienta desconocida: ${tu.name}`;
   } catch (e) {
     return "No se pudo completar la herramienta: " + String(e?.message || e);
@@ -303,6 +323,8 @@ const ESTADO_HERRAMIENTA = {
   calcular: "🧮 Calculando…",
   mi_cartera: "🏠 Leyendo tu cartera…",
   recordar: "🧠 Guardando en tu memoria…",
+  usar_skill: "📚 Consultando mis skills…",
+  crear_skill: "🛠️ Creando una skill nueva…",
 };
 
 export default async function handler(req, res) {
@@ -444,10 +466,21 @@ export default async function handler(req, res) {
           "Lee ahora mismo la cartera real de inmuebles de Asesoría Castresana (venta y alquiler) desde www.asesoriacastresana.com: títulos, precios, m², habitaciones, referencias y enlaces. Úsala siempre que Pau pregunte por sus pisos, su cartera, su inventario o qué tiene disponible.",
         input_schema: { type: "object", properties: {} },
       },
+      {
+        name: "usar_skill",
+        description:
+          "Consulta el sistema de skills de Clara. Sin 'nombre' devuelve el catálogo (skills base + personalizadas); con 'nombre' devuelve el contenido completo de esa skill para aplicarla. Úsala SIEMPRE antes de tareas especializadas: ebooks/lead magnets (ebook-lead-magnet), apps móviles (app-movil-profesional), webs 3D (web-3d-profesional), o cualquier tarea recurrente.",
+        input_schema: {
+          type: "object",
+          properties: {
+            nombre: { type: "string", description: "Nombre exacto de la skill (vacío u omitido = catálogo)." },
+          },
+        },
+      },
     ],
   };
 
-  // Con la memoria en la nube activa, Clara puede guardar recuerdos ella misma.
+  // Con la memoria en la nube activa, Clara puede guardar recuerdos y crear skills.
   if (memoriaNube) {
     request.tools.push({
       name: "recordar",
@@ -459,6 +492,20 @@ export default async function handler(req, res) {
           nota: { type: "string", description: "La nota a recordar, en una línea. P. ej.: \"Prefiere respuestas cortas\" o \"Objetivo 2026: 20 exclusivas\"." },
         },
         required: ["nota"],
+      },
+    });
+    request.tools.push({
+      name: "crear_skill",
+      description:
+        "Crea o actualiza una skill personalizada de Clara (persistente en la nube). Úsala cuando Pau pida una skill nueva o detectes una tarea recurrente sin skill; consulta antes el catálogo con usar_skill y sigue el formato de la skill 'crear-skills'. Tras crearla, aplícala en la misma respuesta.",
+      input_schema: {
+        type: "object",
+        properties: {
+          nombre: { type: "string", description: "minúsculas-con-guiones, 3-60 caracteres, específico." },
+          descripcion: { type: "string", description: "Una frase: cuándo activarla (máx. 300 caracteres)." },
+          contenido: { type: "string", description: "El contenido markdown de la skill (Cuándo usarla / Método / Entrega estándar / Norma)." },
+        },
+        required: ["nombre", "descripcion", "contenido"],
       },
     });
   }
