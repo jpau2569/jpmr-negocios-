@@ -2,7 +2,14 @@
   "name": "jpmr-negocios",
   "private": true,
   "type": "module",
+  "scripts": {
+    "test": "node test/clara.test.mjs",
+    "test:ui": "node test/ui.test.mjs"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.0"
   }
 }

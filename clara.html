@@ -10,6 +10,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 <link rel="icon" href='data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" rx="24" fill="%23ff5c9d"/%3E%3Ctext x="50" y="68" font-size="52" text-anchor="middle"%3E%F0%9F%92%AC%3C/text%3E%3C/svg%3E' />
+<link rel="manifest" href="clara.webmanifest" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Clara" />
 <style>
   :root{
     --bg:#070b18; --fg:#eef2ff; --muted:#8b96b8; --muted-2:#5d6786;
@@ -352,9 +355,19 @@
     busy = true;
     sendEl.disabled = true;
 
-    addMessage("user", text);
+    const userMsg = addMessage("user", text).closest(".msg");
     history.push({ role: "user", content: text });
     addTyping();
+
+    // Si algo falla, se deshace el turno y el texto vuelve al cuadro de
+    // entrada para que Pau no pierda lo escrito y pueda reenviarlo.
+    const deshacer = (mensajeError) => {
+      history.pop();
+      userMsg.remove();
+      inputEl.value = text;
+      inputEl.dispatchEvent(new Event("input"));
+      addError(mensajeError);
+    };
 
     try {
       const res = await fetch("/api/clara", {
@@ -366,8 +379,7 @@
       removeTyping();
 
       if (!res.ok) {
-        history.pop(); // no guardamos el turno fallido
-        addError(data.error || "Error al hablar con Clara (" + res.status + "). Inténtalo de nuevo.");
+        deshacer(data.error || "Error al hablar con Clara (" + res.status + "). Tu mensaje sigue en el cuadro: reenvíalo cuando quieras.");
       } else {
         addMessage("assistant", data.reply);
         history.push({ role: "assistant", content: data.reply });
@@ -376,8 +388,7 @@
       }
     } catch (err) {
       removeTyping();
-      history.pop();
-      addError("No hay conexión con el servidor. Comprueba tu red e inténtalo de nuevo.");
+      deshacer("No hay conexión con el servidor. Tu mensaje sigue en el cuadro: comprueba la red y reenvíalo.");
     } finally {
       busy = false;
       sendEl.disabled = false;

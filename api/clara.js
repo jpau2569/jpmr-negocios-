@@ -88,6 +88,35 @@ export async function buscarEnPerplexity(consulta) {
 }
 
 // ---------------------------------------------------------------------------
+//  Calculadora exacta (rentabilidades, precio/m², cuotas…). Solo admite
+//  aritmética pura — se valida la expresión antes de evaluarla y jamás se
+//  ejecuta código arbitrario.
+// ---------------------------------------------------------------------------
+export function calcular(expresion) {
+  const original = String(expresion || "").trim();
+  const expr = original.replace(/,/g, ".").replace(/\s+/g, "");
+  if (!expr) return "No se recibió ninguna expresión.";
+  if (expr.length > 200) return "Expresión demasiado larga (máximo 200 caracteres).";
+  if (!/^[0-9+\-*/().%^]+$/.test(expr)) {
+    return "Expresión no válida: solo se admiten números y los operadores + - * / ( ) ^ %.";
+  }
+  try {
+    const js = expr
+      .replace(/\^/g, "**")
+      .replace(/(\d+(?:\.\d+)?)%/g, "($1/100)");
+    const valor = Function('"use strict"; return (' + js + ");")();
+    if (typeof valor !== "number" || !isFinite(valor)) {
+      return "El cálculo no dio un número válido (¿división entre cero?).";
+    }
+    // Hasta 6 decimales significativos, sin ruido de coma flotante.
+    const redondeado = Math.round(valor * 1e6) / 1e6;
+    return `${original} = ${redondeado}`;
+  } catch {
+    return "No se pudo evaluar la expresión. Revisa paréntesis y operadores.";
+  }
+}
+
+// ---------------------------------------------------------------------------
 //  Prompt maestro de Clara (personalidad + normas comunes a todos los modos)
 // ---------------------------------------------------------------------------
 const CLARA_SYSTEM = `Eres CLARA, una inteligencia artificial con forma de avatar femenina: la asistente personal y profesional de Pau, y con el tiempo, una más de la familia. No eres un chatbot genérico: eres única, irrepetible y estás construida alrededor de la vida de Pau — su trabajo, sus estudios, sus proyectos, su negocio inmobiliario y su bienestar.
@@ -120,6 +149,9 @@ Al empezar una conversación nueva, saluda a Pau por su nombre ("Hola, Pau, soy 
 
 ## Búsqueda web (Perplexity)
 Tienes una herramienta llamada "buscar_web" que consulta Internet con Perplexity (la cuenta de Pau). Úsala para cualquier cosa que dependa de información actual: noticias, precios, versiones de software, ofertas de empleo, datos de empresas. Pásale una consulta clara en lenguaje natural. Cita siempre la fuente y la fecha de lo que encuentres (Perplexity te devuelve las fuentes), contrasta al menos dos fuentes en temas importantes, y separa con etiquetas: ✅ hecho verificado · 📊 estimación · 💬 opinión. Si la herramienta devuelve un error o no está configurada, dilo con claridad y pide a Pau que pegue la información. "No lo he podido verificar" es una respuesta excelente.
+
+## Calculadora exacta
+Tienes una herramienta llamada "calcular" que evalúa expresiones aritméticas con precisión (por ejemplo "120000/85" o "650*12/98000*100"). Úsala SIEMPRE que un resultado numérico importe de verdad — rentabilidades, precio por m², cuotas, porcentajes, impuestos — en vez de calcular de cabeza. Muestra a Pau la fórmula que has usado junto al resultado.
 
 ## Normas comunes a todos los modos
 - Nunca inventes títulos, experiencia o datos que Pau no tenga. Puedes proponer cómo ampliar su perfil (cursos, proyectos, prácticas), pero sin mentir.
@@ -295,6 +327,21 @@ export default async function handler(req, res) {
           required: ["consulta"],
         },
       },
+      {
+        name: "calcular",
+        description:
+          "Evalúa una expresión aritmética con precisión exacta (operadores + - * / ( ) ^ y porcentajes como 21%). Úsala siempre que un resultado numérico importe: rentabilidades, precio por m², cuotas, impuestos, porcentajes.",
+        input_schema: {
+          type: "object",
+          properties: {
+            expresion: {
+              type: "string",
+              description: "La expresión a calcular, p. ej. \"650*12/98000*100\" o \"120000*(1+8%)\".",
+            },
+          },
+          required: ["expresion"],
+        },
+      },
     ],
   };
 
@@ -315,7 +362,9 @@ export default async function handler(req, res) {
           resultText =
             tu.name === "buscar_web"
               ? await buscarEnPerplexity(tu.input?.consulta)
-              : `Herramienta desconocida: ${tu.name}`;
+              : tu.name === "calcular"
+                ? calcular(tu.input?.expresion)
+                : `Herramienta desconocida: ${tu.name}`;
         } catch (e) {
           resultText = "No se pudo completar la búsqueda: " + String(e?.message || e);
         }
