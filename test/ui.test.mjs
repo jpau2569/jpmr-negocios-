@@ -92,6 +92,7 @@ try {
 
   console.log("\n— 🧠 memoria —");
   await page.click("#memory");
+  check("campo de clave de sincronización presente", (await page.$$("#memClave, #memEstado")).length === 2);
   await page.fill("#memText", "Objetivo: invertir en Oviedo este año.");
   await page.click("#memSave");
   await page.fill("#input", "hola de nuevo");
