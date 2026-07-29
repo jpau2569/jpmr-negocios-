@@ -2,6 +2,9 @@
   "functions": {
     "api/clara.js": {
       "maxDuration": 60
+    },
+    "api/escaparate.js": {
+      "maxDuration": 30
     }
   }
 }
