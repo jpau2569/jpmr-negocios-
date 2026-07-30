@@ -11,6 +11,7 @@
 import handler, { buscarEnPerplexity, calcular } from "../api/clara.js";
 import briefing from "../api/briefing.js";
 import memoria from "../api/memoria.js";
+import lead from "../api/lead.js";
 import { parsearInmuebles, resumenCartera } from "../lib/cartera.js";
 import { SKILLS_BASE, catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
 
@@ -484,6 +485,41 @@ check("briefing básico con la cartera real", (res.r.body?.briefing || "").inclu
 check("sin Telegram configurado, enviado=false", res.r.body?.enviado === false);
 process.env.ANTHROPIC_API_KEY = claveAnthropic;
 
+globalThis.fetch = realFetch;
+
+// ---------------------------------------------------------------------------
+console.log("\n— api/lead.js (landing del ebook) —");
+// ---------------------------------------------------------------------------
+res = mockRes();
+await lead({ method: "GET" }, res);
+check("GET → 405", res.r.statusCode === 405);
+
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_ANON_KEY;
+res = mockRes();
+await lead({ method: "POST", body: { email: "pau@test.com" } }, res);
+check("sin Supabase → 503", res.r.statusCode === 503);
+
+process.env.SUPABASE_URL = "https://test.supabase.co";
+process.env.SUPABASE_ANON_KEY = "anon-test";
+const altasLead = [];
+globalThis.fetch = async (url, init) => {
+  const u = String(url);
+  if (!u.includes("test.supabase.co/rest/v1/rpc/lead_guarda")) throw new Error("fetch inesperado: " + u);
+  altasLead.push(JSON.parse(init.body));
+  return new Response("", { status: 200 });
+};
+
+res = mockRes();
+await lead({ method: "POST", body: { email: "esto-no-es-un-email" } }, res);
+check("email inválido → 400", res.r.statusCode === 400);
+
+res = mockRes();
+await lead({ method: "POST", body: { origen: "ebook-7-errores", nombre: "Pau", email: "pau@test.com", telefono: "600", tipo: "inversor" } }, res);
+check("alta de lead → 200", res.r.statusCode === 200 && res.r.body?.ok === true);
+check("el lead llegó a Supabase con sus datos", altasLead.some((a) => a.email_nuevo === "pau@test.com" && a.tipo_nuevo === "inversor" && a.origen_nuevo === "ebook-7-errores"));
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_ANON_KEY;
 globalThis.fetch = realFetch;
 
 // ---------------------------------------------------------------------------
