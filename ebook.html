@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Guía gratuita: Los 7 errores que hunden el precio de tu piso en Oviedo — Asesoría Castresana</title>
+<meta name="description" content="Descarga la guía gratuita de Asesoría Castresana: los 7 errores que vemos cada semana en vendedores particulares en Oviedo y cómo evitarlos antes de perder miles de euros." />
+<meta name="theme-color" content="#10203a" />
+<link rel="icon" href='data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" rx="24" fill="%2310203a"/%3E%3Ctext x="50" y="68" font-size="52" text-anchor="middle"%3E%F0%9F%93%96%3C/text%3E%3C/svg%3E' />
+<style>
+  :root{ --marino:#10203a; --marino-2:#1a3050; --dorado:#c9a227; --hueso:#f7f5f0; --texto:#3d4351; --suave:#6c7484; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:var(--texto);background:var(--hueso);line-height:1.7;-webkit-font-smoothing:antialiased}
+  .serif{font-family:Georgia,'Times New Roman',serif}
+  .wrap{max-width:880px;margin:0 auto;padding:0 20px}
+  section{padding:56px 0}
+
+  /* Hero */
+  .hero{background:linear-gradient(160deg,var(--marino) 0%,var(--marino-2) 100%);color:#fff;padding:70px 0 64px;border-bottom:6px solid var(--dorado)}
+  .hero .marca{font-size:12px;letter-spacing:5px;color:var(--dorado);text-transform:uppercase;margin-bottom:26px}
+  .hero h1{font-size:clamp(28px,5vw,42px);line-height:1.2;font-weight:800;letter-spacing:-.5px;max-width:760px}
+  .hero h1 em{color:var(--dorado);font-style:normal}
+  .hero .sub{margin-top:18px;font-size:18px;color:#c9d3e6;max-width:680px}
+  .hero .apoyo{margin-top:14px;font-size:15px;color:#9fb3d1;max-width:680px}
+  .btn{display:inline-block;margin-top:28px;background:var(--dorado);color:var(--marino);font-weight:800;font-size:17px;
+    padding:16px 34px;border-radius:12px;border:none;cursor:pointer;text-decoration:none;transition:.15s;font-family:inherit}
+  .btn:hover{transform:translateY(-2px);filter:brightness(1.06)}
+  .hero .mini{display:block;margin-top:10px;font-size:13px;color:#9fb3d1}
+
+  h2{font-family:Georgia,serif;font-size:clamp(22px,3.6vw,30px);color:var(--marino);line-height:1.25;margin-bottom:18px}
+  ul.puntos{list-style:none;margin-top:8px}
+  ul.puntos li{position:relative;padding-left:32px;margin-bottom:12px;font-size:16px}
+  ul.puntos li::before{content:"✓";position:absolute;left:0;top:0;color:var(--dorado);font-weight:800;font-size:18px}
+  .nota{font-style:italic;color:var(--suave);margin-top:16px}
+
+  .banda{background:#fff;border-top:1px solid #e5e1d8;border-bottom:1px solid #e5e1d8}
+  .inversores{background:var(--marino);color:#fff}
+  .inversores h2{color:#fff}
+  .inversores p{color:#c9d3e6}
+  .inversores ul.puntos li{color:#e8edf6}
+  .inversores ul.puntos li::before{color:var(--dorado)}
+
+  .confianza .items{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:22px}
+  .confianza .item{background:#fff;border:1px solid #e5e1d8;border-left:4px solid var(--dorado);border-radius:10px;padding:18px;font-size:14.5px}
+  .confianza .item b{color:var(--marino)}
+
+  /* Formulario */
+  .captura{background:linear-gradient(160deg,var(--marino) 0%,var(--marino-2) 100%);color:#fff}
+  .captura h2{color:#fff}
+  .captura .intro{color:#c9d3e6;max-width:620px}
+  form{margin-top:26px;max-width:560px}
+  label{display:block;font-size:13px;color:#9fb3d1;margin:14px 0 6px;font-weight:600}
+  input[type=text],input[type=email],input[type=tel],select{
+    width:100%;padding:14px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.25);
+    background:rgba(255,255,255,.08);color:#fff;font-size:15px;font-family:inherit;outline:none;transition:border-color .15s}
+  input:focus,select:focus{border-color:var(--dorado)}
+  input::placeholder{color:#7d8db0}
+  select{appearance:auto}
+  select option{color:var(--texto)}
+  .aviso{font-size:12px;color:#9fb3d1;margin-top:12px;line-height:1.6}
+  .estado{margin-top:14px;font-size:14.5px;min-height:22px}
+  .estado.err{color:#ffb3b3}
+  .estado.ok{color:#7de3ab}
+  .gracias{display:none;margin-top:26px;background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.5);border-radius:14px;padding:24px;text-align:center}
+  .gracias.show{display:block}
+  .gracias h3{color:var(--dorado);font-size:20px;margin-bottom:8px}
+  .gracias p{color:#c9d3e6;font-size:14.5px;margin-bottom:16px}
+
+  .cierre .opciones{margin:16px 0 8px}
+  footer{background:var(--marino);color:#9fb3d1;text-align:center;padding:26px 20px;font-size:13px;border-top:4px solid var(--dorado)}
+  footer b{color:#fff}
+</style>
+</head>
+<body>
+
+<!-- 1 · HERO -->
+<header class="hero">
+  <div class="wrap">
+    <div class="marca">Asesoría Castresana · Oviedo · desde 1993</div>
+    <h1 class="serif">Los 7 errores que están <em>hundiendo el precio</em> de tu piso en Oviedo (y cómo evitarlos antes de perder miles de euros)</h1>
+    <p class="sub">La guía directa de Asesoría Castresana para propietarios y pequeños inversores que quieren dejar de improvisar y empezar a vender con estrategia profesional.</p>
+    <p class="apoyo">Si estás pensando en vender tu piso en Oviedo —o ya lo tienes anunciado y no pasa nada— este ebook te enseña lo que no cuentan los portales: errores emocionales, fallos de precio, problemas de presentación y riesgos jurídicos que vemos cada semana en operaciones reales.</p>
+    <a class="btn" href="#descargar">Descargar la guía gratuita</a>
+    <span class="mini">Descárgala al instante, sin esperas.</span>
+  </div>
+</header>
+
+<!-- 2 · ES PARA TI SI -->
+<section>
+  <div class="wrap">
+    <h2>Este ebook es para ti si…</h2>
+    <ul class="puntos">
+      <li>Tienes un piso en Oviedo y llevas tiempo pensando en vender, pero no terminas de decidirte.</li>
+      <li>Has publicado ya tu vivienda y apenas recibes visitas o las ofertas no llegan.</li>
+      <li>Has recibido alguna oferta y no sabes si aceptarla, esperar o renegociar.</li>
+      <li>Eres pequeño inversor y quieres dejar de perder rentabilidad por decisiones emocionales al vender.</li>
+      <li>No quieres descubrir errores jurídicos o fiscales cuando ya estés a punto de firmar.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 3 · QUÉ VAS A APRENDER -->
+<section class="banda">
+  <div class="wrap">
+    <h2>Lo que descubrirás al descargar la guía</h2>
+    <ul class="puntos">
+      <li>Los <b>7 errores</b> que vemos una y otra vez en vendedores particulares en Oviedo (y que pueden costar miles de euros).</li>
+      <li>Cómo fijar un <b>precio profesional</b> sin dejarte llevar solo por la nostalgia o la urgencia.</li>
+      <li>Cómo preparar tu piso para que los compradores sientan <b>"podría vivir aquí"</b> en los primeros 10 segundos.</li>
+      <li>La estructura de <b>anuncio, fotos y vídeo</b> que hace que un piso destaque frente a decenas de publicaciones.</li>
+      <li>Las claves para <b>filtrar curiosos</b> y centrarte en compradores reales sin sonar borde ni desesperado.</li>
+      <li>Qué <b>documentación y puntos jurídicos/fiscales</b> tienes que tener claros para no llevarte sorpresas.</li>
+    </ul>
+    <p class="nota">No es teoría de manual: es el resumen directo de lo que vemos cada semana con propietarios y pequeños inversores en Oviedo.</p>
+  </div>
+</section>
+
+<!-- 4 · INVERSORES -->
+<section class="inversores">
+  <div class="wrap">
+    <h2 class="serif">Si eres inversor, te interesa especialmente…</h2>
+    <p>Si compras y vendes pisos como inversión, sabes que cada punto de precio y cada mes de espera afectan tu rentabilidad. En la guía dedicamos espacio a errores que vemos en inversores: fijar precios "de manual" sin leer el mercado de Oviedo, quemar propiedades por anuncios pobres y perder valor en la negociación por no separar emoción de números.</p>
+    <ul class="puntos">
+      <li>Cómo evitar "enamorarte" de tus propias cifras y dejar de ver el mercado real.</li>
+      <li>Cómo usar el copy y el vídeo para vender rápido sin tener que tirar demasiado el precio.</li>
+      <li>Cómo decidir cuándo tiene sentido vender solo y cuándo delegar para proteger resultado y tiempo.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 5 · AUTORIDAD -->
+<section class="confianza">
+  <div class="wrap">
+    <h2>Quién hay detrás de esta guía</h2>
+    <p>Asesoría Castresana lleva décadas ayudando a particulares, autónomos y empresas en Oviedo con asesoramiento jurídico, fiscal y administración de fincas, y desde hace años también con gestión inmobiliaria individualizada.</p>
+    <p style="margin-top:10px">No hablamos desde la teoría: cada año acompañamos operaciones reales de venta y compra de vivienda en Oviedo, vemos de cerca los errores que más dinero cuestan y sabemos qué decisiones protegen de verdad a un propietario o inversor.</p>
+    <div class="items">
+      <div class="item"><b>Desde 1993</b><br />Empresa con raíces jurídicas y fiscales sólidas.</div>
+      <div class="item"><b>Gestión personalizada</b><br />Cada operación adaptada a su caso concreto.</div>
+      <div class="item"><b>Especialistas en Oviedo</b><br />Centro, Casco Histórico y los barrios clave de la ciudad.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 · FORMULARIO -->
+<section class="captura" id="descargar">
+  <div class="wrap">
+    <h2 class="serif">Descarga ahora la guía gratuita</h2>
+    <p class="intro">Déjanos tus datos y descarga al instante el ebook <b style="color:#fff">"Los 7 errores que hunden el precio de tu piso en Oviedo"</b>. Sin spam, sin compromiso. Solo información que te ayuda a vender mejor.</p>
+    <form id="formulario">
+      <label for="nombre">Nombre</label>
+      <input type="text" id="nombre" placeholder="Tu nombre" maxlength="120" />
+      <label for="email">Email *</label>
+      <input type="email" id="email" placeholder="Tu mejor correo" maxlength="200" required />
+      <label for="telefono">Teléfono (solo si quieres que te llamemos para valorar tu piso)</label>
+      <input type="tel" id="telefono" placeholder="Teléfono (opcional)" maxlength="40" />
+      <label for="tipo">Tu situación</label>
+      <select id="tipo">
+        <option value="primera-venta">Voy a vender mi piso por primera vez</option>
+        <option value="inversor">Soy pequeño inversor (ya he comprado/vendido antes)</option>
+      </select>
+      <button class="btn" type="submit" id="enviar">Quiero la guía ahora</button>
+      <div class="estado" id="estado"></div>
+      <p class="aviso">Al enviar tus datos aceptas recibir la guía y comunicaciones relacionadas con la venta de tu vivienda en Oviedo. Puedes darte de baja en cualquier momento.</p>
+    </form>
+    <div class="gracias" id="gracias">
+      <h3>¡Gracias! Tu guía está lista 📖</h3>
+      <p>Pulsa el botón para abrirla. Consejo: desde el navegador, usa Imprimir → "Guardar como PDF" para llevarla siempre contigo.</p>
+      <a class="btn" href="ebook-guia.html" target="_blank" rel="noopener">⬇ Abrir mi guía</a>
+    </div>
+  </div>
+</section>
+
+<!-- 7 · CTA SECUNDARIA -->
+<section class="cierre">
+  <div class="wrap">
+    <h2>¿Prefieres hablar directamente de tu caso?</h2>
+    <p>Si al leer esta página ya tienes claro que no quieres seguir improvisando con tu patrimonio, puedes saltarte el paso del ebook y hablar directamente con nosotros:</p>
+    <ul class="puntos opciones">
+      <li>Llámanos al <b>985 21 04 68</b> o al <b>689 929 926</b>.</li>
+      <li>Escríbenos desde <b>asesoriacastresana.com</b> contándonos brevemente tu situación.</li>
+      <li>O deja tu teléfono en el formulario de arriba y te llamamos para valorar tu piso.</li>
+    </ul>
+    <p class="nota">Tanto si descargas la guía como si hablamos directamente, nuestro objetivo es el mismo: que vendas tu piso en Oviedo con cabeza fría, estrategia clara y resultados que tengan sentido para ti.</p>
+  </div>
+</section>
+
+<footer>
+  <b>Asesoría Castresana</b> · C/ Cabo Noval, 8 Bajo 2 · 33007 Oviedo · ☎ 985 21 04 68 · www.asesoriacastresana.com
+</footer>
+
+<script>
+  const form = document.getElementById("formulario");
+  const estado = document.getElementById("estado");
+  const gracias = document.getElementById("gracias");
+  const enviar = document.getElementById("enviar");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("email").value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) {
+      estado.className = "estado err";
+      estado.textContent = "Revisa el correo: no parece válido.";
+      return;
+    }
+    enviar.disabled = true;
+    estado.className = "estado";
+    estado.textContent = "Un segundo…";
+    try {
+      const res = await fetch("/api/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origen: "ebook-7-errores",
+          nombre: document.getElementById("nombre").value.trim(),
+          email,
+          telefono: document.getElementById("telefono").value.trim(),
+          tipo: document.getElementById("tipo").value,
+        }),
+      });
+      if (res.ok) {
+        estado.className = "estado ok";
+        estado.textContent = "✅ Datos recibidos. ¡Disfruta la guía!";
+      } else {
+        // Aunque el registro falle, no dejamos al visitante sin su guía.
+        estado.className = "estado";
+        estado.textContent = "Tu guía está lista igualmente 👇";
+      }
+    } catch {
+      estado.className = "estado";
+      estado.textContent = "Tu guía está lista igualmente 👇";
+    }
+    form.style.display = "none";
+    gracias.classList.add("show");
+    gracias.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+</script>
+</body>
+</html>

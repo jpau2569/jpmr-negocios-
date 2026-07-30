@@ -114,6 +114,27 @@ try {
   const saludo2 = await page.textContent(".msg.clara .bubble");
   check("reiniciar vuelve al saludo inicial", saludo2.includes("Hola, Pau"));
   check("reiniciar NO borra la 🧠 memoria", await page.evaluate(() => localStorage.getItem("clara_memoria_v1") === "Objetivo: invertir en Oviedo este año."));
+
+  console.log("\n— landing del ebook (ebook.html) —");
+  let leadRecibido = null;
+  await page.route("**/api/lead", async (route) => {
+    leadRecibido = route.request().postDataJSON();
+    await route.fulfill({ contentType: "application/json", body: '{"ok":true}' });
+  });
+  await page.goto(`http://localhost:${PORT}/ebook.html`);
+  check("la landing carga con el titular", (await page.textContent("h1")).includes("7 errores"));
+  await page.fill("#email", "comprador@test.com");
+  await page.selectOption("#tipo", "inversor");
+  await page.click("#enviar");
+  await page.waitForSelector(".gracias.show");
+  check("al enviar aparece la descarga de la guía", (await page.textContent("#gracias")).includes("Abrir mi guía"));
+  check("el lead viajó a /api/lead", leadRecibido?.email === "comprador@test.com" && leadRecibido?.tipo === "inversor");
+
+  console.log("\n— el ebook (ebook-guia.html) —");
+  await page.goto(`http://localhost:${PORT}/ebook-guia.html`);
+  check("el ebook tiene 16 páginas A4", (await page.$$(".pagina")).length === 16);
+  check("portada con el título real", (await page.textContent(".portada h1")).includes("hunden el precio"));
+  check("checklist con los 6 bloques", (await page.evaluate(() => document.body.textContent)).includes("Bloque 6"));
 } catch (e) {
   fallados++;
   console.error("  ❌ excepción durante el test:", e.message);

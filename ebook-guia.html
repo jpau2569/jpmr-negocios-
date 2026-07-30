@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Los 7 errores que hunden el precio de tu piso en Oviedo — Asesoría Castresana</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!--
+  EBOOK / LEAD MAGNET — contenido real de Pau (skill ebook-lead-magnet).
+  Cómo convertirlo en PDF: abrir → Ctrl+P → "Guardar como PDF" (A4, márgenes:
+  ninguno, "gráficos de fondo" activado).
+
+  PORTADA CON HIGGSFIELD — genera la imagen con uno de estos prompts y pégala
+  donde indica "IMAGEN-PORTADA":
+   1) "Editorial real estate photography, elegant apartment interior in Oviedo Spain,
+      warm golden hour light through tall windows, navy and gold color palette,
+      premium magazine cover style, vertical A4, no text"
+   2) "Aerial view of Oviedo city at sunset, Asturias Spain, warm cinematic light,
+      deep navy sky, golden highlights on historic buildings, premium editorial
+      style, vertical composition, no text"
+
+  PUENTES A VÍDEO: los bloques 🎬 nombran tus vídeos como "el vídeo" en genérico.
+  Cuando me pases los títulos reales, los sustituimos y añadimos enlaces o QR.
+-->
+<style>
+  :root{ --marino:#10203a; --dorado:#c9a227; --hueso:#f7f5f0; --texto:#3d4351; --suave:#6c7484; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  @page{size:A4;margin:0}
+  body{font-family:Georgia,'Times New Roman',serif;color:var(--texto);background:#e9e6df;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pagina{width:210mm;min-height:297mm;margin:0 auto;background:#fff;position:relative;padding:20mm 20mm 24mm;page-break-after:always;overflow:hidden}
+  @media screen{.pagina{margin:14px auto;box-shadow:0 10px 40px rgba(16,32,58,.25)}}
+  @media print{body{background:#fff}.pagina{margin:0;box-shadow:none}}
+  .sans{font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
+  .num{position:absolute;bottom:10mm;right:20mm;font-size:10px;color:var(--suave);letter-spacing:2px}
+  .marca-pie{position:absolute;bottom:10mm;left:20mm;font-size:9px;color:var(--suave);letter-spacing:2px;text-transform:uppercase}
+
+  .portada{background:var(--marino);color:#fff;display:flex;flex-direction:column;padding:0}
+  .portada .franja{height:8mm;background:var(--dorado)}
+  .portada .cuerpo{flex:1;display:flex;flex-direction:column;justify-content:center;padding:18mm 22mm}
+  .portada .marca{font-size:13px;letter-spacing:6px;color:var(--dorado);text-transform:uppercase;margin-bottom:14mm}
+  .portada h1{font-size:38px;line-height:1.2;font-weight:700;letter-spacing:-.5px}
+  .portada h1 span{color:var(--dorado)}
+  .portada .sub{margin-top:9mm;font-size:15.5px;line-height:1.65;color:#c9d3e6;max-width:150mm}
+  .portada .autor{margin-top:auto;padding-top:14mm;font-size:12.5px;color:#9fb3d1;letter-spacing:.5px;line-height:1.7}
+  .portada .autor b{color:#fff}
+  .portada .foto{position:absolute;inset:0;opacity:.28;object-fit:cover;width:100%;height:100%}
+
+  .capitulo-num{font-size:11px;letter-spacing:5px;color:var(--dorado);text-transform:uppercase;margin-bottom:5mm}
+  h2{font-size:25px;color:var(--marino);line-height:1.25;margin-bottom:7mm;font-weight:700}
+  h3{font-size:14.5px;color:var(--marino);margin:6mm 0 2.5mm}
+  p{font-size:12px;line-height:1.8;margin-bottom:4mm;text-align:justify}
+  .destacado{border-left:3px solid var(--dorado);background:var(--hueso);padding:5mm 7mm;margin:6mm 0;font-size:12px;line-height:1.75;font-style:italic;color:var(--marino)}
+  .video{display:flex;gap:4mm;background:#eef1f7;border:1px solid #d8deeb;border-radius:3mm;padding:4.5mm 6mm;margin:5mm 0;font-size:11.5px;line-height:1.7;color:var(--marino)}
+  .video .icono{flex:0 0 auto;font-size:15px}
+  ul.lista{margin:3mm 0 4mm 6mm;font-size:12px;line-height:1.8}
+  ul.lista li{margin-bottom:2.2mm}
+  ul.lista b{color:var(--marino)}
+  ol.lista{margin:3mm 0 4mm 7mm;font-size:12px;line-height:1.8}
+  ol.lista li{margin-bottom:2.2mm}
+  .regla{height:1px;background:linear-gradient(90deg,var(--dorado),transparent);margin:7mm 0}
+  .cita{font-size:14px;font-style:italic;color:var(--marino);text-align:center;padding:5mm 10mm;line-height:1.7}
+
+  .indice li{list-style:none;display:flex;align-items:baseline;font-size:13px;margin-bottom:4.6mm;color:var(--marino)}
+  .indice .n{color:var(--dorado);font-size:17px;width:12mm;font-weight:700}
+  .indice .puntos{flex:1;border-bottom:1px dotted #c5c9d3;margin:0 3mm}
+  .indice .pg{color:var(--suave);font-size:11px}
+
+  .check{display:flex;gap:3.5mm;align-items:flex-start;margin-bottom:3.2mm;font-size:11.5px;line-height:1.65}
+  .check .caja{flex:0 0 4.6mm;width:4.6mm;height:4.6mm;border:1.6px solid var(--dorado);border-radius:1.3mm;margin-top:.8mm}
+
+  .cierre{background:var(--marino);color:#fff;display:flex;flex-direction:column;justify-content:center;text-align:center}
+  .cierre h2{color:#fff;font-size:29px}
+  .cierre .oro{color:var(--dorado)}
+  .cierre p{text-align:center;color:#c9d3e6;font-size:13.5px;max-width:135mm;margin:0 auto 5mm}
+  .cierre .contacto{margin-top:10mm;font-size:15px;line-height:2.1}
+  .cierre .contacto b{color:var(--dorado);font-size:18px}
+  .cierre .franja-b{position:absolute;bottom:0;left:0;right:0;height:8mm;background:var(--dorado)}
+</style>
+</head>
+<body>
+
+<!-- ============ PORTADA ============ -->
+<section class="pagina portada">
+  <!-- IMAGEN-PORTADA: pega tu imagen de Higgsfield y descomenta:
+  <img class="foto" src="portada.jpg" alt="" /> -->
+  <div class="franja"></div>
+  <div class="cuerpo">
+    <div class="marca sans">Asesoría Castresana · Oviedo</div>
+    <h1>Los 7 errores que <span>hunden el precio</span> de tu piso en Oviedo</h1>
+    <p class="sub">…y cómo evitarlos antes de perder miles de euros. La guía directa de Asesoría Castresana para propietarios que quieren dejar de improvisar y vender su piso con resultados profesionales, no con suerte.</p>
+    <div class="autor sans">Equipo de gestión inmobiliaria de <b>Asesoría Castresana</b><br />Calle Cabo Noval, 8 Bajo 2 · 33007 Oviedo</div>
+  </div>
+</section>
+
+<!-- ============ INTRODUCCIÓN ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Introducción</div>
+  <h2>Si tu piso lleva demasiado tiempo en venta, no es culpa "solo" del mercado</h2>
+  <p>Puede que te suene esto:</p>
+  <div class="cita">"Si no se vende es porque el mercado está fatal" · "Ya aparecerá el comprador adecuado tarde o temprano" · "Yo sé lo que vale mi casa, no pienso bajarla"</div>
+  <p>El problema es que la psicología del vendedor suele jugar en su contra: mezclamos apego, necesidad y orgullo, y tomamos decisiones que parecen lógicas… pero nos bloquean la venta durante meses.</p>
+  <p>En Oviedo lo vemos cada semana desde Asesoría Castresana: pisos muy buenos que se quedan "congelados" en portales, propietarios agotados de enseñar la vivienda y ofertas que nunca terminan de concretarse. Y casi siempre hay un patrón: el propietario está intentando vender solo, y además lo hace desde la emoción, no desde un plan profesional.</p>
+  <p>Esta guía no pretende ser amable por compromiso, sino útil de verdad. Te vamos a hablar como lo haríamos en nuestra oficina, con un café encima de la mesa: con respeto, pero con sinceridad total. Porque defender tu patrimonio no es repetir "mi casa vale mucho", es tomar decisiones inteligentes en cada fase de la venta.</p>
+  <p>Cuando acabes de leerla, tendrás dos caminos muy claros:</p>
+  <ul class="lista">
+    <li><b>Seguir solo,</b> sabiendo exactamente qué estás arriesgando.</li>
+    <li><b>O llamarnos</b> para que, al menos, revisemos juntos tu caso y te demos una visión profesional del mercado de Oviedo.</li>
+  </ul>
+  <div class="regla"></div>
+  <h3 style="margin-bottom:4mm">Índice</h3>
+  <ul class="indice">
+    <li><span class="n">1</span> Lo que NO te han contado sobre el mercado de Oviedo <span class="puntos"></span><span class="pg sans">3</span></li>
+    <li><span class="n">2</span> Los 7 errores que hunden el precio sin que lo notes <span class="puntos"></span><span class="pg sans">4</span></li>
+    <li><span class="n">3</span> Precio: la diferencia entre "colgar un anuncio" y vender <span class="puntos"></span><span class="pg sans">6</span></li>
+    <li><span class="n">4</span> El impacto emocional en los primeros 10 segundos <span class="puntos"></span><span class="pg sans">7</span></li>
+    <li><span class="n">5</span> Copy y vídeo: que el comprador se imagine viviendo allí <span class="puntos"></span><span class="pg sans">8</span></li>
+    <li><span class="n">6</span> Filtrar curiosos sin perder al comprador bueno <span class="puntos"></span><span class="pg sans">9</span></li>
+    <li><span class="n">7</span> Negociar sin perder la calma… ni el valor de tu piso <span class="puntos"></span><span class="pg sans">10</span></li>
+    <li><span class="n">8</span> Seguridad jurídica y fiscal: el punto ciego <span class="puntos"></span><span class="pg sans">11</span></li>
+    <li><span class="n">9</span> El momento en que tiene sentido dejar de ir solo <span class="puntos"></span><span class="pg sans">12</span></li>
+    <li><span class="n">10</span> Tu decisión: seguir igual… o hacer algo diferente hoy <span class="puntos"></span><span class="pg sans">13</span></li>
+    <li><span class="n">✓</span> Checklist: tu piso listo para vender sin perder dinero <span class="puntos"></span><span class="pg sans">14</span></li>
+  </ul>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">2</div>
+</section>
+
+<!-- ============ CAPÍTULO 1 ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Capítulo 1</div>
+  <h2>Lo que NO te han contado sobre el mercado de Oviedo</h2>
+  <p>Cuando entras a portales inmobiliarios ves pisos, fotos, precios y mapas. Lo que no ves es la historia que hay detrás: semanas sin visitas, bajadas de precio, reservas que se caen, propietarios que se cansan y terminan aceptando una oferta que no les convence.</p>
+  <p>En Oviedo hay zonas muy competidas: Centro, Casco Histórico, Ciudad Naranco, Vallobín, La Florida, Auditorio, HUCA… Cada anuncio que se publica entra en una batalla silenciosa por la atención de los mismos compradores. Ellos tienen poco tiempo, mucha oferta y una forma muy concreta de decidir:</p>
+  <ul class="lista">
+    <li><b>Primero se enganchan por emoción:</b> fotos, vídeo, sensación.</li>
+    <li><b>Luego buscan razones</b> para justificar o descartar esa emoción: datos, precio, estado, ubicación.</li>
+  </ul>
+  <p>Si tu anuncio no genera esa primera emoción, eres invisible. Si la genera, pero luego tus datos o tu precio no cuadran, eres "la casa que parecía bien, pero…" y el comprador se va a otro anuncio.</p>
+  <p>La pregunta incómoda que te hacemos aquí es simple:</p>
+  <div class="cita">¿Estás mirando tu piso como propietario… o como comprador?</div>
+  <p>Porque si lo miras como propietario, ves recuerdos, esfuerzo y cariño. Si lo miras como comprador, ves metros, luz, distribución, estado y precio en comparación con todo lo que ofrece Oviedo hoy.</p>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">3</div>
+</section>
+
+<!-- ============ CAPÍTULO 2 (I) ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Capítulo 2</div>
+  <h2>Los 7 errores que hunden el precio de tu piso sin que lo notes</h2>
+  <p>Vamos al grano: estos son los errores que vemos casi a diario y que, juntos, pueden hacer que un piso pierda miles de euros de valor final.</p>
+  <h3>Error 1 · Fijar el precio desde la nostalgia, no desde el mercado</h3>
+  <div class="cita" style="padding:2mm 6mm">"Yo no puedo vender por menos de lo que pagué" · "Mi vecino pide X, yo también" · "Por menos de esta cifra no lo saco"</div>
+  <p>Detrás de esas frases hay apego y miedo a perder, dos emociones muy humanas, pero muy peligrosas para la venta. El mercado no tiene en cuenta tu historia, tus recuerdos ni tu hipoteca; solo mira qué ofrece tu piso frente a otros en tu zona y cuánto están dispuestos a pagar los compradores hoy, no hace diez años.</p>
+  <h3>Error 2 · Anuncio pobre, fotos improvisadas</h3>
+  <p>Fotos con poca luz, habitaciones desordenadas, móvil antiguo, sin plano, sin vídeo profesional. Es duro decirlo, pero es necesario: si tu anuncio parece "hecho a prisa", el comprador entiende que tú también estás improvisando la venta. Está acostumbrado a ver anuncios muy trabajados, y cuando llega a uno descuidado asocia: "si así presenta el piso, ¿cómo será el resto del proceso?".</p>
+  <h3>Error 3 · Enseñar el piso "tal cual", sin preparación</h3>
+  <p>Lo que tú ya no ves porque te has acostumbrado, el comprador lo ve amplificado. Manchas en la pared, muebles demasiado grandes, baños cansados, olores, exceso de objetos personales… Todo son argumentos que aparecen en su cabeza para pensar: "aquí hay trabajo, aquí hay dinero que gastar". Si no preparas la vivienda, no solo se nota: <b>se paga</b>.</p>
+  <h3>Error 4 · No cuidar la documentación desde el principio</h3>
+  <p>Es muy común pensar que la documentación ya se verá "cuando salga el comprador". Pero cuando la venta entra en la fase seria y aparece algún problema o falta de claridad, el comprador serio se inquieta, duda… y a veces se marcha. Certificados, cargas, comunidad, IBI, escrituras, nota simple… todo eso tiene que estar listo y claro antes de llegar a la firma. Es parte de proteger tu operación.</p>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">4</div>
+</section>
+
+<!-- ============ CAPÍTULO 2 (II) ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Capítulo 2 · continuación</div>
+  <h3 style="margin-top:0">Error 5 · Responder a todo el mundo sin filtro</h3>
+  <p>WhatsApp, llamadas, mensajes a cualquier hora… Respondes a todos como si todos fueran potenciales compradores. El resultado: te cansas, pierdes energía, te quemas y, cuando llega alguien que podría comprar de verdad, ya no tienes paciencia para negociar con calma. Filtrar no es ser antipático; es respetar tu tiempo y el de los demás.</p>
+  <h3>Error 6 · Negociar desde el orgullo o la necesidad</h3>
+  <div class="cita" style="padding:2mm 6mm">"Yo no bajo ni un euro" · "Necesito vender ya, aceptaré lo que sea"</div>
+  <p>Son dos extremos igual de peligrosos. El orgullo puede cerrar puertas que deberías mantener abiertas; la necesidad puede hacerte aceptar condiciones que te van a pesar durante años.</p>
+  <h3>Error 7 · Pensar que una agencia "solo pone anuncios"</h3>
+  <p>Este es quizá el error más caro: creer que el valor de una inmobiliaria se reduce a publicar en portales. Mientras tú discutes por WhatsApp con curiosos, un equipo profesional está filtrando contactos, presentando el piso con estrategia, negociando con datos y cuidando que todo el proceso jurídico y fiscal esté limpio.</p>
+  <div class="regla"></div>
+  <h3>Mini auditoría personal</h3>
+  <p>Te proponemos algo muy sencillo: lee otra vez estos 7 errores y márcalos con honestidad.</p>
+  <ul class="lista">
+    <li>¿Cuántos estás cometiendo ahora mismo?</li>
+    <li>¿Cuántos podrías corregir solo?</li>
+    <li>¿En cuántos agradecerías apoyo profesional?</li>
+  </ul>
+  <div class="video"><span class="icono">🎬</span><span>Si quieres ver un ejemplo real, en nuestro vídeo sobre estos errores te enseñamos un piso de Oviedo donde el propietario perdió oportunidades por estos detalles — y qué hicimos para corregirlo.</span></div>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">5</div>
+</section>
+
+<!-- ============ CAPÍTULO 3 ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Capítulo 3</div>
+  <h2>Precio: la diferencia entre "colgar un anuncio" y vender de verdad</h2>
+  <p>Fijar bien el precio de tu piso es la decisión que más influye en todo lo demás: visitas, interés, ofertas y tiempos. Ponerlo "un poco alto para ver qué pasa" puede parecer una idea prudente… hasta que ves que nada pasa.</p>
+  <h3>Qué es un precio profesional</h3>
+  <p>Un precio profesional no es "lo que tú necesitas" ni "lo que te gustaría". Es un punto donde se cruzan cuatro elementos:</p>
+  <ol class="lista">
+    <li><b>Comparables reales en tu zona:</b> pisos similares en metros, planta, estado, ubicación y servicios.</li>
+    <li><b>Situación actual del mercado en Oviedo,</b> no solo hace años.</li>
+    <li><b>Puntos fuertes y débiles de tu vivienda</b> frente a esas alternativas.</li>
+    <li><b>Estrategia:</b> salir en un rango que permita negociación sin tener que hacer rebajas dramáticas.</li>
+  </ol>
+  <h3>Cómo buscar comparables que sí sirven</h3>
+  <p>Un error común es mirar solo "pisos de 3 habitaciones en Oviedo" y mezclar zonas, estados y precios sin criterio. Para que un comparable te sirva, tiene que parecerse a tu piso de verdad: misma zona o muy cercana, planta similar, superficie parecida, estado próximo y similares ventajas (garaje, ascensor, exterior/interior…).</p>
+  <p>A partir de ahí, no buscas copiar precios, sino entender el rango donde los compradores están diciendo "sí".</p>
+  <div class="destacado">"Si tu precio solo se sostiene en tu ilusión, no es un precio: es una apuesta."</div>
+  <div class="video"><span class="icono">🎬</span><span>Si quieres profundizar, en nuestro vídeo sobre precio te explicamos paso a paso cómo usar comparables reales de Oviedo sin dejarte llevar solo por la emoción.</span></div>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">6</div>
+</section>
+
+<!-- ============ CAPÍTULO 4 ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Capítulo 4</div>
+  <h2>El impacto emocional de tu piso en los primeros 10 segundos</h2>
+  <p>La psicología del comprador es clara: en menos de 10 segundos decide si una vivienda le gusta o no. No tiene una lista de Excel abierta en la cabeza; tiene sensaciones. Cuando entra por la puerta o ve tus fotos, le pasa algo muy sencillo:</p>
+  <ul class="lista">
+    <li>O siente <b>"podría vivir aquí"</b>.</li>
+    <li>O siente <b>"no me veo en este sitio"</b>.</li>
+  </ul>
+  <h3>Dejar de mirar tu piso como propietario</h3>
+  <p>Tu casa ha sido parte de tu historia, y eso es precioso. Pero ahora quieres vender, y necesitas mirarla con otros ojos: los del comprador que entra por primera vez, sin conocer nada de tu vida. Preguntas clave:</p>
+  <ul class="lista">
+    <li>¿Qué ve en los primeros 10 segundos?</li>
+    <li>¿Qué sensaciones se lleva de entrada: luz, orden, amplitud, cuidado… o lo contrario?</li>
+    <li>¿Puede imaginar sus cosas aquí, o ve demasiadas cosas tuyas por todas partes?</li>
+  </ul>
+  <h3>Microacciones que multiplican la impresión inicial</h3>
+  <p>No hablamos de reformas enormes, sino de acciones concretas:</p>
+  <ul class="lista">
+    <li><b>Orden serio,</b> no "pasar por encima": menos muebles, menos objetos personales, más espacio visual.</li>
+    <li><b>Luz:</b> abrir, despejar, jugar con cortinas claras que dejen entrar la luz.</li>
+    <li><b>Limpieza profunda y pequeños arreglos:</b> detalles que tú no notabas y que el comprador sí va a notar.</li>
+  </ul>
+  <p>Si no cuidas esos primeros 10 segundos, el resto de la visita tiene que remontar una sensación inicial floja. Y muchas veces, simplemente no lo consigue.</p>
+  <div class="video"><span class="icono">🎬</span><span>En nuestro vídeo del antes y el después te enseñamos un piso de Oviedo preparado para la venta — y cómo cambió la reacción de los compradores al entrar por la puerta.</span></div>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">7</div>
+</section>
+
+<!-- ============ CAPÍTULO 5 ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Capítulo 5</div>
+  <h2>Copy y vídeo: cómo hablar de tu piso para que el comprador se imagine viviendo allí</h2>
+  <p>Tu piso no es un listado de características: es un escenario para la vida de alguien. El trabajo del texto y del vídeo es ayudarle a verse dentro.</p>
+  <h3>Del dato frío a la visión clara</h3>
+  <p>En lugar de decir solo "80 m², 3 habitaciones", puedes transformar eso en una imagen:</p>
+  <ul class="lista">
+    <li><b>Característica:</b> "80 m² bien distribuidos".</li>
+    <li><b>Beneficio práctico:</b> "para que cada miembro de la familia tenga su espacio sin sentir que falta aire".</li>
+    <li><b>Beneficio emocional:</b> "un hogar donde puedes crecer sin renunciar a sentirte cómodo cada día".</li>
+  </ul>
+  <p>El objetivo no es describir: es construir una visión en la mente del comprador.</p>
+  <h3>Estructura del texto que funciona</h3>
+  <ol class="lista">
+    <li><b>Atención (titular):</b> gancho claro con tipo de inmueble + beneficio estrella + zona.</li>
+    <li><b>Interés (primer párrafo):</b> conectas con el sueño del comprador y presentas la promesa del hogar.</li>
+    <li><b>Deseo (cuerpo):</b> despliegas características y beneficios, con lenguaje sencillo y cercano.</li>
+    <li><b>Acción (cierre):</b> llamada a la acción clara, amable y sin presión.</li>
+  </ol>
+  <p>El lenguaje debe ser directo, conversacional y centrado en el "tú" del lector, no en "la casa" de forma fría.</p>
+  <h3>El papel del vídeo</h3>
+  <p>El vídeo enseña lo que las fotos no pueden: sensaciones, recorridos y entorno. Un buen recorrido en vídeo multiplica las visitas de calidad, porque quien pide ver el piso después de verlo entero… ya viene medio convencido.</p>
+  <div class="video"><span class="icono">🎬</span><span>En nuestro vídeo de análisis de anuncios reales te enseñamos por qué algunos generan llamadas y otros pasan desapercibidos, aunque el piso sea bueno.</span></div>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">8</div>
+</section>
+
+<!-- ============ CAPÍTULO 6 ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Capítulo 6</div>
+  <h2>Filtrar curiosos sin perder al comprador bueno</h2>
+  <p>No todo contacto es igual. Hay curiosos, hay quien quiere aprender mercado, hay negociadores agresivos… y hay compradores serios. Si tratas a todos como si fueran lo mismo, te desgastas.</p>
+  <h3>Preguntas clave en el primer contacto</h3>
+  <p>Sin convertirte en un interrogatorio, puedes hacer preguntas que te ayuden a entender a quién tienes delante:</p>
+  <ul class="lista">
+    <li>¿En qué plazo te gustaría comprar?</li>
+    <li>¿Has visto ya más pisos en esta zona?</li>
+    <li>¿Tienes la financiación avanzada o estás en proceso?</li>
+  </ul>
+  <p>Las respuestas te dan pistas sobre si esa persona puede llegar al final del camino… o se quedará a mitad.</p>
+  <h3>Poner límites sin perder la cercanía</h3>
+  <p>Explicar que necesitas cierta información porque estás cuidando tu tiempo y el suyo es una forma de filtrar y a la vez mostrar profesionalidad. No tienes que enseñar tu casa a todo el mundo; solo a quienes realmente pueden comprarla.</p>
+  <p>Utilizar fichas completas y vídeo también ayuda: quien pide visita después de ver todo eso suele estar más alineado y preparado.</p>
+  <div class="video"><span class="icono">🎬</span><span>En nuestro vídeo sobre contactos y visitas te contamos cómo detectar en la primera llamada si tienes delante a un comprador real — con ejemplos de Oviedo.</span></div>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">9</div>
+</section>
+
+<!-- ============ CAPÍTULO 7 ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Capítulo 7</div>
+  <h2>Negociar sin perder la calma… ni el valor de tu piso</h2>
+  <p>La negociación es el punto donde tus emociones se cruzan con la estrategia del comprador. Si llegas sin plan, el resultado suele salir caro.</p>
+  <h3>Separar hechos de emociones</h3>
+  <p>Antes de negociar, es clave tener claros los hechos:</p>
+  <ul class="lista">
+    <li>Qué se está pagando realmente en tu zona.</li>
+    <li>Qué puntos fuertes tiene tu piso frente a otros.</li>
+    <li>Qué puntos débiles hay que asumir.</li>
+  </ul>
+  <p>Con esos datos delante, puedes decidir mejor hasta dónde bajar, en qué condiciones y qué ofertas no te interesan.</p>
+  <h3>Manejar orgullo y urgencia</h3>
+  <p>Una parte de ti dice "no bajo nada"; otra parte piensa "acepto lo que sea, necesito cerrar". Ninguna de las dos debería mandar sola. Lo que funciona es una estrategia donde tú sabes de antemano:</p>
+  <ul class="lista">
+    <li>Qué precio mínimo tiene sentido para ti.</li>
+    <li>En qué puntos estás dispuesto a ser flexible (fechas, pequeños ajustes…).</li>
+    <li>Qué tipo de oferta no te compensa, por muy urgente que sea tu situación.</li>
+  </ul>
+  <div class="destacado">Aquí es donde un agente profesional marca la diferencia: no tiene tu carga emocional, puede defender tu precio con calma y negociar pensando en el resultado, no solo en "quitarse el problema de encima".</div>
+  <div class="video"><span class="icono">🎬</span><span>En nuestro vídeo sobre negociación: qué decir, qué no decir, y cómo proteger tu posición sin romper la venta.</span></div>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">10</div>
+</section>
+
+<!-- ============ CAPÍTULO 8 ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Capítulo 8</div>
+  <h2>Seguridad jurídica y fiscal: el punto ciego de casi todos los vendedores particulares</h2>
+  <p>Muchas personas ven la parte jurídica y fiscal como "papeles que ya se verán", y ahí es donde se meten en problemas. Un error en contratos, cláusulas o impuestos no es un susto puntual: puede perseguirte años.</p>
+  <h3>Lo que hay que tener claro desde el principio</h3>
+  <ul class="lista">
+    <li>Escrituras, cargas y situación registral.</li>
+    <li>Certificado energético y otros documentos obligatorios.</li>
+    <li>Estado de la comunidad, pagos al día, posibles derramas.</li>
+    <li>Impuestos asociados a la venta y consecuencias fiscales.</li>
+  </ul>
+  <p>No se trata de asustarte, sino de recordarte que esta parte no es opcional. Y que aquí es donde contar con asesoría jurídica y fiscal es dejar de jugar con fuego.</p>
+  <div class="destacado">En Asesoría Castresana este es nuestro terreno natural: nacimos como asesoría jurídica y fiscal, y por eso cada venta que gestionamos llega a la notaría con los deberes hechos.</div>
+  <div class="video"><span class="icono">🎬</span><span>En nuestro vídeo sobre documentación e impuestos te explicamos los errores más peligrosos de vender sin tener esta parte clara desde el principio — con casos reales en Oviedo.</span></div>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">11</div>
+</section>
+
+<!-- ============ CAPÍTULO 9 ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Capítulo 9</div>
+  <h2>El momento en que tiene sentido dejar de ir solo</h2>
+  <p>Después de todo lo que has leído, quizá te estés haciendo estas preguntas:</p>
+  <ul class="lista">
+    <li>¿Cuánto tiempo llevo pensando en vender y no avanzo como me gustaría?</li>
+    <li>¿Cuánto dinero estoy arriesgando hoy por no tener una estrategia profesional de precio, marketing, negociación y seguridad jurídica?</li>
+    <li>¿Qué perdería realmente si, al menos, llamo a Asesoría Castresana y tengo una segunda opinión sobre mi caso?</li>
+  </ul>
+  <p>En Asesoría Castresana trabajamos cada día con viviendas en Oviedo, combinando experiencia jurídica, fiscal y de gestión inmobiliaria. No somos solo una inmobiliaria que publica anuncios: somos un equipo que te acompaña desde la decisión de vender hasta la firma final.</p>
+  <h3>Nuestro proceso habitual incluye</h3>
+  <ul class="lista">
+    <li><b>Valoración profesional</b> de tu piso y de tu situación concreta.</li>
+    <li><b>Plan de marketing</b> con fotos, vídeo y presencia en los portales adecuados.</li>
+    <li><b>Gestión de contactos,</b> filtrado y organización de visitas.</li>
+    <li><b>Negociación y cierre</b> con seguridad jurídica y fiscal.</li>
+  </ul>
+  <p>No tienes que tomar la decisión ahora mismo, pero sí puedes dar un paso sencillo: hablar con nosotros sobre tu caso y ver qué opciones reales tienes.</p>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">12</div>
+</section>
+
+<!-- ============ CAPÍTULO 10 ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Capítulo 10</div>
+  <h2>Tu decisión: seguir como hasta ahora… o hacer algo diferente hoy</h2>
+  <p>Tu casa ha sido parte de tu historia. Has trabajado para tenerla, la has llenado de momentos que solo tú conoces. Ahora estás en otro punto: quizá quieres un cambio, otro barrio, menos metros, más luz, otra ciudad o simplemente cerrar una etapa.</p>
+  <p>La venta de tu piso no es solo una operación económica: es la forma en la que conviertes esa historia en tu siguiente paso. Hacerlo bien o hacerlo "como salga" marca una diferencia que se nota en el resultado y en cómo te sientes después.</p>
+  <p>Por eso te proponemos algo muy concreto:</p>
+  <ol class="lista">
+    <li><b>Revisa la checklist</b> de las páginas siguientes y marca con sinceridad tu situación actual.</li>
+    <li><b>Pregúntate</b> si quieres seguir improvisando con un patrimonio que te ha costado años construir.</li>
+    <li><b>Si la respuesta es no,</b> da el siguiente paso lógico:
+      <ul class="lista" style="margin-top:2mm">
+        <li>Visita nuestra web: <b>asesoriacastresana.com</b>.</li>
+        <li>Llámanos al <b>985 21 04 68</b> o al <b>689 929 926</b>.</li>
+        <li>Escríbenos contándonos brevemente tu situación y el tipo de piso que quieres vender.</li>
+      </ul>
+    </li>
+  </ol>
+  <div class="destacado">A partir de ahí, no estás solo. Diseñamos contigo un plan y ponemos toda nuestra experiencia para que la venta de tu piso en Oviedo sea una historia que quieras recordar, no olvidar.</div>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">13</div>
+</section>
+
+<!-- ============ CHECKLIST (I) ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Tu herramienta</div>
+  <h2>Checklist: tu piso listo para vender sin perder dinero en Oviedo</h2>
+  <p>Antes de sacar tu piso al mercado, imprime esta checklist y revísala con calma. Cada casilla sin marcar es una oportunidad de mejora… o un riesgo de perder dinero en la venta.</p>
+  <h3>Bloque 1 · Documentación lista y clara</h3>
+  <div class="check"><span class="caja"></span>Escrituras y nota simple revisadas.</div>
+  <div class="check"><span class="caja"></span>Certificado energético vigente.</div>
+  <div class="check"><span class="caja"></span>Últimos recibos de IBI disponibles.</div>
+  <div class="check"><span class="caja"></span>Últimos recibos de comunidad y posibles derramas conocidas.</div>
+  <div class="check"><span class="caja"></span>Situación de cargas e hipotecas clara (sabes cuánto queda pendiente).</div>
+  <div class="check"><span class="caja"></span>Información básica de impuestos que pagarás tras la venta.</div>
+  <div class="video"><span class="icono">🎬</span><span>Casillas sin marcar aquí: mira nuestro vídeo sobre documentación e impuestos, con casos reales en Oviedo.</span></div>
+  <h3>Bloque 2 · Piso preparado para causar buena impresión</h3>
+  <div class="check"><span class="caja"></span>Toda la vivienda ordenada a fondo (no solo "pasar por encima").</div>
+  <div class="check"><span class="caja"></span>Objetos personales, fotos familiares y exceso de decoración retirados.</div>
+  <div class="check"><span class="caja"></span>Iluminación mejorada (cortinas claras, lámparas funcionales, bombillas revisadas).</div>
+  <div class="check"><span class="caja"></span>Pequeños desperfectos visibles solucionados (manchas, golpes, grifos…).</div>
+  <div class="check"><span class="caja"></span>Baños y cocina limpios y con sensación de cuidado, aunque no sean nuevos.</div>
+  <div class="check"><span class="caja"></span>Olor neutro y agradable en la vivienda.</div>
+  <div class="video"><span class="icono">🎬</span><span>Si aún "se ve muy tuyo": mira el antes y el después de un piso de Oviedo preparado para la venta.</span></div>
+  <h3>Bloque 3 · Anuncio profesional que destaca</h3>
+  <div class="check"><span class="caja"></span>Reportaje fotográfico de calidad (luz, composición, resolución).</div>
+  <div class="check"><span class="caja"></span>Plano de la vivienda o explicación clara de la distribución.</div>
+  <div class="check"><span class="caja"></span>Vídeo de recorrido con sensaciones, entorno y puntos fuertes.</div>
+  <div class="check"><span class="caja"></span>Título con tipo de piso + beneficio clave + zona.</div>
+  <div class="check"><span class="caja"></span>Descripción que combina datos objetivos y beneficios concretos.</div>
+  <div class="check"><span class="caja"></span>Información clave visible: metros, planta, orientación, gastos, certificado energético.</div>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">14</div>
+</section>
+
+<!-- ============ CHECKLIST (II) ============ -->
+<section class="pagina">
+  <div class="capitulo-num sans">Tu herramienta · continuación</div>
+  <h3 style="margin-top:0">Bloque 4 · Precio alineado con el mercado</h3>
+  <div class="check"><span class="caja"></span>Al menos 3 pisos comparables identificados en tu zona (metros, planta, estado, servicios).</div>
+  <div class="check"><span class="caja"></span>Puntos fuertes y débiles de tu vivienda analizados frente a esos comparables.</div>
+  <div class="check"><span class="caja"></span>Tu precio no depende solo de lo que "necesitas" o "te gustaría": sale de datos reales.</div>
+  <div class="check"><span class="caja"></span>Rango de negociación claro (precio objetivo y mínimo razonable).</div>
+  <div class="check"><span class="caja"></span>Dispuesto a ajustar dentro de una estrategia, no por desesperación.</div>
+  <div class="video"><span class="icono">🎬</span><span>Si tu precio sale más de la emoción que de los datos: nuestro vídeo sobre precio profesional en Oviedo.</span></div>
+  <h3>Bloque 5 · Contactos filtrados y negociación con plan</h3>
+  <div class="check"><span class="caja"></span>Sabes qué preguntas hacer en el primer contacto para detectar compradores reales.</div>
+  <div class="check"><span class="caja"></span>No enseñas la vivienda a todo el mundo: priorizas a quienes pueden comprar.</div>
+  <div class="check"><span class="caja"></span>Sabes responder a ofertas a la baja sin entrar en discusiones personales.</div>
+  <div class="check"><span class="caja"></span>Límite mínimo y condiciones preferentes definidos ANTES de negociar.</div>
+  <div class="check"><span class="caja"></span>Has decidido si negocias tú o lo hace un profesional por ti.</div>
+  <div class="video"><span class="icono">🎬</span><span>Errores típicos de negociación de propietarios particulares — y cómo evitarlos — en nuestro vídeo de negociación.</span></div>
+  <h3>Bloque 6 · Acompañamiento profesional (o decisión consciente de ir solo)</h3>
+  <div class="check"><span class="caja"></span>Has decidido conscientemente si vendes por tu cuenta o con ayuda profesional.</div>
+  <div class="check"><span class="caja"></span>Sabes qué tareas quieres delegar (precio, marketing, visitas, negociación, jurídico-fiscal).</div>
+  <div class="check"><span class="caja"></span>Conoces las ventajas de un equipo como Asesoría Castresana: experiencia, tiempo, seguridad y resultado.</div>
+  <div class="check"><span class="caja"></span>Tienes los datos de contacto claros y sabes cuál sería el primer paso.</div>
+  <div class="video"><span class="icono">🎬</span><span>¿Aún dudas? Mira nuestro vídeo comparando el camino de un propietario que vende solo y el de otro acompañado: casos reales de Oviedo y números encima de la mesa.</span></div>
+  <div class="marca-pie sans">Asesoría Castresana</div>
+  <div class="num sans">15</div>
+</section>
+
+<!-- ============ CIERRE / CTA ============ -->
+<section class="pagina cierre">
+  <h2>¿Revisamos <span class="oro">tu caso</span>?</h2>
+  <p style="margin-top:8mm">Tanto si decides vender solo como acompañado, nuestro objetivo es el mismo: que vendas tu piso en Oviedo con cabeza fría, estrategia clara y resultados que tengan sentido para ti.</p>
+  <p><b style="color:#fff">Valoración profesional y sin compromiso</b> · precio realista, plan de venta y visión jurídico-fiscal de tu operación.</p>
+  <div class="contacto sans">
+    <b>☎ 985 21 04 68 · 689 929 926</b><br />
+    www.asesoriacastresana.com<br />
+    C/ Cabo Noval, 8 Bajo 2 · 33007 Oviedo
+  </div>
+  <p class="sans" style="margin-top:12mm;font-size:10px;color:#9fb3d1">Guía divulgativa de carácter general. No sustituye el asesoramiento profesional de cada caso concreto (jurídico, fiscal o técnico). Asesoría Castresana · desde 1993.</p>
+  <div class="franja-b"></div>
+</section>
+
+</body>
+</html>
