@@ -24,6 +24,12 @@
 
   Los datos vienen de /api/escaparate (escrapea www.asesoriacastresana.com cada 30 min).
   Si la API falla, se muestra la cartera de respaldo embebida abajo.
+
+  Cada diapositiva muestra, además de foto/título/precio: la localidad (chip
+  arriba a la derecha), el precio por m² en venta, y un código QR (abajo a la
+  derecha de la foto) que lleva a la ficha del inmueble en la web para ver
+  todas las fotos. El QR se genera con api.qrserver.com; si ese servicio no
+  responde en la TV, la caja se oculta sola y todo sigue como antes.
 -->
 <style>
   html, body {
@@ -93,6 +99,21 @@
     text-transform: uppercase;
   }
   .etiqueta.alquiler { background: #3f8efc; color: #ffffff; }
+  .chip-localidad {
+    position: absolute; top: 36px; right: 0; z-index: 3;
+    background: rgba(11, 22, 38, 0.88); color: #ffffff;
+    border: 2px solid #c9a227; border-right: none;
+    font-size: 30px; font-weight: 700; letter-spacing: 2px;
+    padding: 12px 36px 12px 30px; border-radius: 12px 0 0 12px;
+  }
+  /* QR a la ficha del inmueble: se escanea desde la calle para ver todas las fotos */
+  .qr {
+    position: absolute; right: 36px; bottom: 30px; z-index: 3;
+    background: #ffffff; border-radius: 14px; padding: 14px 14px 8px;
+    text-align: center;
+  }
+  .qr img { width: 150px; height: 150px; display: block; }
+  .qr .qr-texto { font-size: 20px; color: #10203a; font-weight: 800; margin-top: 6px; letter-spacing: 2px; }
   .info {
     flex: 1 1 auto; padding: 34px 64px 20px;
     display: flex; flex-direction: column; align-items: center; text-align: center;
@@ -231,13 +252,13 @@
   // ---------- Cartera de respaldo (si la API no responde) ----------
   // Actualizada el 29/07/2026 con los inmuebles publicados en asesoriacastresana.com.
   var RESPALDO = [
-    { titulo: "Piso 4º exterior en El Fontán, junto al casco antiguo", precio: 330000, m2: 99, habitaciones: 3, banos: 2, ref: "PIS0160", operacion: "venta" },
-    { titulo: "Piso súper céntrico en Plaza de América", precio: 270000, m2: 80, habitaciones: null, banos: null, ref: null, operacion: "venta" },
-    { titulo: "Ático con ascensor en Calle Rosal, 20 · zona Parque San Francisco", precio: 145000, m2: 51, habitaciones: 1, banos: 1, ref: null, operacion: "venta" },
-    { titulo: "Piso a reformar con ascensor en Calle Rosal, centro de Oviedo", precio: null, m2: 70, habitaciones: null, banos: null, ref: "es1616045", operacion: "venta" },
-    { titulo: "Piso 2º en zona Ayuntamiento con cocina independiente", precio: null, m2: 50, habitaciones: 1, banos: 1, ref: null, operacion: "venta" },
-    { titulo: "Piso de 3 habitaciones en San Pedro – Siana, Mieres", precio: 120000, m2: 90, habitaciones: 3, banos: 1, ref: null, operacion: "venta" },
-    { titulo: "Piso con 2 baños en pleno centro, Calle Avilés, Mieres", precio: null, m2: 85, habitaciones: 2, banos: 2, ref: null, operacion: "venta" }
+    { titulo: "Piso 4º exterior en El Fontán, junto al casco antiguo", precio: 330000, m2: 99, habitaciones: 3, banos: 2, ref: "PIS0160", operacion: "venta", localidad: "Oviedo" },
+    { titulo: "Piso súper céntrico en Plaza de América", precio: 270000, m2: 80, habitaciones: null, banos: null, ref: null, operacion: "venta", localidad: "Oviedo" },
+    { titulo: "Ático con ascensor en Calle Rosal, 20 · zona Parque San Francisco", precio: 145000, m2: 51, habitaciones: 1, banos: 1, ref: null, operacion: "venta", localidad: "Oviedo" },
+    { titulo: "Piso a reformar con ascensor en Calle Rosal, centro de Oviedo", precio: null, m2: 70, habitaciones: null, banos: null, ref: "es1616045", operacion: "venta", localidad: "Oviedo" },
+    { titulo: "Piso 2º en zona Ayuntamiento con cocina independiente", precio: null, m2: 50, habitaciones: 1, banos: 1, ref: null, operacion: "venta", localidad: "Oviedo" },
+    { titulo: "Piso de 3 habitaciones en San Pedro – Siana, Mieres", precio: 120000, m2: 90, habitaciones: 3, banos: 1, ref: null, operacion: "venta", localidad: "Mieres" },
+    { titulo: "Piso con 2 baños en pleno centro, Calle Avilés, Mieres", precio: null, m2: 85, habitaciones: 2, banos: 2, ref: null, operacion: "venta", localidad: "Mieres" }
   ];
 
   // ---------- Utilidades ----------
@@ -245,10 +266,12 @@
     return String(t == null ? "" : t)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
+  function formateaMiles(n) {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  }
   function formateaPrecio(n, operacion) {
     if (!n) return "Consultar precio";
-    var s = String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    return s + " €" + (operacion === "alquiler" ? "<small>/mes</small>" : "");
+    return formateaMiles(n) + " €" + (operacion === "alquiler" ? "<small>/mes</small>" : "");
   }
 
   // ---------- Construcción de diapositivas ----------
@@ -266,12 +289,25 @@
       if (it.m2) rasgos += '<div class="rasgo"><b>' + escapa(it.m2) + '</b> m²</div>';
       if (it.habitaciones) rasgos += '<div class="rasgo"><b>' + escapa(it.habitaciones) + "</b> hab.</div>";
       if (it.banos) rasgos += '<div class="rasgo"><b>' + escapa(it.banos) + "</b> baño" + (it.banos > 1 ? "s" : "") + "</div>";
+      if (it.precio && it.m2 && it.operacion !== "alquiler") {
+        rasgos += '<div class="rasgo"><b>' + formateaMiles(Math.round(it.precio / it.m2)) + "</b> €/m²</div>";
+      }
 
       // El panel "sin foto" va siempre debajo; si la imagen no carga, se oculta y queda el panel.
       var foto = it.foto
         ? '<img src="' + escapa(it.foto) + '" alt="" onerror="this.style.display=\'none\'" />'
         : "";
       var sinFoto = '<div class="sin-foto"><div class="icono">🏠</div><div class="texto">FOTOS EN OFICINA Y WEB</div></div>';
+
+      // Chip con la localidad (viene del scraper; si no hay, no se pinta nada)
+      var chip = it.localidad ? '<div class="chip-localidad">📍 ' + escapa(it.localidad) + "</div>" : "";
+      // QR a la ficha del inmueble en la web: si el servicio de QR no responde,
+      // el onerror oculta la caja y la diapositiva queda como antes.
+      var qr = it.url
+        ? '<div class="qr"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=0&data=' +
+          encodeURIComponent(it.url) +
+          '" alt="" onerror="this.parentNode.style.display=\'none\'" /><div class="qr-texto">MÁS FOTOS</div></div>'
+        : "";
 
       var d = document.createElement("div");
       d.className = "diapo" + (i === 0 ? " activa" : "");
@@ -281,6 +317,7 @@
           '<div class="velo"></div>' +
           '<div class="etiqueta ' + (it.operacion === "alquiler" ? "alquiler" : "") + '">' +
             (it.operacion === "alquiler" ? "Se alquila" : "Se vende") + "</div>" +
+          chip + qr +
         "</div>" +
         '<div class="info">' +
           '<div class="titulo">' + escapa(it.titulo) + "</div>" +
