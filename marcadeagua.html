@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Quitar Marca de Agua — LimpiaFotos JPMR</title>
-<meta name="description" content="Borra marcas de agua de tus propias fotos (o de tus socios, con permiso) pintando encima: la IA rellena solo esa zona sin deformar el resto de la imagen." />
+<meta name="description" content="Borra marcas de agua de tus propias fotos (o de tus socios, con permiso) pintando encima: la IA reconstruye solo esa zona siguiendo la foto, sin deformar nada." />
 <meta name="theme-color" content="#070b18" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -144,7 +144,7 @@
   <header>
     <span class="logo">✦ JPMR NEGOCIOS</span>
     <h1>Quitar Marca de Agua</h1>
-    <p>Pinta encima de la marca de agua y la IA <strong>borra solo esa zona</strong>, rellenándola con el contenido de alrededor. El resto de la foto queda intacto: sin deformaciones ni borrones.</p>
+    <p>Pinta encima de la marca de agua y la IA <strong>reconstruye esa zona siguiendo la propia foto</strong>: continúa la pared, el cielo o el suelo que hay debajo. Sin borrones, sin deformaciones, y el resto de la imagen queda intacto píxel a píxel.</p>
     <p style="margin-top:12px"><a href="index.html" style="color:#9fe7f5;font-weight:700;text-decoration:none">← Volver a LimpiaFotos</a></p>
   </header>
 
@@ -168,7 +168,7 @@
     <div class="drop" id="drop" role="button" tabindex="0" aria-label="Subir foto">
       <div class="big">💧</div>
       <div><strong>Toca para elegir una foto</strong> o arrástrala aquí</div>
-      <div class="hint">También puedes pegarla con <kbd>Ctrl</kbd>+<kbd>V</kbd> · JPG, PNG o WebP · las fotos grandes se optimizan solas</div>
+      <div class="hint">También puedes pegarla con <kbd>Ctrl</kbd>+<kbd>V</kbd> · JPG, PNG o WebP · se conserva la resolución original</div>
       <input type="file" id="file" accept="image/*" hidden />
     </div>
 
@@ -203,6 +203,7 @@
 
   <footer>
     Impulsado por Clipdrop AI (Cleanup) · Tus fotos se procesan al momento y no se almacenan.<br />
+    🎯 Consejo: cubre la marca entera con un poco de margen — la IA reconstruye mejor si no queda ningún borde de la marca sin pintar.<br />
     💡 Si queda algún resto, vuelve a pintar encima y pulsa «Borrar lo marcado» otra vez: cada pasada refina el resultado.<br />
     📱 En iPhone, si la descarga abre la imagen: mantén pulsado → «Guardar en Fotos».
   </footer>
@@ -222,17 +223,24 @@
   const goBtn = $("go"), goLabel = $("go-label"), dlBtn = $("download"), shareBtn = $("share"), resetBtn = $("reset");
   const statusEl = $("status"), creditsEl = $("credits"), metaEl = $("meta"), passChip = $("passchip");
 
-  const MAX_DIM = 2048;                 // lado máximo (el cleanup de Clipdrop admite hasta 16 MP)
-  const MAX_BYTES = 3.2 * 1024 * 1024;  // margen para que foto + máscara quepan en el límite de Vercel (~4,5 MB)
+  // La clave de la calidad: trabajamos con la foto a alta resolución y a la IA
+  // solo le enviamos un RECORTE alrededor de la zona pintada. Así ve el máximo
+  // detalle para reconstruir, y el resto de la foto ni siquiera viaja: queda
+  // intacto píxel a píxel.
+  const MAX_DIM = 3072;   // lado máximo de la imagen de trabajo (≈ 9 MP)
+  const SEND_DIM = 2048;  // lado máximo del recorte que se envía a la IA
+  const DILATE = 8;       // px extra alrededor del trazo, para no dejar bordes de la marca
+  const FEATHER = 5;      // px de fundido al integrar la reconstrucción en la foto
 
-  let baseImg = null;        // HTMLImageElement de la imagen de trabajo actual
-  let originalImg = null;    // la primera imagen subida (para comparar)
-  let baseBlob = null;       // Blob de la imagen de trabajo (lo que se envía y se descarga)
+  let workCanvas = null, workCtx = null;  // imagen de trabajo a resolución completa
+  let originalCanvas = null;              // la foto tal como se subió (para comparar)
+  let dispScale = 1;                      // escala del lienzo visible respecto a la imagen
+  let srcType = "image/jpeg";
   let baseName = "foto";
-  let strokes = [];          // [{size, points:[{x,y}...]}] en coordenadas naturales de la imagen
+  let baseBlob = null;       // imagen de trabajo codificada (descarga / compartir)
+  let strokes = [];          // [{size, points:[{x,y}...]}] en coordenadas de la imagen
   let currentStroke = null;
-  let passes = 0;            // pasadas de limpieza ya aplicadas
-  let processed = false;     // hay resultado descargable
+  let passes = 0;
   let busy = false;
   let showingOriginal = false;
 
@@ -254,55 +262,48 @@
     });
   }
 
-  // Reduce fotos grandes para que suban rápido y quepan junto a la máscara.
-  async function optimize(file){
-    const img = await loadImage(file);
-    const w = img.naturalWidth, h = img.naturalHeight;
-    if (file.size <= MAX_BYTES && Math.max(w, h) <= MAX_DIM) return { blob: file, img, optimized: false };
+  const canvasToBlob = (c, type, q) => new Promise(res => c.toBlob(res, type, q));
 
-    const scale = Math.min(1, MAX_DIM / Math.max(w, h));
-    const cw = Math.round(w * scale), ch = Math.round(h * scale);
-    const c = document.createElement("canvas");
-    c.width = cw; c.height = ch;
-    c.getContext("2d").drawImage(img, 0, 0, cw, ch);
-    const blob = await new Promise(res => c.toBlob(res, "image/jpeg", 0.92));
-    if (!blob) return { blob: file, img, optimized: false };
-    return { blob, img: await loadImage(blob), optimized: true };
+  // ---------- Pintado del lienzo visible ----------
+  function drawStroke(c, s, scale, extra, dx, dy){
+    const w = s.size * scale + (extra || 0);
+    const pts = s.points;
+    c.lineWidth = w;
+    if (pts.length === 1) {
+      c.beginPath();
+      c.arc((pts[0].x + (dx||0)) * scale, (pts[0].y + (dy||0)) * scale, w / 2, 0, Math.PI * 2);
+      c.fill();
+      return;
+    }
+    c.beginPath();
+    c.moveTo((pts[0].x + (dx||0)) * scale, (pts[0].y + (dy||0)) * scale);
+    for (let i = 1; i < pts.length; i++) c.lineTo((pts[i].x + (dx||0)) * scale, (pts[i].y + (dy||0)) * scale);
+    c.stroke();
   }
 
-  // ---------- Pintado del lienzo ----------
   function redraw(){
-    if (!baseImg) return;
+    if (!workCanvas) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(showingOriginal && originalImg ? originalImg : baseImg, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(showingOriginal && originalCanvas ? originalCanvas : workCanvas, 0, 0, canvas.width, canvas.height);
     if (showingOriginal) return;
     ctx.save();
     ctx.strokeStyle = "rgba(255,92,157,.55)";
     ctx.fillStyle = "rgba(255,92,157,.55)";
     ctx.lineCap = "round"; ctx.lineJoin = "round";
-    for (const s of strokes) drawStroke(ctx, s);
+    for (const s of strokes) drawStroke(ctx, s, dispScale, 0, 0, 0);
     ctx.restore();
   }
 
-  function drawStroke(c, s){
-    c.lineWidth = s.size;
-    if (s.points.length === 1) {
-      const p = s.points[0];
-      c.beginPath(); c.arc(p.x, p.y, s.size / 2, 0, Math.PI * 2); c.fill();
-      return;
-    }
-    c.beginPath();
-    c.moveTo(s.points[0].x, s.points[0].y);
-    for (let i = 1; i < s.points.length; i++) c.lineTo(s.points[i].x, s.points[i].y);
-    c.stroke();
+  function syncCanvasSize(){
+    // El lienzo visible se limita a ~1800 px para que el pintado vaya fluido
+    // incluso en el móvil; la imagen de trabajo conserva su resolución.
+    dispScale = Math.min(1, 1800 / Math.max(workCanvas.width, workCanvas.height));
+    canvas.width = Math.round(workCanvas.width * dispScale);
+    canvas.height = Math.round(workCanvas.height * dispScale);
   }
 
-  function setImage(img, blob){
-    baseImg = img; baseBlob = blob;
-    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-    strokes = []; currentStroke = null;
-    redraw(); syncButtons();
-    metaEl.textContent = `${img.naturalWidth} × ${img.naturalHeight} px · ${fmtKB(blob.size)}`;
+  async function refreshBaseBlob(){
+    baseBlob = await canvasToBlob(workCanvas, srcType === "image/png" ? "image/png" : "image/jpeg", 0.95);
   }
 
   function syncButtons(){
@@ -310,29 +311,29 @@
     undoBtn.disabled = !hasStrokes || busy;
     clearBtn.disabled = !hasStrokes || busy;
     goBtn.disabled = !hasStrokes || busy;
-    dlBtn.disabled = !processed || busy;
+    dlBtn.disabled = passes === 0 || busy;
     compareBtn.style.display = passes > 0 ? "" : "none";
     passChip.classList.toggle("show", passes > 0);
     if (passes > 0) passChip.textContent = `✓ ${passes} pasada${passes > 1 ? "s" : ""} aplicada${passes > 1 ? "s" : ""}`;
   }
 
-  // Coordenadas del puntero → coordenadas naturales de la imagen
+  // Coordenadas del puntero → coordenadas de la imagen de trabajo
   function toImageCoords(e){
     const r = canvas.getBoundingClientRect();
     return {
-      x: (e.clientX - r.left) * (canvas.width / r.width),
-      y: (e.clientY - r.top) * (canvas.height / r.height),
+      x: (e.clientX - r.left) / r.width * workCanvas.width,
+      y: (e.clientY - r.top) / r.height * workCanvas.height,
     };
   }
   // El pincel se elige en píxeles de pantalla; lo convertimos a píxeles de imagen
   function brushSizeImage(){
     const r = canvas.getBoundingClientRect();
-    const scale = r.width ? canvas.width / r.width : 1;
+    const scale = r.width ? workCanvas.width / r.width : 1;
     return Number(brushRange.value) * scale;
   }
 
   canvas.addEventListener("pointerdown", (e) => {
-    if (!baseImg || busy || showingOriginal) return;
+    if (!workCanvas || busy || showingOriginal) return;
     e.preventDefault();
     canvas.setPointerCapture(e.pointerId);
     currentStroke = { size: brushSizeImage(), points: [toImageCoords(e)] };
@@ -358,31 +359,10 @@
   clearBtn.addEventListener("click", () => { strokes = []; redraw(); syncButtons(); });
 
   // Mantener pulsado para comparar con el original
-  function holdStart(e){ if (!originalImg || busy) return; e.preventDefault(); showingOriginal = true; redraw(); }
+  function holdStart(e){ if (!originalCanvas || busy) return; e.preventDefault(); showingOriginal = true; redraw(); }
   function holdEnd(){ if (!showingOriginal) return; showingOriginal = false; redraw(); }
   compareBtn.addEventListener("pointerdown", holdStart);
   ["pointerup","pointerleave","pointercancel"].forEach(ev => compareBtn.addEventListener(ev, holdEnd));
-
-  // ---------- Máscara: negro = conservar, blanco = borrar ----------
-  async function buildMask(){
-    const c = document.createElement("canvas");
-    c.width = canvas.width; c.height = canvas.height;
-    const mctx = c.getContext("2d");
-    mctx.fillStyle = "#000"; mctx.fillRect(0, 0, c.width, c.height);
-    mctx.strokeStyle = "#fff"; mctx.fillStyle = "#fff";
-    mctx.lineCap = "round"; mctx.lineJoin = "round";
-    for (const s of strokes) drawStroke(mctx, s);
-
-    // Clipdrop espera una máscara binaria: eliminamos los grises del antialiasing.
-    const data = mctx.getImageData(0, 0, c.width, c.height);
-    const px = data.data;
-    for (let i = 0; i < px.length; i += 4) {
-      const v = px[i] > 127 ? 255 : 0;
-      px[i] = px[i+1] = px[i+2] = v; px[i+3] = 255;
-    }
-    mctx.putImageData(data, 0, 0);
-    return new Promise(res => c.toBlob(res, "image/png"));
-  }
 
   // ---------- Elegir foto ----------
   async function pickFile(file){
@@ -390,16 +370,30 @@
     if (!file.type.startsWith("image/")) { setStatus("Ese archivo no es una imagen.", "err"); return; }
     setStatus("Preparando la foto…");
     try {
-      const opt = await optimize(file);
+      const img = await loadImage(file);
+      const scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+
+      workCanvas = document.createElement("canvas");
+      workCanvas.width = w; workCanvas.height = h;
+      workCtx = workCanvas.getContext("2d");
+      workCtx.drawImage(img, 0, 0, w, h);
+
+      originalCanvas = document.createElement("canvas");
+      originalCanvas.width = w; originalCanvas.height = h;
+      originalCanvas.getContext("2d").drawImage(workCanvas, 0, 0);
+
+      srcType = file.type === "image/png" ? "image/png" : "image/jpeg";
       baseName = (file.name || "foto").replace(/\.[^.]+$/, "");
-      originalImg = opt.img;
-      passes = 0; processed = false; showingOriginal = false;
-      setImage(opt.img, opt.blob);
-      if (opt.optimized) metaEl.textContent += " · optimizada ✓";
+      baseBlob = null;
+      strokes = []; currentStroke = null; passes = 0; showingOriginal = false;
+
+      syncCanvasSize(); redraw(); syncButtons();
+      metaEl.textContent = `${w} × ${h} px` + (scale < 1 ? " · ajustada a la resolución máxima de trabajo" : " · resolución original conservada");
       editor.classList.add("show");
       drop.style.display = "none";
       creditsEl.classList.remove("show");
-      setStatus("Pinta sobre la marca de agua con el dedo o el ratón.", "ok");
+      setStatus("Pinta sobre la marca de agua con el dedo o el ratón (cúbrela entera, con algo de margen).", "ok");
       canvas.scrollIntoView({ behavior: "smooth", block: "center" });
     } catch (err) {
       setStatus(err.message || "No se pudo leer esa imagen.", "err");
@@ -414,23 +408,74 @@
   drop.addEventListener("drop", e => pickFile(e.dataTransfer.files[0]));
   window.addEventListener("paste", (e) => {
     const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
-    if (item && !baseImg) { pickFile(item.getAsFile()); toast("📋 Imagen pegada"); }
+    if (item && !workCanvas) { pickFile(item.getAsFile()); toast("📋 Imagen pegada"); }
   });
 
-  // ---------- Procesar: cleanup con máscara ----------
+  // ---------- Recorte alrededor de lo pintado ----------
+  function strokesRect(){
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const s of strokes) {
+      const r = s.size / 2 + DILATE;
+      for (const p of s.points) {
+        minX = Math.min(minX, p.x - r); minY = Math.min(minY, p.y - r);
+        maxX = Math.max(maxX, p.x + r); maxY = Math.max(maxY, p.y + r);
+      }
+    }
+    // Margen de contexto: la IA necesita ver bien qué hay alrededor para
+    // continuar texturas, líneas y colores de la propia foto.
+    const pad = Math.max(180, 0.4 * Math.max(maxX - minX, maxY - minY));
+    const x = Math.max(0, Math.floor(minX - pad));
+    const y = Math.max(0, Math.floor(minY - pad));
+    const x2 = Math.min(workCanvas.width, Math.ceil(maxX + pad));
+    const y2 = Math.min(workCanvas.height, Math.ceil(maxY + pad));
+    return { x, y, w: x2 - x, h: y2 - y };
+  }
+
+  // Máscara del recorte: negro = conservar, blanco = reconstruir (binaria)
+  function buildCropMask(rect, sendScale){
+    const c = document.createElement("canvas");
+    c.width = Math.round(rect.w * sendScale); c.height = Math.round(rect.h * sendScale);
+    const m = c.getContext("2d");
+    m.fillStyle = "#000"; m.fillRect(0, 0, c.width, c.height);
+    m.strokeStyle = "#fff"; m.fillStyle = "#fff";
+    m.lineCap = "round"; m.lineJoin = "round";
+    for (const s of strokes) drawStroke(m, s, sendScale, 2 * DILATE * sendScale, -rect.x, -rect.y);
+
+    const data = m.getImageData(0, 0, c.width, c.height);
+    const px = data.data;
+    for (let i = 0; i < px.length; i += 4) {
+      const v = px[i] > 127 ? 255 : 0;
+      px[i] = px[i+1] = px[i+2] = v; px[i+3] = 255;
+    }
+    m.putImageData(data, 0, 0);
+    return c;
+  }
+
+  // ---------- Procesar: recorte + cleanup + integración con fundido ----------
   goBtn.addEventListener("click", async () => {
-    if (!baseBlob || !strokes.length || busy) return;
+    if (!workCanvas || !strokes.length || busy) return;
     busy = true; syncButtons(); goBtn.disabled = true; resetBtn.disabled = true;
-    goLabel.innerHTML = '<span class="spinner"></span> Borrando…';
+    goLabel.innerHTML = '<span class="spinner"></span> Reconstruyendo…';
     canvasbox.classList.add("shimmer");
-    setStatus("La IA está rellenando la zona marcada, unos segundos…");
+    setStatus("La IA está reconstruyendo la zona marcada siguiendo la foto, unos segundos…");
 
     try {
-      const mask = await buildMask();
+      const rect = strokesRect();
+      const sendScale = Math.min(1, SEND_DIM / Math.max(rect.w, rect.h));
+
+      // Recorte de la imagen alrededor de la zona pintada, a máximo detalle
+      const crop = document.createElement("canvas");
+      crop.width = Math.round(rect.w * sendScale); crop.height = Math.round(rect.h * sendScale);
+      crop.getContext("2d").drawImage(workCanvas, rect.x, rect.y, rect.w, rect.h, 0, 0, crop.width, crop.height);
+
+      // Recortes pequeños viajan en PNG (sin pérdida); los grandes en JPEG de alta calidad
+      const usePng = crop.width * crop.height <= 1024 * 1024;
+      const cropBlob = await canvasToBlob(crop, usePng ? "image/png" : "image/jpeg", 0.95);
+      const maskBlob = await canvasToBlob(buildCropMask(rect, sendScale), "image/png");
+
       const form = new FormData();
-      const imgFile = new File([baseBlob], baseName + (baseBlob.type.includes("png") ? ".png" : ".jpg"), { type: baseBlob.type || "image/jpeg" });
-      form.append("image_file", imgFile, imgFile.name);
-      form.append("mask_file", new File([mask], "mask.png", { type: "image/png" }), "mask.png");
+      form.append("image_file", new File([cropBlob], usePng ? "recorte.png" : "recorte.jpg", { type: cropBlob.type }), usePng ? "recorte.png" : "recorte.jpg");
+      form.append("mask_file", new File([maskBlob], "mask.png", { type: "image/png" }), "mask.png");
       form.append("mode", "quality");
 
       const res = await fetch("/api/process/cleanup", { method: "POST", body: form });
@@ -439,17 +484,37 @@
         try { const j = await res.json(); msg = j.error + (j.detail ? " — " + j.detail : ""); } catch (_) {}
         throw new Error(msg);
       }
+      const resultImg = await loadImage(await res.blob());
 
-      const resultBlob = await res.blob();
-      const resultImg = await loadImage(resultBlob);
-      passes += 1; processed = true;
-      setImage(resultImg, resultBlob);   // el resultado pasa a ser la imagen de trabajo: se puede repasar
+      // Integración: del resultado solo tomamos la zona pintada (+ un fundido
+      // suave en el borde). Todo lo demás sigue siendo la foto original.
+      const blend = document.createElement("canvas");
+      blend.width = rect.w; blend.height = rect.h;
+      const bctx = blend.getContext("2d");
+      bctx.drawImage(resultImg, 0, 0, rect.w, rect.h);
+
+      const feather = document.createElement("canvas");
+      feather.width = rect.w; feather.height = rect.h;
+      const fctx = feather.getContext("2d");
+      if ("filter" in fctx) fctx.filter = `blur(${FEATHER}px)`;
+      fctx.strokeStyle = "#fff"; fctx.fillStyle = "#fff";
+      fctx.lineCap = "round"; fctx.lineJoin = "round";
+      for (const s of strokes) drawStroke(fctx, s, 1, 2 * DILATE, -rect.x, -rect.y);
+
+      bctx.globalCompositeOperation = "destination-in";
+      bctx.drawImage(feather, 0, 0);
+      workCtx.drawImage(blend, rect.x, rect.y);
+
+      strokes = []; currentStroke = null; passes += 1;
+      redraw();
+      await refreshBaseBlob();
+      metaEl.textContent = `${workCanvas.width} × ${workCanvas.height} px · ${fmtKB(baseBlob.size)}`;
       await setupShare();
 
       const remaining = res.headers.get("X-Remaining-Credits");
       if (remaining) { creditsEl.textContent = `⚡ ${remaining} créditos restantes`; creditsEl.classList.add("show"); }
-      setStatus("¡Marca borrada! Descarga la foto, o pinta otra zona y repite para refinar.", "ok");
-      toast("✅ Zona borrada con IA");
+      setStatus("¡Zona reconstruida! Descarga la foto, o pinta otra zona y repite para refinar.", "ok");
+      toast("✅ Zona reconstruida con IA");
     } catch (err) {
       setStatus(err.message || "No se pudo procesar la imagen.", "err");
     } finally {
@@ -461,10 +526,10 @@
   });
 
   // ---------- Descargar / compartir ----------
-  const outName = () => `${baseName}-sin-marca.${(baseBlob?.type || "").includes("jpeg") ? "jpg" : "png"}`;
+  const outName = () => `${baseName}-sin-marca.${srcType === "image/png" ? "png" : "jpg"}`;
 
   dlBtn.addEventListener("click", () => {
-    if (!baseBlob || !processed) return;
+    if (!baseBlob || !passes) return;
     const url = URL.createObjectURL(baseBlob);
     const a = document.createElement("a");
     a.href = url; a.download = outName(); a.rel = "noopener";
@@ -492,8 +557,8 @@
   // ---------- Empezar de nuevo ----------
   resetBtn.addEventListener("click", () => {
     if (busy) return;
-    baseImg = null; originalImg = null; baseBlob = null;
-    strokes = []; currentStroke = null; passes = 0; processed = false; showingOriginal = false;
+    workCanvas = null; workCtx = null; originalCanvas = null; baseBlob = null;
+    strokes = []; currentStroke = null; passes = 0; showingOriginal = false;
     fileInput.value = "";
     editor.classList.remove("show");
     drop.style.display = "";
