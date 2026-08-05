@@ -14,6 +14,7 @@ Reglas rápidas:
 
 - Web estática + funciones serverless de Vercel.
 - `index.html` + `api/process/[tool].js` → LimpiaFotos (Clipdrop; clave en `CLIPDROP_API_KEY`).
+- `marcadeagua.html` → herramienta de quitar marcas de agua propias: el usuario pinta una máscara sobre la marca y se envía imagen + máscara al endpoint `cleanup` de `api/process/[tool].js` (Clipdrop Cleanup, modo quality); admite varias pasadas.
 - `clara.html` + `api/clara.js` → chat de CLARA (API de Claude; clave en `ANTHROPIC_API_KEY`).
 - La persona de Clara vive en `clara_persona.md` (canónica) y embebida en `api/clara.js` — **si cambias una, actualiza la otra**.
 - `escaparate.html` + `api/escaparate.js` → escaparate para la TV Samsung vertical del local: la API escrapea los inmuebles de www.asesoriacastresana.com y la página se muestra en vertical sin girar por defecto; con el mando (OK/Enter) o `?rot=90|270|0|180` se puede rotar y la elección queda guardada en la TV (también `?secs=N`, `?fuente=demo`).

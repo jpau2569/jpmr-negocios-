@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Quitar Marca de Agua — LimpiaFotos JPMR</title>
+<meta name="description" content="Borra marcas de agua de tus propias fotos (o de tus socios, con permiso) pintando encima: la IA reconstruye solo esa zona siguiendo la foto, sin deformar nada." />
+<meta name="theme-color" content="#070b18" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<link rel="icon" href='data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" rx="24" fill="%236c5ce7"/%3E%3Ctext x="50" y="68" font-size="52" text-anchor="middle"%3E%F0%9F%92%A7%3C/text%3E%3C/svg%3E' />
+<style>
+  :root{
+    --bg:#070b18; --fg:#eef2ff; --muted:#8b96b8; --muted-2:#5d6786;
+    --glass:rgba(255,255,255,.045); --glass-2:rgba(255,255,255,.07);
+    --stroke:rgba(255,255,255,.09); --stroke-2:rgba(255,255,255,.16);
+    --cyan:#22d3ee; --purple:#8b7cf7; --pink:#ff5c9d; --green:#2fe08d; --danger:#ff6b6b; --amber:#ffc857;
+    --r-lg:22px; --r-md:16px; --r-sm:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg); color:var(--fg); -webkit-font-smoothing:antialiased;
+    padding:28px 16px 80px; overflow-x:hidden;
+  }
+  .aurora{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+  .aurora span{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;animation:float 16s ease-in-out infinite}
+  .aurora span:nth-child(1){width:520px;height:520px;left:-140px;top:-160px;background:#5b3df0}
+  .aurora span:nth-child(2){width:460px;height:460px;right:-120px;top:-80px;background:#0e7490;animation-delay:-5s}
+  .aurora span:nth-child(3){width:420px;height:420px;left:35%;bottom:-220px;background:#9d174d;animation-delay:-10s;opacity:.35}
+  @keyframes float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(46px) scale(1.08)}}
+  @media (prefers-reduced-motion: reduce){.aurora span{animation:none}}
+
+  .wrap{max-width:980px;margin:0 auto}
+  header{text-align:center;margin-bottom:26px}
+  .logo{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:12.5px;letter-spacing:.14em;
+    background:linear-gradient(135deg,var(--purple),var(--cyan));padding:7px 16px;border-radius:999px;color:#fff;
+    box-shadow:0 8px 30px rgba(108,92,231,.35)}
+  h1{font-size:clamp(30px,6vw,46px);font-weight:900;margin:18px 0 8px;letter-spacing:-.02em;
+    background:linear-gradient(100deg,#dff6ff 10%,#9fe7f5 35%,#8b7cf7 70%,#ff5c9d 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  header p{color:var(--muted);font-size:15.5px;max-width:620px;margin:0 auto;line-height:1.55}
+
+  .card{background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r-lg);
+    padding:24px;margin-top:18px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    box-shadow:0 20px 60px rgba(0,0,0,.35)}
+
+  .banner{display:none;gap:12px;align-items:flex-start;background:rgba(255,200,87,.08);
+    border:1px solid rgba(255,200,87,.35);border-radius:var(--r-md);padding:14px 16px;margin-top:18px;
+    color:#ffe3a3;font-size:13.5px;line-height:1.6}
+  .banner.show{display:flex}
+  .banner code{background:rgba(255,255,255,.08);padding:2px 7px;border-radius:6px;font-size:12.5px}
+
+  .legal{display:flex;gap:10px;align-items:flex-start;background:rgba(34,211,238,.06);
+    border:1px solid rgba(34,211,238,.25);border-radius:var(--r-md);padding:12px 16px;margin-top:18px;
+    color:#a9e8f5;font-size:12.5px;line-height:1.6}
+
+  .step-label{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+  .step-label .n{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;
+    border-radius:8px;background:linear-gradient(135deg,var(--purple),var(--cyan));color:#fff;font-size:12px}
+
+  .drop{border:1.6px dashed var(--stroke-2);border-radius:var(--r-md);padding:38px 20px;
+    text-align:center;color:var(--muted);cursor:pointer;transition:.18s;background:rgba(255,255,255,.015)}
+  .drop:hover,.drop.drag{border-color:var(--cyan);color:var(--fg);background:rgba(34,211,238,.06);
+    box-shadow:inset 0 0 50px rgba(34,211,238,.05)}
+  .drop .big{font-size:34px;margin-bottom:10px}
+  .drop strong{color:var(--fg)}
+  .drop .hint{font-size:12.5px;margin-top:8px;color:var(--muted-2)}
+  kbd{background:rgba(255,255,255,.08);border:1px solid var(--stroke);border-radius:6px;padding:1px 7px;
+    font-family:inherit;font-size:11.5px}
+
+  /* ---- Editor ---- */
+  #editor{display:none;margin-top:8px}
+  #editor.show{display:block}
+  .toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;
+    background:rgba(0,0,0,.22);border:1px solid var(--stroke);border-radius:var(--r-md);padding:10px 14px}
+  .toolbar .lbl{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+  .toolbar input[type=range]{width:130px;accent-color:var(--cyan)}
+  .tbtn{font-family:inherit;cursor:pointer;background:rgba(255,255,255,.07);border:1px solid var(--stroke-2);
+    color:var(--fg);border-radius:10px;padding:8px 14px;font-size:12.5px;font-weight:700;transition:.15s;white-space:nowrap}
+  .tbtn:hover:not(:disabled){background:rgba(255,255,255,.12)}
+  .tbtn:disabled{opacity:.4;cursor:not-allowed}
+  .brush-preview{width:34px;height:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .brush-preview span{display:block;border-radius:50%;background:rgba(255,92,157,.6);border:1.5px solid var(--pink)}
+
+  .canvasbox{position:relative;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--stroke);
+    background-image:
+      linear-gradient(45deg,#1c2748 25%,transparent 25%),linear-gradient(-45deg,#1c2748 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#1c2748 75%),linear-gradient(-45deg,transparent 75%,#1c2748 75%);
+    background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0;background-color:#111a33;
+    display:flex;align-items:center;justify-content:center}
+  #canvas{display:block;max-width:100%;max-height:70vh;touch-action:none;cursor:crosshair}
+  .canvasbox.shimmer::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.09) 50%,transparent 70%);
+    background-size:220% 100%;animation:shimmer 1.3s linear infinite;pointer-events:none}
+  @keyframes shimmer{to{background-position:-220% 0}}
+  .meta{font-size:11.5px;color:var(--muted-2);margin-top:8px;min-height:14px}
+  .passchip{display:none;font-size:11.5px;color:var(--green);background:rgba(47,224,141,.1);
+    border:1px solid rgba(47,224,141,.3);padding:4px 12px;border-radius:999px;font-weight:700;margin-left:8px}
+  .passchip.show{display:inline-block}
+
+  .btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+  button.action{font-family:inherit;cursor:pointer;border:none;border-radius:14px;font-weight:800;font-size:15px;
+    padding:15px 24px;transition:.18s;display:inline-flex;align-items:center;gap:9px;letter-spacing:.01em}
+  button.action:disabled{opacity:.45;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+  .btn-primary{background:linear-gradient(135deg,#8b7cf7,#22d3ee);color:#061021;box-shadow:0 10px 30px rgba(108,92,231,.35)}
+  .btn-primary:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.08)}
+  .btn-download{background:linear-gradient(135deg,#2fe08d,#14b8a6);color:#04160e;box-shadow:0 10px 30px rgba(47,224,141,.28)}
+  .btn-download:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.07)}
+  button.action.btn-share{display:none;background:rgba(255,255,255,.07);border:1px solid var(--stroke-2);color:var(--fg)}
+  button.action.btn-share.show{display:inline-flex}
+  .btn-share:hover:not(:disabled){background:rgba(255,255,255,.12)}
+  .btn-ghost{background:transparent;border:1px solid var(--stroke-2);color:var(--muted)}
+  .btn-ghost:hover:not(:disabled){color:var(--fg);border-color:var(--fg)}
+  @media(max-width:640px){.btns{flex-direction:column}.btns button.action{justify-content:center}}
+  .spinner{width:16px;height:16px;border:2.5px solid rgba(6,16,33,.3);border-top-color:#061021;border-radius:50%;
+    animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .statusline{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;flex-wrap:wrap}
+  .status{font-size:14px;min-height:20px}
+  .status.err{color:var(--danger)}
+  .status.ok{color:var(--green)}
+  .chip{display:none;font-size:11.5px;color:var(--cyan);background:rgba(34,211,238,.1);
+    border:1px solid rgba(34,211,238,.3);padding:4px 12px;border-radius:999px;font-weight:700}
+  .chip.show{display:inline-block}
+
+  footer{text-align:center;color:var(--muted-2);font-size:12.5px;margin-top:34px;line-height:1.7}
+
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:#101b38;border:1px solid var(--stroke-2);color:var(--fg);padding:12px 20px;border-radius:14px;
+    font-size:13.5px;font-weight:600;pointer-events:none;transition:.28s;z-index:50;max-width:calc(100vw - 32px);
+    box-shadow:0 16px 50px rgba(0,0,0,.5)}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+
+<div class="wrap">
+  <header>
+    <span class="logo">✦ JPMR NEGOCIOS</span>
+    <h1>Quitar Marca de Agua</h1>
+    <p>Pinta encima de la marca de agua y la IA <strong>reconstruye esa zona siguiendo la propia foto</strong>: continúa la pared, el cielo o el suelo que hay debajo. Sin borrones, sin deformaciones, y el resto de la imagen queda intacto píxel a píxel.</p>
+    <p style="margin-top:12px"><a href="index.html" style="color:#9fe7f5;font-weight:700;text-decoration:none">← Volver a LimpiaFotos</a></p>
+  </header>
+
+  <div class="banner" id="banner">
+    <span style="font-size:18px">🔑</span>
+    <div>
+      <strong>Falta un paso de configuración:</strong> el servidor aún no tiene la clave de Clipdrop.
+      En Vercel entra en <em>tu proyecto → Settings → Environment Variables</em>, añade
+      <code>CLIPDROP_API_KEY</code> con tu clave de <a href="https://clipdrop.co/apis" target="_blank" rel="noopener" style="color:#ffe3a3">clipdrop.co/apis</a>
+      y pulsa <em>Redeploy</em>. Después recarga esta página.
+    </div>
+  </div>
+
+  <div class="legal">
+    <span style="font-size:16px">ℹ️</span>
+    <div>Esta herramienta es para fotos <strong>tuyas o de tus socios</strong> (con su permiso): tus propias marcas, logos de la agencia, sellos de colaboradores… No la uses con imágenes de terceros protegidas por derechos de autor.</div>
+  </div>
+
+  <div class="card">
+    <div class="step-label"><span class="n">1</span> Sube la foto con la marca de agua</div>
+    <div class="drop" id="drop" role="button" tabindex="0" aria-label="Subir foto">
+      <div class="big">💧</div>
+      <div><strong>Toca para elegir una foto</strong> o arrástrala aquí</div>
+      <div class="hint">También puedes pegarla con <kbd>Ctrl</kbd>+<kbd>V</kbd> · JPG, PNG o WebP · se conserva la resolución original</div>
+      <input type="file" id="file" accept="image/*" hidden />
+    </div>
+
+    <div id="editor">
+      <div class="step-label"><span class="n">2</span> Pinta sobre la marca de agua <span class="passchip" id="passchip"></span></div>
+      <div class="toolbar">
+        <span class="lbl">Pincel</span>
+        <input type="range" id="brush" min="8" max="120" value="36" aria-label="Tamaño del pincel" />
+        <span class="brush-preview"><span id="brushdot" style="width:17px;height:17px"></span></span>
+        <button class="tbtn" id="undo" type="button" disabled>↩️ Deshacer</button>
+        <button class="tbtn" id="clear" type="button" disabled>🗑️ Borrar marcas</button>
+        <button class="tbtn" id="compare" type="button" style="display:none">👁️ Mantén pulsado: ver original</button>
+      </div>
+      <div class="canvasbox" id="canvasbox">
+        <canvas id="canvas"></canvas>
+      </div>
+      <div class="meta" id="meta"></div>
+
+      <div class="btns">
+        <button class="action btn-primary" id="go" disabled type="button"><span id="go-label">🧽 Borrar lo marcado</span></button>
+        <button class="action btn-download" id="download" disabled type="button">⬇️ Descargar foto</button>
+        <button class="action btn-share" id="share" type="button">📤 Compartir / Guardar en galería</button>
+        <button class="action btn-ghost" id="reset" type="button">↺ Otra foto</button>
+      </div>
+
+      <div class="statusline">
+        <div class="status" id="status" role="status"></div>
+        <span class="chip" id="credits"></span>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Impulsado por Clipdrop AI (Cleanup) · Tus fotos se procesan al momento y no se almacenan.<br />
+    🎯 Consejo: cubre la marca entera con un poco de margen — la IA reconstruye mejor si no queda ningún borde de la marca sin pintar.<br />
+    💡 Si queda algún resto, vuelve a pintar encima y pulsa «Borrar lo marcado» otra vez: cada pasada refina el resultado.<br />
+    📱 En iPhone, si la descarga abre la imagen: mantén pulsado → «Guardar en Fotos».
+  </footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const drop = $("drop"), fileInput = $("file"), editor = $("editor");
+  const canvas = $("canvas"), ctx = canvas.getContext("2d");
+  const canvasbox = $("canvasbox");
+  const brushRange = $("brush"), brushDot = $("brushdot");
+  const undoBtn = $("undo"), clearBtn = $("clear"), compareBtn = $("compare");
+  const goBtn = $("go"), goLabel = $("go-label"), dlBtn = $("download"), shareBtn = $("share"), resetBtn = $("reset");
+  const statusEl = $("status"), creditsEl = $("credits"), metaEl = $("meta"), passChip = $("passchip");
+
+  // La clave de la calidad: trabajamos con la foto a alta resolución y a la IA
+  // solo le enviamos un RECORTE alrededor de la zona pintada. Así ve el máximo
+  // detalle para reconstruir, y el resto de la foto ni siquiera viaja: queda
+  // intacto píxel a píxel.
+  const MAX_DIM = 3072;   // lado máximo de la imagen de trabajo (≈ 9 MP)
+  const SEND_DIM = 2048;  // lado máximo del recorte que se envía a la IA
+  const DILATE = 8;       // px extra alrededor del trazo, para no dejar bordes de la marca
+  const FEATHER = 5;      // px de fundido al integrar la reconstrucción en la foto
+
+  let workCanvas = null, workCtx = null;  // imagen de trabajo a resolución completa
+  let originalCanvas = null;              // la foto tal como se subió (para comparar)
+  let dispScale = 1;                      // escala del lienzo visible respecto a la imagen
+  let srcType = "image/jpeg";
+  let baseName = "foto";
+  let baseBlob = null;       // imagen de trabajo codificada (descarga / compartir)
+  let strokes = [];          // [{size, points:[{x,y}...]}] en coordenadas de la imagen
+  let currentStroke = null;
+  let passes = 0;
+  let busy = false;
+  let showingOriginal = false;
+
+  function setStatus(msg, kind){ statusEl.textContent = msg || ""; statusEl.className = "status" + (kind ? " " + kind : ""); }
+  let toastTimer;
+  function toast(msg){
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+  }
+  const fmtKB = (bytes) => bytes > 1024*1024 ? (bytes/1024/1024).toFixed(1) + " MB" : Math.round(bytes/1024) + " KB";
+
+  function loadImage(blob){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("No se pudo leer la imagen.")); };
+      img.src = url;
+    });
+  }
+
+  const canvasToBlob = (c, type, q) => new Promise(res => c.toBlob(res, type, q));
+
+  // ---------- Pintado del lienzo visible ----------
+  function drawStroke(c, s, scale, extra, dx, dy){
+    const w = s.size * scale + (extra || 0);
+    const pts = s.points;
+    c.lineWidth = w;
+    if (pts.length === 1) {
+      c.beginPath();
+      c.arc((pts[0].x + (dx||0)) * scale, (pts[0].y + (dy||0)) * scale, w / 2, 0, Math.PI * 2);
+      c.fill();
+      return;
+    }
+    c.beginPath();
+    c.moveTo((pts[0].x + (dx||0)) * scale, (pts[0].y + (dy||0)) * scale);
+    for (let i = 1; i < pts.length; i++) c.lineTo((pts[i].x + (dx||0)) * scale, (pts[i].y + (dy||0)) * scale);
+    c.stroke();
+  }
+
+  function redraw(){
+    if (!workCanvas) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(showingOriginal && originalCanvas ? originalCanvas : workCanvas, 0, 0, canvas.width, canvas.height);
+    if (showingOriginal) return;
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,92,157,.55)";
+    ctx.fillStyle = "rgba(255,92,157,.55)";
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for (const s of strokes) drawStroke(ctx, s, dispScale, 0, 0, 0);
+    ctx.restore();
+  }
+
+  function syncCanvasSize(){
+    // El lienzo visible se limita a ~1800 px para que el pintado vaya fluido
+    // incluso en el móvil; la imagen de trabajo conserva su resolución.
+    dispScale = Math.min(1, 1800 / Math.max(workCanvas.width, workCanvas.height));
+    canvas.width = Math.round(workCanvas.width * dispScale);
+    canvas.height = Math.round(workCanvas.height * dispScale);
+  }
+
+  async function refreshBaseBlob(){
+    baseBlob = await canvasToBlob(workCanvas, srcType === "image/png" ? "image/png" : "image/jpeg", 0.95);
+  }
+
+  function syncButtons(){
+    const hasStrokes = strokes.length > 0;
+    undoBtn.disabled = !hasStrokes || busy;
+    clearBtn.disabled = !hasStrokes || busy;
+    goBtn.disabled = !hasStrokes || busy;
+    dlBtn.disabled = passes === 0 || busy;
+    compareBtn.style.display = passes > 0 ? "" : "none";
+    passChip.classList.toggle("show", passes > 0);
+    if (passes > 0) passChip.textContent = `✓ ${passes} pasada${passes > 1 ? "s" : ""} aplicada${passes > 1 ? "s" : ""}`;
+  }
+
+  // Coordenadas del puntero → coordenadas de la imagen de trabajo
+  function toImageCoords(e){
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left) / r.width * workCanvas.width,
+      y: (e.clientY - r.top) / r.height * workCanvas.height,
+    };
+  }
+  // El pincel se elige en píxeles de pantalla; lo convertimos a píxeles de imagen
+  function brushSizeImage(){
+    const r = canvas.getBoundingClientRect();
+    const scale = r.width ? workCanvas.width / r.width : 1;
+    return Number(brushRange.value) * scale;
+  }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    if (!workCanvas || busy || showingOriginal) return;
+    e.preventDefault();
+    canvas.setPointerCapture(e.pointerId);
+    currentStroke = { size: brushSizeImage(), points: [toImageCoords(e)] };
+    strokes.push(currentStroke);
+    redraw(); syncButtons();
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    if (!currentStroke) return;
+    e.preventDefault();
+    currentStroke.points.push(toImageCoords(e));
+    redraw();
+  });
+  const endStroke = () => { currentStroke = null; };
+  canvas.addEventListener("pointerup", endStroke);
+  canvas.addEventListener("pointercancel", endStroke);
+
+  brushRange.addEventListener("input", () => {
+    const s = Math.max(8, Math.min(30, Number(brushRange.value) * 0.45));
+    brushDot.style.width = s + "px"; brushDot.style.height = s + "px";
+  });
+
+  undoBtn.addEventListener("click", () => { strokes.pop(); redraw(); syncButtons(); });
+  clearBtn.addEventListener("click", () => { strokes = []; redraw(); syncButtons(); });
+
+  // Mantener pulsado para comparar con el original
+  function holdStart(e){ if (!originalCanvas || busy) return; e.preventDefault(); showingOriginal = true; redraw(); }
+  function holdEnd(){ if (!showingOriginal) return; showingOriginal = false; redraw(); }
+  compareBtn.addEventListener("pointerdown", holdStart);
+  ["pointerup","pointerleave","pointercancel"].forEach(ev => compareBtn.addEventListener(ev, holdEnd));
+
+  // ---------- Elegir foto ----------
+  async function pickFile(file){
+    if (!file || busy) return;
+    if (!file.type.startsWith("image/")) { setStatus("Ese archivo no es una imagen.", "err"); return; }
+    setStatus("Preparando la foto…");
+    try {
+      const img = await loadImage(file);
+      const scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+
+      workCanvas = document.createElement("canvas");
+      workCanvas.width = w; workCanvas.height = h;
+      workCtx = workCanvas.getContext("2d");
+      workCtx.drawImage(img, 0, 0, w, h);
+
+      originalCanvas = document.createElement("canvas");
+      originalCanvas.width = w; originalCanvas.height = h;
+      originalCanvas.getContext("2d").drawImage(workCanvas, 0, 0);
+
+      srcType = file.type === "image/png" ? "image/png" : "image/jpeg";
+      baseName = (file.name || "foto").replace(/\.[^.]+$/, "");
+      baseBlob = null;
+      strokes = []; currentStroke = null; passes = 0; showingOriginal = false;
+
+      syncCanvasSize(); redraw(); syncButtons();
+      metaEl.textContent = `${w} × ${h} px` + (scale < 1 ? " · ajustada a la resolución máxima de trabajo" : " · resolución original conservada");
+      editor.classList.add("show");
+      drop.style.display = "none";
+      creditsEl.classList.remove("show");
+      setStatus("Pinta sobre la marca de agua con el dedo o el ratón (cúbrela entera, con algo de margen).", "ok");
+      canvas.scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (err) {
+      setStatus(err.message || "No se pudo leer esa imagen.", "err");
+    }
+  }
+
+  drop.addEventListener("click", () => !busy && fileInput.click());
+  drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); } });
+  fileInput.addEventListener("change", (e) => pickFile(e.target.files[0]));
+  ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("drag"); }));
+  ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("drag"); }));
+  drop.addEventListener("drop", e => pickFile(e.dataTransfer.files[0]));
+  window.addEventListener("paste", (e) => {
+    const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
+    if (item && !workCanvas) { pickFile(item.getAsFile()); toast("📋 Imagen pegada"); }
+  });
+
+  // ---------- Recorte alrededor de lo pintado ----------
+  function strokesRect(){
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const s of strokes) {
+      const r = s.size / 2 + DILATE;
+      for (const p of s.points) {
+        minX = Math.min(minX, p.x - r); minY = Math.min(minY, p.y - r);
+        maxX = Math.max(maxX, p.x + r); maxY = Math.max(maxY, p.y + r);
+      }
+    }
+    // Margen de contexto: la IA necesita ver bien qué hay alrededor para
+    // continuar texturas, líneas y colores de la propia foto.
+    const pad = Math.max(180, 0.4 * Math.max(maxX - minX, maxY - minY));
+    const x = Math.max(0, Math.floor(minX - pad));
+    const y = Math.max(0, Math.floor(minY - pad));
+    const x2 = Math.min(workCanvas.width, Math.ceil(maxX + pad));
+    const y2 = Math.min(workCanvas.height, Math.ceil(maxY + pad));
+    return { x, y, w: x2 - x, h: y2 - y };
+  }
+
+  // Máscara del recorte: negro = conservar, blanco = reconstruir (binaria)
+  function buildCropMask(rect, sendScale){
+    const c = document.createElement("canvas");
+    c.width = Math.round(rect.w * sendScale); c.height = Math.round(rect.h * sendScale);
+    const m = c.getContext("2d");
+    m.fillStyle = "#000"; m.fillRect(0, 0, c.width, c.height);
+    m.strokeStyle = "#fff"; m.fillStyle = "#fff";
+    m.lineCap = "round"; m.lineJoin = "round";
+    for (const s of strokes) drawStroke(m, s, sendScale, 2 * DILATE * sendScale, -rect.x, -rect.y);
+
+    const data = m.getImageData(0, 0, c.width, c.height);
+    const px = data.data;
+    for (let i = 0; i < px.length; i += 4) {
+      const v = px[i] > 127 ? 255 : 0;
+      px[i] = px[i+1] = px[i+2] = v; px[i+3] = 255;
+    }
+    m.putImageData(data, 0, 0);
+    return c;
+  }
+
+  // ---------- Procesar: recorte + cleanup + integración con fundido ----------
+  goBtn.addEventListener("click", async () => {
+    if (!workCanvas || !strokes.length || busy) return;
+    busy = true; syncButtons(); goBtn.disabled = true; resetBtn.disabled = true;
+    goLabel.innerHTML = '<span class="spinner"></span> Reconstruyendo…';
+    canvasbox.classList.add("shimmer");
+    setStatus("La IA está reconstruyendo la zona marcada siguiendo la foto, unos segundos…");
+
+    try {
+      const rect = strokesRect();
+      const sendScale = Math.min(1, SEND_DIM / Math.max(rect.w, rect.h));
+
+      // Recorte de la imagen alrededor de la zona pintada, a máximo detalle
+      const crop = document.createElement("canvas");
+      crop.width = Math.round(rect.w * sendScale); crop.height = Math.round(rect.h * sendScale);
+      crop.getContext("2d").drawImage(workCanvas, rect.x, rect.y, rect.w, rect.h, 0, 0, crop.width, crop.height);
+
+      // Recortes pequeños viajan en PNG (sin pérdida); los grandes en JPEG de alta calidad
+      const usePng = crop.width * crop.height <= 1024 * 1024;
+      const cropBlob = await canvasToBlob(crop, usePng ? "image/png" : "image/jpeg", 0.95);
+      const maskBlob = await canvasToBlob(buildCropMask(rect, sendScale), "image/png");
+
+      const form = new FormData();
+      form.append("image_file", new File([cropBlob], usePng ? "recorte.png" : "recorte.jpg", { type: cropBlob.type }), usePng ? "recorte.png" : "recorte.jpg");
+      form.append("mask_file", new File([maskBlob], "mask.png", { type: "image/png" }), "mask.png");
+      form.append("mode", "quality");
+
+      const res = await fetch("/api/process/cleanup", { method: "POST", body: form });
+      if (!res.ok) {
+        let msg = `Error ${res.status}`;
+        try { const j = await res.json(); msg = j.error + (j.detail ? " — " + j.detail : ""); } catch (_) {}
+        throw new Error(msg);
+      }
+      const resultImg = await loadImage(await res.blob());
+
+      // Integración: del resultado solo tomamos la zona pintada (+ un fundido
+      // suave en el borde). Todo lo demás sigue siendo la foto original.
+      const blend = document.createElement("canvas");
+      blend.width = rect.w; blend.height = rect.h;
+      const bctx = blend.getContext("2d");
+      bctx.drawImage(resultImg, 0, 0, rect.w, rect.h);
+
+      const feather = document.createElement("canvas");
+      feather.width = rect.w; feather.height = rect.h;
+      const fctx = feather.getContext("2d");
+      if ("filter" in fctx) fctx.filter = `blur(${FEATHER}px)`;
+      fctx.strokeStyle = "#fff"; fctx.fillStyle = "#fff";
+      fctx.lineCap = "round"; fctx.lineJoin = "round";
+      for (const s of strokes) drawStroke(fctx, s, 1, 2 * DILATE, -rect.x, -rect.y);
+
+      bctx.globalCompositeOperation = "destination-in";
+      bctx.drawImage(feather, 0, 0);
+      workCtx.drawImage(blend, rect.x, rect.y);
+
+      strokes = []; currentStroke = null; passes += 1;
+      redraw();
+      await refreshBaseBlob();
+      metaEl.textContent = `${workCanvas.width} × ${workCanvas.height} px · ${fmtKB(baseBlob.size)}`;
+      await setupShare();
+
+      const remaining = res.headers.get("X-Remaining-Credits");
+      if (remaining) { creditsEl.textContent = `⚡ ${remaining} créditos restantes`; creditsEl.classList.add("show"); }
+      setStatus("¡Zona reconstruida! Descarga la foto, o pinta otra zona y repite para refinar.", "ok");
+      toast("✅ Zona reconstruida con IA");
+    } catch (err) {
+      setStatus(err.message || "No se pudo procesar la imagen.", "err");
+    } finally {
+      busy = false; resetBtn.disabled = false;
+      goLabel.textContent = "🧽 Borrar lo marcado";
+      canvasbox.classList.remove("shimmer");
+      syncButtons();
+    }
+  });
+
+  // ---------- Descargar / compartir ----------
+  const outName = () => `${baseName}-sin-marca.${srcType === "image/png" ? "png" : "jpg"}`;
+
+  dlBtn.addEventListener("click", () => {
+    if (!baseBlob || !passes) return;
+    const url = URL.createObjectURL(baseBlob);
+    const a = document.createElement("a");
+    a.href = url; a.download = outName(); a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast(`⬇️ Descargando «${outName()}»`);
+  });
+
+  async function setupShare(){
+    shareBtn.classList.remove("show");
+    if (!navigator.share || !navigator.canShare || !baseBlob) return;
+    try {
+      const f = new File([baseBlob], outName(), { type: baseBlob.type || "image/png" });
+      if (navigator.canShare({ files: [f] })) shareBtn.classList.add("show");
+    } catch (_) {}
+  }
+  shareBtn.addEventListener("click", async () => {
+    if (!baseBlob) return;
+    try {
+      const f = new File([baseBlob], outName(), { type: baseBlob.type || "image/png" });
+      await navigator.share({ files: [f], title: "Foto sin marca de agua — LimpiaFotos JPMR" });
+    } catch (_) { /* usuario canceló */ }
+  });
+
+  // ---------- Empezar de nuevo ----------
+  resetBtn.addEventListener("click", () => {
+    if (busy) return;
+    workCanvas = null; workCtx = null; originalCanvas = null; baseBlob = null;
+    strokes = []; currentStroke = null; passes = 0; showingOriginal = false;
+    fileInput.value = "";
+    editor.classList.remove("show");
+    drop.style.display = "";
+    metaEl.textContent = ""; creditsEl.classList.remove("show");
+    shareBtn.classList.remove("show");
+    setStatus("");
+    syncButtons();
+  });
+
+  // ---------- Comprobar configuración del servidor ----------
+  fetch("/api/health").then(r => r.json()).then(d => {
+    if (d && d.clipdropConfigured === false) $("banner").classList.add("show");
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>

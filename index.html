@@ -61,7 +61,8 @@
     border-radius:8px;background:linear-gradient(135deg,var(--purple),var(--cyan));color:#fff;font-size:12px}
 
   /* ---- Selector de herramienta ---- */
-  .tools{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .tools{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:900px){.tools{grid-template-columns:repeat(2,1fr)}}
   @media(max-width:640px){.tools{grid-template-columns:1fr}}
   .tool{position:relative;text-align:left;background:var(--glass);border:1px solid var(--stroke);
     border-radius:var(--r-md);padding:16px;cursor:pointer;transition:.18s;color:var(--fg);font-family:inherit}
@@ -200,6 +201,11 @@
         <h4>Mejorar resolución</h4>
         <p>Duplica el tamaño con más nitidez. Perfecto para fotos pequeñas o borrosas.</p>
       </button>
+      <a class="tool" href="marcadeagua.html" style="text-decoration:none;display:block">
+        <span class="ico">💧</span>
+        <h4>Quitar marca de agua</h4>
+        <p>Pinta sobre la marca y la IA la borra sin deformar la foto. Abre la herramienta →</p>
+      </a>
     </div>
 
     <div class="step-label" style="margin-top:26px"><span class="n">2</span> Sube tu foto</div>
@@ -286,7 +292,7 @@
   // ---------- Selección de herramienta ----------
   $("tools").addEventListener("click", (e) => {
     const btn = e.target.closest(".tool");
-    if (!btn || busy) return;
+    if (!btn || busy || !btn.dataset.tool) return;
     currentTool = btn.dataset.tool;
     document.querySelectorAll(".tool").forEach(t => t.classList.toggle("active", t === btn));
     if (selectedFile) setStatus("Herramienta cambiada. Pulsa «Procesar con IA».", "ok");
