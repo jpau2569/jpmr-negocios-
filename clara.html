@@ -557,6 +557,9 @@
       speak(texto);
     };
 
+    // Referencia a la burbuja de Clara mientras se genera, para poder retirarla
+    // si el streaming se corta a mitad (evita respuestas "huérfanas" en el DOM).
+    let assistantMsg = null;
     try {
       const res = await fetch("/api/clara", {
         method: "POST",
@@ -569,6 +572,7 @@
         // ---- Streaming: el texto va apareciendo según lo escribe Clara ----
         removeTyping();
         const bubble = addMessage("assistant", "");
+        assistantMsg = bubble.closest(".msg");
         let acc = "", finalReply = null, errorMsg = null;
         const reader = res.body.getReader();
         const dec = new TextDecoder();
@@ -615,6 +619,8 @@
         removeTyping();
         if (!res.ok) {
           deshacer(data.error || "Error al hablar con Clara (" + res.status + "). Tu mensaje sigue en el cuadro: reenvíalo cuando quieras.");
+        } else if (!data.reply) {
+          deshacer("Clara no llegó a responder. Tu mensaje sigue en el cuadro: reenvíalo.");
         } else {
           addMessage("assistant", data.reply);
           finaliza(data.reply);
@@ -622,7 +628,8 @@
       }
     } catch (err) {
       removeTyping();
-      deshacer("No hay conexión con el servidor. Tu mensaje sigue en el cuadro: comprueba la red y reenvíalo.");
+      if (assistantMsg) assistantMsg.remove(); // retira la respuesta a medias
+      deshacer("Se cortó la conexión mientras Clara respondía. Tu mensaje sigue en el cuadro: reenvíalo.");
     } finally {
       busy = false;
       sendEl.disabled = false;

@@ -12,6 +12,7 @@ import handler, { buscarEnPerplexity, calcular } from "../api/clara.js";
 import briefing from "../api/briefing.js";
 import memoria from "../api/memoria.js";
 import lead from "../api/lead.js";
+import leads from "../api/leads.js";
 import { parsearInmuebles, resumenCartera } from "../lib/cartera.js";
 import { SKILLS_BASE, catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
 
@@ -467,7 +468,13 @@ process.env.CRON_SECRET = "top-secreto";
 res = mockRes();
 await briefing({ method: "GET", headers: {} }, res);
 check("con CRON_SECRET y sin cabecera → 401", res.r.statusCode === 401);
+
+// Sin CRON_SECRET configurado, el briefing NO se sirve (evita URL pública).
 delete process.env.CRON_SECRET;
+res = mockRes();
+await briefing({ method: "GET", headers: {} }, res);
+check("sin CRON_SECRET configurado → 500", res.r.statusCode === 500);
+process.env.CRON_SECRET = "top-secreto";
 
 const claveAnthropic = process.env.ANTHROPIC_API_KEY;
 delete process.env.ANTHROPIC_API_KEY; // así el briefing usa el modo básico, sin IA
@@ -479,11 +486,17 @@ globalThis.fetch = async (url) => {
   throw new Error("fetch inesperado: " + u);
 };
 res = mockRes();
-await briefing({ method: "GET", headers: {} }, res);
-check("briefing → 200", res.r.statusCode === 200);
+await briefing({ method: "GET", headers: { authorization: "Bearer top-secreto" } }, res);
+check("briefing autorizado por cabecera → 200", res.r.statusCode === 200);
 check("briefing básico con la cartera real", (res.r.body?.briefing || "").includes("Briefing de Clara") && (res.r.body?.briefing || "").includes("2 inmuebles (1 en venta, 1 en alquiler)"), res.r.body?.briefing);
 check("sin Telegram configurado, enviado=false", res.r.body?.enviado === false);
+
+res = mockRes();
+await briefing({ method: "GET", headers: {}, query: { key: "top-secreto" } }, res);
+check("briefing autorizado por ?key= → 200", res.r.statusCode === 200);
+
 process.env.ANTHROPIC_API_KEY = claveAnthropic;
+delete process.env.CRON_SECRET;
 
 globalThis.fetch = realFetch;
 
@@ -518,6 +531,49 @@ res = mockRes();
 await lead({ method: "POST", body: { origen: "ebook-7-errores", nombre: "Pau", email: "pau@test.com", telefono: "600", tipo: "inversor" } }, res);
 check("alta de lead → 200", res.r.statusCode === 200 && res.r.body?.ok === true);
 check("el lead llegó a Supabase con sus datos", altasLead.some((a) => a.email_nuevo === "pau@test.com" && a.tipo_nuevo === "inversor" && a.origen_nuevo === "ebook-7-errores"));
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_ANON_KEY;
+globalThis.fetch = realFetch;
+
+// ---------------------------------------------------------------------------
+console.log("\n— api/leads.js (panel de leads) —");
+// ---------------------------------------------------------------------------
+res = mockRes();
+await leads({ method: "GET" }, res);
+check("GET → 405", res.r.statusCode === 405);
+
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_ANON_KEY;
+res = mockRes();
+await leads({ method: "POST", body: { clave: "x" } }, res);
+check("sin Supabase → 503", res.r.statusCode === 503);
+
+process.env.SUPABASE_URL = "https://test.supabase.co";
+process.env.SUPABASE_ANON_KEY = "anon-test";
+res = mockRes();
+await leads({ method: "POST", body: {} }, res);
+check("sin clave → 400", res.r.statusCode === 400);
+
+const LEADS_FALSOS = [
+  { id: 1, created_at: "2026-08-01T09:30:00Z", nombre: "Ana", email: "ana@test.com", origen: "ebook-7-errores", tipo: "propietario" },
+  { id: 2, created_at: "2026-08-02T10:00:00Z", nombre: "Luis", email: "luis@test.com", origen: "ebook-7-errores", tipo: "inversor" },
+];
+globalThis.fetch = async (url, init) => {
+  const u = String(url);
+  if (!u.includes("test.supabase.co/rest/v1/rpc/leads_lista")) throw new Error("fetch inesperado: " + u);
+  const { clave } = JSON.parse(init.body);
+  if (clave !== "buena") return new Response("clave incorrecta", { status: 401 });
+  return new Response(JSON.stringify(LEADS_FALSOS), { status: 200, headers: { "content-type": "application/json" } });
+};
+
+res = mockRes();
+await leads({ method: "POST", body: { clave: "mala" } }, res);
+check("clave incorrecta → 401", res.r.statusCode === 401);
+
+res = mockRes();
+await leads({ method: "POST", body: { clave: "buena" } }, res);
+check("clave correcta → 200 con la lista", res.r.statusCode === 200 && res.r.body?.total === 2 && res.r.body?.leads?.[0]?.email === "ana@test.com");
+
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_ANON_KEY;
 globalThis.fetch = realFetch;
