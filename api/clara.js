@@ -37,24 +37,38 @@ export async function buscarEnPerplexity(consulta) {
   const query = String(consulta || "").trim().slice(0, 2000);
   if (!query) return "No se recibió ninguna consulta de búsqueda.";
 
-  const resp = await fetch("https://api.perplexity.ai/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: PERPLEXITY_MODEL,
-      messages: [
-        {
-          role: "system",
-          content:
-            "Eres un buscador de información. Responde en español de España, con los datos más recientes y relevantes, indicando fechas cuando existan. Sé conciso y factual.",
-        },
-        { role: "user", content: query },
-      ],
-    }),
-  });
+  // Timeout: si Perplexity tarda demasiado, cancelamos para no colgar la respuesta.
+  const ctrl = new AbortController();
+  const alarma = setTimeout(() => ctrl.abort(), 20000);
+  let resp;
+  try {
+    resp = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: PERPLEXITY_MODEL,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Eres un buscador de información. Responde en español de España, con los datos más recientes y relevantes, indicando fechas cuando existan. Sé conciso y factual.",
+          },
+          { role: "user", content: query },
+        ],
+      }),
+    });
+  } catch (e) {
+    if (e?.name === "AbortError") {
+      return "La búsqueda con Perplexity tardó demasiado y se canceló. Inténtalo de nuevo o pega tú la información.";
+    }
+    return "No se pudo conectar con Perplexity: " + String(e?.message || e);
+  } finally {
+    clearTimeout(alarma);
+  }
 
   if (!resp.ok) {
     const detail = await resp.text().catch(() => "");
@@ -318,6 +332,13 @@ async function ejecutarHerramienta(tu, claveSync) {
   }
 }
 
+// Garantiza que el resultado de una herramienta sea SIEMPRE texto no vacío:
+// la API de Claude rechaza un tool_result con content null o cadena vacía.
+function textoHerramienta(x) {
+  const s = typeof x === "string" ? x : String(x ?? "");
+  return s.trim() ? s : "(sin resultado)";
+}
+
 const ESTADO_HERRAMIENTA = {
   buscar_web: "🔍 Buscando en Internet…",
   calcular: "🧮 Calculando…",
@@ -512,6 +533,8 @@ export default async function handler(req, res) {
 
   const RESPUESTA_RECHAZO =
     "Lo siento, Pau, no puedo ayudarte con eso. ¿Quieres que lo enfoquemos de otra manera?";
+  const RESPUESTA_LIMITE =
+    "Uf, esto me ha llevado demasiados pasos y no he conseguido cerrarlo. ¿Puedes reformular la pregunta o darme un poco más de contexto? Así lo resuelvo mejor.";
 
   try {
     const client = new Anthropic();
@@ -544,7 +567,7 @@ export default async function handler(req, res) {
             toolResults.push({
               type: "tool_result",
               tool_use_id: tu.id,
-              content: await ejecutarHerramienta(tu, claveSync),
+              content: textoHerramienta(await ejecutarHerramienta(tu, claveSync)),
             });
           }
           convo = [
@@ -557,8 +580,12 @@ export default async function handler(req, res) {
             emite({ t: "\n\n" });
           }
         }
-        const reply = completo.trim() || RESPUESTA_RECHAZO;
-        emite({ done: true, reply: response?.stop_reason === "refusal" && !completo.trim() ? RESPUESTA_RECHAZO : reply });
+        let reply;
+        if (completo.trim()) reply = completo.trim();
+        else if (response?.stop_reason === "refusal") reply = RESPUESTA_RECHAZO;
+        else if (response?.stop_reason === "tool_use") reply = RESPUESTA_LIMITE; // se agotaron las rondas
+        else reply = RESPUESTA_RECHAZO;
+        emite({ done: true, reply });
       } catch (e) {
         console.error("Error en streaming de /api/clara:", e);
         emite({ error: "Clara ha tenido un problema al responder (" + String(e?.status || e?.message || e) + "). Inténtalo de nuevo." });
@@ -576,7 +603,7 @@ export default async function handler(req, res) {
         toolResults.push({
           type: "tool_result",
           tool_use_id: tu.id,
-          content: await ejecutarHerramienta(tu, claveSync),
+          content: textoHerramienta(await ejecutarHerramienta(tu, claveSync)),
         });
       }
       // Se conserva response.content intacto (incluidos los bloques de thinking)
@@ -595,8 +622,14 @@ export default async function handler(req, res) {
       .join("\n")
       .trim();
 
-    if (response.stop_reason === "refusal" || !reply) {
+    if (response.stop_reason === "refusal") {
       return res.status(200).json({ reply: RESPUESTA_RECHAZO });
+    }
+    if (!reply) {
+      // Sin texto y aún pidiendo herramientas = se agotaron las rondas, no un rechazo.
+      return res.status(200).json({
+        reply: response.stop_reason === "tool_use" ? RESPUESTA_LIMITE : RESPUESTA_RECHAZO,
+      });
     }
 
     res.setHeader("Cache-Control", "no-store");

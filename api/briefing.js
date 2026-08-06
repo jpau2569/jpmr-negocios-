@@ -45,8 +45,18 @@ function briefingBasico(items, errores) {
 }
 
 export default async function handler(req, res) {
-  // Vercel Cron envía "Authorization: Bearer CRON_SECRET" si la variable existe.
-  if (process.env.CRON_SECRET && req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+  // El briefing SIEMPRE va protegido: sin CRON_SECRET no se sirve (evita que la
+  // URL sea pública y cualquiera gaste tokens de Anthropic o spamee el Telegram).
+  const secreto = process.env.CRON_SECRET;
+  if (!secreto) {
+    return res.status(500).json({
+      error: "El briefing no está protegido: define CRON_SECRET en Vercel → Settings → Environment Variables.",
+    });
+  }
+  // Autorizado por cabecera (Vercel Cron la envía sola) o por ?key= (para abrirlo tú en el navegador).
+  const porCabecera = req.headers.authorization === `Bearer ${secreto}`;
+  const porQuery = req.query && req.query.key === secreto;
+  if (!porCabecera && !porQuery) {
     return res.status(401).json({ error: "No autorizado." });
   }
 

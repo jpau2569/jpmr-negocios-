@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Leads · CLARA</title>
+<meta name="description" content="Panel privado de leads capturados por el embudo de Clara." />
+<meta name="theme-color" content="#070b18" />
+<meta name="robots" content="noindex, nofollow" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<link rel="icon" href='data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" rx="24" fill="%232fe08d"/%3E%3Ctext x="50" y="70" font-size="52" text-anchor="middle"%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E' />
+<style>
+  :root{
+    --bg:#070b18; --fg:#eef2ff; --muted:#8b96b8; --muted-2:#5d6786;
+    --glass:rgba(255,255,255,.045); --glass-2:rgba(255,255,255,.07);
+    --stroke:rgba(255,255,255,.09); --stroke-2:rgba(255,255,255,.16);
+    --cyan:#22d3ee; --purple:#8b7cf7; --pink:#ff5c9d; --green:#2fe08d; --danger:#ff6b6b;
+    --r-lg:22px; --r-md:16px; --r-sm:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased;padding:28px 16px 60px;min-height:100vh}
+  .aurora{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+  .aurora span{position:absolute;border-radius:50%;filter:blur(90px);opacity:.45;animation:float 16s ease-in-out infinite}
+  .aurora span:nth-child(1){width:520px;height:520px;left:-140px;top:-160px;background:#047857}
+  .aurora span:nth-child(2){width:460px;height:460px;right:-120px;top:-80px;background:#5b3df0;animation-delay:-5s}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(40px)}}
+  @media (prefers-reduced-motion: reduce){.aurora span{animation:none}}
+
+  .wrap{max-width:1000px;margin:0 auto}
+  header{text-align:center;margin-bottom:22px}
+  a.back{display:inline-block;color:var(--muted);font-size:12.5px;text-decoration:none;border:1px solid var(--stroke);
+    border-radius:999px;padding:6px 12px;background:var(--glass);margin-bottom:14px}
+  a.back:hover{color:var(--fg);border-color:var(--stroke-2)}
+  h1{font-size:clamp(24px,5vw,34px);font-weight:900;letter-spacing:-.02em;
+    background:linear-gradient(100deg,#dff6ff 10%,#7ff0c0 45%,#8b7cf7 90%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  header p{color:var(--muted);font-size:13.5px;margin-top:6px}
+
+  .card{background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r-lg);padding:22px;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  input[type=password],input[type=text]{flex:1;min-width:200px;border:1px solid var(--stroke);background:var(--glass);
+    color:var(--fg);border-radius:var(--r-md);padding:12px 14px;font-size:14px;font-family:inherit;outline:none}
+  input:focus{border-color:var(--green)}
+  button{border:none;cursor:pointer;border-radius:var(--r-md);padding:12px 18px;font-weight:800;font-size:14px;
+    font-family:inherit;color:#04231a;background:linear-gradient(135deg,var(--green),var(--cyan));transition:.15s}
+  button:hover:not(:disabled){transform:translateY(-1px)}
+  button:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  button.ghost{background:var(--glass);color:var(--muted);border:1px solid var(--stroke)}
+  button.ghost:hover{color:var(--fg)}
+  label.check{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12.5px;cursor:pointer}
+
+  .msg{margin-top:14px;font-size:13.5px;line-height:1.5}
+  .msg.err{color:#ffb3b3}
+  .msg.ok{color:var(--green)}
+
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:18px 0 10px}
+  .count{font-weight:800;font-size:15px}
+  .count span{color:var(--green)}
+  .search{flex:1;min-width:160px}
+
+  .tablewrap{overflow-x:auto;border:1px solid var(--stroke);border-radius:var(--r-md);margin-top:6px}
+  table{border-collapse:collapse;width:100%;font-size:13px;min-width:560px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--stroke);white-space:nowrap;vertical-align:top}
+  th{position:sticky;top:0;background:#0d1428;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;
+    font-size:11px;font-weight:800}
+  tr:hover td{background:rgba(255,255,255,.03)}
+  td.email{color:var(--cyan)}
+  .empty{padding:26px;text-align:center;color:var(--muted-2)}
+</style>
+</head>
+<body>
+<div class="aurora"><span></span><span></span></div>
+
+<div class="wrap">
+  <header>
+    <a class="back" href="clara.html">← Volver a Clara</a>
+    <h1>📈 Leads del embudo</h1>
+    <p>Panel privado. Solo tú, con tu clave de sincronización, puedes ver estos datos.</p>
+  </header>
+
+  <div class="card" id="loginCard">
+    <div class="row">
+      <input type="password" id="clave" placeholder="Clave de sincronización (la misma de la 🧠 memoria)" autocomplete="current-password" />
+      <button id="entrar">Ver leads</button>
+    </div>
+    <label class="check" style="margin-top:12px">
+      <input type="checkbox" id="recordar" /> Recordar la clave en este dispositivo
+    </label>
+    <div class="msg" id="estado"></div>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="toolbar">
+      <div class="count">Total: <span id="total">0</span> leads</div>
+      <input type="text" class="search" id="buscar" placeholder="Filtrar (nombre, email…)" />
+      <button class="ghost" id="exportar">⬇ CSV</button>
+      <button class="ghost" id="recargar">↻ Recargar</button>
+      <button class="ghost" id="salir">Salir</button>
+    </div>
+    <div class="tablewrap"><table id="tabla"><thead></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<script>
+  const CLAVE_KEY = "clara_leads_clave_v1";
+  const claveEl = document.getElementById("clave");
+  const recordarEl = document.getElementById("recordar");
+  const entrarEl = document.getElementById("entrar");
+  const estadoEl = document.getElementById("estado");
+  const loginCard = document.getElementById("loginCard");
+  const panel = document.getElementById("panel");
+  const totalEl = document.getElementById("total");
+  const buscarEl = document.getElementById("buscar");
+  const tabla = document.getElementById("tabla");
+
+  let leads = [];
+  let columnas = [];
+
+  const ETIQUETAS = {
+    created_at: "Fecha", fecha: "Fecha", creado: "Fecha",
+    nombre: "Nombre", name: "Nombre",
+    email: "Email", correo: "Email",
+    telefono: "Teléfono", phone: "Teléfono",
+    origen: "Origen", source: "Origen",
+    tipo: "Tipo", id: "ID",
+  };
+  const ORDEN = ["created_at", "fecha", "creado", "nombre", "name", "email", "correo", "telefono", "phone", "origen", "source", "tipo", "id"];
+
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function formatoValor(clave, v) {
+    if (v == null) return "";
+    if (/fecha|created|creado/i.test(clave)) {
+      const d = new Date(v);
+      if (!isNaN(d)) return d.toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" });
+    }
+    return String(v);
+  }
+
+  function calcularColumnas(filas) {
+    const set = new Set();
+    filas.forEach((f) => f && typeof f === "object" && Object.keys(f).forEach((k) => set.add(k)));
+    const todas = [...set];
+    const orden = (k) => { const i = ORDEN.indexOf(k); return i === -1 ? 999 : i; };
+    return todas.sort((a, b) => orden(a) - orden(b) || a.localeCompare(b));
+  }
+
+  function pinta(filtro) {
+    const q = (filtro || "").toLowerCase().trim();
+    const filas = q
+      ? leads.filter((l) => Object.values(l).some((v) => String(v ?? "").toLowerCase().includes(q)))
+      : leads;
+
+    const thead = "<tr>" + columnas.map((c) => "<th>" + escapeHtml(ETIQUETAS[c] || c) + "</th>").join("") + "</tr>";
+    tabla.querySelector("thead").innerHTML = thead;
+
+    const tbody = tabla.querySelector("tbody");
+    if (!filas.length) {
+      tbody.innerHTML = '<tr><td class="empty" colspan="' + Math.max(1, columnas.length) + '">' +
+        (leads.length ? "Ningún lead coincide con el filtro." : "Aún no hay leads capturados.") + "</td></tr>";
+      return;
+    }
+    tbody.innerHTML = filas.map((l) =>
+      "<tr>" + columnas.map((c) => {
+        const clase = /email|correo/i.test(c) ? ' class="email"' : "";
+        return "<td" + clase + ">" + escapeHtml(formatoValor(c, l[c])) + "</td>";
+      }).join("") + "</tr>"
+    ).join("");
+  }
+
+  async function cargar(clave) {
+    estadoEl.className = "msg";
+    estadoEl.textContent = "Cargando…";
+    entrarEl.disabled = true;
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clave }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        estadoEl.className = "msg err";
+        estadoEl.textContent = data.error || ("No se pudo cargar (" + res.status + ").");
+        return;
+      }
+      leads = Array.isArray(data.leads) ? data.leads : [];
+      columnas = calcularColumnas(leads);
+      totalEl.textContent = leads.length;
+      pinta(buscarEl.value);
+      loginCard.style.display = "none";
+      panel.style.display = "block";
+      if (recordarEl.checked) { try { localStorage.setItem(CLAVE_KEY, clave); } catch {} }
+    } catch (e) {
+      estadoEl.className = "msg err";
+      estadoEl.textContent = "Sin conexión con el servidor. Inténtalo de nuevo.";
+    } finally {
+      entrarEl.disabled = false;
+    }
+  }
+
+  entrarEl.addEventListener("click", () => {
+    const clave = claveEl.value.trim();
+    if (!clave) { estadoEl.className = "msg err"; estadoEl.textContent = "Escribe tu clave de sincronización."; return; }
+    cargar(clave);
+  });
+  claveEl.addEventListener("keydown", (e) => { if (e.key === "Enter") entrarEl.click(); });
+  buscarEl.addEventListener("input", () => pinta(buscarEl.value));
+  document.getElementById("recargar").addEventListener("click", () => cargar(claveEl.value.trim()));
+  document.getElementById("salir").addEventListener("click", () => {
+    try { localStorage.removeItem(CLAVE_KEY); } catch {}
+    claveEl.value = ""; leads = []; panel.style.display = "none"; loginCard.style.display = "block";
+    estadoEl.textContent = "";
+  });
+
+  document.getElementById("exportar").addEventListener("click", () => {
+    if (!leads.length) return;
+    const esc = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+    const csv = [columnas.map((c) => esc(ETIQUETAS[c] || c)).join(",")]
+      .concat(leads.map((l) => columnas.map((c) => esc(formatoValor(c, l[c]))).join(",")))
+      .join("\r\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "leads-clara.csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // Clave recordada: entra directo.
+  try {
+    const guardada = localStorage.getItem(CLAVE_KEY);
+    if (guardada) { claveEl.value = guardada; recordarEl.checked = true; cargar(guardada); }
+  } catch {}
+</script>
+</body>
+</html>
