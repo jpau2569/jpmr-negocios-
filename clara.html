@@ -160,6 +160,16 @@
   #send:hover:not(:disabled){transform:translateY(-1px)}
   #send:disabled{opacity:.5;cursor:not-allowed;transform:none}
   .hint{max-width:820px;margin:6px auto 0;color:var(--muted-2);font-size:11.5px;text-align:center}
+
+  /* ---- Rostro de Clara (avatar visual) ---- */
+  .claraface{width:78px;height:78px;border-radius:50%;object-fit:cover;object-position:center 22%;
+    display:block;margin:4px auto 2px;border:2px solid rgba(255,92,157,.5);
+    box-shadow:0 8px 30px rgba(255,92,157,.30);transition:box-shadow .2s,transform .2s}
+  .claraface.speaking{border-color:var(--pink);
+    box-shadow:0 0 0 4px rgba(255,92,157,.18),0 0 26px rgba(255,92,157,.55);
+    animation:claraPulse 1s ease-in-out infinite}
+  @keyframes claraPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+  @media (prefers-reduced-motion: reduce){.claraface.speaking{animation:none}}
 </style>
 </head>
 <body>
@@ -173,6 +183,8 @@
     <button class="tbtn" id="export" title="Descarga la conversación como archivo Markdown">⬇ Exportar</button>
     <button class="tbtn" id="reset" title="Borra esta conversación y empieza de cero">🗑 Nueva</button>
   </div>
+  <img class="claraface" id="claraFace" src="clara-rostro.jpg" alt="Rostro de Clara"
+       onerror="this.style.display='none'" />
   <div class="logo">💬 CLARA IA</div>
   <h1>Clara, tu asistente IA avatar</h1>
   <p>Asesora laboral · Profesora · Psicóloga · Ingeniera · Investigadora · Inmobiliaria</p>
@@ -282,16 +294,35 @@
       .replace(/\s+/g, " ")
       .trim();
   }
+  // Rostro de Clara: se ilumina mientras habla (si la imagen existe).
+  const claraFaceEl = document.getElementById("claraFace");
+  function faceSpeak(on) { if (claraFaceEl) claraFaceEl.classList.toggle("speaking", !!on); }
+  // Elige la mejor voz femenina en español disponible en el navegador.
+  function pickSpanishVoice() {
+    const voces = speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().startsWith("es"));
+    if (!voces.length) return null;
+    const pref = ["mónica","monica","paulina","elvira","helena","laura","sabina","esperanza","marisol","lucia","google español"];
+    for (const name of pref) {
+      const m = voces.find((v) => v.name && v.name.toLowerCase().includes(name));
+      if (m) return m;
+    }
+    return voces.find((v) => v.lang.toLowerCase() === "es-es") || voces[0];
+  }
   function speak(text) {
     if (!voiceOn || !speechOK) return;
     const t = toTexto(text);
     if (!t) return;
     speechSynthesis.cancel();
+    faceSpeak(false);
     const u = new SpeechSynthesisUtterance(t);
     u.lang = "es-ES";
-    const voz = speechSynthesis.getVoices().find((v) => v.lang && v.lang.startsWith("es"));
+    const voz = pickSpanishVoice();
     if (voz) u.voice = voz;
     u.rate = 1.02;
+    u.pitch = 1.05;
+    u.onstart = () => faceSpeak(true);
+    u.onend = () => faceSpeak(false);
+    u.onerror = () => faceSpeak(false);
     speechSynthesis.speak(u);
   }
   if (speechOK) {
@@ -301,7 +332,7 @@
       voiceOn = !voiceOn;
       try { localStorage.setItem(VOICE_KEY, voiceOn ? "1" : "0"); } catch {}
       renderVoiceBtn();
-      if (!voiceOn) speechSynthesis.cancel();
+      if (!voiceOn) { speechSynthesis.cancel(); faceSpeak(false); }
     });
   }
 
