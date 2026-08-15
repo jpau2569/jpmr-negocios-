@@ -1,0 +1,13 @@
+.splash {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.text {
+  font-size: var(--fs-sm);
+  color: var(--text-faint);
+}

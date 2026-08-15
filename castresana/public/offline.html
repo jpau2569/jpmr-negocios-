@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sin conexión · Castresana</title>
+  <style>
+    :root {
+      --bg: #100E0C;
+      --surface: #1B1613;
+      --border: rgba(241, 235, 223, 0.11);
+      --text: #F1EBDF;
+      --muted: #8A7D68;
+      --accent: #B87A48;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 24px;
+    }
+    .card {
+      max-width: 380px;
+      text-align: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 40px 32px;
+    }
+    svg { margin: 0 auto 20px; display: block; }
+    h1 {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 10px;
+    }
+    p { color: var(--muted); font-size: 0.9rem; line-height: 1.55; margin-bottom: 24px; }
+    button {
+      font: inherit;
+      color: #1A120B;
+      background: var(--accent);
+      border: none;
+      border-radius: 9px;
+      padding: 10px 22px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(1.08); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <svg width="44" height="44" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <path d="M31 9.5A15 15 0 1 0 31 30.5" stroke="#B87A48" stroke-width="2" stroke-linecap="round"/>
+      <path d="M13.5 21.5 20 15l6.5 6.5M20 15v11.5" stroke="#F1EBDF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h1>Sin conexión</h1>
+    <p>No hay acceso a Internet ahora mismo. Tus datos volverán a sincronizarse en cuanto se recupere la conexión.</p>
+    <button onclick="location.reload()">Reintentar</button>
+  </main>
+</body>
+</html>

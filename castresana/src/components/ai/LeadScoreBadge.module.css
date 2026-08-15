@@ -1,0 +1,43 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 21px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.compact { padding: 0 7px; }
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+  flex: none;
+}
+
+.value { font-variant-numeric: tabular-nums; }
+
+.label { font-weight: var(--fw-medium); }
+
+.caliente {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 13%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+.templado {
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 13%, transparent);
+  border-color: color-mix(in srgb, var(--warning) 30%, transparent);
+}
+.frio {
+  color: var(--info);
+  background: color-mix(in srgb, var(--info) 13%, transparent);
+  border-color: color-mix(in srgb, var(--info) 30%, transparent);
+}
