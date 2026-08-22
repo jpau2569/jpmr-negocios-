@@ -62,7 +62,7 @@ Embeddings, búsqueda semántica, citas, control de acceso. Además: landing, gu
 
 - [x] Diagnóstico de 15 preguntas
 - [x] Plan de 18 semanas aprobado por Pau
-- [ ] **Sesión 1 (Fase 1) — EN CURSO**: crear repo `curso-fullstack-castresana` + primera función TypeScript tipada `filtrarPorPresupuesto` (filtrar leads por presupuesto mínimo). Verificación esperada: `npx tsx src/leads.ts` muestra solo María y Lucía. Commit sugerido: `feat: add lead filtering by minimum budget with typed Lead model`.
+- [x] **Sesión 1 (Fase 1) — SUPERADA (22/08/2026)**: repo local `curso-fullstack-castresana` creado (Git + TS strict + tsx), y Pau escribió su primera función tipada: `filtrarPorPresupuesto` con `.filter()` y `lead.presupuesto >= minimo`. **Evidencia verificada**: `npx tsx src/leads.ts` devolvió solo María y Lucía. Aprendizajes extra de la sesión (depuración real): terminal vs editor, `cd` y el prompt como brújula, leer la primera línea del error, verificar con `cat`/`ls` antes de suponer. Pendiente no bloqueante: subir el repo a GitHub (bloqueado por el 2FA de GitHub) y dejar VS Code operativo para la Sesión 2.
 - [ ] Fase 1 completada
 - [ ] Fase 2 completada
 - [ ] Fase 3 completada
@@ -70,6 +70,6 @@ Embeddings, búsqueda semántica, citas, control de acceso. Además: landing, gu
 - [ ] Fase 5 completada (Proyecto 2: Analizador documental)
 - [ ] Fase 6 completada (Proyecto 3: RAG + venta)
 
-**Próxima acción de la Sesión 1:** Pau ejecuta los comandos de arranque, escribe él la función (con pistas, sin solución), pega la salida de la terminal como evidencia, y registra la sesión en `docs/progress.md`.
+**Próxima acción (Sesión 2):** `map` y `sort` — ordenar los leads por presupuesto y transformarlos (p. ej. sacar solo los nombres). Antes de empezar: dejar VS Code operativo (Spotlight o instalación guiada) para jubilar los pegados por terminal.
 
 *El progreso sesión a sesión vive en `curso-fullstack-castresana/docs/progress.md`; este archivo guarda el plan maestro y el estado por fases.*
