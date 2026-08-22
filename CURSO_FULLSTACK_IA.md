@@ -1,76 +1,75 @@
 # 🎓 Curso Full Stack con IA — Asesoría Castresana
 
-> Curso personal de Pau Moralejo, con Clara como profesora. Objetivo: que Pau entienda y domine **todo lo que ya tiene construido** (Clara, LimpiaFotos, el embudo del ebook, el escaparate) y sea capaz de **crear sus propias apps de principio a fin usando la IA como copiloto**.
+> Curso personal de Pau Moralejo, con Clara como profesora. **Plan aprobado por Pau** (diagnóstico de 15 preguntas completado). Ritmo real: **14 h/semana, tardes y fines de semana**. Duración: **18 semanas** — el calendario se adapta a la evidencia, no al revés.
 >
-> Método: cada módulo tiene ① explicación clara y simple, ② práctica sobre TUS proyectos reales, ③ cómo hacerlo con IA (Claude) para ir 10× más rápido. Nada de teoría vacía.
+> Matiz de Pau: profesor cercano, explicaciones fáciles, y todo lo que se construya debe ser **útil y aprovechable para Castresana desde el día 1**. La IA se usa como herramienta de aprendizaje, no como muleta.
 >
-> Ritmo sugerido: 1 módulo por semana (30-60 min al día). Se avanza diciendo: **"Clara, dame la lección X.Y"**.
+> Para retomar en cualquier sesión: **"Clara, ¿por dónde íbamos del curso?"** — leer este archivo y el `docs/progress.md` del repo `curso-fullstack-castresana`.
 
 ---
 
-## Mapa del curso (9 módulos)
+## Mapa de competencias (del diagnóstico)
 
-### Módulo 0 — El mapa del territorio 🗺️ (1 sesión)
-Qué es "full stack": frontend (lo que se ve), backend (lo que piensa), base de datos (lo que se recuerda) y despliegue (lo que lo pone en Internet). Dónde encaja cada pieza de TUS proyectos en ese mapa.
-- **Práctica:** dibujar el mapa de Clara: `clara.html` (frontend) → `api/clara.js` (backend) → Supabase (datos) → Vercel (despliegue).
-- **Con IA:** cómo pedirle a Claude que te explique cualquier archivo de tu repo.
+**Ya tiene (aprovechable):** entorno montado (macOS, VS Code, terminal, GitHub) · experiencia real con Firebase (Auth/Storage → suavizará Supabase) · ha llamado APIs de IA desde código · conoce su negocio y su flujo real de leads (WhatsApp, Instagram, TikTok, Inmoweb).
 
-### Módulo 1 — HTML y CSS: lo que se ve 🎨 (1-2 semanas)
-Etiquetas, estructura, estilos, flexbox/grid, diseño responsive (móvil primero), fuentes y colores de marca.
-- **Práctica:** leer `ebook.html` por bloques y hacer TÚ una landing sencilla para un inmueble real de tu cartera (sin IA primero; luego mejorarla con IA).
-- **Con IA:** el prompt perfecto para pedir páginas ("estructura + estilo + marca Castresana").
+**A construir desde la base:** React y hooks (prioridad nº 1) · SQL y bases relacionales (solo conoce NoSQL) · TypeScript escrito por él · depuración metódica (hipótesis → evidencia, no "pruebo al azar").
 
-### Módulo 2 — JavaScript: lo que se mueve ⚡ (2 semanas)
-Variables, funciones, eventos (clic, teclado), modificar la página (DOM), `fetch` para hablar con servidores, JSON.
-- **Práctica:** entender el chat de `clara.html`: qué pasa cuando pulsas "Enviar" (evento → fetch → respuesta → pintar burbuja). Añadir tú un botón nuevo pequeño.
-- **Con IA:** depurar errores de consola pegándoselos a Claude.
+**Se refuerza con práctica:** JavaScript (filter, map, funciones) · Git con ramas y PRs · consumo de APIs.
 
-### Módulo 3 — Backend: lo que piensa 🧠 (2 semanas)
-Qué es un servidor, qué es una API, funciones serverless de Vercel, peticiones GET/POST, variables de entorno (por qué las claves NUNCA van en el navegador).
-- **Práctica:** leer `api/lead.js` (el más corto) línea a línea; luego `api/clara.js` por secciones. Crear tu primera función propia: `api/hola.js` que devuelva un saludo con tu nombre.
-- **Con IA:** pedir endpoints seguros ("valida la entrada, clave en variable de entorno, mensajes de error claros").
+**Riesgos detectados y antídotos:**
+1. Dependencia de la IA para resolver sin entender → cada sesión incluye un reto que Pau resuelve ANTES de ver la solución.
+2. Abandono por frustración → sesiones cortas con resultado visible siempre.
+3. Copiar código sin poder repararlo → la evidencia de verificación es obligatoria para avanzar.
 
-### Módulo 4 — Bases de datos: lo que se recuerda 🗄️ (1-2 semanas)
-Tablas, filas y columnas. SQL básico (select, insert, where, order by). Supabase: qué es, RLS y por qué tus funciones RPC validan la clave.
-- **Práctica:** en TU Supabase real: ver la tabla `clara_leads`, hacer un select, entender `lead_guarda` y `leads_lista` (¡las que ya usamos juntos!).
-- **Con IA:** pedir consultas SQL en lenguaje natural y entenderlas antes de ejecutarlas.
-
-### Módulo 5 — APIs de IA: el superpoder 🤖 (2 semanas)
-Cómo se habla con Claude por API (mensajes, system prompt, herramientas/tools), qué son los tokens y cuánto cuesta, streaming, y cómo Clara usa Perplexity para buscar.
-- **Práctica:** leer el system prompt de Clara en `api/clara.js` y modificar UNA cosa pequeña de su personalidad. Entender el bucle de herramientas (buscar_web → resultado → respuesta).
-- **Con IA:** diseñar tu propio mini-asistente para un caso Castresana (p. ej. "respondedor de dudas de arras").
-
-### Módulo 6 — Git y GitHub: la máquina del tiempo ⏳ (1 semana)
-Qué es un repositorio, commit, rama, pull request, merge. Por qué nunca se pierde nada. GitHub como centro de todo.
-- **Práctica:** mirar el historial real de tu repo (todo lo que hemos hecho juntos está ahí); hacer tu primer commit propio (retocar un texto de `CLARA.md`).
-- **Con IA:** dejar que Claude haga los commits pero entendiendo qué está pasando.
-
-### Módulo 7 — Despliegue: ponerlo en el mundo 🚀 (1 semana)
-Vercel: proyectos, despliegues automáticos al hacer push, variables de entorno, dominios, crons. Costes reales.
-- **Práctica:** LA GRANDE — desplegar Clara de verdad (el paso que tenemos pendiente) entendiendo cada clic. Al terminar este módulo, Clara estará viva y sabrás exactamente por qué funciona.
-- **Con IA:** leer logs de errores de despliegue y arreglarlos.
-
-### Módulo 8 — Proyecto final: tu app de cero 🏆 (2-3 semanas)
-Con todo lo aprendido: construir TÚ (con Clara de copilota, no de piloto) una app nueva completa para el negocio. Ideas: calculadora de gastos de compraventa para clientes, agenda de visitas, valorador orientativo con captura de leads.
-- **Entrega:** app desplegada en Vercel, con su repositorio, su base de datos si la necesita, y funcionando en tu móvil.
+**Regla de oro sobre la IA:** se pueden preguntar dudas de concepto ("¿qué hace filter?"), pero no pedir la solución entera. Esa diferencia es la diferencia entre aprender y copiar.
 
 ---
 
-## Reglas del curso (las de Clara)
-1. **Nunca copiar sin entender.** La IA escribe rápido; tú decides y compruebas. Cada lección termina con 2-3 preguntas de comprobación.
-2. **Errores = oro.** Cada error real de tus proyectos es una lección gratis.
-3. **Proyectos reales siempre.** Nada de "todo lists" de juguete: todo se practica sobre Castresana.
-4. **Ritmo honesto.** Si una semana no puedes, el curso te espera. Se retoma con "Clara, ¿por dónde íbamos del curso?".
+## Plan de 18 semanas (6 fases)
 
-## Progreso
-- [ ] Módulo 0 — El mapa del territorio
-- [ ] Módulo 1 — HTML y CSS
-- [ ] Módulo 2 — JavaScript
-- [ ] Módulo 3 — Backend
-- [ ] Módulo 4 — Bases de datos
-- [ ] Módulo 5 — APIs de IA
-- [ ] Módulo 6 — Git y GitHub
-- [ ] Módulo 7 — Despliegue
-- [ ] Módulo 8 — Proyecto final
+### Fase 1 — Fundamentos que faltan (semanas 1-3)
+JavaScript/TypeScript real (funciones, arrays, tipos), Git con ramas y PRs, depuración metódica.
+- **Entregable:** mini-app de consola en TS que filtra y ordena leads ficticios, con repo, ramas y commits correctos.
+- **Criterio de cierre:** escribe la función de filtrado sin ayuda.
 
-*Última actualización: al crear el curso. Clara marca las casillas según avanzas.*
+### Fase 2 — React y Next.js (semanas 4-6)
+Componentes, useState, useEffect, formularios, Tailwind.
+- **Entregable:** interfaz del CRM (lista de leads, filtros, formulario de alta) con datos en memoria, desplegada en Vercel por Pau.
+- **Criterio de cierre:** añade un campo nuevo al formulario sin ayuda.
+
+### Fase 3 — Base de datos y Supabase (semanas 7-9)
+SQL desde cero, PostgreSQL, tablas relacionales, Supabase Auth y RLS.
+- **Entregable:** el CRM con datos reales persistentes, login y permisos.
+- **Criterio de cierre:** escribe un SELECT con JOIN y explica una política RLS.
+
+### Fase 4 — CRM completo (semanas 10-12)
+Inmuebles, clientes, tareas, estados, panel de métricas, primeros tests, README profesional.
+- **Entregable:** **Proyecto 1** terminado y en uso real en Castresana. Hito de evaluación práctica.
+
+### Fase 5 — Analizador documental con IA (semanas 13-15)
+Subida segura de PDFs, extracción estructurada con validación Zod, revisión humana, control de costes.
+- **Entregable:** **Proyecto 2** funcionando con documentos ficticios.
+
+### Fase 6 — Asistente RAG + venta (semanas 16-18)
+Embeddings, búsqueda semántica, citas, control de acceso. Además: landing, guion de demo de 3 minutos y propuesta comercial.
+- **Entregable:** **Proyecto 3** + material de venta listo para el horizonte de 6-10 meses.
+
+**Revisiones:** informe semanal cada domingo y evaluación práctica al cierre de cada fase. Si una fase necesita más tiempo, se estira sin culpa.
+
+---
+
+## Estado actual
+
+- [x] Diagnóstico de 15 preguntas
+- [x] Plan de 18 semanas aprobado por Pau
+- [ ] **Sesión 1 (Fase 1) — EN CURSO**: crear repo `curso-fullstack-castresana` + primera función TypeScript tipada `filtrarPorPresupuesto` (filtrar leads por presupuesto mínimo). Verificación esperada: `npx tsx src/leads.ts` muestra solo María y Lucía. Commit sugerido: `feat: add lead filtering by minimum budget with typed Lead model`.
+- [ ] Fase 1 completada
+- [ ] Fase 2 completada
+- [ ] Fase 3 completada
+- [ ] Fase 4 completada (Proyecto 1: CRM en uso real)
+- [ ] Fase 5 completada (Proyecto 2: Analizador documental)
+- [ ] Fase 6 completada (Proyecto 3: RAG + venta)
+
+**Próxima acción de la Sesión 1:** Pau ejecuta los comandos de arranque, escribe él la función (con pistas, sin solución), pega la salida de la terminal como evidencia, y registra la sesión en `docs/progress.md`.
+
+*El progreso sesión a sesión vive en `curso-fullstack-castresana/docs/progress.md`; este archivo guarda el plan maestro y el estado por fases.*
