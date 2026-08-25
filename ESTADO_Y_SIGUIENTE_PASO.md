@@ -9,13 +9,13 @@
 La app de **CLARA** está construida y fusionada en el repositorio `jpau2569/jpmr-negocios-`. Todo el código está subido; **no se ha perdido nada**.
 
 - `clara.html` — La interfaz de chat de Clara (con selector de modos).
-- `api/clara.js` — El "cerebro": función que habla con la API de Claude y busca en Internet con **Perplexity**. Las claves viven aquí de forma segura, nunca en el navegador.
+- `api/clara.js` — El "cerebro": función que habla con la API de Claude y busca en Internet con **Gemini + búsqueda de Google**. Las claves viven aquí de forma segura, nunca en el navegador.
 - `clara_persona.md` — La personalidad completa de Clara (los cinco modos).
 - `CLARA.md` — Documentación de configuración.
 - `index.html` — La web de LimpiaFotos, con un enlace a Clara.
 - `package.json`, `vercel.json` — Preparados para desplegar en Vercel.
 
-**Modos de Clara:** 💼 Trabajo y empleo · 📚 Estudios y profesor · 🌱 Psicóloga y coach · 💻 Ingeniera de software · 📰 Noticias e investigación (con Perplexity).
+**Modos de Clara:** 💼 Trabajo y empleo · 📚 Estudios y profesor · 🌱 Psicóloga y coach · 💻 Ingeniera de software · 📰 Noticias e investigación (con Gemini + Google).
 
 ---
 
@@ -25,7 +25,7 @@ El código está listo. Solo queda **desplegarlo en un servidor** y **pegar 2 cl
 
 ### Las 2 claves que hay que poner (en el panel del servidor, NUNCA en el chat)
 1. `ANTHROPIC_API_KEY` → el cerebro de Clara. Se saca en **platform.claude.com → API Keys** (empieza por `sk-ant-...`).
-2. `PERPLEXITY_API_KEY` → las búsquedas. Se saca en **perplexity.ai/account/api** con la cuenta `jpaumoralejo@gmail.com` (empieza por `pplx-...`). Requiere crédito/Pro en Perplexity.
+2. `GEMINI_API_KEY` → las búsquedas (Gemini + Google). Se saca en **aistudio.google.com/apikey** con la cuenta `jpaumoralejo@gmail.com`. Tiene capa gratuita.
 
 ---
 

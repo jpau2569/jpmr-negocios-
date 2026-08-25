@@ -2,13 +2,13 @@
 //  Tests de la API de Clara — se ejecutan con: npm test
 // ----------------------------------------------------------------------------
 //  No llaman a ninguna API real: se simulan las respuestas de Claude, de
-//  Perplexity y de asesoriacastresana.com interceptando fetch. Verifican la
+//  Gemini y de asesoriacastresana.com interceptando fetch. Verifican la
 //  calculadora, la búsqueda, la cartera, la validación de entradas, los
 //  adjuntos multimodales, el flujo completo con herramientas, el streaming
 //  SSE y el briefing diario.
 // ============================================================================
 
-import handler, { buscarEnPerplexity, calcular } from "../api/clara.js";
+import handler, { buscarConGemini, calcular } from "../api/clara.js";
 import briefing from "../api/briefing.js";
 import memoria from "../api/memoria.js";
 import lead from "../api/lead.js";
@@ -86,26 +86,37 @@ check("resumen con items", resumenCartera(inmuebles).includes("1 en venta") && r
 check("resumen sin items avisa", resumenCartera([], ["venta: HTTP 500"]).includes("no he podido leer"));
 
 // ---------------------------------------------------------------------------
-console.log("\n— buscarEnPerplexity() —");
+console.log("\n— buscarConGemini() —");
 // ---------------------------------------------------------------------------
-delete process.env.PERPLEXITY_API_KEY;
-check("sin clave: mensaje claro", (await buscarEnPerplexity("test")).includes("no está configurada"));
+delete process.env.GEMINI_API_KEY;
+check("sin clave: mensaje claro", (await buscarConGemini("test")).includes("no está configurada"));
 
-process.env.PERPLEXITY_API_KEY = "pplx-test";
+process.env.GEMINI_API_KEY = "clave-gemini-test";
 globalThis.fetch = async () =>
   new Response(
     JSON.stringify({
-      choices: [{ message: { content: "El Euríbor está en el 2,1%." } }],
-      search_results: [{ title: "Banco de España", url: "https://www.bde.es" }],
+      candidates: [
+        {
+          content: { parts: [{ text: "El Euríbor está en el 2,1%." }] },
+          groundingMetadata: {
+            groundingChunks: [
+              { web: { title: "Banco de España", uri: "https://www.bde.es" } },
+              { web: { title: "Banco de España", uri: "https://www.bde.es" } },
+            ],
+          },
+        },
+      ],
     }),
     { status: 200, headers: { "content-type": "application/json" } }
   );
-const busqueda = await buscarEnPerplexity("euríbor hoy");
+const busqueda = await buscarConGemini("euríbor hoy");
 check("con clave: devuelve respuesta", busqueda.includes("Euríbor"));
-check("con clave: cita las fuentes", busqueda.includes("Fuentes:") && busqueda.includes("bde.es"));
+check("con clave: cita las fuentes sin duplicar", busqueda.includes("Fuentes:") && busqueda.includes("bde.es") && !busqueda.includes("[2]"));
 
 globalThis.fetch = async () => new Response("boom", { status: 429 });
-check("gestiona el error 429", (await buscarEnPerplexity("x")).includes("429"));
+check("gestiona el error 429", (await buscarConGemini("x")).includes("429"));
+globalThis.fetch = async () => new Response("API key not valid", { status: 400 });
+check("clave inválida → mensaje de clave", (await buscarConGemini("x")).includes("GEMINI_API_KEY"));
 globalThis.fetch = realFetch;
 
 // ---------------------------------------------------------------------------
