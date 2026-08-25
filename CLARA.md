@@ -31,7 +31,7 @@ Este mandato vive también en `clara_persona.md` (sección "Lo que sabes de Pau"
   - **⬇ Exportar** — descarga la conversación como archivo Markdown.
   - **Instalable como app** — `clara.webmanifest` + `clara-icon.svg` permiten añadir Clara a la pantalla de inicio del móvil (Chrome/Android: menú → "Añadir a pantalla de inicio") y abrirla a pantalla completa como una app.
   - Si un envío falla (red caída, error de la API), el mensaje **vuelve al cuadro de texto** para reenviarlo sin perder nada.
-- **`api/clara.js`** — función serverless de Vercel. Lleva la persona de Clara embebida (sincronizada con `clara_persona.md`) y llama a la API de Claude con el modelo `claude-sonnet-5`. Responde en **streaming** (el texto aparece según lo escribe, con avisos de "🔍 Buscando…", "🧮 Calculando…", "🏠 Leyendo tu cartera…"), acepta **fotos y PDFs adjuntos** (los analiza de verdad: Claude es multimodal) y tiene tres herramientas: `buscar_web` (**Perplexity**, con fuentes), `calcular` (**calculadora exacta**) y `mi_cartera` (**lee en el momento los inmuebles reales publicados en asesoriacastresana.com**, con precios y referencias). Ninguna clave llega al navegador.
+- **`api/clara.js`** — función serverless de Vercel. Lleva la persona de Clara embebida (sincronizada con `clara_persona.md`) y llama a la API de Claude con el modelo `claude-sonnet-5`. Responde en **streaming** (el texto aparece según lo escribe, con avisos de "🔍 Buscando…", "🧮 Calculando…", "🏠 Leyendo tu cartera…"), acepta **fotos y PDFs adjuntos** (los analiza de verdad: Claude es multimodal) y tiene tres herramientas: `buscar_web` (**Gemini + búsqueda de Google**, con fuentes), `calcular` (**calculadora exacta**) y `mi_cartera` (**lee en el momento los inmuebles reales publicados en asesoriacastresana.com**, con precios y referencias). Ninguna clave llega al navegador.
 - **`lib/cartera.js`** — lector compartido de la cartera de Asesoría Castresana (lo usan el escaparate, la herramienta `mi_cartera` de Clara y el briefing).
 - **`api/briefing.js`** — briefing proactivo: un cron de Vercel lo ejecuta cada mañana (08:00 en horario de verano; el horario del cron es UTC, `0 6 * * *`). Lee la cartera real, Clara redacta el resumen del día y, si configuras `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID` en Vercel, te llega al móvil por Telegram. **`CRON_SECRET` es obligatorio** (por seguridad: sin él el endpoint no se sirve, para que nadie más pueda gastar tu saldo de Anthropic ni spamear tu Telegram). El cron de Vercel envía ese secreto solo; para leerlo tú en el navegador, abre `/api/briefing?key=TU_CRON_SECRET`.
 - **`lib/memoria.js` + `api/memoria.js`** — memoria en la nube (Supabase, proyecto `clara-memoria`, 0 €/mes). La tabla tiene RLS activado sin políticas: solo se accede por funciones RPC que exigen la **clave de sincronización** de Pau. Pau escribe esa clave una vez en el panel 🧠 de cada dispositivo y su memoria pasa a ser la misma en todos; además Clara gana la herramienta `recordar` para apuntar notas ella sola. Sin clave (o sin las variables de Supabase), todo sigue funcionando en modo local como antes.
@@ -60,9 +60,9 @@ En Vercel: **Project → Settings → Environment Variables**, añade estas dos 
 1. **`ANTHROPIC_API_KEY`** — el cerebro de Clara.
    - Consíguela en [platform.claude.com](https://platform.claude.com/) → **API Keys** (empieza por `sk-ant-...`).
 
-2. **`PERPLEXITY_API_KEY`** — la búsqueda en Internet de Clara (tu cuenta de Perplexity, `jpaumoralejo@gmail.com`).
-   - Entra en [perplexity.ai/account/api](https://www.perplexity.ai/account/api/) con tu cuenta, ve a **API Keys** y **genera una clave** (empieza por `pplx-...`).
-   - Perplexity cobra la API por uso: necesitas **crédito o suscripción Pro** en tu cuenta. El correo por sí solo no basta — hace falta la clave que se genera ahí.
+2. **`GEMINI_API_KEY`** — la búsqueda en Internet de Clara (Gemini + búsqueda de Google, tu cuenta de Google AI Studio, `jpaumoralejo@gmail.com`).
+   - Entra en [aistudio.google.com/apikey](https://aistudio.google.com/apikey) con tu cuenta y **crea una clave de API**.
+   - Tiene capa gratuita generosa; el consumo se ve en el propio AI Studio.
    - Si no configuras esta clave, Clara sigue funcionando, pero en vez de buscar te pedirá que le pegues la información.
 
 Listo: abre `https://tu-proyecto.vercel.app/clara.html` y habla con Clara.
@@ -70,8 +70,8 @@ Listo: abre `https://tu-proyecto.vercel.app/clara.html` y habla con Clara.
 ## Costes
 
 - **Claude** (`claude-sonnet-5`): buena calidad a precio contenido ($3 por millón de tokens de entrada, $15 de salida — con precio introductorio $2/$10 hasta agosto de 2026). Puedes cambiar el modelo en la constante `MODEL` de `api/clara.js` (`claude-opus-4-8` es más potente pero más caro; `claude-haiku-4-5` es más barato).
-- **Perplexity**: la búsqueda se cobra en tu cuenta de Perplexity según su tarifa por uso. Clara hace como máximo 6 rondas de búsqueda por respuesta. Puedes cambiar el modelo de búsqueda en la constante `PERPLEXITY_MODEL` de `api/clara.js` (`sonar` es el más barato; `sonar-pro` da respuestas más completas).
-- Revisa el consumo de Claude en [platform.claude.com](https://platform.claude.com/) y el de Perplexity en tu panel de [perplexity.ai](https://www.perplexity.ai/account/api/).
+- **Gemini (búsqueda)**: la búsqueda usa tu cuenta de Google AI Studio, con capa gratuita generosa. Clara hace como máximo 6 rondas de búsqueda por respuesta. Puedes cambiar el modelo en la constante `GEMINI_MODEL` de `api/clara.js` (`gemini-2.5-flash` es rápido y barato; `gemini-2.5-pro` da respuestas más completas).
+- Revisa el consumo de Claude en [platform.claude.com](https://platform.claude.com/) y el de Gemini en [aistudio.google.com](https://aistudio.google.com/).
 
 ## Notas
 

@@ -19,88 +19,90 @@ import { catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
 export const config = { supportsResponseStreaming: true };
 
 const MODEL = "claude-sonnet-5";
-const PERPLEXITY_MODEL = "sonar"; // buscador con fuentes; alternativas: "sonar-pro", "sonar-reasoning"
+const GEMINI_MODEL = "gemini-2.5-flash"; // buscador con fuentes (Google AI Studio); alternativa: "gemini-2.5-pro"
 const MAX_HISTORY = 60; // últimos N mensajes que se envían al modelo
 const MAX_TOOL_ROUNDS = 6; // rondas máximas de búsqueda por respuesta
 
 // ---------------------------------------------------------------------------
-//  Búsqueda con Perplexity (API OpenAI-compatible). La clave vive en la
-//  variable de entorno PERPLEXITY_API_KEY (cuenta de Pau) — nunca en el
-//  navegador. Devuelve un texto con el resumen y las fuentes citadas.
+//  Búsqueda con Gemini (Google AI Studio) + grounding de Google Search. La
+//  clave vive en la variable de entorno GEMINI_API_KEY (cuenta de Pau) —
+//  nunca en el navegador. Devuelve un texto con el resumen y las fuentes.
 // ---------------------------------------------------------------------------
-export async function buscarEnPerplexity(consulta) {
-  const key = process.env.PERPLEXITY_API_KEY;
+export async function buscarConGemini(consulta) {
+  const key = process.env.GEMINI_API_KEY;
   if (!key) {
-    return "La búsqueda con Perplexity no está configurada (falta PERPLEXITY_API_KEY). Pídele a Pau que pegue la información que quiere analizar.";
+    return "La búsqueda con Gemini no está configurada (falta GEMINI_API_KEY). Pídele a Pau que pegue la información que quiere analizar.";
   }
 
   const query = String(consulta || "").trim().slice(0, 2000);
   if (!query) return "No se recibió ninguna consulta de búsqueda.";
 
-  // Timeout: si Perplexity tarda demasiado, cancelamos para no colgar la respuesta.
+  // Timeout: si Gemini tarda demasiado, cancelamos para no colgar la respuesta.
   const ctrl = new AbortController();
   const alarma = setTimeout(() => ctrl.abort(), 20000);
   let resp;
   try {
-    resp = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      signal: ctrl.signal,
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: PERPLEXITY_MODEL,
-        messages: [
-          {
-            role: "system",
-            content:
-              "Eres un buscador de información. Responde en español de España, con los datos más recientes y relevantes, indicando fechas cuando existan. Sé conciso y factual.",
+    resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: {
+          "x-goog-api-key": key,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [
+              {
+                text: "Eres un buscador de información. Responde en español de España, con los datos más recientes y relevantes, indicando fechas cuando existan. Sé conciso y factual.",
+              },
+            ],
           },
-          { role: "user", content: query },
-        ],
-      }),
-    });
+          contents: [{ role: "user", parts: [{ text: query }] }],
+          tools: [{ google_search: {} }],
+        }),
+      }
+    );
   } catch (e) {
     if (e?.name === "AbortError") {
-      return "La búsqueda con Perplexity tardó demasiado y se canceló. Inténtalo de nuevo o pega tú la información.";
+      return "La búsqueda con Gemini tardó demasiado y se canceló. Inténtalo de nuevo o pega tú la información.";
     }
-    return "No se pudo conectar con Perplexity: " + String(e?.message || e);
+    return "No se pudo conectar con Gemini: " + String(e?.message || e);
   } finally {
     clearTimeout(alarma);
   }
 
   if (!resp.ok) {
     const detail = await resp.text().catch(() => "");
-    if (resp.status === 401) {
-      return "Perplexity rechazó la clave (401). Revisa PERPLEXITY_API_KEY en Vercel.";
+    if (resp.status === 401 || resp.status === 403 || (resp.status === 400 && /api key/i.test(detail))) {
+      return `Gemini rechazó la clave (${resp.status}). Revisa GEMINI_API_KEY en Vercel.`;
     }
     if (resp.status === 429) {
-      return "Perplexity ha limitado las peticiones o no hay saldo (429). Inténtalo más tarde o revisa el crédito de la cuenta.";
+      return "Gemini ha limitado las peticiones (429). Inténtalo más tarde o revisa la cuota en Google AI Studio.";
     }
-    return `La búsqueda con Perplexity falló (${resp.status}). ${detail.slice(0, 200)}`;
+    return `La búsqueda con Gemini falló (${resp.status}). ${detail.slice(0, 200)}`;
   }
 
   const data = await resp.json().catch(() => ({}));
-  const answer = data?.choices?.[0]?.message?.content?.trim() || "";
+  const cand = data?.candidates?.[0];
+  const answer = (cand?.content?.parts || [])
+    .map((p) => p?.text || "")
+    .filter(Boolean)
+    .join("\n")
+    .trim();
 
-  // Las fuentes pueden venir como `search_results` (objetos con url/title/date)
-  // o como `citations` (lista de URLs). Manejamos ambos formatos.
+  // Fuentes del grounding de Google Search (título — URL, sin duplicados).
   const sources = [];
-  if (Array.isArray(data?.search_results)) {
-    for (const s of data.search_results) {
-      const url = s?.url || "";
-      if (url) sources.push(s?.title ? `${s.title} — ${url}` : url);
-    }
-  }
-  if (sources.length === 0 && Array.isArray(data?.citations)) {
-    for (const c of data.citations) {
-      const url = typeof c === "string" ? c : c?.url || "";
-      if (url) sources.push(url);
-    }
+  const vistos = new Set();
+  for (const ch of cand?.groundingMetadata?.groundingChunks || []) {
+    const url = ch?.web?.uri || "";
+    if (!url || vistos.has(url)) continue;
+    vistos.add(url);
+    sources.push(ch?.web?.title ? `${ch.web.title} — ${url}` : url);
   }
 
-  let out = answer || "Perplexity no devolvió texto.";
+  let out = answer || "Gemini no devolvió texto.";
   if (sources.length) {
     out += "\n\nFuentes:\n" + sources.map((s, i) => `[${i + 1}] ${s}`).join("\n");
   }
@@ -169,8 +171,8 @@ El mandato de Pau: te ha pedido ser SUS OJOS Y SU MANO EJECUTORA en su vida prof
 ## Inicio de sesión
 Al empezar una conversación nueva, saluda a Pau por su nombre ("Hola, Pau, soy Clara, tu asistente IA avatar.") y pregúntale qué modo quiere usar: 💼 trabajo y empleo, 📚 estudios y profesor, 🌱 psicóloga y crecimiento personal, 💻 ingeniera de software, 📰 noticias e investigación, o 🏠 negocio inmobiliario. Si Pau ya dice directamente lo que quiere, adáptate sin más preguntas. Cuando cambie de modo, recuérdale en una frase qué puedes hacer en ese modo. Los modos son sombreros, no muros: combínalos si la tarea lo pide.
 
-## Búsqueda web (Perplexity)
-Tienes una herramienta llamada "buscar_web" que consulta Internet con Perplexity (la cuenta de Pau). Úsala para cualquier cosa que dependa de información actual: noticias, precios, versiones de software, ofertas de empleo, datos de empresas. Pásale una consulta clara en lenguaje natural. Cita siempre la fuente y la fecha de lo que encuentres (Perplexity te devuelve las fuentes), contrasta al menos dos fuentes en temas importantes, y separa con etiquetas: ✅ hecho verificado · 📊 estimación · 💬 opinión. Si la herramienta devuelve un error o no está configurada, dilo con claridad y pide a Pau que pegue la información. "No lo he podido verificar" es una respuesta excelente.
+## Búsqueda web (Gemini + Google)
+Tienes una herramienta llamada "buscar_web" que consulta Internet con Gemini y la búsqueda de Google (la cuenta de Google AI Studio de Pau). Úsala para cualquier cosa que dependa de información actual: noticias, precios, versiones de software, ofertas de empleo, datos de empresas. Pásale una consulta clara en lenguaje natural. Cita siempre la fuente y la fecha de lo que encuentres (Gemini te devuelve las fuentes de Google), contrasta al menos dos fuentes en temas importantes, y separa con etiquetas: ✅ hecho verificado · 📊 estimación · 💬 opinión. Si la herramienta devuelve un error o no está configurada, dilo con claridad y pide a Pau que pegue la información. "No lo he podido verificar" es una respuesta excelente.
 
 ## Calculadora exacta
 Tienes una herramienta llamada "calcular" que evalúa expresiones aritméticas con precisión (por ejemplo "120000/85" o "650*12/98000*100"). Úsala SIEMPRE que un resultado numérico importe de verdad — rentabilidades, precio por m², cuotas, porcentajes, impuestos — en vez de calcular de cabeza. Muestra a Pau la fórmula que has usado junto al resultado.
@@ -297,7 +299,7 @@ const MAX_ADJUNTO_B64 = 5_000_000; // ~3,7 MB reales por adjunto
 // Ejecuta una herramienta pedida por Clara y devuelve su resultado en texto.
 async function ejecutarHerramienta(tu, claveSync) {
   try {
-    if (tu.name === "buscar_web") return await buscarEnPerplexity(tu.input?.consulta);
+    if (tu.name === "buscar_web") return await buscarConGemini(tu.input?.consulta);
     if (tu.name === "calcular") return calcular(tu.input?.expresion);
     if (tu.name === "mi_cartera") {
       const { items, errores } = await obtenerCartera();
@@ -454,7 +456,7 @@ export default async function handler(req, res) {
       {
         name: "buscar_web",
         description:
-          "Busca información actual en Internet con Perplexity (noticias, precios, datos, ofertas de empleo, empresas). Devuelve un resumen con las fuentes citadas. Úsala siempre que la respuesta dependa de información reciente.",
+          "Busca información actual en Internet con Gemini y la búsqueda de Google (noticias, precios, datos, ofertas de empleo, empresas). Devuelve un resumen con las fuentes citadas. Úsala siempre que la respuesta dependa de información reciente.",
         input_schema: {
           type: "object",
           properties: {
