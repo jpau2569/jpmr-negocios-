@@ -105,5 +105,7 @@ Es "el agente que trabaja de noche".
 - [x] Prompt maestro de PAU → `agentes/pau-bot.md`
 - [x] Prompt maestro de NURIA → `agentes/nuria.md`
 - [x] Prompt maestro de NICER → `agentes/nicer.md`
-- [ ] Adaptar backend CasteBot a selector de 6 agentes (cargar el prompt desde `agentes/<nombre>.md`)
-- [ ] Definir el aviso Telegram de hot-lead con formato común para los 6
+- [x] Adaptar backend CasteBot a selector de 6 agentes → `api/castebot.js` + `castebot.html` (carga `_comunes.md` + `agentes/<nombre>.md`)
+- [x] Definir el aviso Telegram de hot-lead con formato común para los 6 → bloque `[[HOTLEAD]]` que el backend extrae, envía a Telegram (`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`) y oculta al cliente
+- [ ] Configurar en Vercel las variables `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID` (reutilizar castresana-bot) y probar un hot-lead real
+- [ ] Test 1 semana con leads reales → ajustar cualificación de JUANJO y filtro de NURIA

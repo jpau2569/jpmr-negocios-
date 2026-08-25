@@ -3,6 +3,10 @@
     "api/clara.js": {
       "maxDuration": 60
     },
+    "api/castebot.js": {
+      "maxDuration": 60,
+      "includeFiles": "agentes/**"
+    },
     "api/escaparate.js": {
       "maxDuration": 30
     },
