@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CasteBot — Asesoría Castresana</title>
+<meta name="description" content="El equipo digital de Asesoría Castresana (Oviedo, desde 1993): seis asistentes que atienden 24/7 sin perder el trato humano.">
+<style>
+  :root {
+    --azul: #1d3557;       /* azul Castresana, sobrio */
+    --azul-claro: #457b9d;
+    --crema: #f7f5f0;
+    --blanco: #ffffff;
+    --tinta: #22242a;
+    --gris: #6b7280;
+    --acento: #e63946;     /* solo para detalles (hot, notificaciones) */
+    --verde: #2a9d8f;
+    --radio: 14px;
+    --sombra: 0 6px 24px rgba(29, 53, 87, .12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--crema);
+    color: var(--tinta);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: var(--azul);
+    color: var(--blanco);
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header .logo {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--blanco); color: var(--azul);
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 18px;
+  }
+  header h1 { font-size: 17px; font-weight: 700; }
+  header p { font-size: 12.5px; opacity: .85; }
+  header .volver {
+    margin-left: auto;
+    background: rgba(255,255,255,.14);
+    color: var(--blanco);
+    border: 0; border-radius: 10px;
+    padding: 8px 14px; font-size: 13px;
+    cursor: pointer; display: none;
+  }
+  main { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 760px; margin: 0 auto; }
+
+  /* ---------- Selector ---------- */
+  #selector { padding: 22px 16px 32px; }
+  #selector h2 { font-size: 21px; margin-bottom: 6px; color: var(--azul); }
+  #selector > p { color: var(--gris); font-size: 14.5px; margin-bottom: 18px; }
+  .fichas { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .ficha {
+    background: var(--blanco);
+    border: 1px solid #e5e3dc;
+    border-radius: var(--radio);
+    padding: 16px;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(29,53,87,.05);
+    transition: transform .12s ease, box-shadow .12s ease;
+    font: inherit;
+  }
+  .ficha:hover { transform: translateY(-2px); box-shadow: var(--sombra); }
+  .ficha .avatar {
+    width: 46px; height: 46px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 23px; margin-bottom: 10px;
+    background: var(--crema);
+  }
+  .ficha h3 { font-size: 16px; color: var(--azul); }
+  .ficha .rol { font-size: 13px; color: var(--verde); font-weight: 600; margin: 2px 0 6px; }
+  .ficha .desc { font-size: 13px; color: var(--gris); line-height: 1.45; }
+  .ficha .interno {
+    display: inline-block; margin-top: 8px;
+    font-size: 11px; font-weight: 700; letter-spacing: .4px;
+    color: var(--azul-claro); background: #e8eef4;
+    border-radius: 20px; padding: 2px 9px;
+  }
+
+  /* ---------- Chat ---------- */
+  #chat { display: none; flex: 1; flex-direction: column; min-height: 0; }
+  #mensajes {
+    flex: 1; overflow-y: auto;
+    padding: 18px 14px 8px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .burbuja {
+    max-width: 86%;
+    padding: 10px 14px;
+    border-radius: var(--radio);
+    font-size: 15px; line-height: 1.5;
+    white-space: pre-wrap; word-wrap: break-word;
+  }
+  .burbuja.usuario { align-self: flex-end; background: var(--azul); color: var(--blanco); border-bottom-right-radius: 4px; }
+  .burbuja.agente { align-self: flex-start; background: var(--blanco); border: 1px solid #e5e3dc; border-bottom-left-radius: 4px; }
+  .burbuja.error { align-self: center; background: #fdecec; color: #8f2430; font-size: 13.5px; }
+  .escribiendo { align-self: flex-start; color: var(--gris); font-size: 13px; padding: 2px 6px; }
+  #formulario {
+    display: flex; gap: 8px;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+    background: var(--crema);
+  }
+  #entrada {
+    flex: 1; resize: none;
+    border: 1px solid #d8d5cc; border-radius: var(--radio);
+    padding: 11px 14px; font: inherit; font-size: 15px;
+    background: var(--blanco); outline: none;
+    max-height: 120px;
+  }
+  #entrada:focus { border-color: var(--azul-claro); }
+  #enviar {
+    border: 0; border-radius: var(--radio);
+    background: var(--azul); color: var(--blanco);
+    padding: 0 18px; font-size: 15px; font-weight: 600;
+    cursor: pointer;
+  }
+  #enviar:disabled { opacity: .5; cursor: default; }
+  footer { text-align: center; font-size: 11.5px; color: var(--gris); padding: 6px 12px 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">AC</div>
+  <div>
+    <h1 id="titulo">Asesoría Castresana</h1>
+    <p id="subtitulo">Oviedo · desde 1993 · atención 24/7</p>
+  </div>
+  <button class="volver" id="volver" type="button">← Equipo</button>
+</header>
+
+<main>
+  <!-- Selector de agente -->
+  <section id="selector">
+    <h2>¿Con quién quieres hablar?</h2>
+    <p>Nuestro equipo digital te atiende al momento, a cualquier hora. Detrás siempre hay personas del despacho que revisan cada gestión.</p>
+    <div class="fichas" id="fichas"></div>
+  </section>
+
+  <!-- Chat -->
+  <section id="chat">
+    <div id="mensajes"></div>
+    <form id="formulario">
+      <textarea id="entrada" rows="1" placeholder="Escribe tu mensaje…" required></textarea>
+      <button id="enviar" type="submit">Enviar</button>
+    </form>
+    <footer>Asistente digital de Asesoría Castresana. No sustituye el asesoramiento profesional del despacho.</footer>
+  </section>
+</main>
+
+<script>
+  // Fichas del equipo (mismo orden que el flujo de un cliente típico).
+  const EQUIPO = [
+    { id: "juanjo", emoji: "🏠", nombre: "Juanjo", rol: "Comprar piso",
+      desc: "Te ayudo a encontrar piso en el centro de Asturias y te agendo la visita.",
+      saludo: "¡Hola! Soy Juanjo, del equipo digital de Asesoría Castresana. ¿Buscas piso para comprar o para alquilar? Cuéntame qué zona te interesa." },
+    { id: "javi", emoji: "📈", nombre: "Javi", rol: "Vender tu piso",
+      desc: "Te doy una valoración orientativa de tu piso y te organizo la valoración gratuita.",
+      saludo: "¡Hola! Soy Javi, de Asesoría Castresana. ¿Estás pensando en vender tu piso? Si me dices la zona y los metros aproximados, te doy una primera orientación." },
+    { id: "nuria", emoji: "🔑", nombre: "Nuria", rol: "Alquileres",
+      desc: "Llevo los alquileres: busco piso, preparo tu expediente y atiendo incidencias.",
+      saludo: "¡Hola! Soy Nuria, la responsable de alquileres de Asesoría Castresana. ¿Buscas piso de alquiler, quieres alquilar el tuyo, o eres inquilino nuestro con alguna incidencia?" },
+    { id: "alejandro", emoji: "📋", nombre: "Alejandro", rol: "Asesoría y trámites",
+      desc: "Primeras dudas fiscales, laborales o de fincas, y preparación de tu expediente.",
+      saludo: "Hola, soy Alejandro, de Asesoría Castresana. Puedo orientarte con dudas fiscales, laborales, contables o de comunidades, y preparar tu expediente. ¿En qué te ayudo?" },
+    { id: "pau", emoji: "🤝", nombre: "Pau", rol: "Seguimiento",
+      desc: "¿Ya nos conoces? Retomo tu búsqueda, tu visita o cualquier gestión pendiente.",
+      saludo: "¡Hola de nuevo! Soy Pau, de Asesoría Castresana. ¿Retomamos tu búsqueda o quieres contarme qué te pareció la última visita?" },
+    { id: "nicer", emoji: "🎨", nombre: "Nicer", rol: "Marketing e informes", interno: true,
+      desc: "Uso interno del despacho: fichas de inmuebles, contenido para redes e informe diario.",
+      saludo: "Hola, equipo. Soy Nicer. Pásame los datos de un inmueble para redactar su ficha y anuncio, o pídeme el informe de actividad." },
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  let agenteActivo = null;
+  let historial = [];
+  let enviando = false;
+
+  // --- Selector ---
+  for (const a of EQUIPO) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "ficha";
+    b.innerHTML = `
+      <div class="avatar">${a.emoji}</div>
+      <h3>${a.nombre}</h3>
+      <div class="rol">${a.rol}</div>
+      <div class="desc">${a.desc}</div>
+      ${a.interno ? '<span class="interno">USO INTERNO</span>' : ""}`;
+    b.addEventListener("click", () => abrirChat(a));
+    $("fichas").appendChild(b);
+  }
+
+  function claveAlmacen(id) { return "castebot_" + id; }
+
+  function abrirChat(a) {
+    agenteActivo = a;
+    $("selector").style.display = "none";
+    $("chat").style.display = "flex";
+    $("volver").style.display = "block";
+    $("titulo").textContent = a.nombre + " — " + a.rol;
+    $("subtitulo").textContent = "Asesoría Castresana · en línea";
+    $("mensajes").innerHTML = "";
+    try {
+      historial = JSON.parse(localStorage.getItem(claveAlmacen(a.id))) || [];
+    } catch { historial = []; }
+    if (historial.length === 0) {
+      pintar("agente", a.saludo); // saludo local: no gasta llamada a la API
+    } else {
+      for (const m of historial) pintar(m.role === "user" ? "usuario" : "agente", m.content);
+    }
+    $("entrada").focus();
+  }
+
+  $("volver").addEventListener("click", () => {
+    $("chat").style.display = "none";
+    $("volver").style.display = "none";
+    $("selector").style.display = "block";
+    $("titulo").textContent = "Asesoría Castresana";
+    $("subtitulo").textContent = "Oviedo · desde 1993 · atención 24/7";
+    agenteActivo = null;
+  });
+
+  // --- Chat ---
+  function pintar(tipo, texto) {
+    const div = document.createElement("div");
+    div.className = "burbuja " + tipo;
+    div.textContent = texto;
+    $("mensajes").appendChild(div);
+    $("mensajes").scrollTop = $("mensajes").scrollHeight;
+    return div;
+  }
+
+  function guardar() {
+    try { localStorage.setItem(claveAlmacen(agenteActivo.id), JSON.stringify(historial.slice(-80))); } catch {}
+  }
+
+  $("entrada").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      $("formulario").requestSubmit();
+    }
+  });
+
+  $("formulario").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (enviando || !agenteActivo) return;
+    const texto = $("entrada").value.trim();
+    if (!texto) return;
+    $("entrada").value = "";
+    enviando = true;
+    $("enviar").disabled = true;
+
+    pintar("usuario", texto);
+    historial.push({ role: "user", content: texto });
+    guardar();
+
+    const estado = document.createElement("div");
+    estado.className = "escribiendo";
+    estado.textContent = agenteActivo.nombre + " está escribiendo…";
+    $("mensajes").appendChild(estado);
+    $("mensajes").scrollTop = $("mensajes").scrollHeight;
+
+    let burbuja = null;
+    let recibido = "";
+    try {
+      const resp = await fetch("/api/castebot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agente: agenteActivo.id, messages: historial, stream: true }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data.error || "No se pudo conectar con el asistente (" + resp.status + ").");
+      }
+
+      // Lectura del stream SSE: eventos "data: {json}\n\n"
+      const lector = resp.body.getReader();
+      const decodificador = new TextDecoder();
+      let pendiente = "";
+      let terminado = false;
+      while (!terminado) {
+        const { value, done } = await lector.read();
+        if (done) break;
+        pendiente += decodificador.decode(value, { stream: true });
+        const eventos = pendiente.split("\n\n");
+        pendiente = eventos.pop();
+        for (const ev of eventos) {
+          const linea = ev.split("\n").find((l) => l.startsWith("data: "));
+          if (!linea) continue;
+          let obj;
+          try { obj = JSON.parse(linea.slice(6)); } catch { continue; }
+          if (obj.t) {
+            estado.remove();
+            recibido += obj.t;
+            if (!burbuja) burbuja = pintar("agente", "");
+            burbuja.textContent = recibido;
+            $("mensajes").scrollTop = $("mensajes").scrollHeight;
+          }
+          if (obj.done) {
+            estado.remove();
+            recibido = obj.reply || recibido;
+            if (!burbuja) burbuja = pintar("agente", "");
+            burbuja.textContent = recibido;
+            terminado = true;
+          }
+          if (obj.error) throw new Error(obj.error);
+        }
+      }
+      if (!recibido.trim()) throw new Error("El asistente no devolvió respuesta. Inténtalo de nuevo.");
+      historial.push({ role: "assistant", content: recibido });
+      guardar();
+    } catch (err) {
+      estado.remove();
+      if (burbuja && !burbuja.textContent.trim()) burbuja.remove();
+      pintar("error", String(err.message || err));
+    } finally {
+      enviando = false;
+      $("enviar").disabled = false;
+      $("entrada").focus();
+    }
+  });
+</script>
+</body>
+</html>
