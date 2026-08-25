@@ -9,6 +9,7 @@
 // ============================================================================
 
 import handler, { separarHotlead } from "../api/castebot.js";
+import informe from "../api/castebot-informe.js";
 
 let pasados = 0;
 let fallados = 0;
@@ -199,6 +200,119 @@ globalThis.fetch = async (url, init) => {
 res = mockRes();
 await handler({ method: "POST", body: { agente: "javi", messages: [{ role: "user", content: "hola" }] } }, res);
 check("sin Telegram: responde 200 igualmente", res.r.statusCode === 200 && (res.r.body?.reply || "") === "Anotado.");
+
+// ---------------------------------------------------------------------------
+console.log("\n— handler: registro del hot-lead en Supabase —");
+// ---------------------------------------------------------------------------
+process.env.SUPABASE_URL = "https://test.supabase.co";
+process.env.SUPABASE_ANON_KEY = "anon-test";
+process.env.TELEGRAM_BOT_TOKEN = "123:test";
+process.env.TELEGRAM_CHAT_ID = "-100999";
+const altasSupabase = [];
+globalThis.fetch = async (url, init) => {
+  const u = String(url);
+  if (u.includes("api.telegram.org")) {
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "content-type": "application/json" } });
+  }
+  if (u.includes("test.supabase.co/rest/v1/rpc/castebot_lead_guarda")) {
+    altasSupabase.push(JSON.parse(init.body));
+    return new Response("", { status: 200 });
+  }
+  if (!u.includes("anthropic.com")) throw new Error("fetch inesperado: " + u);
+  return new Response(
+    JSON.stringify({
+      id: "msg_5", type: "message", role: "assistant", model: "claude-sonnet-5",
+      content: [{ type: "text", text: "Te llaman hoy.\n[[HOTLEAD]]\n🔥 HOT-LEAD JUANJO\nNombre: Carlos\n[[/HOTLEAD]]" }],
+      stop_reason: "end_turn", usage: { input_tokens: 10, output_tokens: 10 },
+    }),
+    { status: 200, headers: { "content-type": "application/json" } }
+  );
+};
+res = mockRes();
+await handler({ method: "POST", body: { agente: "juanjo", messages: [{ role: "user", content: "hola" }] } }, res);
+check("hot-lead registrado en Supabase (RPC castebot_lead_guarda)", altasSupabase.length === 1, JSON.stringify(altasSupabase));
+check("registro con agente y resumen", altasSupabase[0]?.agente_nuevo === "JUANJO" && (altasSupabase[0]?.resumen_nuevo || "").includes("Carlos"));
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_ANON_KEY;
+delete process.env.TELEGRAM_BOT_TOKEN;
+delete process.env.TELEGRAM_CHAT_ID;
+
+// ---------------------------------------------------------------------------
+console.log("\n— api/castebot-informe.js (informe diario de NICER) —");
+// ---------------------------------------------------------------------------
+delete process.env.CRON_SECRET;
+res = mockRes();
+await informe({ method: "GET", headers: {}, query: {} }, res);
+check("sin CRON_SECRET → 500", res.r.statusCode === 500);
+
+process.env.CRON_SECRET = "secreto-cron";
+res = mockRes();
+await informe({ method: "GET", headers: {}, query: { key: "mala" } }, res);
+check("clave incorrecta → 401", res.r.statusCode === 401);
+
+// Sin nube ni IA: informe básico avisando de que no hay datos.
+delete process.env.ANTHROPIC_API_KEY;
+res = mockRes();
+await informe({ method: "GET", headers: {}, query: { key: "secreto-cron" } }, res);
+check("sin nube: informe básico con aviso", res.r.statusCode === 200 && (res.r.body?.informe || "").includes("Sin datos"));
+
+// Con nube simulada y Telegram: totales por agente y envío.
+process.env.SUPABASE_URL = "https://test.supabase.co";
+process.env.SUPABASE_ANON_KEY = "anon-test";
+process.env.TELEGRAM_BOT_TOKEN = "123:test";
+process.env.TELEGRAM_CHAT_ID = "-100999";
+const telegramsInforme = [];
+globalThis.fetch = async (url, init) => {
+  const u = String(url);
+  if (u.includes("test.supabase.co/rest/v1/rpc/castebot_leads_resumen")) {
+    return new Response(
+      JSON.stringify({ hoy: [{ agente: "NURIA", total: 2 }], semana: [{ agente: "NURIA", total: 5 }, { agente: "JAVI", total: 1 }], total_semana: 6, ultimo: "2026-08-25T08:00:00Z" }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  }
+  if (u.includes("api.telegram.org")) {
+    telegramsInforme.push(JSON.parse(init.body));
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "content-type": "application/json" } });
+  }
+  throw new Error("fetch inesperado: " + u);
+};
+res = mockRes();
+await informe({ method: "GET", headers: { authorization: "Bearer secreto-cron" }, query: {} }, res);
+check("informe básico con totales por agente", res.r.statusCode === 200 && (res.r.body?.informe || "").includes("NURIA: 2 hot-leads"));
+check("el informe llegó a Telegram", telegramsInforme.length === 1 && res.r.body?.enviado === true);
+
+// Con IA simulada: NICER redacta el informe con su voz.
+process.env.ANTHROPIC_API_KEY = "sk-ant-test";
+const sistemasInforme = [];
+globalThis.fetch = async (url, init) => {
+  const u = String(url);
+  if (u.includes("test.supabase.co/rest/v1/rpc/castebot_leads_resumen")) {
+    return new Response(JSON.stringify({ hoy: [], semana: [], total_semana: 0, ultimo: null }), { status: 200, headers: { "content-type": "application/json" } });
+  }
+  if (u.includes("api.telegram.org")) {
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "content-type": "application/json" } });
+  }
+  if (!u.includes("anthropic.com")) throw new Error("fetch inesperado: " + u);
+  sistemasInforme.push(JSON.parse(init.body));
+  return new Response(
+    JSON.stringify({
+      id: "msg_6", type: "message", role: "assistant", model: "claude-sonnet-5",
+      content: [{ type: "text", text: "📊 CASTRESANA — hoy\nJUANJO: sin datos\n✅ Hoy recomiendo: 1) activar captación" }],
+      stop_reason: "end_turn", usage: { input_tokens: 100, output_tokens: 50 },
+    }),
+    { status: 200, headers: { "content-type": "application/json" } }
+  );
+};
+res = mockRes();
+await informe({ method: "GET", headers: { authorization: "Bearer secreto-cron" }, query: {} }, res);
+check("con IA: NICER redacta el informe", (res.r.body?.informe || "").includes("Hoy recomiendo"));
+const sysInforme = (sistemasInforme[0]?.system || []).map((b) => b.text).join("\n");
+check("con IA: usa el prompt maestro de NICER", sysInforme.includes("Eres **NICER**"));
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_ANON_KEY;
+delete process.env.TELEGRAM_BOT_TOKEN;
+delete process.env.TELEGRAM_CHAT_ID;
+delete process.env.CRON_SECRET;
 
 // ---------------------------------------------------------------------------
 console.log("\n— handler: rechazo del modelo —");

@@ -17,6 +17,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { nubeConfigurada, rpc } from "../lib/memoria.js";
 
 export const config = { supportsResponseStreaming: true };
 
@@ -111,6 +112,24 @@ async function avisarTelegram(texto) {
     return false;
   } finally {
     clearTimeout(alarma);
+  }
+}
+
+// Registro del hot-lead en Supabase (tabla castebot_leads, vía RPC): deja
+// histórico para el informe diario de NICER. Best-effort: si la nube no está
+// configurada o falla, el hot-lead sigue llegando por Telegram igualmente.
+async function registrarHotlead(agente, resumen) {
+  if (!nubeConfigurada()) return false;
+  try {
+    await rpc("castebot_lead_guarda", {
+      agente_nuevo: agente,
+      resumen_nuevo: String(resumen || "").slice(0, 2000),
+      canal_nuevo: "web",
+    });
+    return true;
+  } catch (e) {
+    console.error("No se pudo registrar el hot-lead en Supabase:", String(e?.message || e));
+    return false;
   }
 }
 
@@ -226,7 +245,10 @@ export default async function handler(req, res) {
         const response = await flujo.finalMessage();
         const { visible, hotlead } = separarHotlead(completo);
         const reply = visible || (response?.stop_reason === "refusal" ? RESPUESTA_RECHAZO : RESPUESTA_RECHAZO);
-        if (hotlead) await avisarTelegram(hotlead);
+        if (hotlead) {
+          await avisarTelegram(hotlead);
+          await registrarHotlead(ficha.nombre, hotlead);
+        }
         emite({ done: true, reply });
       } catch (e) {
         console.error("Error en streaming de /api/castebot:", e);
@@ -242,7 +264,10 @@ export default async function handler(req, res) {
       .map((b) => b.text)
       .join("\n");
     const { visible, hotlead } = separarHotlead(bruto);
-    if (hotlead) await avisarTelegram(hotlead);
+    if (hotlead) {
+      await avisarTelegram(hotlead);
+      await registrarHotlead(ficha.nombre, hotlead);
+    }
 
     if (response.stop_reason === "refusal" || !visible) {
       return res.status(200).json({ reply: RESPUESTA_RECHAZO, agente: ficha.nombre });
