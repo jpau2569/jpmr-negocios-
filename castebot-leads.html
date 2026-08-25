@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Leads · CLARA</title>
-<meta name="description" content="Panel privado de leads capturados por el embudo de Clara." />
+<title>Hot-leads · CasteBot</title>
+<meta name="description" content="Panel privado de hot-leads capturados por la red de 6 agentes de Asesoría Castresana." />
 <meta name="theme-color" content="#070b18" />
 <meta name="robots" content="noindex, nofollow" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-<link rel="icon" href='data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" rx="24" fill="%232fe08d"/%3E%3Ctext x="50" y="70" font-size="52" text-anchor="middle"%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E' />
+<link rel="icon" href='data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" rx="24" fill="%23e63946"/%3E%3Ctext x="50" y="70" font-size="52" text-anchor="middle"%3E%F0%9F%94%A5%3C/text%3E%3C/svg%3E' />
 <style>
   :root{
     --bg:#070b18; --fg:#eef2ff; --muted:#8b96b8; --muted-2:#5d6786;
     --glass:rgba(255,255,255,.045); --glass-2:rgba(255,255,255,.07);
     --stroke:rgba(255,255,255,.09); --stroke-2:rgba(255,255,255,.16);
-    --cyan:#22d3ee; --purple:#8b7cf7; --pink:#ff5c9d; --green:#2fe08d; --danger:#ff6b6b;
+    --cyan:#22d3ee; --purple:#8b7cf7; --fuego:#ff7a59; --green:#2fe08d;
     --r-lg:22px; --r-md:16px; --r-sm:12px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -24,18 +24,18 @@
     background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased;padding:28px 16px 60px;min-height:100vh}
   .aurora{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
   .aurora span{position:absolute;border-radius:50%;filter:blur(90px);opacity:.45;animation:float 16s ease-in-out infinite}
-  .aurora span:nth-child(1){width:520px;height:520px;left:-140px;top:-160px;background:#047857}
-  .aurora span:nth-child(2){width:460px;height:460px;right:-120px;top:-80px;background:#5b3df0;animation-delay:-5s}
+  .aurora span:nth-child(1){width:520px;height:520px;left:-140px;top:-160px;background:#7a2830}
+  .aurora span:nth-child(2){width:460px;height:460px;right:-120px;top:-80px;background:#1d3557;animation-delay:-5s}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(40px)}}
   @media (prefers-reduced-motion: reduce){.aurora span{animation:none}}
 
   .wrap{max-width:1000px;margin:0 auto}
   header{text-align:center;margin-bottom:22px}
   a.back{display:inline-block;color:var(--muted);font-size:12.5px;text-decoration:none;border:1px solid var(--stroke);
-    border-radius:999px;padding:6px 12px;background:var(--glass);margin-bottom:14px}
+    border-radius:999px;padding:6px 12px;background:var(--glass);margin:0 4px 14px}
   a.back:hover{color:var(--fg);border-color:var(--stroke-2)}
   h1{font-size:clamp(24px,5vw,34px);font-weight:900;letter-spacing:-.02em;
-    background:linear-gradient(100deg,#dff6ff 10%,#7ff0c0 45%,#8b7cf7 90%);
+    background:linear-gradient(100deg,#ffe3d6 10%,#ff7a59 45%,#8b7cf7 90%);
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
   header p{color:var(--muted);font-size:13.5px;margin-top:6px}
 
@@ -44,9 +44,9 @@
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   input[type=password],input[type=text]{flex:1;min-width:200px;border:1px solid var(--stroke);background:var(--glass);
     color:var(--fg);border-radius:var(--r-md);padding:12px 14px;font-size:14px;font-family:inherit;outline:none}
-  input:focus{border-color:var(--green)}
+  input:focus{border-color:var(--fuego)}
   button{border:none;cursor:pointer;border-radius:var(--r-md);padding:12px 18px;font-weight:800;font-size:14px;
-    font-family:inherit;color:#04231a;background:linear-gradient(135deg,var(--green),var(--cyan));transition:.15s}
+    font-family:inherit;color:#2b0d05;background:linear-gradient(135deg,var(--fuego),#ffb347);transition:.15s}
   button:hover:not(:disabled){transform:translateY(-1px)}
   button:disabled{opacity:.5;cursor:not-allowed;transform:none}
   button.ghost{background:var(--glass);color:var(--muted);border:1px solid var(--stroke)}
@@ -55,20 +55,24 @@
 
   .msg{margin-top:14px;font-size:13.5px;line-height:1.5}
   .msg.err{color:#ffb3b3}
-  .msg.ok{color:var(--green)}
 
   .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:18px 0 10px}
   .count{font-weight:800;font-size:15px}
-  .count span{color:var(--green)}
+  .count span{color:var(--fuego)}
   .search{flex:1;min-width:160px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 10px}
+  .chip{border:1px solid var(--stroke);background:var(--glass);color:var(--muted);border-radius:999px;
+    padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  .chip.activo{color:#2b0d05;background:linear-gradient(135deg,var(--fuego),#ffb347);border-color:transparent}
 
-  .tablewrap{overflow-x:auto;border:1px solid var(--stroke);border-radius:var(--r-md);margin-top:6px}
-  table{border-collapse:collapse;width:100%;font-size:13px;min-width:560px}
-  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--stroke);white-space:nowrap;vertical-align:top}
-  th{position:sticky;top:0;background:#0d1428;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;
-    font-size:11px;font-weight:800}
-  tr:hover td{background:rgba(255,255,255,.03)}
-  td.email{color:var(--cyan)}
+  .lista{display:flex;flex-direction:column;gap:10px}
+  .lead{background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r-md);padding:14px 16px}
+  .lead .meta{display:flex;gap:10px;flex-wrap:wrap;align-items:baseline;margin-bottom:8px}
+  .lead .agente{font-weight:900;color:var(--fuego);letter-spacing:.03em}
+  .lead .fecha{color:var(--muted);font-size:12.5px}
+  .lead .canal{color:var(--muted-2);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;
+    border:1px solid var(--stroke);border-radius:999px;padding:2px 8px}
+  .lead pre{white-space:pre-wrap;word-wrap:break-word;font-family:inherit;font-size:13.5px;line-height:1.55;color:var(--fg)}
   .empty{padding:26px;text-align:center;color:var(--muted-2)}
 </style>
 </head>
@@ -77,16 +81,19 @@
 
 <div class="wrap">
   <header>
-    <a class="back" href="clara.html">← Volver a Clara</a>
-    <a class="back" href="castebot-leads.html">🔥 Hot-leads de CasteBot</a>
-    <h1>📈 Leads del embudo</h1>
-    <p>Panel privado. Solo tú, con tu clave de sincronización, puedes ver estos datos.</p>
+    <div>
+      <a class="back" href="clara.html">← Volver a Clara</a>
+      <a class="back" href="leads.html">📈 Leads del ebook</a>
+      <a class="back" href="castebot.html">💬 Abrir CasteBot</a>
+    </div>
+    <h1>🔥 Hot-leads de CasteBot</h1>
+    <p>Los leads calientes detectados por los 6 agentes. Panel privado: solo tú, con tu clave de sincronización.</p>
   </header>
 
   <div class="card" id="loginCard">
     <div class="row">
       <input type="password" id="clave" placeholder="Clave de sincronización (la misma de la 🧠 memoria)" autocomplete="current-password" />
-      <button id="entrar">Ver leads</button>
+      <button id="entrar">Ver hot-leads</button>
     </div>
     <label class="check" style="margin-top:12px">
       <input type="checkbox" id="recordar" /> Recordar la clave en este dispositivo
@@ -96,18 +103,19 @@
 
   <div id="panel" style="display:none">
     <div class="toolbar">
-      <div class="count">Total: <span id="total">0</span> leads</div>
-      <input type="text" class="search" id="buscar" placeholder="Filtrar (nombre, email…)" />
+      <div class="count">Total: <span id="total">0</span> hot-leads</div>
+      <input type="text" class="search" id="buscar" placeholder="Filtrar (nombre, teléfono, zona…)" />
       <button class="ghost" id="exportar">⬇ CSV</button>
       <button class="ghost" id="recargar">↻ Recargar</button>
       <button class="ghost" id="salir">Salir</button>
     </div>
-    <div class="tablewrap"><table id="tabla"><thead></thead><tbody></tbody></table></div>
+    <div class="chips" id="chips"></div>
+    <div class="lista" id="lista"></div>
   </div>
 </div>
 
 <script>
-  const CLAVE_KEY = "clara_leads_clave_v1";
+  const CLAVE_KEY = "castebot_leads_clave_v1"; // clave propia, pero es la misma de la memoria
   const claveEl = document.getElementById("clave");
   const recordarEl = document.getElementById("recordar");
   const entrarEl = document.getElementById("entrar");
@@ -116,61 +124,54 @@
   const panel = document.getElementById("panel");
   const totalEl = document.getElementById("total");
   const buscarEl = document.getElementById("buscar");
-  const tabla = document.getElementById("tabla");
+  const listaEl = document.getElementById("lista");
+  const chipsEl = document.getElementById("chips");
 
   let leads = [];
-  let columnas = [];
-
-  const ETIQUETAS = {
-    created_at: "Fecha", fecha: "Fecha", creado: "Fecha",
-    nombre: "Nombre", name: "Nombre",
-    email: "Email", correo: "Email",
-    telefono: "Teléfono", phone: "Teléfono",
-    origen: "Origen", source: "Origen",
-    tipo: "Tipo", id: "ID",
-  };
-  const ORDEN = ["created_at", "fecha", "creado", "nombre", "name", "email", "correo", "telefono", "phone", "origen", "source", "tipo", "id"];
+  let agenteActivo = ""; // "" = todos
 
   function escapeHtml(s) {
     return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
-  function formatoValor(clave, v) {
-    if (v == null) return "";
-    if (/fecha|created|creado/i.test(clave)) {
-      const d = new Date(v);
-      if (!isNaN(d)) return d.toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" });
-    }
-    return String(v);
+  function fechaBonita(v) {
+    const d = new Date(v);
+    return isNaN(d) ? String(v ?? "") : d.toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" });
   }
 
-  function calcularColumnas(filas) {
-    const set = new Set();
-    filas.forEach((f) => f && typeof f === "object" && Object.keys(f).forEach((k) => set.add(k)));
-    const todas = [...set];
-    const orden = (k) => { const i = ORDEN.indexOf(k); return i === -1 ? 999 : i; };
-    return todas.sort((a, b) => orden(a) - orden(b) || a.localeCompare(b));
+  function pintaChips() {
+    const agentes = [...new Set(leads.map((l) => l.agente).filter(Boolean))].sort();
+    const chips = ['<button class="chip' + (agenteActivo === "" ? " activo" : "") + '" data-agente="">Todos</button>']
+      .concat(agentes.map((a) =>
+        '<button class="chip' + (agenteActivo === a ? " activo" : "") + '" data-agente="' + escapeHtml(a) + '">' + escapeHtml(a) + "</button>"
+      ));
+    chipsEl.innerHTML = chips.join("");
+    chipsEl.querySelectorAll(".chip").forEach((b) =>
+      b.addEventListener("click", () => { agenteActivo = b.dataset.agente; pinta(); })
+    );
   }
 
-  function pinta(filtro) {
-    const q = (filtro || "").toLowerCase().trim();
-    const filas = q
-      ? leads.filter((l) => Object.values(l).some((v) => String(v ?? "").toLowerCase().includes(q)))
-      : leads;
-
-    const thead = "<tr>" + columnas.map((c) => "<th>" + escapeHtml(ETIQUETAS[c] || c) + "</th>").join("") + "</tr>";
-    tabla.querySelector("thead").innerHTML = thead;
-
-    const tbody = tabla.querySelector("tbody");
+  function pinta() {
+    const q = (buscarEl.value || "").toLowerCase().trim();
+    const filas = leads.filter((l) =>
+      (!agenteActivo || l.agente === agenteActivo) &&
+      (!q || [l.resumen, l.agente, l.canal].some((v) => String(v ?? "").toLowerCase().includes(q)))
+    );
+    pintaChips();
     if (!filas.length) {
-      tbody.innerHTML = '<tr><td class="empty" colspan="' + Math.max(1, columnas.length) + '">' +
-        (leads.length ? "Ningún lead coincide con el filtro." : "Aún no hay leads capturados.") + "</td></tr>";
+      listaEl.innerHTML = '<div class="empty">' +
+        (leads.length ? "Ningún hot-lead coincide con el filtro." : "Aún no hay hot-leads registrados. En cuanto un agente detecte uno, aparecerá aquí (y te llegará por Telegram).") +
+        "</div>";
       return;
     }
-    tbody.innerHTML = filas.map((l) =>
-      "<tr>" + columnas.map((c) => {
-        const clase = /email|correo/i.test(c) ? ' class="email"' : "";
-        return "<td" + clase + ">" + escapeHtml(formatoValor(c, l[c])) + "</td>";
-      }).join("") + "</tr>"
+    listaEl.innerHTML = filas.map((l) =>
+      '<div class="lead">' +
+        '<div class="meta">' +
+          '<span class="agente">🔥 ' + escapeHtml(l.agente || "") + "</span>" +
+          '<span class="fecha">' + escapeHtml(fechaBonita(l.creado)) + "</span>" +
+          '<span class="canal">' + escapeHtml(l.canal || "web") + "</span>" +
+        "</div>" +
+        "<pre>" + escapeHtml(l.resumen || "") + "</pre>" +
+      "</div>"
     ).join("");
   }
 
@@ -179,7 +180,7 @@
     estadoEl.textContent = "Cargando…";
     entrarEl.disabled = true;
     try {
-      const res = await fetch("/api/leads", {
+      const res = await fetch("/api/castebot-leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clave }),
@@ -191,9 +192,8 @@
         return;
       }
       leads = Array.isArray(data.leads) ? data.leads : [];
-      columnas = calcularColumnas(leads);
       totalEl.textContent = leads.length;
-      pinta(buscarEl.value);
+      pinta();
       loginCard.style.display = "none";
       panel.style.display = "block";
       if (recordarEl.checked) { try { localStorage.setItem(CLAVE_KEY, clave); } catch {} }
@@ -211,7 +211,7 @@
     cargar(clave);
   });
   claveEl.addEventListener("keydown", (e) => { if (e.key === "Enter") entrarEl.click(); });
-  buscarEl.addEventListener("input", () => pinta(buscarEl.value));
+  buscarEl.addEventListener("input", pinta);
   document.getElementById("recargar").addEventListener("click", () => cargar(claveEl.value.trim()));
   document.getElementById("salir").addEventListener("click", () => {
     try { localStorage.removeItem(CLAVE_KEY); } catch {}
@@ -222,20 +222,20 @@
   document.getElementById("exportar").addEventListener("click", () => {
     if (!leads.length) return;
     const esc = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
-    const csv = [columnas.map((c) => esc(ETIQUETAS[c] || c)).join(",")]
-      .concat(leads.map((l) => columnas.map((c) => esc(formatoValor(c, l[c]))).join(",")))
+    const csv = ["Fecha,Agente,Canal,Resumen"]
+      .concat(leads.map((l) => [fechaBonita(l.creado), l.agente, l.canal, l.resumen].map(esc).join(",")))
       .join("\r\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = "leads-clara.csv";
+    a.href = url; a.download = "hot-leads-castebot.csv";
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
   });
 
-  // Clave recordada: entra directo.
+  // Clave recordada (propia o la del panel de leads del ebook): entra directo.
   try {
-    const guardada = localStorage.getItem(CLAVE_KEY);
+    const guardada = localStorage.getItem(CLAVE_KEY) || localStorage.getItem("clara_leads_clave_v1");
     if (guardada) { claveEl.value = guardada; recordarEl.checked = true; cargar(guardada); }
   } catch {}
 </script>

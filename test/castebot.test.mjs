@@ -10,6 +10,7 @@
 
 import handler, { separarHotlead } from "../api/castebot.js";
 import informe from "../api/castebot-informe.js";
+import panelLeads from "../api/castebot-leads.js";
 
 let pasados = 0;
 let fallados = 0;
@@ -313,6 +314,46 @@ delete process.env.SUPABASE_ANON_KEY;
 delete process.env.TELEGRAM_BOT_TOKEN;
 delete process.env.TELEGRAM_CHAT_ID;
 delete process.env.CRON_SECRET;
+
+// ---------------------------------------------------------------------------
+console.log("\n— api/castebot-leads.js (panel de hot-leads) —");
+// ---------------------------------------------------------------------------
+res = mockRes();
+await panelLeads({ method: "GET" }, res);
+check("GET → 405", res.r.statusCode === 405);
+
+res = mockRes();
+await panelLeads({ method: "POST", body: { clave: "x" } }, res);
+check("sin Supabase → 503", res.r.statusCode === 503);
+
+process.env.SUPABASE_URL = "https://test.supabase.co";
+process.env.SUPABASE_ANON_KEY = "anon-test";
+
+res = mockRes();
+await panelLeads({ method: "POST", body: {} }, res);
+check("sin clave → 400", res.r.statusCode === 400);
+
+const HOTLEADS_FALSOS = [
+  { id: 2, creado: "2026-08-25T10:00:00Z", agente: "NURIA", canal: "web", resumen: "🔥 HOT-LEAD NURIA\nNombre: Marta\nDato clave: expediente completo" },
+  { id: 1, creado: "2026-08-24T09:00:00Z", agente: "JUANJO", canal: "web", resumen: "🔥 HOT-LEAD JUANJO\nNombre: Luis\nQué quiere: comprar en Oviedo" },
+];
+globalThis.fetch = async (url, init) => {
+  const u = String(url);
+  if (!u.includes("test.supabase.co/rest/v1/rpc/castebot_leads_lista")) throw new Error("fetch inesperado: " + u);
+  const { clave } = JSON.parse(init.body);
+  if (clave !== "buena") return new Response("clave incorrecta", { status: 401 });
+  return new Response(JSON.stringify(HOTLEADS_FALSOS), { status: 200, headers: { "content-type": "application/json" } });
+};
+
+res = mockRes();
+await panelLeads({ method: "POST", body: { clave: "mala" } }, res);
+check("clave incorrecta → 401", res.r.statusCode === 401);
+
+res = mockRes();
+await panelLeads({ method: "POST", body: { clave: "buena" } }, res);
+check("clave correcta → 200 con la lista", res.r.statusCode === 200 && res.r.body?.total === 2 && res.r.body?.leads?.[0]?.agente === "NURIA");
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_ANON_KEY;
 
 // ---------------------------------------------------------------------------
 console.log("\n— handler: rechazo del modelo —");

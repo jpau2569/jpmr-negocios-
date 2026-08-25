@@ -110,6 +110,7 @@ Es "el agente que trabaja de noche".
 - [x] Widget embebible para asesoriacastresana.com → `castebot-widget.js`: burbuja flotante + panel con el chat. Se instala pegando una línea antes de `</body>` de la web:
       `<script src="https://TU-DOMINIO-VERCEL/castebot-widget.js" defer></script>`
 - [x] Registro de hot-leads en Supabase → tabla `castebot_leads` + RPC `castebot_lead_guarda` (alta desde el backend), `castebot_leads_lista(clave)` (lectura protegida) y `castebot_leads_resumen()` (totales sin datos personales). **Esquema ya aplicado** en el proyecto `clara-memoria` de Supabase.
+- [x] Panel privado de hot-leads → `castebot-leads.html` + `api/castebot-leads.js`: lista los hot-leads registrados (tarjetas con agente, fecha y resumen), con filtro por agente, buscador y export CSV. Protegido con la clave de sincronización, como el panel de leads del ebook. URL: `/castebot-leads.html`.
 - [x] Informe diario de NICER → `api/castebot-informe.js` + cron de Vercel (`0 7 * * *` UTC ≈ 8:00/9:00 Madrid): lee los totales de hot-leads por agente, NICER lo redacta con su prompt maestro y lo envía a Telegram. Protegido con `CRON_SECRET` (como el briefing de Clara); se puede abrir a mano con `/api/castebot-informe?key=TU_CRON_SECRET`.
 - [ ] Configurar en Vercel las variables `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID` (reutilizar castresana-bot) y probar un hot-lead real
 - [ ] Pegar la línea del widget en asesoriacastresana.com (o pedírselo a quien gestione la web)
