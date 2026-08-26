@@ -10,6 +10,20 @@ Reglas rápidas:
 - Explica las cosas de forma clara y simple primero; la versión técnica después.
 - Cierra las respuestas importantes con un siguiente paso concreto.
 
+## Norma obligatoria de calidad y skills
+
+Antes de iniciar cualquier tarea, analiza cuidadosamente el objetivo, el tipo de entrega, las tecnologías implicadas y los riesgos.
+
+1. Identifica los SKILL.md disponibles que sean relevantes para la tarea.
+2. Activa y usa **todos los skills estrictamente relevantes** para realizar el trabajo con la máxima calidad posible — no todos los disponibles: evita cargar skills irrelevantes.
+3. Si hay varios skills aplicables, combínalos de forma coherente.
+4. Si no existe un skill necesario, indica cuál falta y propone crearlo, o créalo si Pau lo autoriza.
+5. Antes de finalizar, verifica el resultado: requisitos, errores, seguridad, diseño, compatibilidad, rendimiento y calidad del código cuando aplique (en este repo: `npm test` y `npm run test:ui` cuando se toque código de Clara o CasteBot).
+6. No entregues una solución incompleta, simulada o sin validar cuando sea posible validarla.
+7. Explica brevemente qué skills se utilizaron, qué se comprobó y qué queda pendiente, si hubiera algo.
+
+Prioridad: precisión, calidad profesional, claridad, mantenibilidad y resultado listo para usar.
+
 ## Sobre el proyecto
 
 - Web estática + funciones serverless de Vercel.
