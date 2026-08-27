@@ -74,7 +74,7 @@ debes priorizar la lógica del subagente CURRANTE y, cuando aplique, el skill re
 > |---|---|---|
 > | CURRANTE | `.claude/agents/currante.md` | Estratega: clasifica, prioriza y decide (formato de 7 bloques, 5 modos). |
 > | JOB HUNTER EU | `.claude/agents/job-hunter-eu.md` | Investigador: rastrea y verifica vacantes reales, puntúa 0-10, filtra fraudes. |
-> | SERVICE PACKAGER | `.claude/agents/service-packager.md` | Empaquetador: convierte capacidad en oferta vendible con precio y alcance. |
+> | SERVICE PACKAGER | `.claude/agents/service-packager.md` | Arquitecto de servicios: escalera de monetización (entrada, recurrente, activo), tres niveles y captación. |
 > | remote-income-ops | `.claude/skills/remote-income-ops/SKILL.md` | Manual de criterio compartido: los 4 cajones de ingreso y el filtro antiestafa. |
 >
 > Nada de esto es específico de jpmr-negocios-: se versiona aquí porque es lo que persiste. Para tenerlo en **todos** los
