@@ -68,11 +68,18 @@ Si la tarea trata de cualquiera de estos temas:
 
 debes priorizar la lógica del subagente CURRANTE y, cuando aplique, el skill remote-income-ops.
 
-> Estado a 27/08/2026: **las dos piezas existen y viven versionadas en este repositorio** — el subagente en
-> `.claude/agents/currante.md` y la skill en `.claude/skills/remote-income-ops/SKILL.md`. Reparto: CURRANTE es el estratega
-> (clasifica, prioriza y decide, con su formato de 7 bloques); `remote-income-ops` es el manual de criterio que se carga para
-> analizar (los 4 cajones de ingreso, la lista de roles a priorizar y el filtro antiestafa). Para tenerlas en todos tus
-> proyectos y no solo en este repositorio, copia esos dos archivos a `~/.claude/agents/` y `~/.claude/skills/` en tu máquina.
+> **El ecosistema Currante vive versionado en `.claude/` de este repositorio** (estado a 27/08/2026):
+>
+> | Pieza | Archivo | Papel |
+> |---|---|---|
+> | CURRANTE | `.claude/agents/currante.md` | Estratega: clasifica, prioriza y decide (formato de 7 bloques, 5 modos). |
+> | JOB HUNTER EU | `.claude/agents/job-hunter-eu.md` | Investigador: rastrea y verifica vacantes reales, puntúa 0-10, filtra fraudes. |
+> | SERVICE PACKAGER | `.claude/agents/service-packager.md` | Empaquetador: convierte capacidad en oferta vendible con precio y alcance. |
+> | remote-income-ops | `.claude/skills/remote-income-ops/SKILL.md` | Manual de criterio compartido: los 4 cajones de ingreso y el filtro antiestafa. |
+>
+> Nada de esto es específico de jpmr-negocios-: se versiona aquí porque es lo que persiste. Para tenerlo en **todos** los
+> proyectos, ejecuta `bash .claude/instalar-global.sh`, que lo copia a `~/.claude/` (agentes, skill y las normas de trabajo
+> como `~/.claude/CLAUDE.md`, con copia de seguridad de lo que hubiera).
 
 ## Norma de calidad final
 
