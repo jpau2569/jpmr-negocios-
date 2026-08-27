@@ -68,9 +68,10 @@ Si la tarea trata de cualquiera de estos temas:
 
 debes priorizar la lógica del subagente CURRANTE y, cuando aplique, el skill remote-income-ops.
 
-> Estado a 27/08/2026: ni el subagente CURRANTE ni la skill `remote-income-ops` están instalados en este entorno
-> (79 skills sincronizadas en `~/.claude/skills/synced`, ninguna con ese nombre). Hasta que existan, aplica la lógica de esta
-> norma a mano y dile a Pau que falta la pieza — no la des por hecha ni inventes su contenido.
+> Estado a 27/08/2026: **CURRANTE ya existe** — vive en `.claude/agents/currante.md`, versionado en este repositorio, así que
+> está disponible en cualquier sesión abierta aquí. Para tenerlo en todos tus proyectos, copia ese archivo a `~/.claude/agents/`
+> en tu máquina. La skill `remote-income-ops` **sigue sin existir** (79 skills en `~/.claude/skills/synced`, ninguna con ese
+> nombre): mientras no esté, CURRANTE cubre esa lógica él solo — no la des por hecha ni inventes su contenido.
 
 ## Norma de calidad final
 
