@@ -1,4 +1,6 @@
-# Instrucciones para Claude en este repositorio
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Persona: CLARA
 
@@ -10,13 +12,58 @@ Reglas rápidas:
 - Explica las cosas de forma clara y simple primero; la versión técnica después.
 - Cierra las respuestas importantes con un siguiente paso concreto.
 
-## Sobre el proyecto
+## Comandos
 
-- Web estática + funciones serverless de Vercel.
-- `index.html` + `api/process/[tool].js` → LimpiaFotos (Clipdrop; clave en `CLIPDROP_API_KEY`).
-- `marcadeagua.html` → herramienta de quitar marcas de agua propias: el usuario pinta una máscara sobre la marca y se envía imagen + máscara al endpoint `cleanup` de `api/process/[tool].js` (Clipdrop Cleanup, modo quality); admite varias pasadas.
-- `clara.html` + `api/clara.js` → chat de CLARA (API de Claude; clave en `ANTHROPIC_API_KEY`).
-- La persona de Clara vive en `clara_persona.md` (canónica) y embebida en `api/clara.js` — **si cambias una, actualiza la otra**.
-- `castebot.html` + `api/castebot.js` → CasteBot: red de 6 agentes IA de Asesoría Castresana (JUANJO, JAVI, ALEJANDRO, PAU, NURIA, NICER) con selector "¿Con quién quieres hablar?". Los prompts maestros canónicos viven en `agentes/` (`_comunes.md` + uno por agente) y el backend los compone en el system prompt; hot-lead → aviso a Telegram (`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`) + registro en Supabase (tabla `castebot_leads`). `castebot-widget.js` es el widget embebible (una línea de script) para asesoriacastresana.com, `api/castebot-informe.js` es el informe diario de NICER (cron 7:00 UTC, protegido con `CRON_SECRET`), y `castebot-leads.html` + `api/castebot-leads.js` el panel privado de hot-leads (protegido con la clave de sincronización). Plan general en `AGENTECASTRESANA6.md`.
-- `escaparate.html` + `api/escaparate.js` → escaparate para la TV Samsung vertical del local: la API escrapea los inmuebles de www.asesoriacastresana.com y la página se muestra en vertical sin girar por defecto; con el mando (OK/Enter) o `?rot=90|270|0|180` se puede rotar y la elección queda guardada en la TV (también `?secs=N`, `?fuente=demo`).
-- Documentación de configuración: `CLARA.md`.
+```bash
+npm install            # imprescindible antes de los tests (@anthropic-ai/sdk)
+npm test               # test/clara.test.mjs + test/castebot.test.mjs
+npm run test:ui        # test de interfaz de clara.html (Playwright + Chromium)
+
+node test/castebot.test.mjs   # ejecutar una sola batería
+```
+
+- Los tests son scripts planos con una función `check(nombre, condición)`; no hay runner ni filtro por nombre de test. Para uno concreto, ejecuta su archivo y busca la línea en la salida. Salen con código ≠ 0 si algo falla.
+- **Nunca llaman a APIs reales**: interceptan `globalThis.fetch` y simulan Anthropic, Gemini, Supabase, Telegram y asesoriacastresana.com; importan los handlers de `api/` directamente y los invocan con un `mockRes()`. Al añadir un endpoint o una herramienta, añade su caso aquí.
+- `npm run test:ui` levanta un servidor estático en el puerto 8123, sirve `clara.html`, intercepta `/api/clara` con una respuesta SSE simulada y usa `chromium.launch({ executablePath: "/opt/pw-browsers/chromium" })` — esa ruta está fija en el archivo; ajústala si el navegador vive en otro sitio.
+- **No hay build ni servidor de desarrollo**: los `.html` son estáticos y se sirven tal cual; las funciones de `api/` se ejecutan en Vercel.
+
+## Arquitectura
+
+Web estática + funciones serverless de Vercel (Node ESM, `"type": "module"`, sin framework). Cada archivo de `api/` exporta `default async function handler(req, res)` al estilo Next/Vercel, y `lib/` guarda lo compartido entre ellas.
+
+**Dos asistentes de Claude, un mismo esqueleto** (`api/clara.js` y `api/castebot.js`), que comparten patrones:
+
+- **System prompt por bloques con caché**: el bloque grande y estable (persona / prompts de agentes) lleva `cache_control: { type: "ephemeral" }`; la fecha de Madrid, el modo y la memoria van *después*, en bloques sin caché, para no invalidar el prefijo cacheado.
+- **Streaming SSE propio** (`export const config = { supportsResponseStreaming: true }`): eventos `data: {"t": "delta"}` para texto, `{"estado": "🔍 Buscando…"}` para avisos de herramienta, `{"done": true, "reply": "..."}` al cerrar y `{"error": "..."}` al fallar. Los frontends esperan exactamente ese contrato. Con `stream: false` la misma ruta responde JSON de una pieza.
+- **Saneado del historial**: se filtran roles, se recorta texto, se limita a `MAX_HISTORY` mensajes y se exige que el primero sea `user`.
+- **Errores traducidos**: `Anthropic.AuthenticationError` → 500 con instrucción concreta, `RateLimitError` → 429, `APIError` → 502.
+
+**Clara** (`clara.html` + `api/clara.js`) añade un bucle de herramientas de hasta `MAX_TOOL_ROUNDS` rondas: `buscar_web` (Gemini + grounding de Google Search, con fuentes), `calcular` (aritmética validada por regex, jamás `eval` de código libre), `mi_cartera`, `usar_skill` y —solo con la nube activa— `recordar` y `crear_skill`. Todo resultado de herramienta pasa por `textoHerramienta()` porque la API rechaza un `tool_result` vacío. Acepta adjuntos base64 (imagen/PDF) solo en los últimos 4 mensajes, con tipo y tamaño acotados.
+
+**CasteBot** (`castebot.html` + `api/castebot.js`) es la red de 6 agentes de Asesoría Castresana. Los prompts maestros **canónicos viven en `agentes/`** y el backend compone `_comunes.md` + `<agente>.md` leyéndolos del disco con `readFileSync` (cacheados en memoria): edita el markdown, no el JS. El diccionario `AGENTES` es una lista blanca — nunca se lee una ruta que venga del frontend. Protocolo de hot-lead: el agente añade un bloque `[[HOTLEAD]]…[[/HOTLEAD]]`, el backend lo extrae, avisa a Telegram, lo registra en Supabase y lo oculta al cliente; en streaming se retiene un margen del tamaño del marcador para poder cortar aunque llegue partido entre deltas. `castebot-widget.js` es el embebible de una línea para asesoriacastresana.com (deduce su origen del `src` del propio script).
+
+**Datos y seguridad:**
+
+- Ninguna clave llega al navegador: todas las llamadas a terceros (Clipdrop, Anthropic, Gemini, Telegram, Supabase) pasan por las funciones de `api/`. Todo `fetch` saliente lleva timeout con `AbortController`.
+- **Supabase se toca solo por RPC** (`lib/memoria.js` → `rpc(fn, args)`). Las tablas tienen RLS activado y **sin políticas**: el acceso va por funciones `security definer` que validan la *clave de sincronización* de Pau. La `SUPABASE_ANON_KEY` es publicable por diseño; el secreto real es esa clave, que Pau escribe en cada dispositivo y nunca está en el código. RPCs en uso: `clara_memoria_lee|guarda|apunta`, `clara_skills_lista|lee|guarda`, `lead_guarda`, `leads_lista`, `castebot_lead_guarda`, `castebot_leads_lista`, `castebot_leads_resumen`.
+- `lib/cartera.js` escrapea las páginas públicas de resultados de asesoriacastresana.com (sin claves) y lo comparten `api/escaparate.js`, la herramienta `mi_cartera` de Clara y `api/briefing.js`. Si cambia el HTML del portal, se arregla aquí una vez.
+- `lib/skills.js`: skills base embebidas en el código + skills que Clara crea ella misma y persisten en Supabase.
+- Los dos crons (`vercel.json`: `/api/briefing` 6:00 UTC, `/api/castebot-informe` 7:00 UTC) exigen `CRON_SECRET` — por cabecera `Authorization: Bearer` (la envía Vercel Cron) o por `?key=` para abrirlos a mano. Sin la variable, el endpoint no se sirve.
+
+**Rutas y páginas:** `index.html` + `api/process/[tool].js` (LimpiaFotos: proxy a Clipdrop que reenvía el multipart crudo con su boundary; endpoints `remove-background`, `remove-text`, `image-upscaling`, `cleanup`) · `marcadeagua.html` (máscara pintada a mano → `cleanup`, varias pasadas) · `escaparate.html` (TV vertical del local; `?rot=90|270|0|180`, `?secs=N`, `?fuente=demo`) · `ebook.html` / `ebook-guia.html` + `api/lead.js` (embudo) · `leads.html` y `castebot-leads.html` + sus APIs (paneles privados, protegidos con la clave de sincronización).
+
+## Invariantes al editar
+
+- **La persona de Clara está duplicada**: `clara_persona.md` (canónica) y `CLARA_SYSTEM` embebido en `api/clara.js`. Si cambias una, actualiza la otra.
+- Función nueva en `api/` que tarde más de 10 s o que lea archivos del repo (como `agentes/`) → añádela a `vercel.json` con su `maxDuration` y su `includeFiles`.
+- Código, comentarios, nombres de variables y mensajes de error: **en español**, como el resto del repositorio. Los errores de cara al usuario dicen qué falta y dónde arreglarlo (p. ej. "añádela en Vercel → Settings → Environment Variables").
+
+## Variables de entorno (Vercel)
+
+`ANTHROPIC_API_KEY` (Clara y CasteBot) · `GEMINI_API_KEY` (búsqueda de Clara) · `CLIPDROP_API_KEY` (LimpiaFotos y marca de agua) · `SUPABASE_URL` + `SUPABASE_ANON_KEY` (memoria, skills, leads) · `CRON_SECRET` (obligatoria para briefing e informe) · `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (hot-leads e informes). Cada bloque degrada con elegancia si falta su clave.
+
+## Documentación del repositorio
+
+`CLARA.md` (configuración y funcionamiento de Clara) · `AGENTECASTRESANA6.md` (plan de la red de 6 agentes) · `DESPLIEGUE_VERCEL.md` (guía de despliegue paso a paso) · `ESTADO_Y_SIGUIENTE_PASO.md` (bitácora de sesión) · `CURSO_FULLSTACK_IA.md` (temario de Pau).
+
+Dos avisos: `README.md` no es documentación, es un volcado de un `index.html` pegado (6.000 líneas) — ignóralo. Y `limpiafotos/` es la versión antigua y autónoma de LimpiaFotos (servidor Express propio) que **no se despliega**; la que está viva es `api/process/[tool].js`.
