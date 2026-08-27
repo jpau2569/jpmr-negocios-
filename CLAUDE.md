@@ -68,10 +68,11 @@ Si la tarea trata de cualquiera de estos temas:
 
 debes priorizar la lógica del subagente CURRANTE y, cuando aplique, el skill remote-income-ops.
 
-> Estado a 27/08/2026: **CURRANTE ya existe** — vive en `.claude/agents/currante.md`, versionado en este repositorio, así que
-> está disponible en cualquier sesión abierta aquí. Para tenerlo en todos tus proyectos, copia ese archivo a `~/.claude/agents/`
-> en tu máquina. La skill `remote-income-ops` **sigue sin existir** (79 skills en `~/.claude/skills/synced`, ninguna con ese
-> nombre): mientras no esté, CURRANTE cubre esa lógica él solo — no la des por hecha ni inventes su contenido.
+> Estado a 27/08/2026: **las dos piezas existen y viven versionadas en este repositorio** — el subagente en
+> `.claude/agents/currante.md` y la skill en `.claude/skills/remote-income-ops/SKILL.md`. Reparto: CURRANTE es el estratega
+> (clasifica, prioriza y decide, con su formato de 7 bloques); `remote-income-ops` es el manual de criterio que se carga para
+> analizar (los 4 cajones de ingreso, la lista de roles a priorizar y el filtro antiestafa). Para tenerlas en todos tus
+> proyectos y no solo en este repositorio, copia esos dos archivos a `~/.claude/agents/` y `~/.claude/skills/` en tu máquina.
 
 ## Norma de calidad final
 
