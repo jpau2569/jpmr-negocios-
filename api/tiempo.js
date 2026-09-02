@@ -56,7 +56,7 @@ async function openMeteo(){
     timezone: ZONA,
     forecast_days: '2'
   });
-  const res = await conCorte(`https://api.open-meteo.com/v1/forecast?${p}`, {}, 9000);
+  const res = await conCorte(`https://api.open-meteo.com/v1/forecast?${p}`, {}, 7000);
   if (!res.ok) throw new Error(`Open-Meteo ${res.status}`);
   const json = await res.json();
   return Array.isArray(json) ? json : [json];
@@ -66,11 +66,11 @@ async function openMeteo(){
 /* OpenData responde en dos pasos: primero una URL, luego los datos.    */
 async function aemetJson(ruta, clave){
   const cabeceras = { 'api_key': clave, 'cache-control': 'no-cache' };
-  const puerta = await conCorte(`https://opendata.aemet.es/opendata${ruta}`, { headers: cabeceras }, 8000);
+  const puerta = await conCorte(`https://opendata.aemet.es/opendata${ruta}`, { headers: cabeceras }, 4000);
   if (!puerta.ok) throw new Error(`AEMET ${puerta.status}`);
   const sobre = await puerta.json();
   if (!sobre.datos) throw new Error(`AEMET sin datos: ${sobre.descripcion || sobre.estado}`);
-  const datos = await conCorte(sobre.datos, {}, 8000);
+  const datos = await conCorte(sobre.datos, {}, 4000);
   if (!datos.ok) throw new Error(`AEMET datos ${datos.status}`);
   // El fichero de datos viene en latin-1 con más frecuencia de la deseable
   const cuerpo = await datos.arrayBuffer();
@@ -223,18 +223,23 @@ export default async function handler(req, res){
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   const ahora = new Date();
+  const clave = process.env.AEMET_API_KEY;
   try {
-    const malla = await openMeteo();
-    let ciudades = CIUDADES.map((c, i) => normaliza(c, malla[i], ahora));
-    let origen = 'openmeteo';
+    /* Las dos fuentes son independientes, así que se piden a la vez: en
+       serie, el peor caso se pasaba del límite de 10 s de las funciones. */
     const avisos = [];
-
-    const clave = process.env.AEMET_API_KEY;
-    if (clave){
-      const obs = await observacionesCercanas(clave).catch(err => {
+    const [malla, obs] = await Promise.all([
+      openMeteo(),
+      clave ? observacionesCercanas(clave).catch(err => {
         avisos.push(`AEMET no disponible (${err.message}); se usa solo el modelo.`);
         return null;
-      });
+      }) : Promise.resolve(null)
+    ]);
+
+    let ciudades = CIUDADES.map((c, i) => normaliza(c, malla[i], ahora));
+    let origen = 'openmeteo';
+
+    if (clave){
       const logradas = obs ? obs.filter(Boolean).length : 0;
       if (logradas){
         ciudades = ciudades.map((c, i) => aplicaObservacion(c, obs[i]));
