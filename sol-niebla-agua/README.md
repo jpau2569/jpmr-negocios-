@@ -152,13 +152,10 @@ Por orden de utilidad real, no de dificultad:
 1. **Avisar solo cuando importa.** Una notificación cuando se abra una
    ventana buena de al menos dos horas en el modo activo. Es lo que
    convierte la app en algo que te busca a ti en vez de al revés.
-2. **Verificar las estaciones de AEMET.** Los indicativos de Mieres y Gijón
-   están elegidos por cercanía, sin comprobar que estén operativos. Conviene
-   contrastarlos con el inventario de estaciones antes de fiarse del todo.
-3. **Radar de precipitación.** Ver el frente acercándose vale más que un
+2. **Radar de precipitación.** Ver el frente acercándose vale más que un
    porcentaje para decidir si sales ahora o en veinte minutos.
-4. **Histórico propio.** Guardar el índice de cada día permite responder
+3. **Histórico propio.** Guardar el índice de cada día permite responder
    "¿cuántos días aprovechables hubo este mes?" y, con el tiempo, ajustar los
    pesos de cada modo con datos en vez de a ojo.
-5. **Más sitios.** Añadir Avilés, Llanes o los puertos de montaña es añadir
+4. **Más sitios.** Añadir Avilés, Llanes o los puertos de montaña es añadir
    una entrada a `CIUDADES`; el resto de la app no se entera.

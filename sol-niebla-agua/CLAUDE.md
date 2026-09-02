@@ -247,8 +247,11 @@ implementes.
 - El gráfico necesita al menos dos franjas; con menos, avisa en vez de
   dibujar coordenadas infinitas.
 
-## Pendiente conocido
+## Estaciones de AEMET
 
-Los indicativos de estación AEMET de Mieres y Gijón (`api/tiempo.js`) están
-elegidos por cercanía, sin verificar que estén operativos. Contrastarlos con
-el inventario de estaciones antes de fiarse de la observación real.
+No hay indicativos escritos a mano. `api/tiempo.js` pide **todas** las
+observaciones en una sola llamada (`/observacion/convencional/todas`) y elige
+para cada ciudad la estación más cercana por distancia real, descartando las
+que estén a más de 30 km. Así la app se autocorrige si AEMET cambia su red o
+una estación deja de emitir. La respuesta dice qué estación usó y a cuántos
+kilómetros está.

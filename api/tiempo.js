@@ -15,11 +15,14 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 const CIUDADES = [
-  // `estaciones`: indicativos AEMET por cercanía, en orden de preferencia
-  { id:'oviedo', nombre:'Oviedo', zona:'interior', lat:43.3619, lon:-5.8494, estaciones:['1249I','1249X'] },
-  { id:'mieres', nombre:'Mieres', zona:'valle',    lat:43.2500, lon:-5.7756, estaciones:['1208H','1249I'] },
-  { id:'gijon',  nombre:'Gijón',  zona:'costa',    lat:43.5453, lon:-5.6615, estaciones:['1207U','1208H'] }
+  { id:'oviedo', nombre:'Oviedo', zona:'interior', lat:43.3619, lon:-5.8494 },
+  { id:'mieres', nombre:'Mieres', zona:'valle',    lat:43.2500, lon:-5.7756 },
+  { id:'gijon',  nombre:'Gijón',  zona:'costa',    lat:43.5453, lon:-5.6615 }
 ];
+
+/* Radio máximo para dar por buena una estación. Más lejos de esto, la
+   observación deja de describir la ciudad y es mejor el modelo.          */
+const RADIO_KM = 30;
 
 const ZONA = 'Europe/Madrid';
 
@@ -76,26 +79,52 @@ async function aemetJson(ruta, clave){
   return JSON.parse(texto);
 }
 
-/** Última observación válida de una estación (o null si no hay). */
-async function observacion(estaciones, clave){
-  for (const idema of estaciones){
-    try {
-      const filas = await aemetJson(`/api/observacion/convencional/datos/estacion/${idema}`, clave);
-      const ultima = [...filas].reverse().find(f => f.ta !== undefined);
-      if (ultima) return {
-        estacion: ultima.ubi?.trim() || idema,
-        instante: ultima.fint,
-        temperatura: ultima.ta,
-        humedad: ultima.hr,
-        viento: ultima.vv !== undefined ? ultima.vv * 3.6 : undefined,   // m/s → km/h
-        rachas:  ultima.vmax !== undefined ? ultima.vmax * 3.6 : undefined,
-        dirViento: ultima.dv,
-        precipitacion: ultima.prec,
-        visibilidad: ultima.vis !== undefined ? ultima.vis * 1000 : undefined   // km → m
-      };
-    } catch { /* probamos la siguiente estación */ }
+/** Distancia en km entre dos coordenadas (haversine). */
+function distancia(aLat, aLon, bLat, bLon){
+  const R = 6371, r = Math.PI / 180;
+  const dLat = (bLat - aLat) * r, dLon = (bLon - aLon) * r;
+  const h = Math.sin(dLat/2)**2 + Math.cos(aLat*r) * Math.cos(bLat*r) * Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/* Las observaciones de todas las estaciones vienen en una sola llamada, con
+   sus coordenadas. Se elige la más cercana a cada ciudad por distancia real
+   en vez de fijar indicativos a mano: la red de AEMET cambia, las estaciones
+   se caen, y una lista escrita a ojo envejece mal.                        */
+async function observacionesCercanas(clave){
+  const filas = await aemetJson('/api/observacion/convencional/todas', clave);
+
+  // Cada estación aparece varias veces (una por hora): nos quedamos con la
+  // última lectura válida de cada una.
+  const porEstacion = new Map();
+  for (const f of filas){
+    if (f.ta === undefined || f.lat === undefined || f.lon === undefined) continue;
+    const previa = porEstacion.get(f.idema);
+    if (!previa || String(f.fint) > String(previa.fint)) porEstacion.set(f.idema, f);
   }
-  return null;
+
+  const estaciones = [...porEstacion.values()];
+  return CIUDADES.map(ciudad => {
+    let mejor = null, minimo = Infinity;
+    for (const e of estaciones){
+      const d = distancia(ciudad.lat, ciudad.lon, e.lat, e.lon);
+      if (d < minimo){ minimo = d; mejor = e; }
+    }
+    if (!mejor || minimo > RADIO_KM) return null;
+    return {
+      estacion: mejor.ubi?.trim() || mejor.idema,
+      idema: mejor.idema,
+      distanciaKm: red(minimo, 1),
+      instante: mejor.fint,
+      temperatura: mejor.ta,
+      humedad: mejor.hr,
+      viento: mejor.vv !== undefined ? mejor.vv * 3.6 : undefined,   // m/s → km/h
+      rachas:  mejor.vmax !== undefined ? mejor.vmax * 3.6 : undefined,
+      dirViento: mejor.dv,
+      precipitacion: mejor.prec,
+      visibilidad: mejor.vis !== undefined ? mejor.vis * 1000 : undefined   // km → m
+    };
+  });
 }
 
 /* ── Normalización: la misma forma que consume la app ─────────────── */
@@ -169,12 +198,14 @@ function aplicaObservacion(ciudad, obs){
     a.sensacion = red(a.temperatura - (v > 14 ? (v - 14) * .10 : 0)
       + (a.temperatura > 24 && a.humedad > 75 ? 1.6 : 0), 1);
   }
-  return { ...ciudad, actual: a, observacion: { estacion: obs.estacion, instante: obs.instante } };
+  return { ...ciudad, actual: a,
+    observacion: { estacion: obs.estacion, idema: obs.idema,
+                   distanciaKm: obs.distanciaKm, instante: obs.instante } };
 }
 
 const num = v => typeof v === 'number' && Number.isFinite(v);
 const red = (v, d) => { if (!num(v)) return v; const f = 10 ** d; return Math.round(v * f) / f; };
-const sinEstaciones = ({ estaciones, ...resto }) => resto;
+const sinEstaciones = (ciudad) => ciudad;
 
 function indiceMasCercano(tiempos, ahora, desfase){
   let mejor = 0, dif = Infinity;
@@ -200,13 +231,17 @@ export default async function handler(req, res){
 
     const clave = process.env.AEMET_API_KEY;
     if (clave){
-      const obs = await Promise.all(CIUDADES.map(c => observacion(c.estaciones, clave).catch(() => null)));
-      const logradas = obs.filter(Boolean).length;
+      const obs = await observacionesCercanas(clave).catch(err => {
+        avisos.push(`AEMET no disponible (${err.message}); se usa solo el modelo.`);
+        return null;
+      });
+      const logradas = obs ? obs.filter(Boolean).length : 0;
       if (logradas){
         ciudades = ciudades.map((c, i) => aplicaObservacion(c, obs[i]));
         origen = logradas === CIUDADES.length ? 'aemet' : 'aemet-parcial';
-      } else {
-        avisos.push('AEMET no devolvió observaciones; se usa solo el modelo.');
+        obs.forEach((o, i) => { if (!o) avisos.push(`Sin estación a menos de ${RADIO_KM} km de ${CIUDADES[i].nombre}.`); });
+      } else if (obs){
+        avisos.push('AEMET no devolvió observaciones utilizables; se usa solo el modelo.');
       }
     } else {
       avisos.push('Sin AEMET_API_KEY: se usa solo Open-Meteo.');
