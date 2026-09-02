@@ -1,12 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sol Niebla y Agua">
-  <rect width="512" height="512" rx="112" fill="#f4f3ef"/>
-  <mask id="corte">
-    <rect x="64" y="64" width="384" height="384" fill="#fff"/>
-    <rect x="64" y="216" width="384" height="30" fill="#000"/>
-    <rect x="64" y="272" width="384" height="30" fill="#000"/>
-  </mask>
-  <circle cx="256" cy="222" r="106" fill="#c8790f" mask="url(#corte)"/>
-  <rect x="94"  y="220" width="324" height="18" rx="9" fill="#79858f"/>
-  <rect x="146" y="276" width="220" height="18" rx="9" fill="#79858f"/>
-  <path d="M104 402q38-42 76 0t76 0 76 0 76 0" fill="none" stroke="#1a6a90" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Sol Niebla y Agua">
+  <rect width="64" height="64" rx="14" fill="#f4f3ef"/>
+  <circle cx="32" cy="32" r="27.6" fill="none" stroke="#dc9c33" stroke-width="2.5" opacity=".8"/>
+  <path d="M20.6 24.75L14.62 22.25L21.08 21.72ZM21.84 19.83L17.53 14.98L23.59 17.31ZM25.09 15.93L23.31 9.69L27.76 14.42ZM29.71 13.83L30.82 7.44L32.77 13.63ZM34.78 13.94L38.55 8.67L37.63 15.09ZM39.3 16.25L44.99 13.13L41.37 18.51ZM42.38 20.28L48.86 19.94L43.26 23.22ZM43.4 25.25L49.38 27.75L42.92 28.28Z" fill="#bd7210"/>
+  <circle cx="32" cy="25" r="9.3" fill="#bd7210"/>
+  <path d="M7.5 38.6q12.25 -5.8 24.5 0t24.5 0" fill="none" stroke="#6f7c87" stroke-width="3.3" stroke-linecap="round"/>
+  <path d="M6.4 46.6q12.8 7.4 25.6 0t25.6 0" fill="none" stroke="#16607f" stroke-width="4.4" stroke-linecap="round"/>
+  <path d="M46.8 40.2C49.02 43.2,49.65 44.68,49.65 45.53A2.85 2.85 0 1 1 43.95 45.53C43.95 44.68,44.58 43.2,46.8 40.2Z" fill="#16607f" stroke="#f4f3ef" stroke-width="1.5" paint-order="stroke"/>
 </svg>

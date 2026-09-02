@@ -6,7 +6,7 @@
      guardada, para que la app siga siendo útil sin cobertura.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'sna-v2.0.0';
+const VERSION = 'sna-v2.1.0';
 const CASCO  = `${VERSION}-casco`;
 const DATOS  = `${VERSION}-datos`;
 
@@ -15,6 +15,10 @@ const RECURSOS = [
   './app.html',
   './styles.css',
   './app.js',
+  './utiles.js',
+  './datos.js',
+  './indice.js',
+  './interfaz.js',
   './manifest.json',
   './icono.svg',
   './icono-monocromo.svg',

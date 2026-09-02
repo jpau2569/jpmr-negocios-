@@ -20,15 +20,29 @@ En el móvil: abrir esa dirección y **Añadir a pantalla de inicio**.
 
 ## Archivos
 
+El código está separado por capas, en módulos ES nativos (sin empaquetador,
+sin build). Cada capa solo conoce a la de debajo:
+
 | Archivo | Papel |
 |---|---|
 | `app.html` | Estructura y textos fijos |
 | `styles.css` | Sistema visual completo (tokens, claro/oscuro) |
-| `app.js` | Datos, índice, etiquetas y render, en secciones numeradas |
+| `utiles.js` | Herramientas sin estado: fechas, iconos, sol, redondeos |
+| `datos.js` | De dónde salen los números: proveedores, cascada y caché |
+| `indice.js` | El Índice Sol Niebla y Agua, etiquetas y recomendaciones |
+| `interfaz.js` | Render puro: recibe la evaluación, no lee estado global |
+| `app.js` | Punto de entrada: estado, eventos, ajustes y PWA |
 | `manifest.json` | Instalación como app |
 | `service-worker.js` | Funcionamiento sin conexión |
 | `herramientas/generar-iconos.mjs` | Regenera los PNG de los iconos |
 | `../api/tiempo.js` | Backend opcional: AEMET + Open-Meteo |
+
+`interfaz.js` no importa a `app.js`: recibe en cada pintada un contexto con
+la ciudad enfocada y los avisos de vuelta. Así no hay ciclo entre capas y el
+render se puede probar por separado.
+
+Al usar módulos, la app **necesita servirse por HTTP** (abrir el archivo con
+doble clic no vale). El service worker tampoco funciona con `file://`.
 
 ## De dónde salen los datos
 
@@ -106,3 +120,45 @@ node sol-niebla-agua/herramientas/generar-iconos.mjs
 
 Hacen falta en PNG porque iOS ignora los `apple-touch-icon` en SVG y pondría
 una captura borrosa en la pantalla de inicio.
+
+## Cómo probarla y cómo instalarla
+
+**En el ordenador**
+
+```bash
+python3 -m http.server 8000
+# → http://localhost:8000/sol-niebla-agua/app.html
+```
+
+Sin el backend desplegado, `/api/tiempo` no existe y la cascada baja sola a
+Open-Meteo o a datos simulados. Es el comportamiento esperado.
+
+**En el móvil**
+
+1. Abre `https://TU-DOMINIO/sol-niebla-agua/app.html`.
+2. iPhone: Compartir → **Añadir a pantalla de inicio**.
+   Android: menú ⋮ → **Instalar aplicación**.
+3. Se abre a pantalla completa, sin barra del navegador, y funciona sin
+   cobertura con los últimos datos descargados.
+
+**Comprobar que hay datos reales:** el sello de la cabecera. "AEMET" o "En
+directo" significa datos reales; "Simulados" significa que no llegó ninguna
+fuente; "Hace X min" avisa de que lo que ves tiene más de 40 minutos.
+
+## Mejoras futuras recomendadas
+
+Por orden de utilidad real, no de dificultad:
+
+1. **Avisar solo cuando importa.** Una notificación cuando se abra una
+   ventana buena de al menos dos horas en el modo activo. Es lo que
+   convierte la app en algo que te busca a ti en vez de al revés.
+2. **Verificar las estaciones de AEMET.** Los indicativos de Mieres y Gijón
+   están elegidos por cercanía, sin comprobar que estén operativos. Conviene
+   contrastarlos con el inventario de estaciones antes de fiarse del todo.
+3. **Radar de precipitación.** Ver el frente acercándose vale más que un
+   porcentaje para decidir si sales ahora o en veinte minutos.
+4. **Histórico propio.** Guardar el índice de cada día permite responder
+   "¿cuántos días aprovechables hubo este mes?" y, con el tiempo, ajustar los
+   pesos de cada modo con datos en vez de a ojo.
+5. **Más sitios.** Añadir Avilés, Llanes o los puertos de montaña es añadir
+   una entrada a `CIUDADES`; el resto de la app no se entera.

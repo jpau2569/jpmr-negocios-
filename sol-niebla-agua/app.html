@@ -26,15 +26,12 @@
 <div class="splash" id="splash" role="status" aria-label="Abriendo Sol Niebla y Agua">
   <div class="splash__mark">
     <svg viewBox="0 0 64 64" aria-hidden="true" class="marca-svg marca-svg--xl">
-      <mask id="sna-mask-splash">
-        <rect width="64" height="64" fill="#fff" />
-        <rect x="0" y="25" width="64" height="4" fill="#000" />
-        <rect x="0" y="32.5" width="64" height="4" fill="#000" />
-      </mask>
-      <circle cx="32" cy="26" r="14" class="mk-sol" mask="url(#sna-mask-splash)" />
-      <rect x="6"  y="25.6" width="52" height="2.4" rx="1.2" class="mk-niebla" />
-      <rect x="13" y="33.1" width="38" height="2.4" rx="1.2" class="mk-niebla" />
-      <path d="M8 50.5q6-5.5 12 0t12 0 12 0" class="mk-agua" />
+      <circle class="mk-aro" cx="32" cy="32" r="27.6"/>
+    <path class="mk-rayos" d="M20.6 24.75L14.62 22.25L21.08 21.72ZM21.84 19.83L17.53 14.98L23.59 17.31ZM25.09 15.93L23.31 9.69L27.76 14.42ZM29.71 13.83L30.82 7.44L32.77 13.63ZM34.78 13.94L38.55 8.67L37.63 15.09ZM39.3 16.25L44.99 13.13L41.37 18.51ZM42.38 20.28L48.86 19.94L43.26 23.22ZM43.4 25.25L49.38 27.75L42.92 28.28Z"/>
+    <circle class="mk-disco" cx="32" cy="25" r="9.3"/>
+    <path class="mk-niebla" d="M7.5 38.6q12.25 -5.8 24.5 0t24.5 0"/>
+    <path class="mk-agua" d="M6.4 46.6q12.8 7.4 25.6 0t25.6 0"/>
+    <path class="mk-gota" d="M46.8 40.2C49.02 43.2,49.65 44.68,49.65 45.53A2.85 2.85 0 1 1 43.95 45.53C43.95 44.68,44.58 43.2,46.8 40.2Z"/>
     </svg>
   </div>
   <p class="splash__nombre">Sol&nbsp;Niebla&nbsp;y&nbsp;Agua</p>
@@ -45,16 +42,11 @@
 <header class="cabecera">
   <div class="marca">
     <svg viewBox="0 0 64 64" aria-hidden="true" class="marca-svg">
-      <mask id="sna-mask">
-        <rect width="64" height="64" fill="#fff" />
-        <rect x="0" y="25" width="64" height="4" fill="#000" />
-        <rect x="0" y="32.5" width="64" height="4" fill="#000" />
-      </mask>
-      <circle cx="32" cy="26" r="14" class="mk-sol" mask="url(#sna-mask)" />
-      <rect x="6"  y="25.6" width="52" height="2.4" rx="1.2" class="mk-niebla" />
-      <rect x="13" y="33.1" width="38" height="2.4" rx="1.2" class="mk-niebla" />
-      <path d="M8 50.5q6-5.5 12 0t12 0 12 0" class="mk-agua" />
-    </svg>
+        <path class="mk-rayos" d="M20.6 24.75L14.62 22.25L21.08 21.72ZM21.84 19.83L17.53 14.98L23.59 17.31ZM25.09 15.93L23.31 9.69L27.76 14.42ZM29.71 13.83L30.82 7.44L32.77 13.63ZM34.78 13.94L38.55 8.67L37.63 15.09ZM39.3 16.25L44.99 13.13L41.37 18.51ZM42.38 20.28L48.86 19.94L43.26 23.22ZM43.4 25.25L49.38 27.75L42.92 28.28Z" transform="translate(0 1.5)"/>
+    <circle class="mk-disco" cx="32" cy="26.5" r="10"/>
+    <path class="mk-niebla mk-niebla--ancha" d="M5 40.4q13.5 -6.4 27 0t27 0"/>
+    <path class="mk-agua mk-agua--ancha" d="M4 49.2q14 8 28 0t28 0"/>
+      </svg>
     <div class="marca__txt">
       <h1>Sol Niebla y Agua</h1>
       <p>Oviedo · Mieres · Gijón</p>
@@ -137,9 +129,9 @@
   <div class="ajuste">
     <p class="ajuste__k">Tema</p>
     <div class="opciones" id="op-tema" role="radiogroup" aria-label="Tema">
-      <button type="button" class="opcion" data-tema="auto">Automático</button>
-      <button type="button" class="opcion" data-tema="claro">Claro</button>
-      <button type="button" class="opcion" data-tema="oscuro">Oscuro</button>
+      <button type="button" class="opcion" role="radio" aria-checked="false" data-tema="auto">Automático</button>
+      <button type="button" class="opcion" role="radio" aria-checked="false" data-tema="claro">Claro</button>
+      <button type="button" class="opcion" role="radio" aria-checked="false" data-tema="oscuro">Oscuro</button>
     </div>
   </div>
 
@@ -158,8 +150,15 @@
   </div>
 </aside>
 
+<div class="aviso-red" id="aviso-red" role="status" hidden>
+  <svg viewBox="0 0 24 24" aria-hidden="true" class="ico-linea">
+    <path d="M2 4l20 16M5 12.5a11 11 0 0 1 4-2.5M1.6 8.9a16 16 0 0 1 5-3.1M17.5 10a11 11 0 0 1 1.5 1M12 19h.01"/>
+  </svg>
+  <span>Sin conexión · viendo los últimos datos guardados</span>
+</div>
+
 <div class="brindis" id="brindis" role="status" aria-live="polite"></div>
 
-<script src="app.js" defer></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>

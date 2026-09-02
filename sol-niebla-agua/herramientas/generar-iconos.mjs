@@ -67,44 +67,90 @@ const sdfTrazo = (puntos, grosor) => (x, y) => {
   return min - grosor / 2;
 };
 
-/* ── La marca: sol cortado por bandas de niebla sobre el agua ────────── */
-function dibujaMarca(l, { fondo = null, escala = 1, tinte = null } = {}){
-  const u = l.n / 512;                                  // unidad de diseño
-  const cx = l.n / 2, cy = l.n / 2;
-  const E = (v) => v * u * escala;
-  const px = (v) => cx + E(v - 256);
-  const py = (v) => cy + E(v - 256);
+/* ── La marca: aro, sol con rayos, niebla, agua y gota ───────────────── */
 
-  if (fondo) forma(l, sdfRectRedondo(cx, cy, l.n, l.n, l.n * 0.22), fondo);
-
-  const cSol    = tinte ?? COLOR.sol;
-  const cNiebla = tinte ?? COLOR.niebla;
-  const cAgua   = tinte ?? COLOR.agua;
-
-  // El sol se recorta con las dos bandas de niebla (mismo efecto que el SVG)
-  // Las bandas cortan el sol y son algo más altas que las barras grises,
-  // así queda un hilo de papel entre el naranja y el gris.
-  const banda1 = [py(216), py(246)], banda2 = [py(272), py(302)];
-  const dentro = (y, [a0, b0]) => Math.min(y - a0, b0 - y);   // > 0 si está dentro
-  const recorte = (x, y) => -Math.max(dentro(y, banda1), dentro(y, banda2));
-  const caja = (cx0, cy0, w, h) => [cx0 - w/2 - 2, cy0 - h/2 - 2, cx0 + w/2 + 2, cy0 + h/2 + 2];
-  forma(l, sdfCirculo(px(256), py(222), E(106)), cSol, recorte,
-    caja(px(256), py(222), E(212), E(212)));
-  forma(l, sdfRectRedondo(px(256), py(229), E(324), E(18), E(9)), cNiebla, null,
-    caja(px(256), py(229), E(324), E(18)));
-  forma(l, sdfRectRedondo(px(256), py(285), E(220), E(18), E(9)), cNiebla, null,
-    caja(px(256), py(285), E(220), E(18)));
-
-  // Onda: dos arcos, muestreados como polilínea
-  const onda = [];
-  for (let t = 0; t <= 1.0001; t += 1 / 96){
-    const x = 104 + t * 304;
-    const y = 402 - Math.sin(t * Math.PI * 2) * 26;
-    onda.push([px(x), py(y)]);
+/** Distancia con signo a un polígono convexo (vale para triángulos). */
+const sdfConvexo = (pts) => (x, y) => {
+  let d = -Infinity;
+  for (let i = 0; i < pts.length; i++){
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    const ex = b[0] - a[0], ey = b[1] - a[1];
+    const largo = Math.hypot(ex, ey) || 1;
+    // normal exterior asumiendo vértices en sentido horario
+    const nx = ey / largo, ny = -ex / largo;
+    d = Math.max(d, (x - a[0]) * nx + (y - a[1]) * ny);
   }
-  forma(l, sdfTrazo(onda, E(22)), cAgua, null,
-    [px(104) - E(16), py(402 - 26) - E(16), px(408) + E(16), py(402 + 26) + E(16)]);
+  return d;
+};
+const sdfAro = (cx, cy, r, grosor) => (x, y) =>
+  Math.abs(Math.hypot(x - cx, y - cy) - r) - grosor / 2;
+const sdfUnion = (...fs) => (x, y) => Math.min(...fs.map(f => f(x, y)));
+const inflado = (f, r) => (x, y) => f(x, y) - r;
+
+/** Muestrea una onda senoidal como polilínea, en coordenadas de diseño. */
+const ondaPts = (E, px, py, x0, x1, y, amp, n = 72) => {
+  const pts = [];
+  for (let i = 0; i <= n; i++){
+    const t = i / n;
+    pts.push([px(x0 + (x1 - x0) * t), py(y - Math.sin(t * Math.PI * 2) * amp)]);
+  }
+  void E; return pts;
+};
+
+/* Rayos calculados igual que en el SVG: 8 triángulos en el arco superior */
+function rayosDiseno({ cx = 32, cy = 25, dentro = 11.4, fuera = 17.6, mitad = .135, n = 8 } = {}){
+  const pol = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  const out = [], desde = -Math.PI * .95, hasta = Math.PI * .05;
+  for (let i = 0; i < n; i++){
+    const a = desde + (hasta - desde) * (i / (n - 1));
+    out.push([pol(dentro, a - mitad), pol(fuera, a), pol(dentro, a + mitad)]);
+  }
+  return out;
 }
+
+function dibujaMarca(l, { fondo = null, escala = 1 } = {}){
+  const u = l.n / 64;                                   // el SVG usa un lienzo de 64
+  const cx = l.n / 2, cy = l.n / 2;
+  const E = v => v * u * escala;                        // longitudes
+  const px = v => cx + E(v - 32);                       // coordenadas de diseño
+  const py = v => cy + E(v - 32);
+  const caja = (x0, y0, x1, y1, m = 3) =>
+    [px(x0) - E(m), py(y0) - E(m), px(x1) + E(m), py(y1) + E(m)];
+
+  if (fondo) forma(l, sdfRectRedondo(cx, cy, l.n, l.n, l.n * .22), fondo);
+
+  // Aro
+  forma(l, sdfAro(px(32), py(32), E(27.6), E(2.5)), mezcla(COLOR.sol, COLOR.papel, .28),
+    null, caja(4, 4, 60, 60));
+
+  // Rayos y disco solar
+  for (const t of rayosDiseno()){
+    const pts = t.map(([x, y]) => [px(x), py(y)]);
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    forma(l, sdfConvexo(pts), COLOR.sol, null,
+      [Math.min(...xs) - 2, Math.min(...ys) - 2, Math.max(...xs) + 2, Math.max(...ys) + 2]);
+  }
+  forma(l, sdfCirculo(px(32), py(25), E(9.3)), COLOR.sol, null, caja(22, 15, 42, 35));
+
+  // Banda de niebla y ola de agua
+  forma(l, sdfTrazo(ondaPts(E, px, py, 7.5, 56.5, 38.6, 2.9), E(3.3)), COLOR.niebla,
+    null, caja(6, 34, 58, 43));
+  forma(l, sdfTrazo(ondaPts(E, px, py, 6.4, 57.6, 46.6, 3.7), E(4.4)), COLOR.agua,
+    null, caja(5, 41, 59, 52));
+
+  // Gota: círculo + triángulo, con halo del color del fondo para que se
+  // despegue de la ola igual que en el SVG
+  const gota = sdfUnion(
+    sdfCirculo(px(46.8), py(45.53), E(2.85)),
+    sdfConvexo([[px(46.8), py(40.2)], [px(49.65), py(45.53)], [px(43.95), py(45.53)]])
+  );
+  const cajaGota = caja(42, 39, 51, 49);
+  if (fondo) forma(l, inflado(gota, E(.75)), fondo, null, cajaGota);   // el SVG reparte el trazo a ambos lados
+  forma(l, gota, COLOR.agua, null, cajaGota);
+}
+
+/** Mezcla dos colores (0 = a, 1 = b). */
+function mezcla(a, b, t){ return a.map((v, i) => Math.round(v + (b[i] - v) * t)); }
 
 /* ── Reducción por área y codificación PNG ───────────────────────────── */
 function reduce(l, destino){
@@ -160,9 +206,9 @@ function png(rgba, lado){
 
 /* ── Piezas a generar ────────────────────────────────────────────────── */
 const piezas = [
-  { archivo:'icono-192.png',  lado:192, fondo:COLOR.papel, escala:1    },
-  { archivo:'icono-512.png',  lado:512, fondo:COLOR.papel, escala:1    },
-  { archivo:'icono-180.png',  lado:180, fondo:COLOR.papel, escala:1    },  // apple-touch-icon
+  { archivo:'icono-192.png',  lado:192, fondo:COLOR.papel, escala:.88 },
+  { archivo:'icono-512.png',  lado:512, fondo:COLOR.papel, escala:.88 },
+  { archivo:'icono-180.png',  lado:180, fondo:COLOR.papel, escala:.88 },  // apple-touch-icon
   // Maskable: la marca se encoge a la zona segura (el sistema recorta el borde)
   { archivo:'icono-maskable-512.png', lado:512, fondo:COLOR.papel, escala:.62, cuadrado:true },
   { archivo:'icono-maskable-192.png', lado:192, fondo:COLOR.papel, escala:.62, cuadrado:true }

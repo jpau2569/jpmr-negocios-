@@ -97,11 +97,15 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
 [hidden]{display:none !important}
 
 /* ── Marca ────────────────────────────────────────────────────────── */
-.marca-svg{width:34px; height:34px; flex:none; display:block}
-.marca-svg--xl{width:66px; height:66px}
-.mk-sol{fill:var(--sol)}
-.mk-niebla{fill:var(--niebla)}
-.mk-agua{fill:none; stroke:var(--agua); stroke-width:3; stroke-linecap:round; stroke-linejoin:round}
+.marca-svg{width:36px; height:36px; flex:none; display:block}
+.marca-svg--xl{width:86px; height:86px}
+.mk-aro{fill:none; stroke:var(--sol-claro); stroke-width:2.5; opacity:.8}
+.mk-rayos,.mk-disco{fill:var(--sol)}
+.mk-niebla{fill:none; stroke:var(--niebla); stroke-width:3.3; stroke-linecap:round}
+.mk-niebla--ancha{stroke-width:3.8}
+.mk-agua{fill:none; stroke:var(--agua); stroke-width:4.4; stroke-linecap:round}
+.mk-agua--ancha{stroke-width:5}
+.mk-gota{fill:var(--agua); stroke:var(--papel); stroke-width:1.5; paint-order:stroke}
 .ico-linea{width:20px; height:20px; fill:none; stroke:currentColor;
   stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round}
 
@@ -129,7 +133,7 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
 .marca__txt h1{font-size:16.5px; font-weight:650; letter-spacing:-.022em; line-height:1.15}
 .marca__txt p{font-size:10.5px; color:var(--tinta-3); letter-spacing:.09em; text-transform:uppercase}
 .btn-icono{
-  width:42px; height:42px; flex:none; border-radius:50%;
+  width:44px; height:44px; flex:none; border-radius:50%;
   border:1px solid var(--linea); background:var(--superficie);
   display:grid; place-items:center; color:var(--tinta);
   transition:transform .18s var(--seg), border-color .2s;
@@ -211,8 +215,8 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
 .hero__hora{font-size:11.5px; color:var(--tinta-3)}
 .btn-refresco{
   margin-left:auto; display:inline-flex; align-items:center; gap:7px;
-  padding:8px 14px; border-radius:999px; border:1px solid var(--linea-fuerte);
-  font-size:12.5px; font-weight:600; min-height:38px; transition:transform .18s var(--seg);
+  padding:10px 16px; border-radius:999px; border:1px solid var(--linea-fuerte);
+  font-size:12.5px; font-weight:600; min-height:44px; transition:transform .18s var(--seg);
 }
 .btn-refresco:active{transform:scale(.95)}
 .btn-refresco svg{width:14px; height:14px; fill:none; stroke:currentColor;
@@ -246,7 +250,7 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
   transition:transform .34s var(--seg);
 }
 .modo{
-  position:relative; z-index:1; padding:10px 2px; min-height:42px; text-align:center;
+  position:relative; z-index:1; padding:11px 2px; min-height:44px; text-align:center;
   font-size:13px; font-weight:600; letter-spacing:-.012em; color:var(--tinta-2);
   border-radius:999px; transition:color .2s;
 }
@@ -256,20 +260,26 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
 /* ── Ranking: las tres ciudades en una sola unidad ────────────────── */
 .ranking{padding:var(--e2) var(--e1)}
 .fila{
-  display:grid; grid-template-columns:1fr 88px 46px 40px; align-items:center; gap:var(--e3);
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(40px,86px) auto auto;
+  align-items:center; gap:10px;
   width:100%; padding:var(--e3) var(--e4); border-radius:var(--r-lg);
   transition:background .2s;
 }
 .fila[data-foco="si"]{background:var(--papel-2)}
 .fila:active{background:var(--papel-2)}
-.fila__n{font-size:15px; font-weight:620; letter-spacing:-.02em; display:flex; align-items:baseline; gap:6px}
-.fila__zona{font-size:9.5px; font-weight:650; letter-spacing:.09em; text-transform:uppercase; color:var(--tinta-3)}
+.fila__n{font-size:15px; font-weight:620; letter-spacing:-.02em;
+  display:flex; align-items:baseline; gap:6px; min-width:0; overflow:hidden}
+.fila__zona{font-size:9.5px; font-weight:650; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--tinta-3); flex:none}
+/* En pantallas muy estrechas la zona sobra: el nombre ya la sugiere */
+@media (max-width:344px){ .fila__zona{display:none} }
 .fila__pista{display:block; height:6px; border-radius:999px; background:var(--papel-2); overflow:hidden}
 :root[data-tema="oscuro"] .fila__pista{background:rgba(255,255,255,.08)}
 .fila__relleno{display:block; height:100%; border-radius:999px; background:var(--acento,var(--niebla));
   transition:width .8s var(--seg)}
-.fila__t{font-size:16px; font-weight:600; letter-spacing:-.03em; text-align:right}
-.fila__i{font-size:16px; font-weight:680; letter-spacing:-.035em; text-align:right; color:var(--acento,var(--niebla))}
+.fila__t{font-size:16px; font-weight:600; letter-spacing:-.03em; text-align:right; min-width:34px}
+.fila__i{font-size:16px; font-weight:680; letter-spacing:-.035em; text-align:right;
+  color:var(--acento,var(--niebla)); min-width:28px}
 .ranking__pie{
   margin:var(--e2) var(--e4) var(--e3); padding-top:var(--e3); border-top:1px solid var(--linea-2);
   font-size:12.5px; color:var(--tinta-2); line-height:1.45;
@@ -408,7 +418,7 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
 }
 .opcion[disabled]{opacity:.45; cursor:not-allowed}
 .btn-plano{
-  padding:9px 14px; min-height:40px; border-radius:999px; border:1px solid var(--linea-fuerte);
+  padding:11px 16px; min-height:44px; border-radius:999px; border:1px solid var(--linea-fuerte);
   font-size:12.5px; font-weight:600;
 }
 
@@ -446,3 +456,14 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
   *,*::before,*::after{animation-duration:.001ms !important; animation-iteration-count:1 !important;
     transition-duration:.001ms !important}
 }
+
+/* ── Aviso de red ─────────────────────────────────────────────────── */
+.aviso-red{
+  position:sticky; top:0; z-index:30; max-width:var(--ancho);
+  display:flex; align-items:center; gap:9px;
+  margin:var(--e3) auto 0; padding:10px var(--e4);
+  border-radius:999px; border:1px solid var(--sol);
+  background:var(--sol-tenue); color:var(--sol);
+  font-size:12.5px; font-weight:600;
+}
+.aviso-red .ico-linea{width:17px; height:17px; flex:none}
