@@ -31,6 +31,11 @@ No complicar el proyecto innecesariamente.
 **La app se sirve por HTTP**, no con `file://`: usa módulos ES y service
 worker. En local, `python3 -m http.server`.
 
+Esta carpeta es autosuficiente: se puede desplegar sola en Vercel poniendo
+Root Directory = `sol-niebla-agua`. Por eso la función vive en
+`sol-niebla-agua/api/tiempo.js`; en la raíz queda solo un reenvío para que
+`/api/tiempo` siga existiendo si algún día se despliega el monorepo entero.
+
 ## Archivos principales
 
 El código está separado por capas. Cada una solo conoce a la de debajo:
@@ -45,7 +50,8 @@ El código está separado por capas. Cada una solo conoce a la de debajo:
 - `manifest.json`: configuración PWA
 - `service-worker.js`: caché y experiencia instalable
 - `herramientas/generar-iconos.mjs`: regenera los PNG de los iconos
-- `../api/tiempo.js`: backend serverless (AEMET + Open-Meteo)
+- `api/tiempo.js`: backend serverless (AEMET + Open-Meteo)
+- `vercel.json`: despliegue de esta carpeta como proyecto propio
 
 `interfaz.js` **no importa a `app.js`**: recibe en cada pintada un contexto
 con la ciudad enfocada y las llamadas de vuelta. No volver a juntar capas ni
@@ -176,7 +182,7 @@ ve cualquiera, y AEMET no envía cabeceras CORS, así que una llamada directa
 desde el móvil ni siquiera funcionaría. Nunca crear un hueco para la clave en
 el JavaScript del navegador.
 
-`api/tiempo.js` compone la malla horaria de Open-Meteo con la observación real
+El backend compone la malla horaria de Open-Meteo con la observación real
 de la estación AEMET más cercana a cada ciudad. Sin clave sigue funcionando y
 devuelve solo el modelo.
 

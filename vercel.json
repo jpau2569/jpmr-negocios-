@@ -18,7 +18,8 @@
       "maxDuration": 60
     },
     "api/tiempo.js": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "sol-niebla-agua/api/**"
     }
   },
   "crons": [
