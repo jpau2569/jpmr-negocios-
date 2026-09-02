@@ -35,7 +35,8 @@ sin build). Cada capa solo conoce a la de debajo:
 | `manifest.json` | Instalación como app |
 | `service-worker.js` | Funcionamiento sin conexión |
 | `herramientas/generar-iconos.mjs` | Regenera los PNG de los iconos |
-| `../api/tiempo.js` | Backend opcional: AEMET + Open-Meteo |
+| `api/tiempo.js` | Backend opcional: AEMET + Open-Meteo |
+| `vercel.json` | Despliegue de esta carpeta como proyecto propio |
 
 `interfaz.js` no importa a `app.js`: recibe en cada pintada un contexto con
 la ciudad enfocada y los avisos de vuelta. Así no hay ciclo entre capas y el
@@ -133,9 +134,17 @@ python3 -m http.server 8000
 Sin el backend desplegado, `/api/tiempo` no existe y la cascada baja sola a
 Open-Meteo o a datos simulados. Es el comportamiento esperado.
 
+**Desplegar en Vercel**
+
+Esta carpeta es autosuficiente. En vercel.com/new, importa el repositorio y
+pon **Root Directory: `sol-niebla-agua`**. Nada más: sin comando de build,
+sin dependencias. La app queda en la raíz del dominio y la función del tiempo
+en `/api/tiempo`. Para activar AEMET, añade `AEMET_API_KEY` en Settings →
+Environment Variables y vuelve a desplegar; sin ella funciona con Open-Meteo.
+
 **En el móvil**
 
-1. Abre `https://TU-DOMINIO/sol-niebla-agua/app.html`.
+1. Abre la URL que te dé Vercel.
 2. iPhone: Compartir → **Añadir a pantalla de inicio**.
    Android: menú ⋮ → **Instalar aplicación**.
 3. Se abre a pantalla completa, sin barra del navegador, y funciona sin
