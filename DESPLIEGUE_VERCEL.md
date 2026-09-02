@@ -27,6 +27,7 @@ del chat o de su web):
 | `TELEGRAM_BOT_TOKEN` | @BotFather en Telegram → /mybots → tu bot → API Token |
 | `TELEGRAM_CHAT_ID` | @userinfobot en Telegram → Start → tu ID |
 | `CLIPDROP_API_KEY` | clipdrop.co/apis (solo para LimpiaFotos y marca de agua) |
+| `AEMET_API_KEY` | opendata.aemet.es/centrodedescargas/altaUsuario (opcional, solo para Sol Niebla y Agua) |
 
 Pulsa **Deploy**. Si ya habías desplegado sin variables: Settings →
 Environment Variables → añádelas → Deployments → ⋯ → **Redeploy**.
