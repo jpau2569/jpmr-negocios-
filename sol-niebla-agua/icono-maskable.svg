@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sol Niebla y Agua">
+  <rect width="512" height="512" fill="#f4f3ef"/>
+  <g transform="translate(256 256) scale(.66) translate(-256 -256)">
+    <mask id="corteM">
+      <rect x="40" y="40" width="432" height="432" fill="#fff"/>
+      <rect x="40" y="216" width="432" height="30" fill="#000"/>
+      <rect x="40" y="272" width="432" height="30" fill="#000"/>
+    </mask>
+    <circle cx="256" cy="222" r="112" fill="#c8790f" mask="url(#corteM)"/>
+    <rect x="82"  y="220" width="348" height="18" rx="9" fill="#79858f"/>
+    <rect x="140" y="276" width="232" height="18" rx="9" fill="#79858f"/>
+    <path d="M96 404q40-44 80 0t80 0 80 0 80 0" fill="none" stroke="#1a6a90" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

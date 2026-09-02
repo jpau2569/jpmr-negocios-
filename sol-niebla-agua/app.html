@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="es" data-tema="auto">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sol Niebla y Agua — El tiempo en Asturias central</title>
+<meta name="description" content="Oviedo, Mieres y Gijón comparados en un vistazo: sol, niebla y agua interpretados para decidir si sales, conduces, haces fotos o enseñas pisos." />
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content="#f4f3ef" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0d0f12" media="(prefers-color-scheme: dark)" />
+
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/svg+xml" href="icono.svg" />
+<link rel="apple-touch-icon" href="icono.svg" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Sol Niebla y Agua" />
+
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ══ Pantalla inicial ══════════════════════════════════════════════ -->
+<div class="splash" id="splash" role="status" aria-label="Abriendo Sol Niebla y Agua">
+  <div class="splash__mark">
+    <svg viewBox="0 0 64 64" aria-hidden="true" class="marca-svg marca-svg--xl">
+      <mask id="sna-mask-splash">
+        <rect width="64" height="64" fill="#fff" />
+        <rect x="0" y="25" width="64" height="4" fill="#000" />
+        <rect x="0" y="32.5" width="64" height="4" fill="#000" />
+      </mask>
+      <circle cx="32" cy="26" r="14" class="mk-sol" mask="url(#sna-mask-splash)" />
+      <rect x="6"  y="25.6" width="52" height="2.4" rx="1.2" class="mk-niebla" />
+      <rect x="13" y="33.1" width="38" height="2.4" rx="1.2" class="mk-niebla" />
+      <path d="M8 50.5q6-5.5 12 0t12 0 12 0" class="mk-agua" />
+    </svg>
+  </div>
+  <p class="splash__nombre">Sol&nbsp;Niebla&nbsp;y&nbsp;Agua</p>
+  <p class="splash__claim">Asturias central y costa</p>
+</div>
+
+<!-- ══ Cabecera ══════════════════════════════════════════════════════ -->
+<header class="cabecera">
+  <div class="marca">
+    <svg viewBox="0 0 64 64" aria-hidden="true" class="marca-svg">
+      <mask id="sna-mask">
+        <rect width="64" height="64" fill="#fff" />
+        <rect x="0" y="25" width="64" height="4" fill="#000" />
+        <rect x="0" y="32.5" width="64" height="4" fill="#000" />
+      </mask>
+      <circle cx="32" cy="26" r="14" class="mk-sol" mask="url(#sna-mask)" />
+      <rect x="6"  y="25.6" width="52" height="2.4" rx="1.2" class="mk-niebla" />
+      <rect x="13" y="33.1" width="38" height="2.4" rx="1.2" class="mk-niebla" />
+      <path d="M8 50.5q6-5.5 12 0t12 0 12 0" class="mk-agua" />
+    </svg>
+    <div class="marca__txt">
+      <h1>Sol Niebla y Agua</h1>
+      <p>Oviedo · Mieres · Gijón</p>
+    </div>
+  </div>
+  <button class="btn-icono" id="btn-tema" type="button" aria-label="Cambiar tema" title="Tema">
+    <svg viewBox="0 0 24 24" aria-hidden="true" class="ico-tema"><circle cx="12" cy="12" r="5" /><g class="ico-tema__rayos"><path d="M12 2v2.4M12 19.6V22M22 12h-2.4M4.4 12H2M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7M18.4 18.4l-1.7-1.7M7.3 7.3 5.6 5.6"/></g></svg>
+  </button>
+</header>
+
+<!-- ══ Titular del día ═══════════════════════════════════════════════ -->
+<section class="titular" aria-labelledby="t-titular">
+  <h2 class="et" id="t-titular">Estado general de Asturias</h2>
+  <p class="titular__frase" id="titular-frase">Cargando lectura del día…</p>
+  <div class="titular__pie">
+    <span class="sello" id="sello-fuente" title="Origen de los datos">·</span>
+    <span class="titular__hora" id="ultima-actualizacion">—</span>
+    <button class="btn-refresco" id="btn-refrescar" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5"/></svg>
+      <span>Actualizar</span>
+    </button>
+  </div>
+</section>
+
+<!-- ══ Modo de uso ═══════════════════════════════════════════════════ -->
+<nav class="modos" aria-label="Modo de uso">
+  <div class="modos__pista" id="modos" role="tablist">
+    <span class="modos__indicador" id="modos-indicador" aria-hidden="true"></span>
+    <button role="tab" type="button" class="modo" data-modo="paseo"     aria-selected="true">Paseo</button>
+    <button role="tab" type="button" class="modo" data-modo="fotos"     aria-selected="false">Fotos</button>
+    <button role="tab" type="button" class="modo" data-modo="visitas"   aria-selected="false">Visitas</button>
+    <button role="tab" type="button" class="modo" data-modo="carretera" aria-selected="false">Carretera</button>
+  </div>
+  <p class="modos__nota" id="modo-nota">Confort general y ausencia de lluvia.</p>
+</nav>
+
+<main id="app" aria-busy="true">
+
+  <!-- ══ Ahora mismo ═════════════════════════════════════════════════ -->
+  <section class="bloque" aria-labelledby="t-ahora">
+    <h2 class="et" id="t-ahora">Ahora mismo</h2>
+    <div class="ahora" id="ahora" aria-live="polite"></div>
+  </section>
+
+  <!-- ══ La mejor opción del momento ═════════════════════════════════ -->
+  <section class="bloque" aria-labelledby="t-mejor">
+    <h2 class="et" id="t-mejor">La mejor opción del momento</h2>
+    <div id="mejor" aria-live="polite"></div>
+  </section>
+
+  <!-- ══ Ciudades ════════════════════════════════════════════════════ -->
+  <section class="bloque" aria-labelledby="t-ciudades">
+    <h2 class="et" id="t-ciudades">Las tres ciudades</h2>
+    <div class="ciudades" id="ciudades"></div>
+  </section>
+
+  <!-- ══ Comparativa ═════════════════════════════════════════════════ -->
+  <section class="bloque" aria-labelledby="t-comparativa">
+    <h2 class="et" id="t-comparativa">Comparativa</h2>
+    <div class="tarjeta comparativa" id="comparativa"></div>
+  </section>
+
+  <!-- ══ Próximas horas ══════════════════════════════════════════════ -->
+  <section class="bloque" aria-labelledby="t-horas">
+    <h2 class="et" id="t-horas">Próximas horas <span class="et__sub" id="horas-ciudad"></span></h2>
+    <div class="tarjeta franjas" id="franjas"></div>
+  </section>
+
+</main>
+
+<footer class="pie">
+  <p id="pie-fuente">Índice Sol Niebla y Agua · cálculo propio</p>
+  <p class="pie__fino">Hecho para decidir rápido, no para mirar números.</p>
+</footer>
+
+<div class="brindis" id="brindis" role="status" aria-live="polite"></div>
+
+<script src="app.js" defer></script>
+</body>
+</html>

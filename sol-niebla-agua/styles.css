@@ -1,0 +1,356 @@
+/* ═══════════════════════════════════════════════════════════════════
+   SOL NIEBLA Y AGUA — sistema visual
+   Suizo, minimal, alto contraste. Sol (ámbar) · Niebla (gris azulado)
+   · Agua (azul profundo). Sin dependencias.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Tokens: tema claro (por defecto) ─────────────────────────────── */
+:root{
+  --papel:#f4f3ef;
+  --papel-2:#eceae4;
+  --superficie:#ffffff;
+  --superficie-2:#faf9f6;
+  --tinta:#14161a;
+  --tinta-2:#5b616a;
+  --tinta-3:#8b9199;
+  --linea:rgba(20,22,26,.11);
+  --linea-fuerte:rgba(20,22,26,.24);
+
+  --sol:#c8790f;
+  --sol-claro:#e6a33a;
+  --sol-tenue:rgba(200,121,15,.12);
+  --niebla:#79858f;
+  --niebla-tenue:rgba(121,133,143,.14);
+  --agua:#1a6a90;
+  --agua-hondo:#134f6c;
+  --agua-tenue:rgba(26,106,144,.12);
+
+  --sombra:0 1px 2px rgba(20,22,26,.05), 0 8px 24px -12px rgba(20,22,26,.14);
+  --sombra-alta:0 2px 4px rgba(20,22,26,.06), 0 18px 40px -18px rgba(20,22,26,.28);
+
+  --r-xl:22px; --r-lg:18px; --r-md:13px; --r-sm:9px;
+  --gap:14px;
+  --ancho:560px;
+  --seg:cubic-bezier(.22,.61,.36,1);
+}
+
+/* ── Tema oscuro ──────────────────────────────────────────────────── */
+:root[data-tema="oscuro"]{
+  --papel:#0d0f12;
+  --papel-2:#111418;
+  --superficie:#171a1f;
+  --superficie-2:#1d2127;
+  --tinta:#edeff2;
+  --tinta-2:#9aa1aa;
+  --tinta-3:#6d747d;
+  --linea:rgba(255,255,255,.10);
+  --linea-fuerte:rgba(255,255,255,.24);
+
+  --sol:#e8a63d;
+  --sol-claro:#f2bd63;
+  --sol-tenue:rgba(232,166,61,.15);
+  --niebla:#9aa6b2;
+  --niebla-tenue:rgba(154,166,178,.15);
+  --agua:#57a8cb;
+  --agua-hondo:#3d87a8;
+  --agua-tenue:rgba(87,168,203,.15);
+
+  --sombra:0 1px 0 rgba(255,255,255,.03);
+  --sombra-alta:0 1px 0 rgba(255,255,255,.05), 0 20px 44px -22px rgba(0,0,0,.8);
+}
+@media (prefers-color-scheme: dark){
+  :root[data-tema="auto"]{
+    --papel:#0d0f12; --papel-2:#111418; --superficie:#171a1f; --superficie-2:#1d2127;
+    --tinta:#edeff2; --tinta-2:#9aa1aa; --tinta-3:#6d747d;
+    --linea:rgba(255,255,255,.10); --linea-fuerte:rgba(255,255,255,.24);
+    --sol:#e8a63d; --sol-claro:#f2bd63; --sol-tenue:rgba(232,166,61,.15);
+    --niebla:#9aa6b2; --niebla-tenue:rgba(154,166,178,.15);
+    --agua:#57a8cb; --agua-hondo:#3d87a8; --agua-tenue:rgba(87,168,203,.15);
+    --sombra:0 1px 0 rgba(255,255,255,.03);
+    --sombra-alta:0 1px 0 rgba(255,255,255,.05), 0 20px 44px -22px rgba(0,0,0,.8);
+  }
+}
+
+/* ── Base ─────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--papel);
+  color:var(--tinta);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16px; line-height:1.45;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  padding:0 16px calc(40px + env(safe-area-inset-bottom));
+  overscroll-behavior-y:contain;
+}
+body>*{max-width:var(--ancho); margin-inline:auto}
+h1,h2,h3,p{margin:0}
+button{font:inherit; color:inherit; background:none; border:0; cursor:pointer; -webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--agua); outline-offset:3px; border-radius:6px}
+.num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+
+/* ── Marca ────────────────────────────────────────────────────────── */
+.marca-svg{width:34px; height:34px; flex:none; display:block}
+.marca-svg--xl{width:66px; height:66px}
+.mk-sol{fill:var(--sol)}
+.mk-niebla{fill:var(--niebla)}
+.mk-agua{fill:none; stroke:var(--agua); stroke-width:3; stroke-linecap:round; stroke-linejoin:round}
+
+/* ── Pantalla inicial ─────────────────────────────────────────────── */
+.splash{
+  position:fixed; inset:0; z-index:60; max-width:none;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  background:var(--papel);
+  transition:opacity .5s var(--seg), visibility .5s;
+}
+.splash[hidden-anim]{opacity:0; visibility:hidden; pointer-events:none}
+.splash__mark{animation:brote .7s var(--seg) both}
+.splash__nombre{
+  margin-top:18px; font-size:19px; font-weight:650; letter-spacing:-.015em;
+  animation:brote .7s var(--seg) .12s both;
+}
+.splash__claim{
+  font-size:11px; text-transform:uppercase; letter-spacing:.16em; color:var(--tinta-3);
+  animation:brote .7s var(--seg) .2s both;
+}
+@keyframes brote{from{opacity:0; transform:translateY(9px)} to{opacity:1; transform:none}}
+
+/* ── Cabecera ─────────────────────────────────────────────────────── */
+.cabecera{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:calc(18px + env(safe-area-inset-top)) 0 14px;
+}
+.marca{display:flex; align-items:center; gap:11px; min-width:0}
+.marca__txt h1{font-size:16.5px; font-weight:650; letter-spacing:-.02em; line-height:1.15}
+.marca__txt p{font-size:11px; color:var(--tinta-3); letter-spacing:.07em; text-transform:uppercase}
+.btn-icono{
+  width:42px; height:42px; flex:none; border-radius:50%;
+  border:1px solid var(--linea); background:var(--superficie);
+  display:grid; place-items:center; transition:transform .18s var(--seg), background .2s;
+}
+.btn-icono:active{transform:scale(.93)}
+.ico-tema{width:20px; height:20px; fill:none; stroke:var(--tinta); stroke-width:1.7; stroke-linecap:round}
+:root[data-tema="oscuro"] .ico-tema circle{fill:var(--tinta); stroke:none}
+:root[data-tema="oscuro"] .ico-tema__rayos{opacity:.35}
+
+/* ── Titular del día ──────────────────────────────────────────────── */
+.et{
+  font-size:10.5px; font-weight:650; text-transform:uppercase; letter-spacing:.15em;
+  color:var(--tinta-3); margin-bottom:10px;
+}
+.et__sub{color:var(--tinta-2); text-transform:none; letter-spacing:.02em; font-weight:550}
+.titular{padding:4px 0 18px; border-bottom:1px solid var(--linea)}
+.titular__frase{
+  font-size:clamp(21px,6.2vw,26px); line-height:1.24; letter-spacing:-.028em; font-weight:600;
+  text-wrap:balance;
+}
+.titular__pie{display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap}
+.titular__hora{font-size:12px; color:var(--tinta-3)}
+.sello{
+  display:inline-flex; align-items:center;
+  font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.1em;
+  padding:4px 8px; border-radius:999px; border:1px solid var(--linea-fuerte); color:var(--tinta-2);
+}
+.sello[data-tipo="real"]{color:var(--agua); border-color:var(--agua)}
+.sello[data-tipo="mock"]{color:var(--sol); border-color:var(--sol)}
+.btn-refresco{
+  margin-left:auto; display:inline-flex; align-items:center; gap:7px;
+  padding:9px 14px; border-radius:999px; border:1px solid var(--linea-fuerte);
+  font-size:13px; font-weight:600; min-height:40px; transition:transform .18s var(--seg);
+}
+.btn-refresco:active{transform:scale(.96)}
+.btn-refresco svg{width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
+.btn-refresco[data-cargando] svg{animation:gira 1s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+
+/* ── Selector de modo (pegajoso) ──────────────────────────────────── */
+.modos{
+  position:sticky; top:0; z-index:20; max-width:var(--ancho);
+  padding:12px 0 10px;
+  background:color-mix(in srgb, var(--papel) 88%, transparent);
+  -webkit-backdrop-filter:saturate(1.6) blur(14px); backdrop-filter:saturate(1.6) blur(14px);
+}
+.modos::after{
+  content:""; position:absolute; left:0; right:0; bottom:0; height:1px; background:var(--linea);
+}
+.modos__pista{
+  position:relative; display:grid; grid-template-columns:repeat(4,1fr); gap:2px;
+  padding:3px; border-radius:999px; background:var(--papel-2); border:1px solid var(--linea);
+}
+.modos__indicador{
+  position:absolute; top:3px; bottom:3px; left:3px; width:calc((100% - 6px)/4);
+  border-radius:999px; background:var(--superficie); box-shadow:var(--sombra);
+  transition:transform .32s var(--seg);
+}
+.modo{
+  position:relative; z-index:1; padding:10px 2px; min-height:42px;
+  font-size:13px; font-weight:600; letter-spacing:-.01em; color:var(--tinta-2);
+  border-radius:999px; transition:color .2s;
+}
+.modo[aria-selected="true"]{color:var(--tinta)}
+.modos__nota{margin-top:9px; font-size:12px; color:var(--tinta-3); text-align:center}
+
+/* ── Bloques ──────────────────────────────────────────────────────── */
+.bloque{padding-top:26px}
+.tarjeta{
+  background:var(--superficie); border:1px solid var(--linea);
+  border-radius:var(--r-xl); box-shadow:var(--sombra);
+}
+
+/* ── Ahora mismo ──────────────────────────────────────────────────── */
+.ahora{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+.ahora__celda{
+  background:var(--superficie); border:1px solid var(--linea); border-radius:var(--r-lg);
+  padding:13px 11px 12px; text-align:center; box-shadow:var(--sombra);
+}
+.ahora__ciudad{font-size:11px; font-weight:650; letter-spacing:.04em; color:var(--tinta-2); text-transform:uppercase}
+.ahora__temp{font-size:27px; font-weight:600; letter-spacing:-.045em; line-height:1.25; margin-top:3px}
+.ahora__ind{font-size:11px; font-weight:700; letter-spacing:.02em; margin-top:2px}
+.ahora__cielo{font-size:11px; color:var(--tinta-3); margin-top:2px; line-height:1.3}
+
+/* ── Tarjeta destacada: mejor opción ──────────────────────────────── */
+.mejor{padding:20px 18px; position:relative; overflow:hidden}
+.mejor::before{
+  content:""; position:absolute; inset:0 auto 0 0; width:4px; background:var(--acento,var(--niebla));
+}
+.mejor__cab{display:flex; align-items:flex-start; gap:14px}
+.mejor__txt{min-width:0; flex:1}
+.mejor__donde{font-size:11px; font-weight:650; letter-spacing:.14em; text-transform:uppercase; color:var(--acento,var(--niebla))}
+.mejor__ciudad{font-size:29px; font-weight:640; letter-spacing:-.035em; line-height:1.1; margin-top:3px}
+.mejor__sub{font-size:13.5px; color:var(--tinta-2); margin-top:5px; line-height:1.4}
+.mejor__consejo{
+  display:flex; gap:11px; align-items:flex-start;
+  margin-top:16px; padding-top:15px; border-top:1px solid var(--linea);
+}
+.mejor__consejo-ico{
+  width:34px; height:34px; flex:none; border-radius:10px; display:grid; place-items:center;
+  background:var(--acento-tenue,var(--niebla-tenue)); color:var(--acento,var(--niebla));
+}
+.mejor__consejo-ico svg{width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.mejor__consejo-tit{font-size:15px; font-weight:650; letter-spacing:-.015em}
+.mejor__consejo-txt{font-size:13px; color:var(--tinta-2); line-height:1.42; margin-top:2px}
+
+/* ── Anillo del índice ────────────────────────────────────────────── */
+.anillo{position:relative; flex:none; display:grid; place-items:center}
+.anillo svg{transform:rotate(-90deg); display:block}
+.anillo__fondo{fill:none; stroke:var(--linea); }
+.anillo__valor{fill:none; stroke:var(--acento,var(--niebla)); stroke-linecap:round; transition:stroke-dashoffset .7s var(--seg)}
+.anillo__num{
+  position:absolute; inset:0; display:grid; place-items:center;
+  font-weight:650; letter-spacing:-.04em; line-height:1;
+}
+
+/* ── Tarjetas de ciudad ───────────────────────────────────────────── */
+.ciudades{display:grid; gap:12px}
+.ciudad{padding:16px 16px 14px; text-align:left; width:100%; display:block; transition:transform .18s var(--seg)}
+.ciudad:active{transform:scale(.985)}
+.ciudad[data-foco="si"]{border-color:var(--linea-fuerte); box-shadow:var(--sombra-alta)}
+.ciudad__cab{display:flex; align-items:center; gap:13px}
+.ciudad__id{flex:1; min-width:0}
+.ciudad__nombre{font-size:19px; font-weight:640; letter-spacing:-.025em; display:flex; align-items:center; gap:7px}
+.ciudad__zona{
+  display:inline-flex; align-items:center; flex:none;
+  font-size:9.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--tinta-3); border:1px solid var(--linea); border-radius:999px; padding:2px 6px;
+}
+.ciudad__cielo{font-size:12.5px; color:var(--tinta-2); margin-top:2px; display:flex; align-items:center; gap:6px}
+.ciudad__cielo svg{width:17px; height:17px; flex:none}
+.ciudad__temp{font-size:34px; font-weight:600; letter-spacing:-.05em; line-height:1}
+.ciudad__minmax{font-size:11.5px; color:var(--tinta-3); text-align:right; margin-top:4px}
+.ciudad__bloque-temp{text-align:right}
+
+.metricas{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:1px; margin-top:15px;
+  background:var(--linea); border:1px solid var(--linea); border-radius:var(--r-md); overflow:hidden;
+}
+.metrica{background:var(--superficie); padding:9px 6px 8px; text-align:center}
+.metrica__k{font-size:9.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--tinta-3)}
+.metrica__v{font-size:14.5px; font-weight:620; letter-spacing:-.02em; margin-top:1px}
+
+.etiquetas{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px}
+.etiqueta{
+  display:inline-flex; align-items:center;
+  font-size:11.5px; font-weight:600; letter-spacing:-.005em; padding:5px 10px; border-radius:999px;
+  border:1px solid currentColor; line-height:1.25;
+}
+.etiqueta[data-tono="sol"]{color:var(--sol); background:var(--sol-tenue)}
+.etiqueta[data-tono="niebla"]{color:var(--niebla); background:var(--niebla-tenue)}
+.etiqueta[data-tono="agua"]{color:var(--agua); background:var(--agua-tenue)}
+
+/* ── Comparativa ──────────────────────────────────────────────────── */
+.comparativa{padding:16px}
+.barra{display:grid; grid-template-columns:66px 1fr 34px; align-items:center; gap:10px; padding:7px 0}
+.barra__n{font-size:13px; font-weight:600; letter-spacing:-.015em}
+.barra__pista{display:block; height:8px; border-radius:999px; background:var(--papel-2); overflow:hidden}
+.barra__relleno{display:block; height:100%; border-radius:999px; background:var(--acento,var(--niebla)); transition:width .8s var(--seg)}
+.barra__v{font-size:13px; font-weight:650; text-align:right; letter-spacing:-.02em}
+.comparativa__nota{
+  margin-top:13px; padding-top:13px; border-top:1px solid var(--linea);
+  font-size:13px; color:var(--tinta-2); line-height:1.45;
+}
+.comparativa__nota strong{color:var(--tinta); font-weight:640}
+.deltas{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px}
+.delta{text-align:center}
+.delta__k{font-size:9.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--tinta-3)}
+.delta__v{font-size:15px; font-weight:640; letter-spacing:-.025em; margin-top:1px}
+
+/* ── Próximas horas ───────────────────────────────────────────────── */
+.franjas{padding:14px 0 12px}
+.franjas__pista{
+  display:flex; gap:2px; overflow-x:auto; padding:0 14px 6px;
+  scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch;
+}
+.franjas__pista::-webkit-scrollbar{height:0}
+.hora{
+  flex:none; width:50px; text-align:center; scroll-snap-align:start;
+  padding:6px 0 4px; border-radius:var(--r-md); transition:background .2s;
+}
+.hora[data-ventana="si"]{background:var(--sol-tenue)}
+.hora__h{font-size:11px; color:var(--tinta-3); font-weight:600}
+.hora__ico{margin:5px auto 4px; width:20px; height:20px}
+.hora__t{font-size:13.5px; font-weight:620; letter-spacing:-.025em}
+.hora__col{height:34px; margin:6px auto 4px; width:6px; border-radius:999px; background:var(--papel-2); position:relative; overflow:hidden}
+.hora__col span{position:absolute; bottom:0; left:0; right:0; border-radius:999px; background:var(--acento,var(--niebla))}
+.hora__p{font-size:10.5px; color:var(--agua); font-weight:650; min-height:14px}
+.franjas__pie{
+  margin:8px 14px 0; padding-top:11px; border-top:1px solid var(--linea);
+  font-size:12.5px; color:var(--tinta-2); line-height:1.45;
+}
+
+/* ── Iconos de cielo ──────────────────────────────────────────────── */
+.ico-cielo{fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+.ico-cielo .s{stroke:var(--sol)}
+.ico-cielo .n{stroke:var(--niebla)}
+.ico-cielo .a{stroke:var(--agua)}
+
+/* ── Pie y avisos ─────────────────────────────────────────────────── */
+.pie{padding:34px 0 10px; text-align:center; color:var(--tinta-3); font-size:11.5px; line-height:1.6}
+.pie__fino{color:var(--tinta-3); opacity:.75}
+.brindis{
+  position:fixed; left:50%; bottom:calc(22px + env(safe-area-inset-bottom)); z-index:50;
+  transform:translate(-50%,16px); opacity:0; pointer-events:none; max-width:calc(100% - 32px);
+  padding:11px 16px; border-radius:999px; font-size:13px; font-weight:550;
+  background:var(--tinta); color:var(--papel); box-shadow:var(--sombra-alta);
+  transition:opacity .28s var(--seg), transform .28s var(--seg);
+}
+.brindis[data-visible]{opacity:1; transform:translate(-50%,0)}
+
+/* ── Esqueleto de carga ───────────────────────────────────────────── */
+.esqueleto{
+  border-radius:var(--r-lg); background:var(--papel-2); animation:latir 1.4s ease-in-out infinite;
+}
+@keyframes latir{0%,100%{opacity:.55} 50%{opacity:1}}
+main[aria-busy="true"] .bloque{opacity:.999}
+
+/* ── Pantallas grandes ────────────────────────────────────────────── */
+@media (min-width:620px){
+  :root{--ancho:640px}
+  .ciudades{grid-template-columns:1fr}
+  .mejor{padding:24px 22px}
+}
+
+/* ── Movimiento reducido ──────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important}
+}

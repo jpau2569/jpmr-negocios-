@@ -1,0 +1,26 @@
+{
+  "id": "/sol-niebla-agua/",
+  "name": "Sol Niebla y Agua — El tiempo en Asturias",
+  "short_name": "Sol Niebla Agua",
+  "description": "Oviedo, Mieres y Gijón comparados en un vistazo: sol, niebla y agua interpretados para decidir si sales, conduces, haces fotos o enseñas pisos.",
+  "start_url": "app.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#f4f3ef",
+  "theme_color": "#f4f3ef",
+  "lang": "es-ES",
+  "dir": "ltr",
+  "categories": ["weather", "utilities", "lifestyle"],
+  "icons": [
+    { "src": "icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icono-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" },
+    { "src": "icono-monocromo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "monochrome" }
+  ],
+  "shortcuts": [
+    { "name": "Modo Carretera", "short_name": "Carretera", "url": "app.html?modo=carretera" },
+    { "name": "Modo Visitas", "short_name": "Visitas", "url": "app.html?modo=visitas" },
+    { "name": "Modo Fotos", "short_name": "Fotos", "url": "app.html?modo=fotos" }
+  ]
+}
