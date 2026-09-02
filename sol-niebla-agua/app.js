@@ -23,9 +23,10 @@ const CONFIG = {
   // 'auto'  → intenta datos reales y cae a simulados si no hay red
   // 'openmeteo' → siempre datos reales   |   'mock' → siempre simulados
   proveedor: 'auto',
+  rutaApi: '/api/tiempo',   // backend propio; si no existe, se cae a Open-Meteo
   horasVista: 12,          // franjas mostradas en "Próximas horas"
   zonaHoraria: 'Europe/Madrid',
-  version: '1.0.0'
+  version: '2.0.0'
 };
 
 const CIUDADES = [
@@ -352,18 +353,80 @@ function normalizaOpenMeteo(ciudad, d, ahora){
   };
 }
 
-const Proveedores = { mock: ProveedorMock, openmeteo: ProveedorOpenMeteo };
+/* ── Capa de datos — backend propio (AEMET + Open-Meteo) ──────────── */
+/* `api/tiempo.js` compone la malla horaria de Open-Meteo con la
+   observación real de la estación AEMET más cercana a cada ciudad. Es la
+   única forma de usar AEMET: su clave no puede vivir en el navegador.   */
+
+const ProveedorApi = {
+  id:'api',
+  etiqueta:'AEMET',
+  async obtener(){
+    const res = await fetch(CONFIG.rutaApi, { cache:'no-store', signal: AbortSignal.timeout(12000) });
+    if (!res.ok) throw new Error('API ' + res.status);
+    const datos = await res.json();
+    if (!datos?.ciudades?.length) throw new Error('API sin ciudades');
+    // El servidor dice si la observación real llegó entera, a medias o nada
+    return revivirFechas({ ...datos, origen: datos.origen === 'openmeteo' ? 'openmeteo' : 'api' });
+  }
+};
+
+/** Las fechas viajan como texto ISO; aquí vuelven a ser Date. */
+function revivirFechas(d){
+  d.instante = new Date(d.instante);
+  d.ciudades.forEach(c => {
+    c.actual.instante = new Date(c.actual.instante);
+    c.hoy.amanecer = new Date(c.hoy.amanecer);
+    c.hoy.ocaso = new Date(c.hoy.ocaso);
+    c.horas.forEach(h => h.instante = new Date(h.instante));
+  });
+  return d;
+}
+
+const Proveedores = { mock: ProveedorMock, openmeteo: ProveedorOpenMeteo, api: ProveedorApi };
+
+/* Cascada por origen elegido. 'auto' baja un peldaño cada vez que algo
+   falla, para que la app siempre tenga algo que enseñar.               */
+const CASCADAS = {
+  auto:      ['api', 'openmeteo', 'mock'],
+  api:       ['api'],
+  openmeteo: ['openmeteo'],
+  mock:      ['mock']
+};
+
+/* Distintas fuentes pueden contradecirse: el código del cielo viene del
+   modelo y la visibilidad puede venir medida por una estación. Aquí se
+   dejan coherentes antes de que nadie los lea, y se redondea lo que
+   luego se enseña como entero.                                         */
+function reconcilia(p){
+  const esNiebla = p.codigo === 45 || p.codigo === 48;
+  if (p.visibilidad < 1000 && !esNiebla && p.precipitacion < .5) p.codigo = 45;
+  else if (esNiebla && p.visibilidad > 5000)
+    p.codigo = p.nubosidad > 85 ? 3 : p.nubosidad > 55 ? 2 : p.nubosidad > 22 ? 1 : 0;
+  p.nubosidad  = Math.round(p.nubosidad);
+  p.humedad    = Math.round(p.humedad);
+  p.probLluvia = Math.round(p.probLluvia);
+  p.viento     = Math.round(p.viento);
+  p.rachas     = Math.round(p.rachas);
+  p.visibilidad = Math.round(p.visibilidad);
+  return p;
+}
 
 /** Punto único de entrada de datos para el resto de la app. */
 async function cargarDatos(sal = 0){
-  if (CONFIG.proveedor === 'mock') return Proveedores.mock.obtener(sal);
-  try {
-    return await Proveedores.openmeteo.obtener();
-  } catch (err){
-    if (CONFIG.proveedor === 'openmeteo') throw err;
-    console.warn('[SNA] Sin datos reales, uso simulados:', err.message);
-    return Proveedores.mock.obtener(sal);
+  const cadena = CASCADAS[CONFIG.proveedor] || CASCADAS.auto;
+  let ultimo;
+  for (const id of cadena){
+    try {
+      const datos = await Proveedores[id].obtener(sal);
+      datos.ciudades.forEach(c => { reconcilia(c.actual); c.horas.forEach(reconcilia); });
+      return datos;
+    } catch (err){
+      ultimo = err;
+      console.warn(`[SNA] proveedor "${id}" no disponible: ${err.message}`);
+    }
   }
+  throw ultimo ?? new Error('Sin proveedores disponibles');
 }
 
 /* ── 5) Motor — Índice Sol Niebla y Agua ──────────────────────────── */
@@ -609,73 +672,190 @@ const ICONOS_CONSEJO = {
 
 /* ── 7) Presentación — render ─────────────────────────────────────── */
 
+const FECHA_LARGA = { weekday:'long', day:'numeric', month:'long' };
+
 function anillo(indice, tam = 62, grosor = 5){
   const r = (tam - grosor) / 2, c = 2 * Math.PI * r;
-  const off = c * (1 - indice / 100);
   return `<div class="anillo" style="--acento:${colorIndice(indice)}; width:${tam}px; height:${tam}px">
     <svg width="${tam}" height="${tam}" aria-hidden="true">
       <circle class="anillo__fondo" cx="${tam/2}" cy="${tam/2}" r="${r}" stroke-width="${grosor}"/>
       <circle class="anillo__valor" cx="${tam/2}" cy="${tam/2}" r="${r}" stroke-width="${grosor}"
-        stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/>
+        stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c * (1 - indice / 100)).toFixed(1)}"/>
     </svg>
     <span class="anillo__num num" style="font-size:${Math.round(tam * .34)}px">${indice}</span>
   </div>`;
 }
 
-function pintarTitular(ev){
-  $('#titular-frase').textContent = lecturaDelDia(ev);
-  $('#ultima-actualizacion').textContent = `Actualizado a las ${hhmm(ev.instante)}`;
-  const sello = $('#sello-fuente');
-  const real = ev.origen === 'openmeteo';
-  sello.dataset.tipo = real ? 'real' : 'mock';
-  sello.textContent = real ? 'En directo' : 'Simulados';
-  sello.title = real ? 'Datos de Open-Meteo' : 'Datos simulados (sin conexión o modo demo)';
-  $('#pie-fuente').textContent = real
-    ? 'Datos: Open-Meteo · Índice Sol Niebla y Agua, cálculo propio'
-    : 'Datos simulados · Índice Sol Niebla y Agua, cálculo propio';
-}
-
-function pintarAhora(ev){
-  $('#ahora').innerHTML = CIUDADES.map(base => {
-    const c = ev.ciudades.find(x => x.id === base.id);
-    return `<div class="ahora__celda">
-      <p class="ahora__ciudad">${c.nombre}</p>
-      <p class="ahora__temp num">${Math.round(c.actual.temperatura)}°</p>
-      <p class="ahora__ind num" style="color:${colorIndice(c.indice)}">${c.indice}<span style="opacity:.5">/100</span></p>
-      <p class="ahora__cielo">${NOMBRE_CIELO[familiaCielo(c.actual.codigo)]}</p>
-    </div>`;
-  }).join('');
-}
-
-function pintarMejor(ev){
-  const m = ev.mejor, r = recomendacion(ev);
-  const b = banda(m.indice);
-  $('#mejor').innerHTML = `<article class="tarjeta mejor"
-      style="--acento:${colorIndice(m.indice)}; --acento-tenue:${colorTenue(m.indice)}">
-    <div class="mejor__cab">
-      <div class="mejor__txt">
-        <p class="mejor__donde">Ahora mismo, mejor en</p>
-        <h3 class="mejor__ciudad">${m.nombre}</h3>
-        <p class="mejor__sub">${b.etiqueta} para ${MODOS[ev.modo].nombre.toLowerCase()} · ${NOMBRE_CIELO[familiaCielo(m.actual.codigo)].toLowerCase()}, ${Math.round(m.actual.temperatura)}° y ${m.actual.probLluvia}% de lluvia.</p>
+/* ── Hero: la lectura del día, la mejor opción y el consejo ───────── */
+function pintarHero(ev){
+  const m = ev.mejor, r = recomendacion(ev), b = banda(m.indice);
+  const fecha = ev.instante.toLocaleDateString('es-ES', FECHA_LARGA);
+  $('#hero').className = 'hero entra';
+  $('#hero').style.setProperty('--acento', colorIndice(m.indice));
+  $('#hero').style.setProperty('--acento-tenue', colorTenue(m.indice));
+  $('#hero').innerHTML = `
+    <p class="hero__fecha">${fecha}</p>
+    <p class="hero__titular">${lecturaDelDia(ev)}</p>
+    <div class="hero__mejor">
+      <div class="hero__mejor-txt">
+        <p class="hero__donde">Ahora mismo, mejor en</p>
+        <p class="hero__ciudad">${m.nombre}</p>
+        <p class="hero__detalle">${b.etiqueta} para ${MODOS[ev.modo].nombre.toLowerCase()} ·
+          ${NOMBRE_CIELO[familiaCielo(m.actual.codigo)].toLowerCase()}, ${Math.round(m.actual.temperatura)}°
+          y ${m.actual.probLluvia}% de lluvia</p>
       </div>
-      ${anillo(m.indice, 72, 6)}
+      ${anillo(m.indice, 74, 6)}
     </div>
-    <div class="mejor__consejo">
-      <span class="mejor__consejo-ico"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONOS_CONSEJO[r.icono]}</svg></span>
+    <div class="hero__consejo">
+      <span class="hero__consejo-ico"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONOS_CONSEJO[r.icono]}</svg></span>
       <div>
-        <p class="mejor__consejo-tit">${r.titulo}</p>
-        <p class="mejor__consejo-txt">${r.texto}</p>
+        <p class="hero__consejo-tit">${r.titulo}</p>
+        <p class="hero__consejo-txt">${r.texto}</p>
       </div>
     </div>
-  </article>`;
+    ${pieHero(ev)}`;
+  $('#btn-refrescar')?.addEventListener('click', () => refrescar({ manual:true }));
 }
 
+function pieHero(ev){
+  const minutos = Math.round((Date.now() - ev.instante.getTime()) / 60000);
+  const viejo = minutos >= 40;
+  const real = ev.origen !== 'mock';
+  const tipo = viejo ? 'viejo' : real ? 'real' : 'mock';
+  const texto = viejo ? `Hace ${minutos < 90 ? minutos + ' min' : Math.round(minutos / 60) + ' h'}`
+    : (Proveedores[ev.origen]?.etiqueta ?? 'Simulados');
+  return `<div class="hero__pie">
+      <span class="sello" data-tipo="${tipo}" title="${real ? 'Datos reales' : 'Datos simulados'}">${texto}</span>
+      <span class="hero__hora">Actualizado a las ${hhmm(ev.instante)}</span>
+      <button class="btn-refresco" id="btn-refrescar" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5"/></svg>
+        <span>Actualizar</span>
+      </button>
+    </div>`;
+}
+
+/** Hero cuando no hay ningún dato con el que trabajar. */
+function pintarHeroError(mensaje){
+  $('#hero').className = 'hero hero--error';
+  $('#hero').innerHTML = `
+    <p class="hero__fecha">Sin datos</p>
+    <p class="hero__titular">${mensaje}</p>
+    <div class="hero__pie">
+      <button class="btn-refresco" id="btn-refrescar" type="button" style="margin-left:0">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5"/></svg>
+        <span>Reintentar</span>
+      </button>
+    </div>`;
+  $('#btn-refrescar').addEventListener('click', () => refrescar({ manual:true }));
+  $('#app').setAttribute('aria-busy', 'false');
+}
+
+/* ── Ranking: las tres ciudades como una sola unidad ──────────────── */
+function pintarRanking(ev){
+  const ganaCosta = ev.costa && ev.costa.indice > ev.mediaInterior;
+  const dif = Math.abs(Math.round((ev.costa?.indice ?? 0) - ev.mediaInterior));
+  $('#ranking').innerHTML = ev.ciudades.map(c => `
+    <button type="button" class="fila" data-ciudad="${c.id}" data-foco="${c.id === Estado.ciudadFoco ? 'si' : 'no'}"
+        style="--acento:${colorIndice(c.indice)}"
+        aria-label="${c.nombre}, ${c.indice} sobre 100, ${Math.round(c.actual.temperatura)} grados. Ver sus próximas horas">
+      <span class="fila__n">${c.nombre} <span class="fila__zona">${c.zona}</span></span>
+      <span class="fila__pista"><span class="fila__relleno" style="width:${c.indice}%"></span></span>
+      <span class="fila__t num">${Math.round(c.actual.temperatura)}°</span>
+      <span class="fila__i num">${c.indice}</span>
+    </button>`).join('')
+    + `<p class="ranking__pie"><strong>${ganaCosta ? 'Mejor ahora en costa.' : 'Mejor ahora en interior.'}</strong>
+        ${dif <= 3 ? 'Las tres van muy parejas: decide por cercanía.'
+          : ganaCosta ? `Gijón saca ${dif} puntos a la media de Oviedo y Mieres.`
+          : `Oviedo y Mieres promedian ${dif} puntos por encima de Gijón.`}</p>`;
+
+  $$('#ranking .fila').forEach(el => el.addEventListener('click', () => enfocar(el.dataset.ciudad)));
+}
+
+/* ── Gráfico de las próximas horas ────────────────────────────────── */
+const G = { ancho:360, alto:180, izq:26, der:26, arriba:30, base:120, lluviaBase:152, lluviaAlto:22 };
+
+/** Catmull-Rom convertido a curvas de Bézier: trazo suave sin librerías. */
+function curvaSuave(pts){
+  let d = `M${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++){
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += `C${c1[0].toFixed(1)} ${c1[1].toFixed(1)},${c2[0].toFixed(1)} ${c2[1].toFixed(1)},${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+function pintarFranjas(ev){
+  const c = ev.ciudades.find(x => x.id === Estado.ciudadFoco) || ev.mejor;
+  $('#horas-ciudad').textContent = '· ' + c.nombre;
+
+  const h = c.futuras;
+  const paso = (G.ancho - G.izq - G.der) / (h.length - 1);
+  const x = i => G.izq + i * paso;
+  const y = v => G.base - (v / 100) * (G.base - G.arriba);
+  const pts = h.map((p, i) => [x(i), y(p.indice)]);
+
+  const ventana = c.ventana
+    ? `<rect class="g-ventana" x="${(x(c.ventana.iDesde) - paso / 2).toFixed(1)}" y="${G.arriba - 6}"
+         width="${(paso * (c.ventana.iHasta - c.ventana.iDesde + 1)).toFixed(1)}"
+         height="${G.base - G.arriba + 6}" rx="8"/>` : '';
+
+  const lluvia = h.map((p, i) => p.probLluvia < 10 ? '' :
+    `<rect class="g-lluvia" x="${(x(i) - 3).toFixed(1)}"
+       y="${(G.lluviaBase - (p.probLluvia / 100) * G.lluviaAlto).toFixed(1)}" width="6"
+       height="${((p.probLluvia / 100) * G.lluviaAlto).toFixed(1)}" rx="3"/>`).join('');
+
+  const etiquetas = h.map((p, i) => i % 2 ? '' :
+    `<text class="g-txt" x="${x(i).toFixed(1)}" y="${G.lluviaBase + 15}">${i === 0 ? 'Ahora' : hh(p.instante)}</text>`).join('');
+  const temps = h.map((p, i) => i % 2 ? '' :
+    `<text class="g-temp" x="${x(i).toFixed(1)}" y="14">${Math.round(p.temperatura)}°</text>`).join('');
+
+  const pie = c.ventana
+    ? `Mejor tramo en ${c.nombre}: <strong>${hhmm(c.ventana.desde)}–${hhmm(c.ventana.hasta)}</strong> (${c.ventana.indice}/100).`
+    : c.bajon
+      ? `${c.nombre} aguanta hasta las <strong>${hhmm(c.bajon.desde)}</strong>; a partir de ahí cae a ${c.bajon.indice}/100.`
+      : c.indice >= 70
+        ? `${c.nombre} se mantiene estable durante las próximas ${CONFIG.horasVista} horas. Sin prisa.`
+        : `Sin ventana clara en ${c.nombre} durante las próximas ${CONFIG.horasVista} horas.`;
+
+  $('#franjas').style.setProperty('--acento', colorIndice(c.indice));
+  $('#franjas').style.setProperty('--acento-tenue', colorTenue(c.indice));
+  $('#franjas').innerHTML = `
+    <svg viewBox="0 0 ${G.ancho} ${G.alto}" role="img"
+         aria-label="Índice Sol Niebla y Agua de ${c.nombre} en las próximas ${h.length} horas, de ${Math.min(...h.map(p=>p.indice))} a ${Math.max(...h.map(p=>p.indice))} sobre 100">
+      <defs><clipPath id="g-caja"><rect x="0" y="${G.arriba - 8}" width="${G.ancho}" height="${G.base - G.arriba + 8}"/></clipPath></defs>
+      ${ventana}
+      <line class="g-rejilla" x1="${G.izq}" y1="${y(70).toFixed(1)}" x2="${G.ancho - G.der}" y2="${y(70).toFixed(1)}" stroke-dasharray="2 4"/>
+      <text class="g-ref" x="${G.ancho - G.der + 3}" y="${(y(70) + 3.5).toFixed(1)}">70</text>
+      <text class="g-ref" x="${G.izq - 5}" y="${G.base + 3.5}" style="text-anchor:end">0</text>
+      <line class="g-rejilla" x1="${G.izq}" y1="${G.base}" x2="${G.ancho - G.der}" y2="${G.base}"/>
+      <g clip-path="url(#g-caja)">
+        <path class="g-area" d="${curvaSuave(pts)}L${x(h.length-1).toFixed(1)} ${G.base}L${G.izq} ${G.base}Z"/>
+        <path class="g-linea" d="${curvaSuave(pts)}"/>
+      </g>
+      <line class="g-ahora" x1="${G.izq}" y1="${G.arriba - 6}" x2="${G.izq}" y2="${G.base}"/>
+      <circle class="g-punto" cx="${G.izq}" cy="${y(h[0].indice).toFixed(1)}" r="3.8"/>
+      <text class="g-ahora-num" x="${G.izq + 7}" y="${(y(h[0].indice) - 7).toFixed(1)}">${h[0].indice}</text>
+      ${lluvia}${temps}${etiquetas}
+    </svg>
+    <div class="leyenda">
+      <span><i style="background:${colorIndice(c.indice)}"></i>Índice</span>
+      <span><i style="background:var(--agua);opacity:.55"></i>Prob. de lluvia</span>
+      ${c.ventana ? '<span><i style="background:var(--sol-tenue);border:1px solid var(--sol)"></i>Ventana buena</span>' : ''}
+    </div>
+    <p class="grafico__pie">${pie}</p>`;
+}
+
+/* ── Detalle por ciudad ───────────────────────────────────────────── */
 function pintarCiudades(ev){
-  $('#ciudades').innerHTML = ev.ciudades.map(c => {
+  $('#ciudades').innerHTML = ev.ciudades.map((c, i) => {
     const a = c.actual;
-    return `<button type="button" class="tarjeta ciudad" data-ciudad="${c.id}"
+    const km = a.visibilidad >= 1000 ? `${redondea(a.visibilidad / 1000, a.visibilidad < 10000 ? 1 : 0)}<small> km</small>`
+      : `${a.visibilidad}<small> m</small>`;
+    return `<button type="button" class="tarjeta ciudad entra" style="--i:${i}" data-ciudad="${c.id}"
         data-foco="${c.id === Estado.ciudadFoco ? 'si' : 'no'}"
-        aria-label="${c.nombre}, índice ${c.indice} sobre 100. Ver próximas horas">
+        aria-label="${c.nombre}, índice ${c.indice} sobre 100. Ver sus próximas horas">
       <div class="ciudad__cab">
         ${anillo(c.indice, 54, 4.5)}
         <div class="ciudad__id">
@@ -688,10 +868,15 @@ function pintarCiudades(ev){
         </div>
       </div>
       <div class="metricas">
-        <div class="metrica"><p class="metrica__k">Lluvia</p><p class="metrica__v num">${a.probLluvia}%</p></div>
+        <div class="metrica" data-alerta="${a.probLluvia >= 60 ? 'si' : 'no'}">
+          <p class="metrica__k">Lluvia</p><p class="metrica__v num">${a.probLluvia}%</p></div>
         <div class="metrica"><p class="metrica__k">Sensación</p><p class="metrica__v num">${Math.round(a.sensacion)}°</p></div>
-        <div class="metrica"><p class="metrica__k">Viento</p><p class="metrica__v num">${a.viento}<span style="font-size:10px"> km/h ${rumbo(a.dirViento)}</span></p></div>
+        <div class="metrica" data-alerta="${a.visibilidad < 2000 ? 'si' : 'no'}">
+          <p class="metrica__k">Visibilidad</p><p class="metrica__v num">${km}</p></div>
+        <div class="metrica" data-alerta="${a.rachas >= 50 ? 'si' : 'no'}">
+          <p class="metrica__k">Viento</p><p class="metrica__v num">${a.viento}<small> km/h ${rumbo(a.dirViento)}</small></p></div>
         <div class="metrica"><p class="metrica__k">Humedad</p><p class="metrica__v num">${a.humedad}%</p></div>
+        <div class="metrica"><p class="metrica__k">Nubes</p><p class="metrica__v num">${a.nubosidad}%</p></div>
       </div>
       <div class="etiquetas">
         ${c.etiquetas.map(e => `<span class="etiqueta" data-tono="${e.tono}">${e.txt}</span>`).join('')}
@@ -699,91 +884,69 @@ function pintarCiudades(ev){
     </button>`;
   }).join('');
 
-  $$('.ciudad').forEach(el => el.addEventListener('click', () => {
-    Estado.ciudadFoco = el.dataset.ciudad;
-    guarda('sna.ciudad', Estado.ciudadFoco);
-    $$('.ciudad').forEach(x => x.dataset.foco = x === el ? 'si' : 'no');
-    pintarFranjas(Estado.evaluacion);
-    $('#franjas').scrollIntoView({ behavior:'smooth', block:'center' });
-  }));
+  $$('.ciudad').forEach(el => el.addEventListener('click', () => enfocar(el.dataset.ciudad, true)));
 }
 
+/** Cambia la ciudad sobre la que se leen las próximas horas. */
+function enfocar(id, desplaza = false){
+  Estado.ciudadFoco = id;
+  guarda('sna.ciudad', id);
+  $$('[data-ciudad]').forEach(x => x.dataset.foco = x.dataset.ciudad === id ? 'si' : 'no');
+  pintarFranjas(Estado.evaluacion);
+  if (desplaza) $('#franjas').scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+/* ── Interior y costa ─────────────────────────────────────────────── */
 function pintarComparativa(ev){
-  const orden = ev.ciudades;
   const costa = ev.costa, interior = ev.interior;
-  const dTemp = costa ? costa.actual.temperatura - media(interior.map(c => c.actual.temperatura)) : 0;
-  const dLluvia = costa ? costa.actual.probLluvia - media(interior.map(c => c.actual.probLluvia)) : 0;
-  const dViento = costa ? costa.actual.viento - media(interior.map(c => c.actual.viento)) : 0;
+  const dTemp   = costa ? costa.actual.temperatura - media(interior.map(c => c.actual.temperatura)) : 0;
+  const dLluvia = costa ? costa.actual.probLluvia  - media(interior.map(c => c.actual.probLluvia))  : 0;
+  const dViento = costa ? costa.actual.viento      - media(interior.map(c => c.actual.viento))      : 0;
   const ganaCosta = costa && costa.indice > ev.mediaInterior;
 
   $('#comparativa').innerHTML = `
-    ${orden.map(c => `<div class="barra" style="--acento:${colorIndice(c.indice)}">
-      <span class="barra__n">${c.nombre}</span>
-      <span class="barra__pista"><span class="barra__relleno" style="width:${c.indice}%"></span></span>
-      <span class="barra__v num">${c.indice}</span>
-    </div>`).join('')}
     <div class="deltas">
-      <div class="delta"><p class="delta__k">Temp. costa</p><p class="delta__v num">${signo(dTemp, 1)}°</p></div>
-      <div class="delta"><p class="delta__k">Lluvia costa</p><p class="delta__v num">${signo(dLluvia, 0)}%</p></div>
-      <div class="delta"><p class="delta__k">Viento costa</p><p class="delta__v num">${signo(dViento, 0)}</p></div>
+      <div class="delta"><p class="delta__k">Temperatura</p><p class="delta__v num">${signo(dTemp, 1)}°</p></div>
+      <div class="delta"><p class="delta__k">Prob. lluvia</p><p class="delta__v num">${signo(dLluvia, 0)}%</p></div>
+      <div class="delta"><p class="delta__k">Viento</p><p class="delta__v num">${signo(dViento, 0)}</p></div>
     </div>
-    <p class="comparativa__nota">
-      <strong>${ganaCosta ? 'Mejor ahora en costa.' : 'Mejor ahora en interior.'}</strong>
+    <p class="comparativa__nota">Diferencia de <strong>Gijón</strong> frente a la media de Oviedo y Mieres.
       ${ganaCosta
-        ? `Gijón saca ${Math.round(costa.indice - ev.mediaInterior)} puntos a la media de Oviedo y Mieres${dViento > 6 ? `, aunque con ${Math.round(dViento)} km/h más de viento` : ''}.`
-        : `Oviedo y Mieres promedian ${Math.round(ev.mediaInterior - (costa?.indice ?? 0))} puntos por encima de Gijón${dLluvia > 8 ? ', con menos agua tierra adentro' : ''}.`}
-    </p>`;
+        ? `Hoy la costa gana${dViento > 6 ? `, aunque con ${Math.round(dViento)} km/h más de viento` : ''}.`
+        : `Hoy gana el interior${dLluvia > 8 ? ': en Gijón hay más agua' : ''}.`}</p>`;
 }
 
 const media = arr => arr.reduce((s, x) => s + x, 0) / arr.length;
 const signo = (v, d) => (v >= 0 ? '+' : '−') + redondea(Math.abs(v), d).toFixed(d);
 
-function pintarFranjas(ev){
-  const c = ev.ciudades.find(x => x.id === Estado.ciudadFoco) || ev.mejor;
-  $('#horas-ciudad').textContent = '· ' + c.nombre;
-  const maxIdx = Math.max(...c.futuras.map(h => h.indice), 1);
-  void maxIdx;
-
-  const pista = c.futuras.map((h, i) => {
-    const dentro = c.ventana && i >= c.ventana.iDesde && i <= c.ventana.iHasta;
-    return `<div class="hora" data-ventana="${dentro ? 'si' : 'no'}" style="--acento:${colorIndice(h.indice)}">
-      <p class="hora__h num">${i === 0 ? 'Ahora' : hh(h.instante)}</p>
-      <div class="hora__ico">${iconoCielo(h.codigo, h.esDeDia)}</div>
-      <p class="hora__t num">${Math.round(h.temperatura)}°</p>
-      <div class="hora__col"><span style="height:${Math.max(6, h.indice)}%"></span></div>
-      <p class="hora__p num">${h.probLluvia >= 15 ? h.probLluvia + '%' : ''}</p>
-    </div>`;
-  }).join('');
-
-  const pie = c.ventana
-    ? `Mejor tramo en ${c.nombre}: <strong>${hhmm(c.ventana.desde)}–${hhmm(c.ventana.hasta)}</strong> (${c.ventana.indice}/100). La banda ámbar marca la ventana.`
-    : c.bajon
-      ? `${c.nombre} aguanta hasta las <strong>${hhmm(c.bajon.desde)}</strong>; a partir de ahí cae a ${c.bajon.indice}/100.`
-      : c.indice >= 70
-        ? `${c.nombre} se mantiene estable durante las próximas ${CONFIG.horasVista} horas. Sin prisa.`
-        : `Sin ventana clara en ${c.nombre} durante las próximas ${CONFIG.horasVista} horas.`;
-
-  $('#franjas').innerHTML = `<div class="franjas__pista">${pista}</div><p class="franjas__pie">${pie}</p>`;
-}
-
+/* ── Orquestador del render ───────────────────────────────────────── */
 function pintar(ev){
   Estado.evaluacion = ev;
   if (!ev.ciudades.some(c => c.id === Estado.ciudadFoco)) Estado.ciudadFoco = ev.mejor.id;
-  pintarTitular(ev); pintarAhora(ev); pintarMejor(ev);
-  pintarCiudades(ev); pintarComparativa(ev); pintarFranjas(ev);
+  pintarHero(ev); pintarRanking(ev); pintarFranjas(ev);
+  pintarCiudades(ev); pintarComparativa(ev);
   $('#app').setAttribute('aria-busy', 'false');
 }
 
-/* ── 8) Estado, eventos y PWA ─────────────────────────────────────── */
+/* ── 8) Estado, ajustes, eventos y PWA ────────────────────────────── */
+
+const FUENTES = [
+  { id:'auto',      nombre:'Automático',
+    nota:'AEMET si está disponible, luego Open-Meteo y, sin red, simulados. Recomendado.' },
+  { id:'api',       nombre:'AEMET + modelo',
+    nota:'Observación real de la estación más cercana sobre la previsión horaria. Necesita el backend desplegado.' },
+  { id:'openmeteo', nombre:'Open-Meteo directo',
+    nota:'Del navegador a Open-Meteo, sin pasar por el backend.' },
+  { id:'mock',      nombre:'Simulados',
+    nota:'Escenarios plausibles de Asturias, sin red. Útil para probar los cuatro modos.' }
+];
 
 const Estado = {
   modo: lee('sna.modo', 'paseo'),
   tema: lee('sna.tema', 'auto'),
+  fuente: lee('sna.fuente', 'auto'),
   ciudadFoco: lee('sna.ciudad', 'oviedo'),
-  datos: null,
-  evaluacion: null,
-  sal: 0,
-  cargando: false
+  datos: null, evaluacion: null, sal: 0, cargando: false
 };
 
 function lee(k, def){ try { return localStorage.getItem(k) ?? def; } catch { return def; } }
@@ -804,36 +967,83 @@ function aplicaTema(){
   $$('meta[name="theme-color"]').forEach(m => m.remove());
   const m = document.createElement('meta');
   m.name = 'theme-color';
-  m.content = oscuro ? '#0d0f12' : '#f4f3ef';
+  m.content = oscuro ? '#0b0d10' : '#f4f3ef';
   document.head.appendChild(m);
+  $$('#op-tema .opcion').forEach(b => b.setAttribute('aria-checked', String(b.dataset.tema === Estado.tema)));
 }
 
 function aplicaModo(){
   const modos = Object.keys(MODOS);
-  const i = modos.indexOf(Estado.modo);
   $$('.modo').forEach(b => b.setAttribute('aria-selected', String(b.dataset.modo === Estado.modo)));
-  $('#modos-indicador').style.transform = `translateX(${i * 100}%)`;
+  $('#modos-indicador').style.transform = `translateX(${modos.indexOf(Estado.modo) * 100}%)`;
   $('#modo-nota').textContent = MODOS[Estado.modo].nota;
+}
+
+function aplicaFuente(){
+  CONFIG.proveedor = Estado.fuente;
+  $$('#op-fuente .opcion').forEach(b => b.setAttribute('aria-checked', String(b.dataset.fuente === Estado.fuente)));
+  $('#nota-fuente').textContent = FUENTES.find(f => f.id === Estado.fuente)?.nota ?? '';
+}
+
+function montarAjustes(){
+  $('#op-fuente').innerHTML = FUENTES.map(f =>
+    `<button type="button" class="opcion" role="radio" aria-checked="false" data-fuente="${f.id}">
+      ${f.nombre}<small>${f.nota}</small></button>`).join('');
+  $('#version-app').textContent = `Sol Niebla y Agua ${CONFIG.version}`;
+
+  $('#op-tema').addEventListener('click', e => {
+    const b = e.target.closest('.opcion'); if (!b) return;
+    Estado.tema = b.dataset.tema; guarda('sna.tema', Estado.tema); aplicaTema();
+  });
+  $('#op-fuente').addEventListener('click', e => {
+    const b = e.target.closest('.opcion'); if (!b || b.dataset.fuente === Estado.fuente) return;
+    Estado.fuente = b.dataset.fuente; guarda('sna.fuente', Estado.fuente);
+    aplicaFuente(); refrescar({ manual:true });
+  });
+  $('#btn-limpiar').addEventListener('click', async () => {
+    try { localStorage.removeItem('sna.cache'); } catch {}
+    if ('caches' in window) for (const k of await caches.keys()) await caches.delete(k);
+    brindis('Caché vaciada');
+    refrescar({ manual:true });
+  });
+
+  $('#btn-ajustes').addEventListener('click', () => hoja(true));
+  $('#btn-cerrar-ajustes').addEventListener('click', () => hoja(false));
+  $('#velo').addEventListener('click', () => hoja(false));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#ajustes').hidden) hoja(false); });
+}
+
+function hoja(abrir){
+  const h = $('#ajustes'), v = $('#velo');
+  if (abrir){
+    h.hidden = false; v.hidden = false;
+    requestAnimationFrame(() => { h.dataset.abierto = ''; v.dataset.abierto = ''; });
+    h.querySelector('.opcion')?.focus();
+  } else {
+    delete h.dataset.abierto; delete v.dataset.abierto;
+    setTimeout(() => { h.hidden = true; v.hidden = true; }, 340);
+    $('#btn-ajustes').focus();
+  }
 }
 
 async function refrescar({ manual = false } = {}){
   if (Estado.cargando) return;
   Estado.cargando = true;
-  const btn = $('#btn-refrescar');
-  btn.setAttribute('data-cargando', '');
+  $('#btn-refrescar')?.setAttribute('data-cargando', '');
   try {
     if (manual) Estado.sal++;
     const datos = await cargarDatos(Estado.sal);
     Estado.datos = datos;
     guardaCache(datos);
     pintar(evaluar(datos, Estado.modo));
-    if (manual) brindis(datos.origen === 'openmeteo' ? 'Datos actualizados' : 'Datos simulados actualizados');
+    if (manual) brindis(datos.origen === 'mock' ? 'Datos simulados actualizados' : 'Datos actualizados');
   } catch (err){
     console.error('[SNA]', err);
-    brindis('No se han podido actualizar los datos');
+    if (Estado.datos) brindis('No se han podido actualizar los datos');
+    else pintarHeroError('No hay conexión ni datos guardados. Vuelve a intentarlo o cambia el origen a "simulados" en Ajustes.');
   } finally {
     Estado.cargando = false;
-    btn.removeAttribute('data-cargando');
+    $('#btn-refrescar')?.removeAttribute('data-cargando');
   }
 }
 
@@ -845,15 +1055,7 @@ function leeCache(){
   try {
     const c = JSON.parse(localStorage.getItem('sna.cache') || 'null');
     if (!c || Date.now() - c.ts > 6 * 36e5) return null;
-    const d = c.datos;
-    d.instante = new Date(d.instante);
-    d.ciudades.forEach(x => {
-      x.actual.instante = new Date(x.actual.instante);
-      x.hoy.amanecer = new Date(x.hoy.amanecer);
-      x.hoy.ocaso = new Date(x.hoy.ocaso);
-      x.horas.forEach(h => h.instante = new Date(h.instante));
-    });
-    return d;
+    return revivirFechas(c.datos);
   } catch { return null; }
 }
 
@@ -862,14 +1064,14 @@ function arrancar(){
   const modoUrl = new URLSearchParams(location.search).get('modo');
   if (modoUrl && MODOS[modoUrl]){ Estado.modo = modoUrl; guarda('sna.modo', modoUrl); }
 
+  montarAjustes();
   aplicaTema();
   aplicaModo();
+  aplicaFuente();
 
   // Pintado inmediato desde caché mientras llegan los datos frescos
   const cache = leeCache();
   if (cache){ Estado.datos = cache; pintar(evaluar(cache, Estado.modo)); }
-
-  $('#btn-refrescar').addEventListener('click', () => refrescar({ manual:true }));
 
   $('#modos').addEventListener('click', e => {
     const b = e.target.closest('.modo');
@@ -882,33 +1084,27 @@ function arrancar(){
 
   $('#modos').addEventListener('keydown', e => {
     if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    e.preventDefault();
     const modos = Object.keys(MODOS);
     const i = (modos.indexOf(Estado.modo) + (e.key === 'ArrowRight' ? 1 : -1) + modos.length) % modos.length;
-    $(`.modo[data-modo="${modos[i]}"]`).click();
-    $(`.modo[data-modo="${modos[i]}"]`).focus();
-  });
-
-  $('#btn-tema').addEventListener('click', () => {
-    const ciclo = ['auto', 'claro', 'oscuro'];
-    Estado.tema = ciclo[(ciclo.indexOf(Estado.tema) + 1) % 3];
-    guarda('sna.tema', Estado.tema);
-    aplicaTema();
-    brindis({ auto:'Tema automático', claro:'Tema claro', oscuro:'Tema oscuro' }[Estado.tema]);
+    const b = $(`.modo[data-modo="${modos[i]}"]`);
+    b.click(); b.focus();
   });
 
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', aplicaTema);
 
   // Al volver a la app tras un rato, los datos se refrescan solos
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && Date.now() - (Estado.datos?.instante ?? 0) > 15 * 60e3) refrescar();
+    if (document.visibilityState === 'visible'
+      && Date.now() - (Estado.datos?.instante?.getTime() ?? 0) > 15 * 60e3) refrescar();
   });
 
   refrescar().finally(() => {
     setTimeout(() => {
       const s = $('#splash');
-      s.setAttribute('hidden-anim', '');
-      setTimeout(() => s.remove(), 600);
-    }, cache ? 300 : 620);
+      s.dataset.fuera = '';
+      setTimeout(() => s.remove(), 500);
+    }, cache ? 250 : 560);
   });
 }
 

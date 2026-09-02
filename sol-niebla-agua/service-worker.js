@@ -6,7 +6,7 @@
      guardada, para que la app siga siendo útil sin cobertura.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'sna-v1.0.0';
+const VERSION = 'sna-v2.0.0';
 const CASCO  = `${VERSION}-casco`;
 const DATOS  = `${VERSION}-datos`;
 
@@ -17,8 +17,12 @@ const RECURSOS = [
   './app.js',
   './manifest.json',
   './icono.svg',
-  './icono-maskable.svg',
-  './icono-monocromo.svg'
+  './icono-monocromo.svg',
+  './icono-192.png',
+  './icono-512.png',
+  './icono-180.png',
+  './icono-maskable-192.png',
+  './icono-maskable-512.png'
 ];
 
 self.addEventListener('install', evento => {
@@ -44,7 +48,8 @@ self.addEventListener('fetch', evento => {
   const url = new URL(req.url);
 
   // ── Datos meteorológicos: red primero ──────────────────────────────
-  if (url.hostname.endsWith('open-meteo.com')){
+  // Tanto el backend propio (/api/tiempo) como Open-Meteo directo.
+  if (url.hostname.endsWith('open-meteo.com') || url.pathname.startsWith('/api/tiempo')){
     evento.respondWith((async () => {
       const cache = await caches.open(DATOS);
       try {

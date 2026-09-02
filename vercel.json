@@ -16,6 +16,9 @@
     },
     "api/briefing.js": {
       "maxDuration": 60
+    },
+    "api/tiempo.js": {
+      "maxDuration": 30
     }
   },
   "crons": [
