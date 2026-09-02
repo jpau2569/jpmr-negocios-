@@ -22,9 +22,25 @@ const CIUDADES = [
 ];
 
 const ZONA = 'Europe/Madrid';
+
+/* Open-Meteo devuelve las horas en la zona pedida pero SIN indicarla
+   ("2026-07-15T11:00"). Vercel ejecuta en UTC, así que parsearlas tal cual
+   desplazaba el "ahora mismo" dos horas en verano: en una mañana de niebla
+   eso es la diferencia entre 400 m y 24 km de visibilidad. Se convierten a
+   instantes absolutos con el desfase que la propia respuesta declara.     */
+const instante = (iso, desfaseSeg) =>
+  new Date(new Date(`${iso}Z`).getTime() - (desfaseSeg ?? 0) * 1000);
 const CAMPOS_HORA = ['temperature_2m','apparent_temperature','relative_humidity_2m',
   'precipitation_probability','precipitation','weather_code','cloud_cover','visibility',
   'wind_speed_10m','wind_gusts_10m','wind_direction_10m','is_day'].join(',');
+
+/** fetch con tiempo máximo, sin depender de AbortSignal.timeout. */
+async function conCorte(url, opciones = {}, ms = 9000){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try { return await fetch(url, { ...opciones, signal: ctrl.signal }); }
+  finally { clearTimeout(t); }
+}
 
 /* ── Open-Meteo: la malla horaria ─────────────────────────────────── */
 async function openMeteo(){
@@ -37,9 +53,7 @@ async function openMeteo(){
     timezone: ZONA,
     forecast_days: '2'
   });
-  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`, {
-    signal: AbortSignal.timeout(9000)
-  });
+  const res = await conCorte(`https://api.open-meteo.com/v1/forecast?${p}`, {}, 9000);
   if (!res.ok) throw new Error(`Open-Meteo ${res.status}`);
   const json = await res.json();
   return Array.isArray(json) ? json : [json];
@@ -49,13 +63,11 @@ async function openMeteo(){
 /* OpenData responde en dos pasos: primero una URL, luego los datos.    */
 async function aemetJson(ruta, clave){
   const cabeceras = { 'api_key': clave, 'cache-control': 'no-cache' };
-  const puerta = await fetch(`https://opendata.aemet.es/opendata${ruta}`, {
-    headers: cabeceras, signal: AbortSignal.timeout(8000)
-  });
+  const puerta = await conCorte(`https://opendata.aemet.es/opendata${ruta}`, { headers: cabeceras }, 8000);
   if (!puerta.ok) throw new Error(`AEMET ${puerta.status}`);
   const sobre = await puerta.json();
   if (!sobre.datos) throw new Error(`AEMET sin datos: ${sobre.descripcion || sobre.estado}`);
-  const datos = await fetch(sobre.datos, { signal: AbortSignal.timeout(8000) });
+  const datos = await conCorte(sobre.datos, {}, 8000);
   if (!datos.ok) throw new Error(`AEMET datos ${datos.status}`);
   // El fichero de datos viene en latin-1 con más frecuencia de la deseable
   const cuerpo = await datos.arrayBuffer();
@@ -89,8 +101,9 @@ async function observacion(estaciones, clave){
 /* ── Normalización: la misma forma que consume la app ─────────────── */
 function normaliza(ciudad, d, ahora){
   const H = d.hourly, C = d.current, D = d.daily;
+  const desfase = d.utc_offset_seconds;
   const horas = H.time.map((iso, i) => ({
-    instante: iso,
+    instante: instante(iso, desfase).toISOString(),
     temperatura: red(H.temperature_2m[i], 1),
     sensacion:   red(H.apparent_temperature[i], 1),
     humedad:     H.relative_humidity_2m[i],
@@ -107,7 +120,7 @@ function normaliza(ciudad, d, ahora){
 
   // Referencia horaria más cercana a "ahora": visibilidad y probabilidad
   // solo existen en la serie horaria, no en la observación actual.
-  const iRef = indiceMasCercano(H.time, ahora);
+  const iRef = indiceMasCercano(H.time, ahora, desfase);
   const ref = horas[iRef] || horas[0];
 
   return {
@@ -132,8 +145,8 @@ function normaliza(ciudad, d, ahora){
       min: red(D.temperature_2m_min[0], 0),
       probLluviaMax: D.precipitation_probability_max?.[0] ?? 0,
       precipTotal: red(D.precipitation_sum?.[0] ?? 0, 1),
-      amanecer: D.sunrise[0],
-      ocaso:    D.sunset[0]
+      amanecer: instante(D.sunrise[0], desfase).toISOString(),
+      ocaso:    instante(D.sunset[0], desfase).toISOString()
     },
     horas
   };
@@ -163,10 +176,10 @@ const num = v => typeof v === 'number' && Number.isFinite(v);
 const red = (v, d) => { if (!num(v)) return v; const f = 10 ** d; return Math.round(v * f) / f; };
 const sinEstaciones = ({ estaciones, ...resto }) => resto;
 
-function indiceMasCercano(tiempos, ahora){
+function indiceMasCercano(tiempos, ahora, desfase){
   let mejor = 0, dif = Infinity;
   for (let i = 0; i < tiempos.length; i++){
-    const d = Math.abs(new Date(tiempos[i]) - ahora);
+    const d = Math.abs(instante(tiempos[i], desfase) - ahora);
     if (d < dif){ dif = d; mejor = i; }
   }
   return mejor;

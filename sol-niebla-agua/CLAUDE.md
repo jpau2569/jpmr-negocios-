@@ -132,7 +132,13 @@ Buscar:
 - sensación de app nativa
 
 Reglas ya verificadas que no hay que romper: sin desborde horizontal desde
-320 px, y ningún objetivo táctil por debajo de 44 px.
+320 px, ningún objetivo táctil por debajo de 44 px, y **todos los textos por
+encima de 4.5:1 de contraste** en los dos temas.
+
+Para lo último existen los tokens `--sol-txt`, `--niebla-txt`, `--agua-txt`:
+el ámbar y el gris de la marca no llegan a 4.5:1 como texto pequeño sobre
+fondo claro, así que la marca y el gráfico usan `--sol`/`--niebla` y el texto
+usa las variantes `-txt`. No unificarlos.
 
 ## Marca
 
@@ -228,6 +234,18 @@ robusta o más lista para uso diario.
 
 Si una idea añade complejidad pero no mejora mucho la experiencia, no la
 implementes.
+
+## Trampas conocidas
+
+- `evaluar()` recibe el reloj como tercer argumento y **no** usa
+  `datos.instante`: con una caché de hace horas, la columna "Ahora" tiene que
+  seguir siendo la hora actual.
+- Open-Meteo devuelve las horas en la zona pedida pero sin indicarla. Hay que
+  convertirlas con `utc_offset_seconds`, o el backend (que corre en UTC) le
+  adjudica al "ahora mismo" la visibilidad de dos horas antes.
+- `AbortSignal.timeout` no existe en iOS 15: usar el ayudante `conCorte`.
+- El gráfico necesita al menos dos franjas; con menos, avisa en vez de
+  dibujar coordenadas infinitas.
 
 ## Pendiente conocido
 

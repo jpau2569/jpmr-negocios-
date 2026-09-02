@@ -15,7 +15,7 @@ export const CONFIG = {
   rutaApi: '/api/tiempo',   // backend propio; si no existe, se cae a Open-Meteo
   horasVista: 12,          // franjas mostradas en "Próximas horas"
   zonaHoraria: 'Europe/Madrid',
-  version: '2.1.0'
+  version: '2.2.0'
 };
 
 export const CIUDADES = [
@@ -133,6 +133,14 @@ export const ProveedorMock = {
 /* Sin clave de API. Para AEMET (OpenData) basta con crear otro objeto con
    la misma forma { id, etiqueta, obtener() } y añadirlo a Proveedores.   */
 
+/** fetch con tiempo máximo. AbortSignal.timeout no existe en iOS 15. */
+async function conCorte(url, opciones = {}, ms = 9000){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try { return await fetch(url, { ...opciones, signal: ctrl.signal }); }
+  finally { clearTimeout(t); }
+}
+
 export const ProveedorOpenMeteo = {
   id:'openmeteo',
   etiqueta:'En directo',
@@ -148,14 +156,9 @@ export const ProveedorOpenMeteo = {
       forecast_days:'2'
     }).toString();
 
-    const ctrl = new AbortController();
-    const corte = setTimeout(() => ctrl.abort(), 9000);
-    let bruto;
-    try {
-      const res = await fetch(url, { signal: ctrl.signal, cache:'no-store' });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      bruto = await res.json();
-    } finally { clearTimeout(corte); }
+    const res = await conCorte(url, { cache:'no-store' }, 9000);
+    if (!res.ok) throw new Error('Open-Meteo ' + res.status);
+    const bruto = await res.json();
 
     const lista = Array.isArray(bruto) ? bruto : [bruto];
     const ahora = new Date();
@@ -164,10 +167,17 @@ export const ProveedorOpenMeteo = {
   }
 };
 
+/* Open-Meteo devuelve las horas en la zona pedida pero sin indicarla
+   ("2026-07-15T11:00"). Se convierten con el desfase que declara la propia
+   respuesta, así son correctas aunque el móvil esté en otro huso.        */
+const instanteDe = (iso, desfaseSeg) =>
+  new Date(new Date(`${iso}Z`).getTime() - (desfaseSeg ?? 0) * 1000);
+
 function normalizaOpenMeteo(ciudad, d, ahora){
   const H = d.hourly, C = d.current, D = d.daily;
+  const desfase = d.utc_offset_seconds;
   const horas = H.time.map((iso, i) => ({
-    instante: new Date(iso),
+    instante: instanteDe(iso, desfase),
     temperatura: redondea(H.temperature_2m[i], 1),
     sensacion:   redondea(H.apparent_temperature[i], 1),
     humedad:     H.relative_humidity_2m[i],
@@ -184,9 +194,8 @@ function normalizaOpenMeteo(ciudad, d, ahora){
 
   // La hora actual sirve de referencia para visibilidad y probabilidad,
   // que Open-Meteo solo publica en la serie horaria.
-  const iAhora = Math.max(0, horas.findIndex(h => h.instante.getHours() === ahora.getHours()
-    && h.instante.getDate() === ahora.getDate()));
-  const ref = horas[iAhora] || horas[0];
+  const ref = horas.reduce((mejor, h) =>
+    Math.abs(h.instante - ahora) < Math.abs(mejor.instante - ahora) ? h : mejor, horas[0]);
 
   return {
     ...ciudad,
@@ -210,8 +219,8 @@ function normalizaOpenMeteo(ciudad, d, ahora){
       min: redondea(D.temperature_2m_min[0], 0),
       probLluviaMax: D.precipitation_probability_max?.[0] ?? 0,
       precipTotal: redondea(D.precipitation_sum?.[0] ?? 0, 1),
-      amanecer: new Date(D.sunrise[0]),
-      ocaso:    new Date(D.sunset[0])
+      amanecer: instanteDe(D.sunrise[0], desfase),
+      ocaso:    instanteDe(D.sunset[0], desfase)
     },
     horas
   };
@@ -226,7 +235,7 @@ export const ProveedorApi = {
   id:'api',
   etiqueta:'AEMET',
   async obtener(){
-    const res = await fetch(CONFIG.rutaApi, { cache:'no-store', signal: AbortSignal.timeout(12000) });
+    const res = await conCorte(CONFIG.rutaApi, { cache:'no-store' }, 12000);
     if (!res.ok) throw new Error('API ' + res.status);
     const datos = await res.json();
     if (!datos?.ciudades?.length) throw new Error('API sin ciudades');

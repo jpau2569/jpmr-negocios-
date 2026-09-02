@@ -15,7 +15,7 @@
   /* Tinta */
   --tinta:#101317;
   --tinta-2:#575d66;
-  --tinta-3:#878e97;
+  --tinta-3:#63686e;   /* 4.5:1 incluso sobre --papel-2 (fila enfocada) */
   --linea:rgba(16,19,23,.10);
   --linea-2:rgba(16,19,23,.06);
   --linea-fuerte:rgba(16,19,23,.22);
@@ -28,6 +28,11 @@
   --niebla-tenue:rgba(111,124,135,.12);
   --agua:#16607f;
   --agua-tenue:rgba(22,96,127,.11);
+  /* Mismo tono, oscurecido lo justo para que el texto pequeño llegue a
+     4.5:1. La marca y el gráfico siguen usando los de arriba. */
+  --sol-txt:#9d5f0d;
+  --niebla-txt:#636e78;
+  --agua-txt:#16607f;
 
   /* Ritmo: una sola escala para todo */
   --e1:4px; --e2:8px; --e3:12px; --e4:16px; --e5:24px; --e6:32px; --e7:44px;
@@ -47,7 +52,7 @@
   --superficie-2:#1b2027;
   --tinta:#eef0f3;
   --tinta-2:#99a1ab;
-  --tinta-3:#6b737d;
+  --tinta-3:#818891;
   --linea:rgba(255,255,255,.09);
   --linea-2:rgba(255,255,255,.05);
   --linea-fuerte:rgba(255,255,255,.22);
@@ -58,17 +63,22 @@
   --niebla-tenue:rgba(152,165,177,.13);
   --agua:#5aabce;
   --agua-tenue:rgba(90,171,206,.13);
+  /* En oscuro los colores de marca ya superan 4.5:1 sobre las tarjetas */
+  --sol-txt:#eaa63c;
+  --niebla-txt:#98a5b1;
+  --agua-txt:#5aabce;
   --sombra:0 1px 0 rgba(255,255,255,.03);
   --sombra-alta:0 1px 0 rgba(255,255,255,.05), 0 26px 52px -24px rgba(0,0,0,.85);
 }
 @media (prefers-color-scheme: dark){
   :root[data-tema="auto"]{
     --papel:#0b0d10; --papel-2:#171b20; --superficie:#14181d; --superficie-2:#1b2027;
-    --tinta:#eef0f3; --tinta-2:#99a1ab; --tinta-3:#6b737d;
+    --tinta:#eef0f3; --tinta-2:#99a1ab; --tinta-3:#818891;
     --linea:rgba(255,255,255,.09); --linea-2:rgba(255,255,255,.05); --linea-fuerte:rgba(255,255,255,.22);
     --sol:#eaa63c; --sol-claro:#f4c069; --sol-tenue:rgba(234,166,60,.14);
     --niebla:#98a5b1; --niebla-tenue:rgba(152,165,177,.13);
     --agua:#5aabce; --agua-tenue:rgba(90,171,206,.13);
+    --sol-txt:#eaa63c; --niebla-txt:#98a5b1; --agua-txt:#5aabce;
     --sombra:0 1px 0 rgba(255,255,255,.03);
     --sombra-alta:0 1px 0 rgba(255,255,255,.05), 0 26px 52px -24px rgba(0,0,0,.85);
   }
@@ -91,7 +101,9 @@ body{
 body>*{max-width:var(--ancho); margin-inline:auto}
 h1,h2,h3,p{margin:0}
 button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
-  -webkit-tap-highlight-color:transparent; text-align:left}
+  -webkit-tap-highlight-color:transparent; text-align:left;
+  touch-action:manipulation; -webkit-user-select:none; user-select:none;
+  -webkit-touch-callout:none}
 :focus-visible{outline:2px solid var(--agua); outline-offset:3px; border-radius:8px}
 .num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
 [hidden]{display:none !important}
@@ -183,7 +195,7 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
 .hero__mejor-txt{flex:1; min-width:0}
 .hero__donde{
   font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
-  color:var(--acento,var(--niebla));
+  color:var(--acento-txt,var(--niebla-txt));
 }
 .hero__ciudad{font-size:30px; font-weight:640; letter-spacing:-.038em; line-height:1.08; margin-top:var(--e1)}
 .hero__detalle{font-size:13px; color:var(--tinta-2); margin-top:var(--e1); line-height:1.4}
@@ -194,27 +206,31 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
 }
 .hero__consejo-ico{
   width:32px; height:32px; flex:none; border-radius:50%; display:grid; place-items:center;
-  background:var(--superficie); color:var(--acento,var(--niebla));
+  background:var(--superficie); color:var(--acento-txt,var(--niebla-txt));
 }
 .hero__consejo-ico svg{width:17px; height:17px; fill:none; stroke:currentColor;
   stroke-width:1.85; stroke-linecap:round; stroke-linejoin:round}
 .hero__consejo-tit{font-size:14.5px; font-weight:650; letter-spacing:-.018em}
 .hero__consejo-txt{font-size:12.5px; color:var(--tinta-2); line-height:1.42; margin-top:1px}
 .hero__pie{
-  display:flex; align-items:center; gap:var(--e2); flex-wrap:wrap;
+  display:flex; align-items:center; gap:var(--e3);
   margin-top:var(--e4); padding-top:var(--e3); border-top:1px solid var(--linea-2);
 }
+.hero__origen{display:flex; flex-direction:column; align-items:flex-start; gap:5px; min-width:0}
 .sello{
   display:inline-flex; align-items:center; gap:5px;
   font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.1em;
   padding:4px 9px; border-radius:999px; border:1px solid currentColor; color:var(--tinta-2);
 }
-.sello[data-tipo="real"]{color:var(--agua)}
-.sello[data-tipo="mock"]{color:var(--sol)}
-.sello[data-tipo="viejo"]{color:var(--sol)}
-.hero__hora{font-size:11.5px; color:var(--tinta-3)}
+.sello[data-tipo="real"]{color:var(--agua-txt)}
+.sello[data-tipo="mock"]{color:var(--sol-txt)}
+.sello[data-tipo="viejo"]{color:var(--sol-txt)}
+.hero__hora{font-size:11.5px; color:var(--tinta-3); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; max-width:100%}
+/* En pantallas estrechas se cae la preposición, nunca la hora */
+@media (max-width:359px){ .hero__hora-prep{display:none} }
 .btn-refresco{
-  margin-left:auto; display:inline-flex; align-items:center; gap:7px;
+  margin-left:auto; flex:none; display:inline-flex; align-items:center; gap:7px;
   padding:10px 16px; border-radius:999px; border:1px solid var(--linea-fuerte);
   font-size:12.5px; font-weight:600; min-height:44px; transition:transform .18s var(--seg);
 }
@@ -273,13 +289,14 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
   color:var(--tinta-3); flex:none}
 /* En pantallas muy estrechas la zona sobra: el nombre ya la sugiere */
 @media (max-width:344px){ .fila__zona{display:none} }
-.fila__pista{display:block; height:6px; border-radius:999px; background:var(--papel-2); overflow:hidden}
-:root[data-tema="oscuro"] .fila__pista{background:rgba(255,255,255,.08)}
+/* El carril usa --linea, no --papel-2: si no, desaparece justo en la fila
+   enfocada, que tiene ese mismo fondo. */
+.fila__pista{display:block; height:6px; border-radius:999px; background:var(--linea); overflow:hidden}
 .fila__relleno{display:block; height:100%; border-radius:999px; background:var(--acento,var(--niebla));
   transition:width .8s var(--seg)}
 .fila__t{font-size:16px; font-weight:600; letter-spacing:-.03em; text-align:right; min-width:34px}
 .fila__i{font-size:16px; font-weight:680; letter-spacing:-.035em; text-align:right;
-  color:var(--acento,var(--niebla)); min-width:28px}
+  color:var(--acento-txt,var(--niebla-txt)); min-width:28px}
 .ranking__pie{
   margin:var(--e2) var(--e4) var(--e3); padding-top:var(--e3); border-top:1px solid var(--linea-2);
   font-size:12.5px; color:var(--tinta-2); line-height:1.45;
@@ -303,7 +320,7 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
 .g-punto{fill:var(--acento,var(--niebla))}
 .g-ref{fill:var(--tinta-3); font-size:8.5px; font-weight:600;
   font-variant-numeric:tabular-nums; text-anchor:start}
-.g-ahora-num{fill:var(--acento,var(--niebla)); font-size:12px; font-weight:700;
+.g-ahora-num{fill:var(--acento-txt,var(--niebla-txt)); font-size:12px; font-weight:700;
   font-variant-numeric:tabular-nums; letter-spacing:-.03em; text-anchor:start}
 .grafico__pie{
   margin:var(--e3) var(--e2) 0; padding-top:var(--e3); border-top:1px solid var(--linea-2);
@@ -330,30 +347,30 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
 }
 .ciudad__cielo{font-size:12.5px; color:var(--tinta-2); margin-top:2px;
   display:flex; align-items:center; gap:6px}
-.ciudad__cielo svg{width:18px; height:18px; flex:none}
+.ciudad__cielo svg{width:20px; height:20px; flex:none}
 .ciudad__bloque-temp{text-align:right; flex:none}
 .ciudad__temp{font-size:32px; font-weight:600; letter-spacing:-.05em; line-height:1}
 .ciudad__minmax{font-size:11px; color:var(--tinta-3); margin-top:3px}
 
 .metricas{
   display:grid; grid-template-columns:repeat(3,1fr); gap:1px; margin-top:var(--e4);
-  background:var(--linea); border:1px solid var(--linea); border-radius:var(--r-md); overflow:hidden;
+  background:var(--linea); border-radius:var(--r-md); overflow:hidden;
 }
-.metrica{background:var(--superficie); padding:9px 6px 8px; text-align:center}
+.metrica{background:var(--papel); padding:10px 6px 9px; text-align:center}
 .metrica__k{font-size:9px; text-transform:uppercase; letter-spacing:.09em; color:var(--tinta-3)}
 .metrica__v{font-size:14.5px; font-weight:620; letter-spacing:-.025em; margin-top:2px}
 .metrica__v small{font-size:9.5px; font-weight:600; letter-spacing:0; color:var(--tinta-3)}
-.metrica[data-alerta="si"] .metrica__v{color:var(--sol)}
+.metrica[data-alerta="si"] .metrica__v{color:var(--sol-txt)}
 
 .etiquetas{display:flex; flex-wrap:wrap; gap:6px; margin-top:var(--e3)}
 .etiqueta{
   display:inline-flex; align-items:center;
-  font-size:11.5px; font-weight:600; padding:5px 10px; border-radius:999px;
-  border:1px solid currentColor; line-height:1.25;
+  font-size:11.5px; font-weight:600; padding:6px 11px; border-radius:999px;
+  line-height:1.25;
 }
-.etiqueta[data-tono="sol"]{color:var(--sol); background:var(--sol-tenue)}
-.etiqueta[data-tono="niebla"]{color:var(--niebla); background:var(--niebla-tenue)}
-.etiqueta[data-tono="agua"]{color:var(--agua); background:var(--agua-tenue)}
+.etiqueta[data-tono="sol"]{color:var(--sol-txt); background:var(--sol-tenue)}
+.etiqueta[data-tono="niebla"]{color:var(--niebla-txt); background:var(--niebla-tenue)}
+.etiqueta[data-tono="agua"]{color:var(--agua-txt); background:var(--agua-tenue)}
 
 /* ── Anillo del índice ────────────────────────────────────────────── */
 .anillo{position:relative; flex:none; display:grid; place-items:center}
@@ -362,7 +379,7 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
 .anillo__valor{fill:none; stroke:var(--acento,var(--niebla)); stroke-linecap:round;
   transition:stroke-dashoffset .9s var(--seg)}
 .anillo__num{position:absolute; inset:0; display:grid; place-items:center;
-  font-weight:660; letter-spacing:-.045em; line-height:1}
+  color:var(--acento-txt,var(--tinta)); font-weight:660; letter-spacing:-.045em; line-height:1}
 
 /* ── Interior y costa ─────────────────────────────────────────────── */
 .comparativa{padding:var(--e4)}
@@ -374,7 +391,7 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
 .comparativa__nota strong{color:var(--tinta); font-weight:640}
 
 /* ── Iconos de cielo ──────────────────────────────────────────────── */
-.ico-cielo{fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+.ico-cielo{fill:none; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round}
 .ico-cielo .s{stroke:var(--sol)}
 .ico-cielo .n{stroke:var(--niebla)}
 .ico-cielo .a{stroke:var(--agua)}
@@ -463,7 +480,22 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer;
   display:flex; align-items:center; gap:9px;
   margin:var(--e3) auto 0; padding:10px var(--e4);
   border-radius:999px; border:1px solid var(--sol);
-  background:var(--sol-tenue); color:var(--sol);
+  background:var(--sol-tenue); color:var(--sol-txt);
   font-size:12.5px; font-weight:600;
 }
 .aviso-red .ico-linea{width:17px; height:17px; flex:none}
+
+/* ── Esqueletos de carga: reservan el sitio para que nada salte ────── */
+.fila-esq{
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(40px,86px) auto;
+  align-items:center; gap:10px; padding:var(--e3) var(--e4);
+}
+.ciudad-esq{
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center;
+  gap:var(--e3); padding:var(--e4); min-height:118px;
+}
+.grafico__vacio{padding:var(--e5) var(--e4); text-align:center;
+  font-size:13px; color:var(--tinta-3); line-height:1.5}
+
+/* ── Estado de error: la app se recoge en vez de dejar cajas vacías ── */
+#app[data-estado="error"] .modos{display:none}

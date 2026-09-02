@@ -6,7 +6,7 @@
      guardada, para que la app siga siendo útil sin cobertura.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'sna-v2.1.0';
+const VERSION = 'sna-v2.2.0';
 const CASCO  = `${VERSION}-casco`;
 const DATOS  = `${VERSION}-datos`;
 

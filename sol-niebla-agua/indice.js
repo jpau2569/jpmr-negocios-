@@ -48,6 +48,12 @@ export function colorIndice(indice){
   const t = banda(indice).tono;
   return { sol:'var(--sol)', niebla:'var(--niebla)', agua:'var(--agua)' }[t];
 }
+/** Variante legible del color de banda, para cuando pinta texto. */
+export function colorTexto(indice){
+  const t = banda(indice).tono;
+  return { sol:'var(--sol-txt)', niebla:'var(--niebla-txt)', agua:'var(--agua-txt)' }[t];
+}
+
 export function colorTenue(indice){
   const t = banda(indice).tono;
   return { sol:'var(--sol-tenue)', niebla:'var(--niebla-tenue)', agua:'var(--agua-tenue)' }[t];
@@ -134,12 +140,15 @@ export function horaDorada(punto, ciudad){
 }
 
 /** Enriquece cada ciudad con índice actual, serie horaria y ventana buena. */
-export function evaluar(datos, modo){
-  const ahora = datos.instante;
+/* `ahora` es el reloj, no el sello de los datos: si la app se abre con una
+   caché de hace tres horas, la columna "Ahora" tiene que seguir siendo la
+   hora actual y no la de entonces.                                       */
+export function evaluar(datos, modo, ahora = new Date()){
+  const desde = new Date(ahora.getTime() - 30 * 60e3);
   const ciudades = datos.ciudades.map(c => {
     const indice = calcularIndice(c.actual, modo, c);
     const futuras = c.horas
-      .filter(h => h.instante >= new Date(ahora.getTime() - 30 * 60e3))
+      .filter(h => h.instante >= desde)
       .slice(0, CONFIG.horasVista)
       .map(h => ({ ...h, indice: calcularIndice(h, modo, c) }));
     return { ...c, indice, futuras, ventana: buscarVentana(futuras, indice),
@@ -159,6 +168,7 @@ export function evaluar(datos, modo){
 
 /** Primer tramo de al menos 2 h seguidas con índice notablemente mejor. */
 export function buscarVentana(futuras, indiceActual){
+  if (futuras.length < 2) return null;
   const umbral = Math.max(66, indiceActual + 10);
   for (let i = 0; i < futuras.length - 1; i++){
     if (futuras[i].indice >= umbral && futuras[i + 1].indice >= umbral){
@@ -172,6 +182,7 @@ export function buscarVentana(futuras, indiceActual){
 
 /** Hora a la que las condiciones se estropean dentro de la vista. */
 export function buscarBajon(futuras, indiceActual){
+  if (futuras.length < 2) return null;
   const suelo = Math.min(indiceActual - 15, 62);
   const i = futuras.findIndex((h, j) => j > 0 && h.indice <= suelo);
   return i > 0 ? { desde: futuras[i].instante, indice: futuras[i].indice } : null;
@@ -219,6 +230,8 @@ export function lecturaDelDia(ev){
   const mediaLluvia = Math.round(ciudades.reduce((s, c) => s + c.actual.probLluvia, 0) / ciudades.length);
   const mediaNubes  = Math.round(ciudades.reduce((s, c) => s + c.actual.nubosidad, 0) / ciudades.length);
 
+  if (conNiebla.length === ciudades.length)
+    return `Niebla en las tres. Hoy manda la visibilidad y ${mejor.nombre} es la menos mala.`;
   if (conNiebla.length)
     return `Niebla ahora en ${lista(conNiebla.map(c => c.nombre))}. ${mejor.nombre} es hoy la apuesta clara.`;
   if (lluviosas.length === 3)
@@ -245,38 +258,34 @@ export function lista(nombres){
 export function recomendacion(ev){
   const { mejor, modo, ciudades, costa, mediaInterior } = ev;
   const a = mejor.actual;
-  const nieblaAhora   = ciudades.filter(c => c.actual.visibilidad < 1500);
-  const nieblaPronto  = ciudades.filter(c => c.futuras.slice(0, 4).some(h => h.visibilidad < 1200));
-  const ganaCosta     = costa && costa.indice > mediaInterior;
-  const margen        = Math.abs(Math.round((costa?.indice ?? 0) - mediaInterior));
-  const segunda       = ciudades[1];
+  const nieblaAhora  = ciudades.filter(c => c.actual.visibilidad < 1500);
+  const nieblaPronto = ciudades.filter(c => c.futuras.slice(0, 4).some(h => h.visibilidad < 1200));
+  const segunda = ciudades[1];
 
   /* Carretera: la visibilidad manda por encima de todo lo demás */
   if (modo === 'carretera' && nieblaAhora.length)
     return { icono:'aviso', titulo:'Ojo con niebla para carretera',
-      texto:`Visibilidad bajo mínimos en ${lista(nieblaAhora.map(c => c.nombre))}. Si tienes que ir, antiniebla y sal con margen.` };
+      texto: nieblaAhora.length === ciudades.length
+        ? 'Visibilidad bajo mínimos en las tres. Si puedes, no cojas el coche todavía.'
+        : `Visibilidad bajo mínimos en ${lista(nieblaAhora.map(c => c.nombre))}. Si tienes que ir, antiniebla y sal con margen.` };
 
   if (modo === 'carretera' && nieblaPronto.length)
     return { icono:'aviso', titulo:'Sal antes de que cierre',
       texto:`Se espera niebla en ${lista(nieblaPronto.map(c => c.nombre))} en las próximas horas. Mejor hacer el trayecto ya.` };
 
-  /* Momento bueno: se dice dónde y hasta cuándo */
-  if (mejor.indice >= 74){
-    const donde = margen >= 8
-      ? (ganaCosta ? ' Ahora mismo la costa gana al interior.' : ' Ahora mismo el interior gana a la costa.')
-      : segunda && mejor.indice - segunda.indice <= 4 ? ` ${segunda.nombre} está casi igual, decide por cercanía.` : '';
-    const cuando = mejor.bajon ? ` Se estropea sobre las ${hhmm(mejor.bajon.desde)}: no lo dejes para luego.`
-      : mejor.ventana ? ` Aguanta bien hasta las ${hhmm(mejor.ventana.hasta)}.` : '';
-    const titulo = { fotos:'Buena ventana para fotos', visitas:`Visitas mejor en ${mejor.nombre} ahora`,
-      carretera:'Carretera despejada', paseo:'Sal ahora' }[modo];
-    return { icono:'salir', titulo, texto:`${mejor.nombre}, ${mejor.indice}/100.${cuando}${donde}` };
-  }
+  /* Momento bueno: dónde, hasta cuándo y por qué */
+  if (mejor.indice >= 74)
+    return { icono:'salir',
+      titulo: { fotos:'Buena ventana para fotos', visitas:`Visitas mejor en ${mejor.nombre} ahora`,
+                carretera:'Carretera despejada', paseo:'Sal ahora' }[modo],
+      texto:`${mejor.nombre}, ${mejor.indice}/100.${cuando(mejor)}${geografia(ev, segunda) || retrato(a, modo)}` };
 
-  /* Hay algo mejor más tarde: se dice a qué hora */
+  /* Hay algo mejor más tarde */
   if (mejor.ventana)
     return { icono:'esperar',
       titulo: horasHasta(mejor.ventana.desde) <= 1 ? 'Espera una hora' : 'Espera una mejor apertura',
-      texto:`Ahora ${mejor.nombre} va justo (${mejor.indice}/100). De ${hhmm(mejor.ventana.desde)} a ${hhmm(mejor.ventana.hasta)} sube a ${mejor.ventana.indice}/100.` };
+      texto:`Ahora ${mejor.nombre} ${mejor.indice < 40 ? 'está mal' : 'va justo'} (${mejor.indice}/100). `
+        + `De ${hhmm(mejor.ventana.desde)} a ${hhmm(mejor.ventana.hasta)} sube a ${mejor.ventana.indice}/100.` };
 
   /* Agua: el consejo cambia según lo que vayas a hacer */
   if (a.probLluvia >= 55 || a.precipitacion > 0){
@@ -289,13 +298,12 @@ export function recomendacion(ev){
     return { icono:'agua', titulo: modo === 'carretera' ? 'Conduce con margen' : 'Lleva paraguas', texto: textos[modo] };
   }
 
-  /* Ni bueno ni malo: se dice dónde está lo menos malo y por qué falla */
+  /* Ni bueno ni malo: dónde está lo menos malo y qué es lo que falla */
   if (mejor.indice >= 50){
-    const humedo = a.humedad >= 85;
-    const gris = a.nubosidad >= 75;
-    const donde = ganaCosta ? 'Mejor costa en este momento' : 'Interior aceptable';
-    return { icono:'esperar', titulo: `${donde}${humedo ? ' pero húmedo' : gris ? ' pero gris' : ''}`,
-      texto:`${mejor.nombre} es lo mejor que hay (${mejor.indice}/100): ${gris ? 'cielo cerrado' : 'luz justa'}${humedo ? ` y ${a.humedad}% de humedad` : ''}. Se puede, sin esperar maravillas.` };
+    const esCosta = mejor.zona === 'costa';
+    return { icono:'esperar',
+      titulo: `${esCosta ? 'Mejor costa' : 'Mejor interior'} en este momento${pero(a)}`,
+      texto:`${mejor.nombre} es lo mejor que hay (${mejor.indice}/100):${estorbo(a, modo)}. Se puede, sin esperar maravillas.` };
   }
 
   if (modo === 'fotos' && a.esDeDia && mejor.hoy?.ocaso)
@@ -304,6 +312,55 @@ export function recomendacion(ev){
 
   return { icono:'aviso', titulo:'Día para plan bajo techo',
     texto:`Ninguna de las tres pasa de ${Math.max(...ciudades.map(c => c.indice))}/100 en las próximas horas. Deja lo de fuera para mañana.` };
+}
+
+/** Hasta cuándo dura lo bueno. */
+function cuando(mejor){
+  if (mejor.bajon)  return ` Se estropea sobre las ${hhmm(mejor.bajon.desde)}: no lo dejes para luego.`;
+  if (mejor.ventana) return ` Aguanta bien hasta las ${hhmm(mejor.ventana.hasta)}.`;
+  return '';
+}
+
+/* La frase de costa contra interior sólo tiene sentido si la ciudad
+   recomendada está del lado que gana; si no, decía "la costa gana"
+   mientras recomendaba Oviedo. */
+function geografia(ev, segunda){
+  const { mejor, costa, mediaInterior } = ev;
+  const esCosta = mejor.zona === 'costa';
+  const ganaCosta = costa && costa.indice > mediaInterior;
+  const margen = Math.abs(Math.round((costa?.indice ?? 0) - mediaInterior));
+  if (ganaCosta === esCosta && margen >= 8)
+    return esCosta ? ' La costa le gana al interior ahora mismo.' : ' El interior le gana a la costa ahora mismo.';
+  if (segunda && mejor.indice - segunda.indice <= 4)
+    return ` ${segunda.nombre} está casi igual: decide por cercanía.`;
+  return '';
+}
+
+/** Tres cifras que sostienen la recomendación, para que nunca quede pelada. */
+function retrato(a, modo){
+  if (modo === 'carretera') return ` Visibilidad de ${Math.round(a.visibilidad / 1000)} km y viento flojo.`;
+  if (modo === 'fotos')     return ` ${a.nubosidad}% de nubes y ${Math.round(a.visibilidad / 1000)} km de visibilidad.`;
+  return ` ${a.probLluvia < 20 ? 'Lluvia descartada' : `${a.probLluvia}% de lluvia`}, ${Math.round(a.sensacion)}° y ${a.viento} km/h.`;
+}
+
+/** El "pero" del titular cuando el día es del montón. */
+function pero(a){
+  if (a.humedad >= 88) return ' pero húmedo';
+  if (a.viento >= 30)  return ' pero con viento';
+  if (a.nubosidad >= 80) return ' pero gris';
+  return '';
+}
+
+/** Qué es exactamente lo que le falta al día, según el modo. */
+function estorbo(a, modo){
+  const partes = [];
+  if (a.nubosidad >= 75) partes.push('cielo cerrado');
+  if (a.probLluvia >= 30) partes.push(`${a.probLluvia}% de lluvia`);
+  if (a.humedad >= 88) partes.push(`${a.humedad}% de humedad`);
+  if (a.viento >= 30) partes.push(`${a.viento} km/h de viento`);
+  if (a.visibilidad < 8000) partes.push(`${Math.round(a.visibilidad / 1000)} km de visibilidad`);
+  if (!partes.length) partes.push(modo === 'fotos' ? 'luz plana' : 'nada del otro mundo');
+  return ' ' + partes.slice(0, 2).join(' y ');
 }
 
 export function horasHasta(fecha){ return (fecha - Date.now()) / 36e5; }

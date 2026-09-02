@@ -61,9 +61,7 @@ function brindis(txt){
 
 /** Cinta fija mientras no hay red: la app sigue, pero con datos viejos. */
 function avisoRed(){
-  const sinRed = !navigator.onLine;
-  $('#aviso-red').hidden = !sinRed;
-  document.body.dataset.sinRed = sinRed ? 'si' : 'no';
+  $('#aviso-red').hidden = navigator.onLine;
 }
 
 /* ── Aplicar preferencias ─────────────────────────────────────────── */
@@ -141,6 +139,7 @@ function hoja(abrir){
 /* ── Carga y repintado ────────────────────────────────────────────── */
 const contexto = () => ({
   ciudadFoco: Estado.ciudadFoco,
+  cargando: Estado.cargando,
   alRefrescar: () => refrescar({ manual:true }),
   alEnfocar: (id, desplaza) => {
     Estado.ciudadFoco = id;
@@ -236,7 +235,8 @@ function arrancar(){
   });
 }
 
-document.addEventListener('DOMContentLoaded', arrancar);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
+else arrancar();
 
 if ('serviceWorker' in navigator){
   addEventListener('load', () => {

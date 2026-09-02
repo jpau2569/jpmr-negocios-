@@ -9,7 +9,7 @@
 import { $, $$, hh, hhmm, redondea, rumbo, familiaCielo, iconoCielo,
          NOMBRE_CIELO, media, signo } from './utiles.js';
 import { CONFIG, Proveedores } from './datos.js';
-import { MODOS, banda, colorIndice, colorTenue, recomendacion,
+import { MODOS, banda, colorIndice, colorTexto, colorTenue, recomendacion,
          lecturaDelDia, ICONOS_CONSEJO } from './indice.js';
 
 /* El contexto lo inyecta app.js en cada pintada. */
@@ -21,7 +21,7 @@ const FECHA_LARGA = { weekday:'long', day:'numeric', month:'long' };
 
 function anillo(indice, tam = 62, grosor = 5){
   const r = (tam - grosor) / 2, c = 2 * Math.PI * r;
-  return `<div class="anillo" style="--acento:${colorIndice(indice)}; width:${tam}px; height:${tam}px">
+  return `<div class="anillo" style="--acento:${colorIndice(indice)}; --acento-txt:${colorTexto(indice)}; width:${tam}px; height:${tam}px">
     <svg width="${tam}" height="${tam}" aria-hidden="true">
       <circle class="anillo__fondo" cx="${tam/2}" cy="${tam/2}" r="${r}" stroke-width="${grosor}"/>
       <circle class="anillo__valor" cx="${tam/2}" cy="${tam/2}" r="${r}" stroke-width="${grosor}"
@@ -37,6 +37,7 @@ function pintarHero(ev){
   const fecha = ev.instante.toLocaleDateString('es-ES', FECHA_LARGA);
   $('#hero').className = 'hero entra';
   $('#hero').style.setProperty('--acento', colorIndice(m.indice));
+  $('#hero').style.setProperty('--acento-txt', colorTexto(m.indice));
   $('#hero').style.setProperty('--acento-tenue', colorTenue(m.indice));
   $('#hero').innerHTML = `
     <p class="hero__fecha">${fecha}</p>
@@ -70,9 +71,11 @@ function pieHero(ev){
   const texto = viejo ? `Hace ${minutos < 90 ? minutos + ' min' : Math.round(minutos / 60) + ' h'}`
     : (Proveedores[ev.origen]?.etiqueta ?? 'Simulados');
   return `<div class="hero__pie">
-      <span class="sello" data-tipo="${tipo}" title="${real ? 'Datos reales' : 'Datos simulados'}">${texto}</span>
-      <span class="hero__hora">Actualizado a las ${hhmm(ev.instante)}</span>
-      <button class="btn-refresco" id="btn-refrescar" type="button">
+      <div class="hero__origen">
+        <span class="sello" data-tipo="${tipo}" title="${real ? 'Datos reales' : 'Datos simulados'}">${texto}</span>
+        <span class="hero__hora">Actualizado<span class="hero__hora-prep"> a las</span> ${hhmm(ev.instante)}</span>
+      </div>
+      <button class="btn-refresco" id="btn-refrescar" type="button"${ctx.cargando ? ' data-cargando' : ''}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5"/></svg>
         <span>Actualizar</span>
       </button>
@@ -81,6 +84,10 @@ function pieHero(ev){
 
 /** Hero cuando no hay ningún dato con el que trabajar. */
 export function pintarHeroError(mensaje){
+  ultimaEv = null;
+  // Sin datos no puede quedar media app pintada: se vacía lo que colgaba
+  ['#ranking', '#franjas', '#ciudades', '#comparativa'].forEach(sel => { $(sel).innerHTML = ''; });
+  $$('.bloque').forEach(b => b.hidden = true);
   $('#hero').className = 'hero hero--error';
   $('#hero').innerHTML = `
     <p class="hero__fecha">Sin datos</p>
@@ -93,6 +100,7 @@ export function pintarHeroError(mensaje){
     </div>`;
   $('#btn-refrescar').addEventListener('click', () => ctx.alRefrescar());
   $('#app').setAttribute('aria-busy', 'false');
+  $('#app').dataset.estado = 'error';
 }
 
 /* ── Ranking: las tres ciudades como una sola unidad ──────────────── */
@@ -101,7 +109,7 @@ function pintarRanking(ev){
   const dif = Math.abs(Math.round((ev.costa?.indice ?? 0) - ev.mediaInterior));
   $('#ranking').innerHTML = ev.ciudades.map(c => `
     <button type="button" class="fila" data-ciudad="${c.id}" data-foco="${c.id === ctx.ciudadFoco ? 'si' : 'no'}"
-        style="--acento:${colorIndice(c.indice)}"
+        style="--acento:${colorIndice(c.indice)}; --acento-txt:${colorTexto(c.indice)}"
         aria-label="${c.nombre}, ${c.indice} sobre 100, ${Math.round(c.actual.temperatura)} grados. Ver sus próximas horas">
       <span class="fila__n">${c.nombre} <span class="fila__zona">${c.zona}</span></span>
       <span class="fila__pista"><span class="fila__relleno" style="width:${c.indice}%"></span></span>
@@ -136,6 +144,11 @@ function pintarFranjas(ev){
   $('#horas-ciudad').textContent = '· ' + c.nombre;
 
   const h = c.futuras;
+  if (h.length < 2){
+    $('#franjas').innerHTML = `<p class="grafico__vacio">Sin previsión horaria disponible para
+      ${c.nombre} en este momento. Prueba a actualizar.</p>`;
+    return;
+  }
   const paso = (G.ancho - G.izq - G.der) / (h.length - 1);
   const x = i => G.izq + i * paso;
   const y = v => G.base - (v / 100) * (G.base - G.arriba);
@@ -165,6 +178,7 @@ function pintarFranjas(ev){
         : `Sin ventana clara en ${c.nombre} durante las próximas ${CONFIG.horasVista} horas.`;
 
   $('#franjas').style.setProperty('--acento', colorIndice(c.indice));
+  $('#franjas').style.setProperty('--acento-txt', colorTexto(c.indice));
   $('#franjas').style.setProperty('--acento-tenue', colorTenue(c.indice));
   $('#franjas').innerHTML = `
     <svg viewBox="0 0 ${G.ancho} ${G.alto}" role="img"
@@ -267,6 +281,8 @@ function pintarComparativa(ev){
 export function pintar(ev, contexto){
   if (contexto) ctx = { ...ctx, ...contexto };
   ultimaEv = ev;
+  $$('.bloque').forEach(b => b.hidden = false);
+  delete $('#app').dataset.estado;
   if (!ev.ciudades.some(c => c.id === ctx.ciudadFoco)) ctx.ciudadFoco = ev.mejor.id;
   pintarHero(ev); pintarRanking(ev); pintarFranjas(ev);
   pintarCiudades(ev); pintarComparativa(ev);
