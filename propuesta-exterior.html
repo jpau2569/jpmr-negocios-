@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Propuesta exterior — infografía para el cliente</title>
+<meta name="description" content="Crea una infografía vertical con la foto real del terreno, el plano a escala del croquis aportado y la simulación de cómo quedaría. Todo en tu móvil, sin subir nada a ningún servidor." />
+<meta name="theme-color" content="#070b18" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<link rel="icon" href='data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" rx="24" fill="%230f2b52"/%3E%3Ctext x="50" y="70" font-size="54" text-anchor="middle"%3E%F0%9F%93%90%3C/text%3E%3C/svg%3E' />
+<style>
+  :root{
+    --bg:#070b18; --fg:#eef2ff; --muted:#8b96b8; --muted-2:#5d6786;
+    --glass:rgba(255,255,255,.045); --glass-2:rgba(255,255,255,.07);
+    --stroke:rgba(255,255,255,.09); --stroke-2:rgba(255,255,255,.16);
+    --cyan:#22d3ee; --purple:#8b7cf7; --green:#2fe08d; --amber:#ffc857;
+    --r-lg:22px; --r-md:16px; --r-sm:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg); color:var(--fg); -webkit-font-smoothing:antialiased;
+    padding:26px 16px 90px;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+  header{text-align:center;margin-bottom:24px}
+  .logo{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:12px;letter-spacing:.14em;
+    background:linear-gradient(135deg,#0f2b52,#22d3ee);padding:7px 16px;border-radius:999px;color:#fff}
+  h1{font-size:clamp(26px,5vw,40px);font-weight:900;margin:16px 0 8px;letter-spacing:-.02em}
+  header p{color:var(--muted);font-size:15px;max-width:640px;margin:0 auto;line-height:1.55}
+
+  .cols{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:22px;align-items:start}
+  @media (max-width:900px){.cols{grid-template-columns:1fr}}
+
+  .card{background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r-lg);padding:18px}
+  .card + .card{margin-top:16px}
+  .card h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);margin-bottom:14px;font-weight:800}
+
+  label{display:block;font-size:12.5px;color:var(--muted);margin:12px 0 5px;font-weight:600}
+  input[type=text],input[type=number],textarea{
+    width:100%;background:rgba(0,0,0,.28);border:1px solid var(--stroke-2);color:var(--fg);
+    border-radius:var(--r-sm);padding:10px 12px;font:inherit;font-size:14px}
+  textarea{resize:vertical;min-height:60px;font-size:13px}
+  input:focus,textarea:focus{outline:none;border-color:var(--cyan)}
+  .fila{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .fila-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .check{display:flex;align-items:center;gap:9px;margin-top:12px;font-size:13.5px;color:var(--fg)}
+  .check input{width:17px;height:17px;accent-color:#22d3ee}
+
+  .drop{margin-top:8px;border:1.5px dashed var(--stroke-2);border-radius:var(--r-md);padding:16px;text-align:center;
+    cursor:pointer;transition:.15s;background:rgba(255,255,255,.02)}
+  .drop:hover{border-color:var(--cyan);background:rgba(34,211,238,.06)}
+  .drop b{display:block;font-size:13.5px;margin-bottom:3px}
+  .drop span{font-size:12px;color:var(--muted-2)}
+  .drop.ok{border-style:solid;border-color:var(--green);background:rgba(47,224,141,.07)}
+  .drop input{display:none}
+
+  .btn{display:block;width:100%;margin-top:18px;padding:14px;border:none;border-radius:var(--r-md);
+    font:inherit;font-weight:800;font-size:15px;cursor:pointer;color:#04121f;
+    background:linear-gradient(135deg,#22d3ee,#2fe08d)}
+  .btn:active{transform:translateY(1px)}
+  .btn.sec{background:var(--glass-2);color:var(--fg);border:1px solid var(--stroke-2)}
+
+  .aviso{margin-top:14px;font-size:12.5px;line-height:1.55;color:var(--amber);
+    background:rgba(255,200,87,.08);border:1px solid rgba(255,200,87,.22);border-radius:var(--r-sm);padding:10px 12px}
+
+  .lienzo{background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r-lg);padding:14px;position:sticky;top:20px}
+  canvas{width:100%;height:auto;display:block;border-radius:12px;background:#fff}
+  .pie{margin-top:10px;text-align:center;font-size:12px;color:var(--muted-2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">📐 INMO CASTRESANA · PROPUESTAS</div>
+    <h1>Infografía de propuesta exterior</h1>
+    <p>Foto real del terreno + plano a escala del croquis + simulación de cómo quedaría. Las fotos no salen de tu dispositivo: todo se dibuja en el navegador.</p>
+  </header>
+
+  <div class="cols">
+    <div>
+      <div class="card">
+        <h2>1 · Fotos</h2>
+
+        <label>Foto del estado actual (la real)</label>
+        <label class="drop" id="dropActual">
+          <b id="txtActual">Elegir foto del terreno</b>
+          <span>JPG o PNG · la que hiciste en el sitio</span>
+          <input type="file" accept="image/*" id="fileActual" />
+        </label>
+
+        <label>Simulación en el terreno (opcional)</label>
+        <label class="drop" id="dropSim">
+          <b id="txtSim">Elegir imagen de la simulación</b>
+          <span>El montaje con la piscina y la caseta</span>
+          <input type="file" accept="image/*" id="fileSim" />
+        </label>
+      </div>
+
+      <div class="card">
+        <h2>2 · Medidas del croquis</h2>
+
+        <div class="fila">
+          <div><label>Ancho de la parcela (m)</label><input type="number" step="0.1" id="ancho" value="18" /></div>
+          <div><label>Fondo de la parcela (m)</label><input type="number" step="0.1" id="fondo" value="20" /></div>
+        </div>
+
+        <label>Piscina</label>
+        <div class="fila-3">
+          <div><label>Largo (m)</label><input type="number" step="0.1" id="pisLargo" value="8" /></div>
+          <div><label>Ancho (m)</label><input type="number" step="0.1" id="pisAncho" value="3" /></div>
+          <div><label>Borde (m)</label><input type="number" step="0.1" id="pisBorde" value="0.8" /></div>
+        </div>
+        <div class="fila">
+          <div><label>Distancia al lindero izq. (m)</label><input type="number" step="0.1" id="pisX" value="5" /></div>
+          <div><label>Distancia al fondo sup. (m)</label><input type="number" step="0.1" id="pisY" value="7" /></div>
+        </div>
+        <div class="check"><input type="checkbox" id="pisCentrada" checked /><label style="margin:0">Centrar la piscina en el ancho</label></div>
+
+        <label>Caseta de aperos</label>
+        <div class="fila">
+          <div><label>Ancho (m)</label><input type="number" step="0.1" id="casAncho" value="3" /></div>
+          <div><label>Fondo (m)</label><input type="number" step="0.1" id="casFondo" value="2" /></div>
+        </div>
+        <div class="fila">
+          <div><label>Distancia al lindero izq. (m)</label><input type="number" step="0.1" id="casX" value="1.5" /></div>
+          <div><label>Distancia al fondo sup. (m)</label><input type="number" step="0.1" id="casY" value="1.5" /></div>
+        </div>
+
+        <label>Zona embaldosada para tomar el sol · fondo (m)</label>
+        <input type="number" step="0.1" id="terrazaFondo" value="5.5" />
+
+        <div class="aviso">
+          El croquis da las medidas de piscina, caseta y parcela, pero <b>no acota las distancias a los linderos</b>.
+          Esos cuatro campos son la lectura proporcional del dibujo: ajústalos si el cliente te da la distancia real.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>3 · Textos</h2>
+        <label>Título</label>
+        <input type="text" id="titulo" value="PROPUESTA DE PISCINA Y ZONA EXTERIOR" />
+        <div class="fila">
+          <div><label>Etiqueta 1</label><input type="text" id="etq1" value="ESTADO ACTUAL" /></div>
+          <div><label>Etiqueta 2</label><input type="text" id="etq2" value="DISTRIBUCIÓN PROPUESTA" /></div>
+        </div>
+        <label>Etiqueta 3</label>
+        <input type="text" id="etq3" value="SIMULACIÓN EN EL TERRENO" />
+        <label>Texto de la zona embaldosada</label>
+        <input type="text" id="txtTerraza" value="ZONA EMBALDOSADA PARA TOMAR EL SOL" />
+        <label>Nota al pie</label>
+        <textarea id="pie">Distribución basada exclusivamente en el croquis aportado · Simulación orientativa, no plano técnico</textarea>
+
+        <button class="btn" id="descargar">Descargar infografía (PNG)</button>
+        <button class="btn sec" id="soloPlano">Descargar solo el plano (PNG)</button>
+      </div>
+    </div>
+
+    <div class="lienzo">
+      <canvas id="lienzo" width="1080" height="2280"></canvas>
+      <div class="pie">Vista previa en directo · se descarga a 1080 px de ancho</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   Infografía de propuesta exterior.
+   Todo se dibuja sobre un <canvas>: así lo que ves es exactamente el
+   PNG que se descarga, sin librerías ni conversión HTML→imagen.
+------------------------------------------------------------------ */
+
+const C = {
+  tinta:   '#0f2b52',   // azul marino de los títulos
+  chip:    '#12365f',   // fondo de las etiquetas
+  panel:   '#f2f4f7',   // fondo del panel del plano
+  cesped:  '#a7c887',
+  cesped2: '#8fb56d',
+  cespedB: '#6d8f4e',
+  baldosa: '#dcdee0',
+  baldosaL:'#c9ccd0',
+  agua:    '#7ad0e6',
+  agua2:   '#54b9d4',
+  aguaB:   '#2f8ba6',
+  coronac: '#eef0f2',   // coronación / borde de la piscina
+  coronacB:'#b4b9be',
+  caseta:  '#b8bdc3',
+  casetaB: '#7c838b',
+  cota:    '#4a5568',
+  hueso:   '#ffffff'
+};
+
+const FUENTE = "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+
+const estado = {
+  imgActual: null,
+  imgSim: null
+};
+
+const lienzo = document.getElementById('lienzo');
+const ctx = lienzo.getContext('2d');
+
+/* ---------- utilidades de dibujo ---------- */
+
+function rectRedondo(c, x, y, w, h, r){
+  r = Math.min(r, w/2, h/2);
+  c.beginPath();
+  c.moveTo(x+r, y);
+  c.arcTo(x+w, y,   x+w, y+h, r);
+  c.arcTo(x+w, y+h, x,   y+h, r);
+  c.arcTo(x,   y+h, x,   y,   r);
+  c.arcTo(x,   y,   x+w, y,   r);
+  c.closePath();
+}
+
+// Dibuja la imagen recortando por el centro para llenar el hueco (cover).
+function dibujarCover(c, img, x, y, w, h, r){
+  c.save();
+  rectRedondo(c, x, y, w, h, r);
+  c.clip();
+  const escala = Math.max(w / img.width, h / img.height);
+  const dw = img.width * escala, dh = img.height * escala;
+  c.drawImage(img, x + (w - dw)/2, y + (h - dh)/2, dw, dh);
+  c.restore();
+}
+
+function hueco(c, texto, x, y, w, h, r){
+  c.save();
+  c.fillStyle = '#eef1f4';
+  rectRedondo(c, x, y, w, h, r); c.fill();
+  c.strokeStyle = '#c2c8cf'; c.lineWidth = 3; c.setLineDash([12, 10]);
+  rectRedondo(c, x+2, y+2, w-4, h-4, r); c.stroke();
+  c.setLineDash([]);
+  c.fillStyle = '#8b949e';
+  c.font = `600 26px ${FUENTE}`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(texto, x + w/2, y + h/2);
+  c.restore();
+}
+
+// Etiqueta azul de sección. Devuelve la altura que ocupa.
+function etiqueta(c, texto, x, y){
+  const alto = 46, pad = 22;
+  c.font = `800 24px ${FUENTE}`;
+  const ancho = c.measureText(texto).width + pad*2;
+  c.fillStyle = C.chip;
+  rectRedondo(c, x, y, ancho, alto, 8); c.fill();
+  c.fillStyle = '#fff';
+  c.textAlign = 'left'; c.textBaseline = 'middle';
+  c.fillText(texto, x + pad, y + alto/2 + 1);
+  return alto;
+}
+
+function flecha(c, x, y, dx, dy){
+  const t = 9;
+  c.beginPath();
+  c.moveTo(x, y);
+  c.lineTo(x + dx*t - dy*t*0.45, y + dy*t - dx*t*0.45);
+  c.lineTo(x + dx*t + dy*t*0.45, y + dy*t + dx*t*0.45);
+  c.closePath(); c.fill();
+}
+
+// Cota horizontal con flechas a los extremos.
+function cotaH(c, x1, x2, y, texto){
+  c.save();
+  c.strokeStyle = C.cota; c.fillStyle = C.cota; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(x1, y); c.lineTo(x2, y); c.stroke();
+  c.beginPath(); c.moveTo(x1, y-9); c.lineTo(x1, y+9); c.stroke();
+  c.beginPath(); c.moveTo(x2, y-9); c.lineTo(x2, y+9); c.stroke();
+  flecha(c, x1, y, 1, 0); flecha(c, x2, y, -1, 0);
+  c.font = `700 26px ${FUENTE}`;
+  const w = c.measureText(texto).width;
+  c.fillStyle = C.panel;
+  c.fillRect((x1+x2)/2 - w/2 - 10, y - 17, w + 20, 34);
+  c.fillStyle = C.tinta;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(texto, (x1+x2)/2, y + 1);
+  c.restore();
+}
+
+// Cota vertical con flechas a los extremos.
+function cotaV(c, y1, y2, x, texto){
+  c.save();
+  c.strokeStyle = C.cota; c.fillStyle = C.cota; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(x, y1); c.lineTo(x, y2); c.stroke();
+  c.beginPath(); c.moveTo(x-9, y1); c.lineTo(x+9, y1); c.stroke();
+  c.beginPath(); c.moveTo(x-9, y2); c.lineTo(x+9, y2); c.stroke();
+  flecha(c, x, y1, 0, 1); flecha(c, x, y2, 0, -1);
+  c.font = `700 26px ${FUENTE}`;
+  const w = c.measureText(texto).width;
+  c.fillStyle = C.panel;
+  c.fillRect(x - w/2 - 10, (y1+y2)/2 - 17, w + 20, 34);
+  c.fillStyle = C.tinta;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(texto, x, (y1+y2)/2 + 1);
+  c.restore();
+}
+
+/* ---------- lectura del formulario ---------- */
+
+const $ = id => document.getElementById(id);
+const num = (id, pordefecto) => {
+  const v = parseFloat($(id).value);
+  return Number.isFinite(v) && v > 0 ? v : pordefecto;
+};
+
+function datos(){
+  const d = {
+    titulo: $('titulo').value.trim(),
+    etq1: $('etq1').value.trim(),
+    etq2: $('etq2').value.trim(),
+    etq3: $('etq3').value.trim(),
+    txtTerraza: $('txtTerraza').value.trim(),
+    pie: $('pie').value.trim(),
+    ancho: num('ancho', 18),
+    fondo: num('fondo', 20),
+    pisLargo: num('pisLargo', 8),
+    pisAncho: num('pisAncho', 3),
+    pisBorde: parseFloat($('pisBorde').value) || 0,
+    pisX: parseFloat($('pisX').value) || 0,
+    pisY: parseFloat($('pisY').value) || 0,
+    casAncho: num('casAncho', 3),
+    casFondo: num('casFondo', 2),
+    casX: parseFloat($('casX').value) || 0,
+    casY: parseFloat($('casY').value) || 0,
+    terrazaFondo: parseFloat($('terrazaFondo').value) || 0
+  };
+  if ($('pisCentrada').checked) d.pisX = (d.ancho - d.pisLargo) / 2;
+  return d;
+}
+
+/* ---------- el plano, dibujado a escala uniforme ---------- */
+
+function dibujarPlano(c, d, px, py, pw, ph){
+  // Fondo del panel
+  c.fillStyle = C.panel;
+  rectRedondo(c, px, py, pw, ph, 14); c.fill();
+
+  // Márgenes internos para que quepan las cotas
+  const mIzq = 110, mDer = 40, mSup = 74, mInf = 40;
+  const dispW = pw - mIzq - mDer;
+  const dispH = ph - mSup - mInf;
+
+  // Escala única para las dos direcciones: el plano es un plano de verdad,
+  // no un dibujo estirado.
+  const e = Math.min(dispW / d.ancho, dispH / d.fondo);
+  const W = d.ancho * e, H = d.fondo * e;
+  const x0 = px + mIzq + (dispW - W) / 2;
+  const y0 = py + mSup + (dispH - H) / 2;
+
+  // Parcela: césped
+  const grad = c.createLinearGradient(x0, y0, x0, y0 + H);
+  grad.addColorStop(0, C.cesped); grad.addColorStop(1, C.cesped2);
+  c.fillStyle = grad;
+  c.fillRect(x0, y0, W, H);
+
+  // Zona embaldosada al fondo (parte delantera de la parcela)
+  const tH = Math.min(d.terrazaFondo, d.fondo) * e;
+  if (tH > 0){
+    const ty = y0 + H - tH;
+    c.fillStyle = C.baldosa;
+    c.fillRect(x0, ty, W, tH);
+    c.strokeStyle = C.baldosaL; c.lineWidth = 1;
+    const paso = e; // una baldosa ficticia por metro, solo como textura
+    for (let x = x0 + paso; x < x0 + W; x += paso){
+      c.beginPath(); c.moveTo(x, ty); c.lineTo(x, ty + tH); c.stroke();
+    }
+    for (let y = ty + paso; y < y0 + H; y += paso){
+      c.beginPath(); c.moveTo(x0, y); c.lineTo(x0 + W, y); c.stroke();
+    }
+    c.strokeStyle = '#a9adb2'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(x0, ty); c.lineTo(x0 + W, ty); c.stroke();
+
+    c.fillStyle = C.tinta;
+    c.font = `800 ${Math.max(16, Math.min(24, tH * 0.28))}px ${FUENTE}`;
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(d.txtTerraza, x0 + W/2, ty + tH/2);
+  }
+
+  // Piscina con su coronación
+  const b = d.pisBorde * e;
+  const plX = x0 + d.pisX * e, plY = y0 + d.pisY * e;
+  const plW = d.pisLargo * e, plH = d.pisAncho * e;
+  if (b > 0){
+    c.fillStyle = C.coronac;
+    c.fillRect(plX - b, plY - b, plW + b*2, plH + b*2);
+    c.strokeStyle = C.coronacB; c.lineWidth = 2;
+    c.strokeRect(plX - b, plY - b, plW + b*2, plH + b*2);
+  }
+  const ga = c.createLinearGradient(plX, plY, plX, plY + plH);
+  ga.addColorStop(0, C.agua); ga.addColorStop(1, C.agua2);
+  c.fillStyle = ga;
+  c.fillRect(plX, plY, plW, plH);
+  c.strokeStyle = C.aguaB; c.lineWidth = 2;
+  c.strokeRect(plX, plY, plW, plH);
+
+  c.fillStyle = '#0b3b4d';
+  c.font = `800 ${Math.max(15, Math.min(24, plH * 0.32))}px ${FUENTE}`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(`${fmt(d.pisLargo)} × ${fmt(d.pisAncho)} m`, plX + plW/2, plY + plH/2);
+
+  // Caseta de aperos
+  const caX = x0 + d.casX * e, caY = y0 + d.casY * e;
+  const caW = d.casAncho * e, caH = d.casFondo * e;
+  c.fillStyle = C.caseta;
+  c.fillRect(caX, caY, caW, caH);
+  c.strokeStyle = C.casetaB; c.lineWidth = 2;
+  c.strokeRect(caX, caY, caW, caH);
+  // Las aspas del croquis
+  c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(caX, caY); c.lineTo(caX+caW, caY+caH);
+  c.moveTo(caX+caW, caY); c.lineTo(caX, caY+caH); c.stroke();
+
+  // La caseta es pequeña: si el rótulo no cabe dentro, sale fuera con una
+  // línea guía, igual que en el croquis a mano.
+  const l1 = 'CASETA DE APEROS';
+  const l2 = `${fmt(d.casAncho)} × ${fmt(d.casFondo)} m`;
+  const fc = 18;
+  c.font = `800 ${fc}px ${FUENTE}`;
+  const anchoRotulo = Math.max(c.measureText(l1).width, c.measureText(l2).width);
+  const cabeDentro = anchoRotulo < caW - 12 && caH > fc * 2.8;
+
+  c.fillStyle = C.tinta;
+  c.textBaseline = 'middle';
+  if (cabeDentro){
+    c.textAlign = 'center';
+    c.fillText(l1, caX + caW/2, caY + caH/2 - fc*0.7);
+    c.font = `700 ${fc}px ${FUENTE}`;
+    c.fillText(l2, caX + caW/2, caY + caH/2 + fc*0.7);
+  } else {
+    // ¿Hay hueco a la derecha de la caseta dentro del panel?
+    const derecha = caX + caW + 18 + anchoRotulo < px + pw - 16;
+    const rx = derecha ? caX + caW + 18 : Math.max(px + 12, caX - 18 - anchoRotulo);
+    const ry = caY + caH/2;
+    c.strokeStyle = C.casetaB; c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(derecha ? caX + caW : caX, ry);
+    c.lineTo(derecha ? rx - 6 : rx + anchoRotulo + 6, ry);
+    c.stroke();
+    c.textAlign = derecha ? 'left' : 'right';
+    const tx = derecha ? rx : rx + anchoRotulo;
+    c.fillText(l1, tx, ry - fc*0.7);
+    c.font = `700 ${fc}px ${FUENTE}`;
+    c.fillText(l2, tx, ry + fc*0.7);
+  }
+
+  // Perímetro de la parcela
+  c.strokeStyle = C.cespedB; c.lineWidth = 3;
+  c.strokeRect(x0, y0, W, H);
+
+  // Cotas generales
+  cotaH(c, x0, x0 + W, y0 - 40, `${fmt(d.ancho)} m`);
+  cotaV(c, y0, y0 + H, x0 - 62, `${fmt(d.fondo)} m`);
+}
+
+const fmt = n => (Math.round(n * 100) / 100).toString().replace('.', ',');
+
+/* ---------- la infografía completa ---------- */
+
+function dibujar(){
+  const d = datos();
+  const A = 1080, m = 26;          // ancho y margen
+  const anchoUtil = A - m*2;
+  const hFoto = 700, hPlano = 800;
+
+  // Altura total, calculada por bloques
+  let y = 24;
+  const hTitulo = 62;
+  const alto = 24 + hTitulo + 20
+             + (46 + 12 + hFoto) + 26
+             + (46 + 12 + hPlano) + 26
+             + (46 + 12 + hFoto) + 24
+             + 52;
+  if (lienzo.height !== alto) lienzo.height = alto;
+
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, A, alto);
+
+  // Título
+  ctx.fillStyle = C.tinta;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `900 44px ${FUENTE}`;
+  let t = d.titulo, tam = 44;
+  while (ctx.measureText(t).width > anchoUtil && tam > 24){
+    tam -= 2; ctx.font = `900 ${tam}px ${FUENTE}`;
+  }
+  ctx.fillText(t, A/2, y + hTitulo/2);
+  y += hTitulo + 20;
+
+  // Bloque 1 — foto real
+  y += etiqueta(ctx, d.etq1, m, y) + 12;
+  if (estado.imgActual) dibujarCover(ctx, estado.imgActual, m, y, anchoUtil, hFoto, 10);
+  else hueco(ctx, 'Añade aquí la foto real del terreno', m, y, anchoUtil, hFoto, 10);
+  y += hFoto + 26;
+
+  // Bloque 2 — plano a escala
+  y += etiqueta(ctx, d.etq2, m, y) + 12;
+  dibujarPlano(ctx, d, m, y, anchoUtil, hPlano);
+  y += hPlano + 26;
+
+  // Bloque 3 — simulación
+  y += etiqueta(ctx, d.etq3, m, y) + 12;
+  if (estado.imgSim) dibujarCover(ctx, estado.imgSim, m, y, anchoUtil, hFoto, 10);
+  else hueco(ctx, 'Añade aquí la simulación en el terreno', m, y, anchoUtil, hFoto, 10);
+  y += hFoto + 24;
+
+  // Pie
+  ctx.fillStyle = '#5a6472';
+  ctx.font = `500 21px ${FUENTE}`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(d.pie, A/2, y + 22);
+}
+
+/* ---------- descargas ---------- */
+
+function descargar(canvas, nombre){
+  canvas.toBlob(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = nombre;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }, 'image/png');
+}
+
+$('descargar').addEventListener('click', () => descargar(lienzo, 'propuesta-exterior.png'));
+
+$('soloPlano').addEventListener('click', () => {
+  const c2 = document.createElement('canvas');
+  c2.width = 1080; c2.height = 900;
+  const x = c2.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, c2.width, c2.height);
+  dibujarPlano(x, datos(), 26, 26, c2.width - 52, c2.height - 52);
+  descargar(c2, 'plano-propuesta.png');
+});
+
+/* ---------- carga de fotos ---------- */
+
+function conectarFoto(inputId, dropId, txtId, clave){
+  const input = $(inputId), drop = $(dropId), txt = $(txtId);
+  input.addEventListener('change', () => {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    const img = new Image();
+    img.onload = () => {
+      estado[clave] = img;
+      drop.classList.add('ok');
+      txt.textContent = f.name.length > 34 ? f.name.slice(0, 31) + '…' : f.name;
+      dibujar();
+    };
+    img.src = URL.createObjectURL(f);
+  });
+}
+conectarFoto('fileActual', 'dropActual', 'txtActual', 'imgActual');
+conectarFoto('fileSim',    'dropSim',    'txtSim',    'imgSim');
+
+/* ---------- todo redibuja en directo ---------- */
+
+document.querySelectorAll('input[type=text],input[type=number],textarea,input[type=checkbox]')
+  .forEach(el => el.addEventListener('input', dibujar));
+
+// Espera a que Inter esté disponible para que el canvas no dibuje con la
+// tipografía de reserva y luego cambie de golpe.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(dibujar).catch(dibujar);
+dibujar();
+</script>
+</body>
+</html>
