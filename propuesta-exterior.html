@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Infografía de propuesta exterior: foto real del terreno, plano a escala del croquis y simulación, en un PNG listo para enviar por WhatsApp.">
+<meta name="theme-color" content="#12304F">
+<link rel="icon" href='data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" rx="18" fill="%2312304F"/%3E%3Ctext x="50" y="70" font-size="54" text-anchor="middle"%3E%F0%9F%93%90%3C/text%3E%3C/svg%3E'>
+<title>Propuesta exterior Castresana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --papel:#F4F6F2; --hoja:#FFFFFF; --panel:#FBFCFA;
+    --tinta:#12304F; --tinta-2:#3D5670; --apunte:#6B7670;
+    --agua:#2E8FA8; --agua-suave:#E2F0F3;
+    --cesped:#6F8F4E;
+    --linea:#DCE0D8; --linea-2:#C3CABE;
+    --sombra:0 1px 2px rgba(18,48,79,.05), 0 8px 24px rgba(18,48,79,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --papel:#101619; --hoja:#18201F; --panel:#141B1E;
+      --tinta:#E3EDEA; --tinta-2:#A9B8B5; --apunte:#8A9793;
+      --agua:#5CBCD3; --agua-suave:#173038;
+      --cesped:#9CBB76;
+      --linea:#28322F; --linea-2:#3A4643;
+      --sombra:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.28);
+    }
+  }
+  :root[data-theme="dark"]{
+    --papel:#101619; --hoja:#18201F; --panel:#141B1E;
+    --tinta:#E3EDEA; --tinta-2:#A9B8B5; --apunte:#8A9793;
+    --agua:#5CBCD3; --agua-suave:#173038;
+    --cesped:#9CBB76;
+    --linea:#28322F; --linea-2:#3A4643;
+    --sombra:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.28);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--papel); color:var(--tinta);
+    font-family:'Source Sans 3', system-ui, -apple-system, sans-serif;
+    font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  .marco{max-width:1220px; margin:0 auto; padding:26px 18px 64px}
+
+  /* ---- cabecera ---- */
+  .cabecera{border-bottom:1.5px solid var(--linea-2); padding-bottom:16px; margin-bottom:22px}
+  .sello{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; font-weight:500;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--apunte);
+    display:flex; gap:10px; align-items:baseline; flex-wrap:wrap;
+  }
+  .sello b{color:var(--agua); font-weight:600}
+  h1{
+    font-family:'Archivo', system-ui, sans-serif; font-weight:800;
+    font-size:clamp(27px, 4.2vw, 40px); line-height:1.06; letter-spacing:-.022em;
+    margin:10px 0 6px; text-wrap:balance;
+  }
+  .entradilla{color:var(--tinta-2); max-width:60ch; margin:0; font-size:15.5px}
+
+  /* ---- rejilla ---- */
+  .tablero{display:grid; grid-template-columns:1fr; gap:18px; align-items:start}
+  @media (min-width:940px){
+    .tablero{grid-template-columns:370px minmax(0,1fr); gap:22px}
+    .hoja-panel{grid-column:2; grid-row:1 / span 3; position:sticky; top:18px}
+  }
+
+  .bloque{
+    background:var(--hoja); border:1px solid var(--linea); border-radius:4px;
+    padding:18px 18px 20px; box-shadow:var(--sombra);
+  }
+  .bloque h2{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; font-weight:600;
+    letter-spacing:.15em; text-transform:uppercase; color:var(--agua);
+    margin:0 0 4px; display:flex; align-items:baseline; gap:9px;
+  }
+  .bloque h2 span{color:var(--linea-2); font-weight:400}
+  .bloque > p.nota{margin:0 0 14px; font-size:13.5px; color:var(--apunte)}
+
+  label.campo{display:block; margin-top:13px}
+  label.campo > span{
+    display:block; font-size:12px; font-weight:600; color:var(--tinta-2);
+    margin-bottom:5px; letter-spacing:.005em;
+  }
+  input[type=text], input[type=number], textarea{
+    width:100%; background:var(--panel); color:var(--tinta);
+    border:1px solid var(--linea-2); border-radius:3px;
+    padding:9px 11px; font:inherit; font-size:14.5px;
+  }
+  input[type=number]{font-family:'IBM Plex Mono', monospace; font-variant-numeric:tabular-nums; font-size:14px}
+  textarea{resize:vertical; min-height:62px; font-size:13.5px; line-height:1.45}
+  input:focus-visible, textarea:focus-visible, .cargador:focus-within, button:focus-visible{
+    outline:2px solid var(--agua); outline-offset:2px; border-color:var(--agua);
+  }
+  .par{display:grid; grid-template-columns:1fr 1fr; gap:11px}
+  .trio{display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px}
+
+  .interruptor{display:flex; align-items:center; gap:9px; margin-top:13px; font-size:14px; color:var(--tinta-2)}
+  .interruptor input{width:17px; height:17px; accent-color:var(--agua); margin:0}
+
+  /* ---- carga de fotos ---- */
+  .cargador{
+    display:flex; align-items:center; gap:13px; margin-top:8px;
+    border:1.5px dashed var(--linea-2); border-radius:4px; padding:13px 14px;
+    cursor:pointer; background:var(--panel); transition:border-color .15s, background .15s;
+  }
+  .cargador:hover{border-color:var(--agua); background:var(--agua-suave)}
+  .cargador.cargado{border-style:solid; border-color:var(--cesped); background:transparent}
+  .cargador input{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none}
+  .miniatura{
+    width:52px; height:52px; flex:0 0 52px; border-radius:3px; background:var(--linea);
+    background-size:cover; background-position:center; border:1px solid var(--linea-2);
+    display:grid; place-items:center; font-family:'IBM Plex Mono',monospace;
+    font-size:17px; color:var(--apunte);
+  }
+  .cargador b{display:block; font-size:14px; font-weight:600; line-height:1.25}
+  .cargador em{display:block; font-style:normal; font-size:12.5px; color:var(--apunte); margin-top:2px}
+
+  /* ---- aviso de honestidad ---- */
+  .cautela{
+    margin-top:15px; border-left:3px solid var(--cesped); background:var(--panel);
+    padding:11px 13px; font-size:13px; line-height:1.5; color:var(--tinta-2);
+  }
+  .cautela b{color:var(--tinta)}
+
+  /* ---- hoja de resultado ---- */
+  .hoja-panel{background:var(--hoja); border:1px solid var(--linea); border-radius:4px; padding:14px; box-shadow:var(--sombra)}
+  canvas{width:100%; height:auto; display:block; background:#fff; border:1px solid var(--linea)}
+  .acciones{display:flex; gap:9px; margin-top:13px; flex-wrap:wrap}
+  button{
+    flex:1 1 160px; font:inherit; font-family:'Archivo', sans-serif; font-weight:700;
+    font-size:14.5px; padding:11px 14px; border-radius:3px; cursor:pointer;
+    border:1px solid var(--tinta); background:var(--tinta); color:var(--hoja);
+    transition:opacity .15s;
+  }
+  button.suave{background:transparent; color:var(--tinta); border-color:var(--linea-2)}
+  button:hover{opacity:.86}
+  .estado{
+    margin-top:10px; font-family:'IBM Plex Mono', monospace; font-size:11.5px;
+    color:var(--apunte); letter-spacing:.02em; min-height:1.4em;
+  }
+  @media (prefers-reduced-motion: reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="marco">
+  <header class="cabecera">
+    <div class="sello"><b>Inmo Castresana</b> <span>·</span> <span>Propuesta de exterior</span> <span>·</span> <span>escala 1:1 en metros</span></div>
+    <h1>Foto, plano y simulación en una sola imagen</h1>
+    <p class="entradilla">Carga la foto del terreno y la simulación, ajusta las medidas del croquis y descarga la infografía vertical lista para WhatsApp. Las fotos se dibujan en tu propio navegador: no salen del dispositivo.</p>
+  </header>
+
+  <div class="tablero">
+
+    <section class="bloque" style="order:1">
+      <h2>Fotos <span>01</span></h2>
+      <p class="nota">Las dos imágenes que enmarcan el plano.</p>
+
+      <label class="cargador" id="cargaActual">
+        <span class="miniatura" id="miniActual">1</span>
+        <span><b>Estado actual</b><em>La foto real del terreno</em></span>
+        <input type="file" accept="image/*" id="fileActual">
+      </label>
+
+      <label class="cargador" id="cargaSim">
+        <span class="miniatura" id="miniSim">3</span>
+        <span><b>Simulación en el terreno</b><em>El montaje con piscina y caseta</em></span>
+        <input type="file" accept="image/*" id="fileSim">
+      </label>
+    </section>
+
+    <section class="hoja-panel" style="order:2">
+      <canvas id="lienzo" width="1080" height="2608" aria-label="Vista previa de la infografía"></canvas>
+      <div class="acciones">
+        <button id="btnInfo">Guardar infografía</button>
+        <button class="suave" id="btnPlano">Solo el plano</button>
+      </div>
+      <p class="estado" id="estado">1080 px de ancho · PNG</p>
+    </section>
+
+    <section class="bloque" style="order:3">
+      <h2>Cotas del croquis <span>02</span></h2>
+      <p class="nota">Metros. Lo que viene dibujado a mano.</p>
+
+      <div class="par">
+        <label class="campo"><span>Ancho de parcela</span><input type="number" step="0.1" id="ancho" value="18"></label>
+        <label class="campo"><span>Fondo de parcela</span><input type="number" step="0.1" id="fondo" value="20"></label>
+      </div>
+
+      <label class="campo" style="margin-top:18px"><span>Piscina — largo · ancho · coronación</span></label>
+      <div class="trio">
+        <input type="number" step="0.1" id="pisLargo" value="8" aria-label="Largo de la piscina">
+        <input type="number" step="0.1" id="pisAncho" value="3" aria-label="Ancho de la piscina">
+        <input type="number" step="0.1" id="pisBorde" value="0.8" aria-label="Coronación de la piscina">
+      </div>
+
+      <label class="campo" style="margin-top:18px"><span>Caseta de aperos — ancho · fondo</span></label>
+      <div class="par">
+        <input type="number" step="0.1" id="casAncho" value="3" aria-label="Ancho de la caseta">
+        <input type="number" step="0.1" id="casFondo" value="2" aria-label="Fondo de la caseta">
+      </div>
+
+      <label class="campo"><span>Zona embaldosada — fondo</span><input type="number" step="0.1" id="terrazaFondo" value="5.5"></label>
+    </section>
+
+    <section class="bloque" style="order:4">
+      <h2>Retranqueos y textos <span>03</span></h2>
+      <p class="nota">Distancias a los linderos y rótulos de la lámina.</p>
+
+      <div class="interruptor">
+        <input type="checkbox" id="pisCentrada" checked>
+        <label for="pisCentrada" style="margin:0">Centrar la piscina en el ancho</label>
+      </div>
+
+      <div class="par">
+        <label class="campo"><span>Piscina · lindero izq.</span><input type="number" step="0.1" id="pisX" value="5"></label>
+        <label class="campo"><span>Piscina · fondo sup.</span><input type="number" step="0.1" id="pisY" value="7"></label>
+      </div>
+      <div class="par">
+        <label class="campo"><span>Caseta · lindero izq.</span><input type="number" step="0.1" id="casX" value="1.5"></label>
+        <label class="campo"><span>Caseta · fondo sup.</span><input type="number" step="0.1" id="casY" value="1.5"></label>
+      </div>
+
+      <p class="cautela">El croquis acota la parcela, la piscina y la caseta, pero <b>no acota las distancias a los linderos</b>. Estos cuatro valores son la lectura proporcional del dibujo: cámbialos en cuanto el cliente te dé la distancia real.</p>
+
+      <label class="campo" style="margin-top:20px"><span>Título</span><input type="text" id="titulo" value="PROPUESTA DE PISCINA Y ZONA EXTERIOR"></label>
+      <div class="par">
+        <label class="campo"><span>Rótulo 1</span><input type="text" id="etq1" value="ESTADO ACTUAL"></label>
+        <label class="campo"><span>Rótulo 2</span><input type="text" id="etq2" value="DISTRIBUCIÓN PROPUESTA"></label>
+      </div>
+      <label class="campo"><span>Rótulo 3</span><input type="text" id="etq3" value="SIMULACIÓN EN EL TERRENO"></label>
+      <label class="campo"><span>Texto de la zona embaldosada</span><input type="text" id="txtTerraza" value="ZONA EMBALDOSADA PARA TOMAR EL SOL"></label>
+      <label class="campo"><span>Nota al pie</span><textarea id="pie">Distribución basada exclusivamente en el croquis aportado · Simulación orientativa, no plano técnico</textarea></label>
+    </section>
+
+  </div>
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   La lámina se dibuja entera sobre un <canvas>: lo que se ve en
+   pantalla es exactamente el PNG que se guarda.
+
+   Los colores de la lámina son fijos a propósito. Es un documento
+   impreso que se manda al cliente, así que no cambia con el tema del
+   navegador; el tema solo viste la interfaz de alrededor.
+------------------------------------------------------------------ */
+
+const C = {
+  tinta:'#12304F', chip:'#12304F', panel:'#F2F4F0',
+  cesped:'#A4C482', cesped2:'#8CB169', cespedB:'#6F8F4E',
+  baldosa:'#DEDFDC', baldosaL:'#CACCC7', baldosaB:'#AAADA7',
+  agua:'#78CFE3', agua2:'#4FB6CE', aguaB:'#2E8FA8', aguaTexto:'#0B3B4D',
+  caseta:'#BABEB8', casetaB:'#7C837C',
+  coronac:'#EFF1ED', coronacB:'#B6BAB3',
+  cota:'#4A5A52', pie:'#5C6660'
+};
+const F_TIT  = "'Archivo', system-ui, sans-serif";
+const F_TXT  = "'Source Sans 3', system-ui, sans-serif";
+const F_COTA = "'IBM Plex Mono', ui-monospace, monospace";
+
+const estado = { imgActual:null, imgSim:null };
+const lienzo = document.getElementById('lienzo');
+const ctx = lienzo.getContext('2d');
+const $ = id => document.getElementById(id);
+const fmt = n => (Math.round(n * 100) / 100).toString().replace('.', ',');
+
+/* ---------- primitivas ---------- */
+
+function rectRedondo(c, x, y, w, h, r){
+  r = Math.min(r, w / 2, h / 2);
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+// Recorta por el centro para llenar el hueco sin deformar la foto.
+function dibujarCover(c, img, x, y, w, h){
+  c.save();
+  rectRedondo(c, x, y, w, h, 3); c.clip();
+  const k = Math.max(w / img.width, h / img.height);
+  const dw = img.width * k, dh = img.height * k;
+  c.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  c.restore();
+  c.strokeStyle = C.coronacB; c.lineWidth = 1;
+  rectRedondo(c, x + .5, y + .5, w - 1, h - 1, 3); c.stroke();
+}
+
+function hueco(c, texto, x, y, w, h){
+  c.save();
+  c.fillStyle = '#EEF0EC';
+  rectRedondo(c, x, y, w, h, 3); c.fill();
+  c.strokeStyle = '#C3CABE'; c.lineWidth = 2; c.setLineDash([11, 9]);
+  rectRedondo(c, x + 1, y + 1, w - 2, h - 2, 3); c.stroke();
+  c.setLineDash([]);
+  c.fillStyle = '#8A938B'; c.font = `500 25px ${F_TXT}`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(texto, x + w / 2, y + h / 2);
+  c.restore();
+}
+
+function rotulo(c, texto, x, y){
+  const alto = 46, pad = 21;
+  c.font = `700 24px ${F_TIT}`;
+  const ancho = c.measureText(texto).width + pad * 2;
+  c.fillStyle = C.chip;
+  c.fillRect(x, y, ancho, alto);
+  c.fillStyle = '#fff';
+  c.textAlign = 'left'; c.textBaseline = 'middle';
+  c.fillText(texto, x + pad, y + alto / 2 + 1);
+  return alto;
+}
+
+function flecha(c, x, y, dx, dy){
+  const t = 9;
+  c.beginPath();
+  c.moveTo(x, y);
+  c.lineTo(x + dx * t - dy * t * .45, y + dy * t - dx * t * .45);
+  c.lineTo(x + dx * t + dy * t * .45, y + dy * t + dx * t * .45);
+  c.closePath(); c.fill();
+}
+
+function cotaH(c, x1, x2, y, texto){
+  c.save();
+  c.strokeStyle = C.cota; c.fillStyle = C.cota; c.lineWidth = 1.6;
+  c.beginPath(); c.moveTo(x1, y); c.lineTo(x2, y); c.stroke();
+  c.beginPath(); c.moveTo(x1, y - 9); c.lineTo(x1, y + 9);
+  c.moveTo(x2, y - 9); c.lineTo(x2, y + 9); c.stroke();
+  flecha(c, x1, y, 1, 0); flecha(c, x2, y, -1, 0);
+  c.font = `600 25px ${F_COTA}`;
+  const w = c.measureText(texto).width;
+  c.fillStyle = C.panel; c.fillRect((x1 + x2) / 2 - w / 2 - 11, y - 17, w + 22, 34);
+  c.fillStyle = C.tinta; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(texto, (x1 + x2) / 2, y + 1);
+  c.restore();
+}
+
+function cotaV(c, y1, y2, x, texto){
+  c.save();
+  c.strokeStyle = C.cota; c.fillStyle = C.cota; c.lineWidth = 1.6;
+  c.beginPath(); c.moveTo(x, y1); c.lineTo(x, y2); c.stroke();
+  c.beginPath(); c.moveTo(x - 9, y1); c.lineTo(x + 9, y1);
+  c.moveTo(x - 9, y2); c.lineTo(x + 9, y2); c.stroke();
+  flecha(c, x, y1, 0, 1); flecha(c, x, y2, 0, -1);
+  c.font = `600 25px ${F_COTA}`;
+  const w = c.measureText(texto).width;
+  c.fillStyle = C.panel; c.fillRect(x - w / 2 - 11, (y1 + y2) / 2 - 17, w + 22, 34);
+  c.fillStyle = C.tinta; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(texto, x, (y1 + y2) / 2 + 1);
+  c.restore();
+}
+
+/* ---------- datos del formulario ---------- */
+
+const num = (id, def) => { const v = parseFloat($(id).value); return Number.isFinite(v) && v > 0 ? v : def; };
+const val = (id) => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : 0; };
+
+function datos(){
+  const d = {
+    titulo:$('titulo').value.trim(), etq1:$('etq1').value.trim(),
+    etq2:$('etq2').value.trim(), etq3:$('etq3').value.trim(),
+    txtTerraza:$('txtTerraza').value.trim(), pie:$('pie').value.trim(),
+    ancho:num('ancho', 18), fondo:num('fondo', 20),
+    pisLargo:num('pisLargo', 8), pisAncho:num('pisAncho', 3), pisBorde:val('pisBorde'),
+    pisX:val('pisX'), pisY:val('pisY'),
+    casAncho:num('casAncho', 3), casFondo:num('casFondo', 2),
+    casX:val('casX'), casY:val('casY'),
+    terrazaFondo:val('terrazaFondo')
+  };
+  if ($('pisCentrada').checked) d.pisX = (d.ancho - d.pisLargo) / 2;
+  return d;
+}
+
+/* ---------- el plano, a escala uniforme ---------- */
+
+function dibujarPlano(c, d, px, py, pw, ph){
+  c.fillStyle = C.panel;
+  c.fillRect(px, py, pw, ph);
+
+  const mIzq = 108, mDer = 40, mSup = 72, mInf = 40;
+  const dispW = pw - mIzq - mDer, dispH = ph - mSup - mInf;
+
+  // Una sola escala para las dos direcciones: plano de verdad, no dibujo estirado.
+  const e = Math.min(dispW / d.ancho, dispH / d.fondo);
+  const W = d.ancho * e, H = d.fondo * e;
+  const x0 = px + mIzq + (dispW - W) / 2;
+  const y0 = py + mSup + (dispH - H) / 2;
+
+  const g = c.createLinearGradient(x0, y0, x0, y0 + H);
+  g.addColorStop(0, C.cesped); g.addColorStop(1, C.cesped2);
+  c.fillStyle = g; c.fillRect(x0, y0, W, H);
+
+  // Zona embaldosada, al frente de la parcela
+  const tH = Math.min(d.terrazaFondo, d.fondo) * e;
+  if (tH > 0){
+    const ty = y0 + H - tH;
+    c.fillStyle = C.baldosa; c.fillRect(x0, ty, W, tH);
+    c.strokeStyle = C.baldosaL; c.lineWidth = 1;
+    for (let x = x0 + e; x < x0 + W - .5; x += e){
+      c.beginPath(); c.moveTo(Math.round(x) + .5, ty); c.lineTo(Math.round(x) + .5, y0 + H); c.stroke();
+    }
+    for (let y = ty + e; y < y0 + H - .5; y += e){
+      c.beginPath(); c.moveTo(x0, Math.round(y) + .5); c.lineTo(x0 + W, Math.round(y) + .5); c.stroke();
+    }
+    c.strokeStyle = C.baldosaB; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(x0, ty); c.lineTo(x0 + W, ty); c.stroke();
+
+    c.fillStyle = C.tinta;
+    c.font = `700 ${Math.max(15, Math.min(23, tH * .27))}px ${F_TIT}`;
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(d.txtTerraza, x0 + W / 2, ty + tH / 2);
+  }
+
+  // Piscina y su coronación
+  const b = d.pisBorde * e;
+  const plX = x0 + d.pisX * e, plY = y0 + d.pisY * e;
+  const plW = d.pisLargo * e, plH = d.pisAncho * e;
+  if (b > 0){
+    c.fillStyle = C.coronac; c.fillRect(plX - b, plY - b, plW + b * 2, plH + b * 2);
+    c.strokeStyle = C.coronacB; c.lineWidth = 1.6;
+    c.strokeRect(plX - b, plY - b, plW + b * 2, plH + b * 2);
+  }
+  const ga = c.createLinearGradient(plX, plY, plX, plY + plH);
+  ga.addColorStop(0, C.agua); ga.addColorStop(1, C.agua2);
+  c.fillStyle = ga; c.fillRect(plX, plY, plW, plH);
+  c.strokeStyle = C.aguaB; c.lineWidth = 1.8; c.strokeRect(plX, plY, plW, plH);
+
+  c.fillStyle = C.aguaTexto;
+  c.font = `600 ${Math.max(15, Math.min(23, plH * .3))}px ${F_COTA}`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(`${fmt(d.pisLargo)} × ${fmt(d.pisAncho)} m`, plX + plW / 2, plY + plH / 2);
+
+  // Caseta de aperos
+  const caX = x0 + d.casX * e, caY = y0 + d.casY * e;
+  const caW = d.casAncho * e, caH = d.casFondo * e;
+  c.fillStyle = C.caseta; c.fillRect(caX, caY, caW, caH);
+  c.strokeStyle = C.casetaB; c.lineWidth = 1.8; c.strokeRect(caX, caY, caW, caH);
+  c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = 1.3;
+  c.beginPath();
+  c.moveTo(caX, caY); c.lineTo(caX + caW, caY + caH);
+  c.moveTo(caX + caW, caY); c.lineTo(caX, caY + caH);
+  c.stroke();
+
+  // A 3 × 2 m el rótulo no cabe dentro: sale fuera con línea guía,
+  // igual que en el croquis a mano.
+  const l1 = 'CASETA DE APEROS', l2 = `${fmt(d.casAncho)} × ${fmt(d.casFondo)} m`;
+  const fc = 17;
+  c.font = `700 ${fc}px ${F_TIT}`;
+  const w1 = c.measureText(l1).width;
+  c.font = `600 ${fc}px ${F_COTA}`;
+  const anchoRotulo = Math.max(w1, c.measureText(l2).width);
+  const dentro = anchoRotulo < caW - 12 && caH > fc * 2.9;
+
+  c.fillStyle = C.tinta; c.textBaseline = 'middle';
+  if (dentro){
+    c.textAlign = 'center';
+    c.font = `700 ${fc}px ${F_TIT}`;
+    c.fillText(l1, caX + caW / 2, caY + caH / 2 - fc * .7);
+    c.font = `600 ${fc}px ${F_COTA}`;
+    c.fillText(l2, caX + caW / 2, caY + caH / 2 + fc * .7);
+  } else {
+    const derecha = caX + caW + 18 + anchoRotulo < px + pw - 16;
+    const rx = derecha ? caX + caW + 18 : Math.max(px + 12, caX - 18 - anchoRotulo);
+    const ry = caY + caH / 2;
+    c.strokeStyle = C.casetaB; c.lineWidth = 1.4;
+    c.beginPath();
+    c.moveTo(derecha ? caX + caW : caX, ry);
+    c.lineTo(derecha ? rx - 6 : rx + anchoRotulo + 6, ry);
+    c.stroke();
+    c.textAlign = derecha ? 'left' : 'right';
+    const tx = derecha ? rx : rx + anchoRotulo;
+    c.font = `700 ${fc}px ${F_TIT}`;
+    c.fillText(l1, tx, ry - fc * .72);
+    c.font = `600 ${fc}px ${F_COTA}`;
+    c.fillText(l2, tx, ry + fc * .72);
+  }
+
+  c.strokeStyle = C.cespedB; c.lineWidth = 2.6; c.strokeRect(x0, y0, W, H);
+
+  cotaH(c, x0, x0 + W, y0 - 40, `${fmt(d.ancho)} m`);
+  cotaV(c, y0, y0 + H, x0 - 60, `${fmt(d.fondo)} m`);
+}
+
+/* ---------- la lámina completa ---------- */
+
+const A = 1080, M = 26, H_FOTO = 700, H_PLANO = 800, H_TIT = 62;
+const ALTO = 24 + H_TIT + 20 + (46 + 12 + H_FOTO) + 26 + (46 + 12 + H_PLANO) + 26 + (46 + 12 + H_FOTO) + 24 + 52;
+
+function dibujar(){
+  const d = datos(), util = A - M * 2;
+  if (lienzo.height !== ALTO) lienzo.height = ALTO;
+
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, A, ALTO);
+
+  let y = 24;
+  ctx.fillStyle = C.tinta; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  let tam = 44; ctx.font = `800 ${tam}px ${F_TIT}`;
+  while (ctx.measureText(d.titulo).width > util && tam > 22){ tam -= 2; ctx.font = `800 ${tam}px ${F_TIT}`; }
+  ctx.fillText(d.titulo, A / 2, y + H_TIT / 2);
+  y += H_TIT + 20;
+
+  y += rotulo(ctx, d.etq1, M, y) + 12;
+  estado.imgActual ? dibujarCover(ctx, estado.imgActual, M, y, util, H_FOTO)
+                   : hueco(ctx, 'Aquí va la foto real del terreno', M, y, util, H_FOTO);
+  y += H_FOTO + 26;
+
+  y += rotulo(ctx, d.etq2, M, y) + 12;
+  dibujarPlano(ctx, d, M, y, util, H_PLANO);
+  y += H_PLANO + 26;
+
+  y += rotulo(ctx, d.etq3, M, y) + 12;
+  estado.imgSim ? dibujarCover(ctx, estado.imgSim, M, y, util, H_FOTO)
+                : hueco(ctx, 'Aquí va la simulación en el terreno', M, y, util, H_FOTO);
+  y += H_FOTO + 24;
+
+  ctx.fillStyle = C.pie; ctx.font = `400 21px ${F_TXT}`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(d.pie, A / 2, y + 22);
+}
+
+/* ---------- guardado ---------- */
+
+let descargas = null, descargasResuelto = false;
+if (window.claude && claude.use){
+  claude.use('downloads').then(d => { descargas = d; descargasResuelto = true; })
+                         .catch(() => { descargasResuelto = true; });
+} else { descargasResuelto = true; }
+
+const decir = t => { $('estado').textContent = t; };
+
+function comoBlob(canvas){
+  return new Promise(res => canvas.toBlob(res, 'image/png'));
+}
+
+async function guardar(canvas, nombre){
+  const blob = await comoBlob(canvas);
+  if (!blob) return decir('No se ha podido generar el PNG.');
+  if (descargas){
+    try {
+      await descargas.save({ filename:nombre, data:blob });
+      decir(`Guardado · ${nombre}`);
+    } catch (e){
+      if (e && e.code === 'declined') decir('Guardado cancelado.');
+      else decir('No se pudo guardar aquí. Mantén pulsada la lámina para guardarla como imagen.');
+    }
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = nombre;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    decir(`Descargado · ${nombre}`);
+  }
+}
+
+$('btnInfo').addEventListener('click', () => guardar(lienzo, 'propuesta-exterior.png'));
+
+$('btnPlano').addEventListener('click', () => {
+  const c2 = document.createElement('canvas');
+  c2.width = 1080; c2.height = 900;
+  const x = c2.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, c2.width, c2.height);
+  dibujarPlano(x, datos(), 26, 26, c2.width - 52, c2.height - 52);
+  guardar(c2, 'plano-propuesta.png');
+});
+
+/* ---------- fotos ---------- */
+
+function conectarFoto(inputId, cargadorId, miniId, clave){
+  const input = $(inputId), caja = $(cargadorId), mini = $(miniId);
+  input.addEventListener('change', () => {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      estado[clave] = img;
+      caja.classList.add('cargado');
+      mini.textContent = '';
+      mini.style.backgroundImage = `url("${url}")`;
+      dibujar();
+      decir('Lámina actualizada.');
+    };
+    img.onerror = () => decir('No se ha podido leer esa imagen.');
+    img.src = url;
+  });
+}
+conectarFoto('fileActual', 'cargaActual', 'miniActual', 'imgActual');
+conectarFoto('fileSim', 'cargaSim', 'miniSim', 'imgSim');
+
+/* ---------- redibujo en directo ---------- */
+
+document.querySelectorAll('input[type=text], input[type=number], textarea, input[type=checkbox]')
+  .forEach(el => el.addEventListener('input', dibujar));
+
+// El canvas necesita las tipografías cargadas antes de medir texto.
+const caras = ['800 44px Archivo', '700 24px Archivo', '600 25px "IBM Plex Mono"', '400 21px "Source Sans 3"'];
+if (document.fonts){
+  Promise.all(caras.map(f => document.fonts.load(f).catch(() => {}))).then(dibujar);
+}
+dibujar();
+</script>
+</body>
+</html>
