@@ -9,9 +9,24 @@
 2. Pulsa **"Continue with GitHub"** (no uses el email) e inicia sesión como **jpau2569**.
 3. Si GitHub falla: **"Continue with Email"** con `jpaumoralejo@gmail.com` → enlace mágico al Gmail.
 
-## 2. Importar el proyecto (enlace directo)
+## 2. Importar el proyecto
 
-Abre: **https://vercel.com/new/import?s=https://github.com/jpau2569/jpmr-negocios-**
+Abre **https://vercel.com/new** (el atajo `vercel.com/new/import?s=...` ya no
+funciona) → **Import Git Repository** → busca **`jpmr-negocios-`** (acaba en
+guion) → **Import**.
+
+Si el repositorio no aparece en la lista: **"Adjust GitHub App Permissions"**, o
+entra en https://github.com/apps/vercel → *Configure* → márcalo.
+
+**Desde el terminal del MacBook, si la web se atasca** (hace lo mismo y crea el
+proyecto solo; acepta todo por defecto):
+
+```bash
+cd ~/ruta/a/jpmr-negocios-
+git pull origin main
+npx vercel login
+npx vercel --prod
+```
 
 En la pantalla de importación, ANTES de pulsar Deploy, abre el apartado
 **Environment Variables** y añade estas variables (el valor de cada una,
@@ -32,9 +47,19 @@ del chat o de su web):
 Pulsa **Deploy**. Si ya habías desplegado sin variables: Settings →
 Environment Variables → añádelas → Deployments → ⋯ → **Redeploy**.
 
+> **El escaparate 3D no necesita ninguna clave.** Si solo quieres ponerlo en
+> marcha, pulsa Deploy sin tocar nada y abre `/escaparate3d/`; las variables de
+> arriba son para Clara, CasteBot y el resto, y se pueden añadir después en
+> Settings → Environment Variables → Redeploy.
+
 ## 3. Probar que todo funciona
 
 Con la URL que te da Vercel (algo como `jpmr-negocios.vercel.app`):
+
+- `/escaparate3d/` → el escaparate 3D con la cartera real: deben salir los pisos
+  con sus fotos. Añade `?auto=1&secs=6` para la tele del local. Si vieras solo
+  siete pisos sin foto, es la cartera de respaldo: entonces hay que sincronizar
+  con `node escaparate3d/herramientas/sincronizar.mjs`.
 
 - `/clara.html` → habla con Clara y pídele algo actual ("¿euríbor hoy?") → debe citar fuentes de Google.
 - `/castebot.html` → haz de cliente con Juanjo (zona + presupuesto + "quiero visitar ya") → debe llegarte el 🔥 a Telegram.
