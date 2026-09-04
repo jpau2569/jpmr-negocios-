@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node test/clara.test.mjs && node test/castebot.test.mjs",
+    "test": "node test/clara.test.mjs && node test/castebot.test.mjs && node test/escaparate3d.test.mjs",
     "test:ui": "node test/ui.test.mjs"
   },
   "dependencies": {
