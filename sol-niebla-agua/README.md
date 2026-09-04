@@ -162,9 +162,15 @@ sin dependencias. La app queda en la raíz del dominio y la función del tiempo
 en `/api/tiempo`. Para activar AEMET, añade `AEMET_API_KEY` en Settings →
 Environment Variables y vuelve a desplegar; sin ella funciona con Open-Meteo.
 
+**Publicar en GitHub Pages** (sin backend, así que sin AEMET)
+
+Settings → Pages → Deploy from a branch → `main` → `/ (root)` → Save. La app
+queda en `https://USUARIO.github.io/REPO/sol-niebla-agua/`. El `.nojekyll` de
+la raíz del repositorio evita que Pages pase los archivos por Jekyll.
+
 **En el móvil**
 
-1. Abre la URL que te dé Vercel.
+1. Abre la URL que te dé Vercel o GitHub Pages.
 2. iPhone: Compartir → **Añadir a pantalla de inicio**.
    Android: menú ⋮ → **Instalar aplicación**.
 3. Se abre a pantalla completa, sin barra del navegador, y funciona sin
