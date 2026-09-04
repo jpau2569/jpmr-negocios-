@@ -122,6 +122,26 @@ node sol-niebla-agua/herramientas/generar-iconos.mjs
 Hacen falta en PNG porque iOS ignora los `apple-touch-icon` en SVG y pondría
 una captura borrosa en la pantalla de inicio.
 
+## Archivo único para el móvil
+
+`sol-niebla-agua.html` es la app entera en un solo archivo: se genera con
+
+```bash
+node sol-niebla-agua/herramientas/empaquetar.mjs
+```
+
+Sirve para llevarla en el móvil sin servidor: se descarga, se abre desde
+Archivos y funciona. Con dos límites que conviene conocer:
+
+- **Sin service worker** (los navegadores no lo permiten en `file://`), así
+  que no hay modo sin conexión ni instalación real en la pantalla de inicio.
+- **Sin AEMET**, porque no hay backend. Intenta Open-Meteo directamente; si
+  el navegador bloquea esa llamada desde un archivo local, cae a datos
+  simulados y lo dice en el sello de la cabecera.
+
+Para la experiencia completa —instalable, sin conexión y con AEMET— hay que
+servirla por HTTP: ver más abajo.
+
 ## Cómo probarla y cómo instalarla
 
 **En el ordenador**
