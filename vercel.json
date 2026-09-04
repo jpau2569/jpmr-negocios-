@@ -17,6 +17,9 @@
     "api/foto.js": {
       "maxDuration": 15
     },
+    "api/fotos.js": {
+      "maxDuration": 20
+    },
     "api/briefing.js": {
       "maxDuration": 60
     },

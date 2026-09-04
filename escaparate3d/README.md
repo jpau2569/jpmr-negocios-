@@ -20,18 +20,41 @@ escaparate3d/
 1. Entra y ve las tarjetas de los inmuebles girando en 3D (flechas, rueda del
    ratón, arrastre o teclado). En el móvil ve directamente la lista con foto.
 2. Filtra por **venta / alquiler** y por **zona**.
-3. En cada inmueble tiene tres acciones:
+3. En cada inmueble tiene cuatro acciones:
+   - **Ver fotos** → la galería, sin salir de la web (ver abajo).
    - **Ver ficha completa** → la ficha oficial en asesoriacastresana.com.
    - **Me interesa** → lo marca (se guarda en su navegador).
    - **Solicitar visita** → formulario corto (nombre, teléfono, cuándo le viene
      bien) y dos botones de envío.
-4. Abajo aparece la barra **"N inmuebles marcados"**: al enviar, el mensaje de
-   WhatsApp o el correo llevan **solo los que ha marcado**, con título, precio,
-   referencia y enlace de cada uno. Nada de "hola, quiero información".
+4. Abajo aparece la barra **"N inmuebles marcados"**, con **Comparar** y **Pedir
+   visita**: al enviar, el mensaje de WhatsApp o el correo llevan **solo los que
+   ha marcado**, con título, precio, referencia y enlace de cada uno. Nada de
+   "hola, quiero información".
 
 El correo va a `asesoriacastresana@gmail.com` y el WhatsApp al móvil que se
 configure. Si además hay Supabase configurado, el contacto se registra en el CRM
 por `/api/lead` (origen `escaparate3d`) sin molestar al cliente.
+
+## Galería, comparador y modo escaparate
+
+**Galería.** Clic en la foto de la tarjeta (o en la tarjeta de delante del
+carrusel, o en "Ver fotos") y se abren todas las fotos del piso sin salir:
+flechas, teclado, miniaturas, deslizar con el dedo en el móvil y, en el pie, los
+mismos botones de marcar y pedir visita. Las fotos salen, por este orden, de
+`pisos.json` (propias) o de `/api/fotos`, que lee la ficha oficial y devuelve
+todas las de ese anuncio. Sin backend, queda la foto de portada.
+
+**Comparador.** Con dos o más marcados aparece **Comparar**: los cuatro primeros
+enfrentados en una tabla —precio, **precio por m²**, superficie, habitaciones,
+baños, planta y **cuota estimada**— con el mejor valor de cada fila en dorado.
+Desde ahí se puede quitar uno o pedir visita de todos. La cuota usa 80 %
+financiado a 25 años al 3 %, y así se dice en la propia tabla.
+
+**Modo escaparate.** Si nadie toca nada durante 30 segundos, el carrusel empieza
+a girar solo y aparece el aviso "modo escaparate". Al primer toque, tecla o
+rueda, se para y manda el visitante. Para la tele del local: `?auto=1` arranca
+girando desde el principio y `?secs=6` marca el ritmo. Con
+`prefers-reduced-motion` activado no se activa nunca.
 
 ## Contacto configurado
 
@@ -77,20 +100,26 @@ Cascada, del más fiable al último recurso:
    la web nunca aparezca vacía si se cae todo lo demás.
 
 Forzar un origen concreto para probar: `?fuente=json`, `?fuente=api`,
-`?fuente=respaldo`. Otros parámetros: `?op=venta`, `?ref=PIS0160`, `?2d=1`.
+`?fuente=respaldo`. Otros parámetros: `?op=venta`, `?ref=PIS0160`, `?2d=1`,
+`?auto=1`, `?secs=6`.
+
+Las fotos de cada ficha las sirve `api/fotos.js` con el lector `lib/fotos-ficha.js`,
+que tiene sus propios tests: `npm test`.
 
 ## Actualizar la cartera
 
 Desde la raíz del repositorio, con conexión a Internet:
 
 ```bash
-node escaparate3d/herramientas/sincronizar.mjs          # datos + fotos
-node escaparate3d/herramientas/sincronizar.mjs --dry    # enseña qué haría, sin escribir
+node escaparate3d/herramientas/sincronizar.mjs               # datos + fotos
+node escaparate3d/herramientas/sincronizar.mjs --dry         # enseña qué haría, sin escribir
+node escaparate3d/herramientas/sincronizar.mjs --maxfotos 10 # más fotos por inmueble
 node escaparate3d/herramientas/sincronizar.mjs --sin-fotos
 ```
 
 - Lee la web oficial con `lib/cartera.js` (el mismo lector que la TV y Clara).
-- Descarga la foto principal de cada anuncio a `fotos/` y apunta la ruta local.
+- Entra en la ficha de cada inmueble y descarga **todas sus fotos** (6 por
+  defecto, `--maxfotos 10` para más) a `fotos/`, apuntando las rutas locales.
 - Pone la fecha de comprobación en `verificado` (se muestra bajo la ficha).
 - **No borra nada**: un anuncio que ya no está pasa a `"activo": false`.
 - Si no consigue leer ni un inmueble, no toca `pisos.json` (evita vaciarlo).

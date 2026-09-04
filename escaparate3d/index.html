@@ -189,6 +189,46 @@
   .tarjeta.guia .cuerpo{padding:18px}
   .tarjeta.guia .eti{margin:0 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--acento);font-weight:600}
 
+  /* ---------- Galería de fotos ---------- */
+  dialog.galeria{width:min(1040px,96vw);background:#0a0e13}
+  .visor{position:relative;background:#05080d;aspect-ratio:16/10;max-height:58vh;
+    display:flex;align-items:center;justify-content:center}
+  .visor img{width:100%;height:100%;object-fit:contain;display:block}
+  .visor .estado{position:absolute;color:var(--apagado);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+  .gal-nav{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;
+    border:1px solid var(--linea);background:rgba(11,15,20,.72);color:var(--texto);font-size:24px;line-height:1;cursor:pointer;backdrop-filter:blur(8px)}
+  .gal-nav:hover:not([disabled]){background:var(--acento);color:#10131a;border-color:var(--acento)}
+  .gal-nav[disabled]{opacity:.25;cursor:default}
+  .gal-nav.izq{left:10px} .gal-nav.der{right:10px}
+  .gal-cuenta{position:absolute;right:12px;bottom:12px;background:rgba(5,8,13,.82);border:1px solid var(--linea);
+    border-radius:999px;padding:5px 12px;font-size:12px;color:var(--apagado)}
+  .minis{display:flex;gap:8px;overflow-x:auto;padding:10px 14px;background:#080b10}
+  .minis button{flex:0 0 auto;width:78px;height:56px;padding:0;border:2px solid transparent;border-radius:9px;
+    overflow:hidden;background:none;cursor:pointer}
+  .minis button[aria-current="true"]{border-color:var(--acento)}
+  .minis img{width:100%;height:100%;object-fit:cover;display:block}
+  .gal-pie{padding:14px 18px 18px;display:flex;gap:16px;justify-content:space-between;align-items:flex-end;flex-wrap:wrap}
+  .gal-pie h3{font-family:var(--display);font-size:20px;margin:0 0 4px;line-height:1.2}
+  .gal-pie p{margin:0;color:var(--apagado);font-size:13px}
+  .gal-pie .precio{margin-top:6px;color:var(--acento);font-weight:700;font-size:19px}
+  button.foto{border:0;padding:0;width:100%;display:block;font:inherit;color:inherit;text-align:left;cursor:zoom-in}
+
+  /* ---------- Comparador ---------- */
+  .envoltorio-tabla{overflow-x:auto;border:1px solid var(--linea);border-radius:14px}
+  .comparar{width:100%;border-collapse:collapse;font-size:13px}
+  .comparar th,.comparar td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--linea);white-space:nowrap}
+  .comparar tbody tr:last-child th,.comparar tbody tr:last-child td{border-bottom:0}
+  .comparar th[scope="row"]{color:var(--apagado);font-weight:500;position:sticky;left:0;background:var(--fondo2)}
+  .comparar thead th{font-family:var(--display);font-size:14px;white-space:normal;min-width:160px;vertical-align:top;line-height:1.25}
+  .comparar thead th small{display:block;font-family:var(--ui);font-size:11px;font-weight:400;color:var(--apagado);margin-top:3px}
+  .comparar td.mejor{color:var(--acento);font-weight:700}
+  .comparar td.mejor::after{content:" ✓";font-size:11px}
+
+  /* ---------- Modo escaparate ---------- */
+  #aviso-auto{position:fixed;left:clamp(12px,3vw,28px);bottom:52px;z-index:4;display:flex;align-items:center;gap:8px;
+    padding:8px 14px;border-radius:999px;border:1px solid rgba(201,162,39,.5);background:rgba(11,15,20,.75);
+    color:var(--acento);font-size:12px;letter-spacing:.1em;text-transform:uppercase;backdrop-filter:blur(8px)}
+
   .cargando{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:8;
     background:var(--fondo);color:var(--apagado);font-size:14px;letter-spacing:.1em;text-transform:uppercase}
   .cargando[hidden]{display:none}
@@ -240,6 +280,7 @@
       <p class="datos" id="f-datos">Pisos, casas y locales en Oviedo, Mieres y alrededores.</p>
       <p class="precio" id="f-precio"></p>
       <div class="cta">
+        <button class="btn" id="f-fotos" hidden>Ver fotos</button>
         <a class="btn" id="f-ficha" href="#lista" hidden>Ver ficha completa</a>
         <button class="btn" id="f-interesa" hidden>Me interesa</button>
         <button class="btn solido" id="f-visita" hidden>Solicitar visita</button>
@@ -265,6 +306,7 @@
 
 <div class="barra" id="barra" hidden>
   <span class="cuenta" id="barra-cuenta">0 inmuebles marcados<small>Te enviamos solo estos, sin llamadas de más.</small></span>
+  <button class="btn" id="barra-comparar" hidden>Comparar</button>
   <button class="btn solido" id="barra-pedir">Pedir visita de los marcados</button>
   <button class="btn pequeno" id="barra-limpiar">Vaciar</button>
 </div>
@@ -327,6 +369,46 @@
     <p class="aviso">Orientativo. Los tipos de impuestos, las bonificaciones y lo que pide cada notaría cambian, y cada caso tiene lo suyo (herencias, VPO, no residentes, hipoteca sin cancelar). Antes de firmar, confírmalo con la notaría o con tu gestoría — o pásanoslo y te lo miramos sin compromiso.</p>
   </div>
 </dialog>
+
+<dialog id="galeria" class="galeria" aria-labelledby="gal-titulo">
+  <div class="visor">
+    <img id="gal-img" alt="" />
+    <span class="estado" id="gal-estado" hidden>Cargando fotos…</span>
+    <button type="button" class="gal-nav izq" id="gal-ant" aria-label="Foto anterior">‹</button>
+    <button type="button" class="gal-nav der" id="gal-sig" aria-label="Foto siguiente">›</button>
+    <span class="gal-cuenta" id="gal-cuenta"></span>
+  </div>
+  <div class="minis" id="gal-minis"></div>
+  <div class="gal-pie">
+    <div>
+      <h3 id="gal-titulo"></h3>
+      <p id="gal-datos"></p>
+      <p class="precio" id="gal-precio"></p>
+    </div>
+    <div class="cta" style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn pequeno" id="gal-ficha" href="#" target="_blank" rel="noopener">Ver ficha</a>
+      <button type="button" class="btn pequeno" id="gal-interesa">Me interesa</button>
+      <button type="button" class="btn pequeno solido" id="gal-visita">Solicitar visita</button>
+      <button type="button" class="btn pequeno" id="gal-cerrar">Cerrar</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="comparador" class="ancho" aria-labelledby="cmp-titulo">
+  <div class="dlg">
+    <button type="button" class="cerrar" id="cmp-cerrar" aria-label="Cerrar">×</button>
+    <h2 id="cmp-titulo">Comparar los marcados</h2>
+    <p class="sub" id="cmp-sub"></p>
+    <div class="envoltorio-tabla"><table class="comparar" id="cmp-tabla"></table></div>
+    <p class="aviso">La cuota es orientativa: 80 % financiado a 25 años al 3 % de interés fijo. El precio por metro sale del precio y de la superficie construida que publica cada anuncio.</p>
+    <div class="envios">
+      <button type="button" class="btn solido" id="cmp-visita">Pedir visita de estos</button>
+      <button type="button" class="btn" id="cmp-vaciar">Vaciar la selección</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="aviso-auto" hidden>Modo escaparate · toca para tomar el mando</div>
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"RealEstateAgent","name":"Asesoría Castresana",
@@ -613,7 +695,8 @@ function pintaZonas() {
 function pintaFicha() {
   const p = (escena3d ? elementosEscena() : estado.visibles)[estado.activo];
   const ficha = $("f-ficha"), interesa = $("f-interesa"), visita = $("f-visita"), guia = $("f-guia");
-  guia.hidden = true;
+  const verFotos = $("f-fotos");
+  guia.hidden = true; verFotos.hidden = true;
   if (p && p.__guia) {
     $("f-etiqueta").textContent = "Guía práctica · gratis";
     $("f-titulo").textContent = p.titulo;
@@ -641,6 +724,9 @@ function pintaFicha() {
   $("f-precio").textContent = precioTexto(p);
   $("f-verificado").textContent = p.verificado ? "Anuncio comprobado el " + fechaCorta(p.verificado) : "";
 
+  verFotos.hidden = !(p.imagen || p.url);
+  verFotos.textContent = (p.imagenes && p.imagenes.length > 1) ? `Ver ${p.imagenes.length} fotos` : "Ver fotos";
+  verFotos.onclick = () => abreGaleria(p);
   ficha.hidden = !p.url;
   if (p.url) { ficha.href = p.url; ficha.target = "_blank"; ficha.rel = "noopener"; }
   interesa.hidden = false;
@@ -674,7 +760,8 @@ function pintaLista2d() {
              alt="${escapa(p.titulo)}" loading="lazy" decoding="async" />`
       : `<span class="sinfoto">Fotos en la ficha</span>`;
     return `<li class="tarjeta" data-id="${escapa(p.id)}">
-      <div class="foto">${foto}<span class="op">${p.operacion === "alquiler" ? "Alquiler" : "Venta"}</span></div>
+      <button type="button" class="foto" data-accion="fotos" aria-label="Ver fotos de ${escapa(p.titulo)}">
+        ${foto}<span class="op">${p.operacion === "alquiler" ? "Alquiler" : "Venta"}</span></button>
       <div class="cuerpo">
         <h3>${escapa(p.titulo)}</h3>
         <p class="datos">${escapa([datosTexto(p), p.zona].filter(Boolean).join(" · "))}</p>
@@ -707,6 +794,7 @@ function pintaBarra() {
   document.body.classList.toggle("con-seleccion", lista.length > 0);
   $("barra-cuenta").innerHTML = `${lista.length} inmueble${lista.length === 1 ? "" : "s"} marcado${lista.length === 1 ? "" : "s"}`
     + `<small>Te enviamos solo estos, nada más.</small>`;
+  $("barra-comparar").hidden = lista.length < 2;
 }
 
 function alternaInteres(id) {
@@ -781,6 +869,7 @@ $("rejilla").addEventListener("click", (e) => {
   const p = estado.todos.find((x) => x.id === id);
   if (!p) return;
   if (boton.dataset.accion === "interes") alternaInteres(id);
+  else if (boton.dataset.accion === "fotos") abreGaleria(p);
   else abreDialogo([p]);
 });
 
@@ -791,8 +880,10 @@ $("barra-limpiar").addEventListener("click", () => {
 
 $("anterior").addEventListener("click", () => escena3d && escena3d.mover(-1));
 $("siguiente").addEventListener("click", () => escena3d && escena3d.mover(1));
+const hayDialogoAbierto = () => Boolean(document.querySelector("dialog[open]"));
+
 addEventListener("keydown", (e) => {
-  if (dlg.open || !escena3d) return;
+  if (hayDialogoAbierto() || !escena3d) return;
   if (e.key === "ArrowLeft") { escena3d.mover(-1); e.preventDefault(); }
   if (e.key === "ArrowRight") { escena3d.mover(1); e.preventDefault(); }
 });
@@ -1101,7 +1192,11 @@ async function inicia3D() {
   });
   lienzo.addEventListener("pointerup", () => {
     arrastrando = false;
-    if (movido < 8 && encima) ir(encima.userData.indice); // clic limpio sobre una tarjeta
+    if (movido >= 8 || !encima) return;                      // era un arrastre
+    const i = encima.userData.indice;
+    if (i !== estado.activo) return ir(i);                   // clic en una tarjeta lateral: se centra
+    const item = encima.userData.inmueble;                   // clic en la de delante: se abre
+    if (item.__guia) abreGuia(); else abreGaleria(item);
   });
   lienzo.addEventListener("pointerleave", () => { arrastrando = false; puntero.set(-2, -2); });
 
@@ -1420,6 +1515,238 @@ $("guia-mail").addEventListener("click", () => {
     + `?subject=${encodeURIComponent((modoGuia === "compra" ? "Voy a comprar" : "Voy a vender") + ": ¿me revisáis los papeles?")}`
     + `&body=${encodeURIComponent(textoGuia())}`;
 });
+
+/* ==========================================================================
+   Galería: todas las fotos del inmueble sin salir de la web.
+   Si pisos.json ya trae varias, se usan esas (hosting propio). Si no, se piden
+   a /api/fotos, que lee la ficha oficial. Si tampoco, queda la foto del listado.
+   ========================================================================== */
+const gal = { p: null, fotos: [], i: 0, gen: 0 };
+
+async function fotosDe(p) {
+  if (p.imagenes && p.imagenes.length > 1) return p.imagenes;
+  if (p.__fotos) return p.__fotos;
+  if (!p.url) return p.imagenes || [];
+  try {
+    const r = await fetch("/api/fotos?u=" + encodeURIComponent(p.url));
+    if (!r.ok) throw new Error("sin galería");
+    const d = await r.json();
+    if (Array.isArray(d.fotos) && d.fotos.length) { p.__fotos = d.fotos; return d.fotos; }
+  } catch { /* sin backend o ficha caída: nos quedamos con lo que ya tenemos */ }
+  return p.imagenes || [];
+}
+
+function pintaGaleria() {
+  const n = gal.fotos.length;
+  const img = $("gal-img"), estado_ = $("gal-estado");
+  $("gal-ant").disabled = n < 2;
+  $("gal-sig").disabled = n < 2;
+  $("gal-cuenta").textContent = n ? `${gal.i + 1} / ${n}` : "";
+  if (!n) {
+    img.removeAttribute("src"); img.alt = "";
+    $("gal-minis").innerHTML = "";
+    estado_.hidden = false;
+    estado_.textContent = "Sin fotos publicadas";
+    return;
+  }
+  const actual = gal.fotos[gal.i];
+  img.onerror = () => { if (!img.src.endsWith(actual)) img.src = actual; };  // sin /api/foto, la original
+  img.src = fotoServida(actual);
+  img.alt = `${gal.p.titulo} — foto ${gal.i + 1} de ${n}`;
+  $("gal-minis").innerHTML = gal.fotos.map((f, k) =>
+    `<button type="button" data-k="${k}" aria-current="${k === gal.i}" aria-label="Foto ${k + 1}">
+       <img src="${escapa(fotoServida(f))}" alt="" loading="lazy" /></button>`).join("");
+  const enMiniaturas = document.activeElement?.closest?.("#gal-minis");
+  const actualMini = $("gal-minis").querySelector('[aria-current="true"]');
+  actualMini?.scrollIntoView({ block: "nearest", inline: "center" });
+  if (enMiniaturas) actualMini?.focus();   // el repintado no debe dejar sin foco
+  if (n > 1) { const sig = new Image(); sig.src = fotoServida(gal.fotos[(gal.i + 1) % n]); } // precarga
+}
+
+function vaFoto(salto) {
+  const n = gal.fotos.length;
+  if (n < 2) return;
+  gal.i = (gal.i + salto + n) % n;
+  pintaGaleria();
+}
+
+async function abreGaleria(p) {
+  if (!p || p.__guia) return;
+  gal.p = p;
+  gal.fotos = p.imagenes && p.imagenes.length ? [...p.imagenes] : p.imagen ? [p.imagen] : [];
+  gal.i = 0;
+  const gen = ++gal.gen;
+
+  $("gal-titulo").textContent = p.titulo;
+  $("gal-datos").textContent = [datosTexto(p), p.zona, p.referencia ? "ref " + p.referencia : null]
+    .filter(Boolean).join(" · ");
+  $("gal-precio").textContent = precioTexto(p);
+  const ficha = $("gal-ficha");
+  ficha.hidden = !p.url;
+  if (p.url) ficha.href = p.url;
+  const interesa = $("gal-interesa");
+  const pintaBotonInteres = () => {
+    interesa.textContent = estado.interes.has(p.id) ? "✓ Marcado" : "Me interesa";
+    interesa.classList.toggle("marcado", estado.interes.has(p.id));
+  };
+  pintaBotonInteres();
+  interesa.onclick = () => { alternaInteres(p.id); pintaBotonInteres(); };
+  $("gal-visita").onclick = () => { $("galeria").close(); abreDialogo([p]); };
+
+  const g = $("galeria");
+  if (typeof g.showModal === "function") g.showModal(); else g.setAttribute("open", "");
+  $("gal-estado").hidden = gal.fotos.length > 0;
+  $("gal-estado").textContent = "Cargando fotos…";
+  pintaGaleria();
+
+  if (gal.fotos.length < 2) {
+    const todas = await fotosDe(p);
+    if (gen !== gal.gen) return;                       // se abrió otra galería mientras tanto
+    if (todas.length) { gal.fotos = todas; gal.i = 0; }
+    $("gal-estado").hidden = gal.fotos.length > 0;
+    pintaGaleria();
+  }
+}
+
+$("gal-ant").addEventListener("click", () => vaFoto(-1));
+$("gal-sig").addEventListener("click", () => vaFoto(1));
+$("gal-cerrar").addEventListener("click", () => $("galeria").close());
+$("gal-minis").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-k]");
+  if (b) { gal.i = Number(b.dataset.k); pintaGaleria(); }
+});
+// A nivel de documento: al repintar las miniaturas se pierde el foco dentro del
+// diálogo, y un escuchador colgado del <dialog> se quedaría sin oír las flechas.
+addEventListener("keydown", (e) => {
+  if (!$("galeria").open) return;
+  if (e.key === "ArrowLeft") { vaFoto(-1); e.preventDefault(); }
+  if (e.key === "ArrowRight") { vaFoto(1); e.preventDefault(); }
+});
+{ // deslizar con el dedo en el móvil
+  let x0 = null;
+  const visor = document.querySelector("#galeria .visor");
+  visor.addEventListener("pointerdown", (e) => { x0 = e.clientX; });
+  visor.addEventListener("pointerup", (e) => {
+    if (x0 === null) return;
+    const dx = e.clientX - x0; x0 = null;
+    if (Math.abs(dx) > 45) vaFoto(dx > 0 ? -1 : 1);
+  });
+}
+
+/* ==========================================================================
+   Comparador: los marcados, enfrentados
+   ========================================================================== */
+const CUOTA_EJEMPLO = { financiado: 0.8, anos: 25, interes: 3 };
+
+function abreComparador() {
+  const lista = seleccionados().slice(0, 4);
+  if (lista.length < 2) return;
+  const total = seleccionados().length;
+  $("cmp-sub").textContent = total > lista.length
+    ? `Los 4 primeros de tus ${total} marcados, uno al lado del otro.`
+    : "Los que has marcado, uno al lado del otro.";
+
+  const eur = (v, sufijo = "") => (v == null ? "—" : miles(Math.round(v)) + " €" + sufijo);
+  const precioM2 = lista.map((p) => (p.precio && p.superficieConstruida ? p.precio / p.superficieConstruida : null));
+  const cuotas = lista.map((p) => (p.precio && p.operacion === "venta"
+    ? cuotaHipoteca(p.precio * CUOTA_EJEMPLO.financiado, CUOTA_EJEMPLO.interes, CUOTA_EJEMPLO.anos) : null));
+
+  // Solo se marca "el mejor" si hay al menos dos valores que comparar.
+  const mejor = (valores, mayor) => {
+    const conValor = valores.filter((v) => v != null);
+    if (conValor.length < 2) return -1;
+    let i = -1;
+    valores.forEach((v, k) => { if (v != null && (i < 0 || (mayor ? v > valores[i] : v < valores[i]))) i = k; });
+    return i;
+  };
+
+  const fila = (titulo, valores, destacado = -1) =>
+    `<tr><th scope="row">${escapa(titulo)}</th>` +
+    valores.map((v, i) => `<td class="${i === destacado ? "mejor" : ""}">${v}</td>`).join("") + "</tr>";
+
+  $("cmp-tabla").innerHTML = `
+    <thead><tr><th></th>${lista.map((p) =>
+      `<th scope="col">${escapa(p.titulo)}<small>${escapa([p.zona, p.referencia ? "ref " + p.referencia : null]
+        .filter(Boolean).join(" · "))}</small></th>`).join("")}</tr></thead>
+    <tbody>
+      ${fila("Operación", lista.map((p) => (p.operacion === "alquiler" ? "Alquiler" : "Venta")))}
+      ${fila("Precio", lista.map((p) => escapa(precioTexto(p))),
+        mejor(lista.map((p) => p.precio), false))}
+      ${fila("Precio por m²", precioM2.map((v) => (v == null ? "—" : miles(Math.round(v)) + " €/m²")),
+        mejor(precioM2, false))}
+      ${fila("Superficie", lista.map((p) => (p.superficieConstruida ? p.superficieConstruida + " m²" : "—")),
+        mejor(lista.map((p) => p.superficieConstruida), true))}
+      ${fila("Habitaciones", lista.map((p) => p.habitaciones ?? "—"),
+        mejor(lista.map((p) => p.habitaciones), true))}
+      ${fila("Baños", lista.map((p) => p.banos ?? "—"), mejor(lista.map((p) => p.banos), true))}
+      ${fila("Planta", lista.map((p) => p.planta ?? "—"))}
+      ${fila(`Cuota estimada (${CUOTA_EJEMPLO.anos} años)`, cuotas.map((v) => eur(v, "/mes")), mejor(cuotas, false))}
+      ${fila("", lista.map((p) => `${p.url ? `<a class="btn pequeno" href="${escapa(p.url)}" target="_blank" rel="noopener">Ficha</a> ` : ""}`
+        + `<button type="button" class="btn pequeno" data-quitar="${escapa(p.id)}">Quitar</button>`))}
+    </tbody>`;
+
+  const c = $("comparador");
+  if (typeof c.showModal === "function") c.showModal(); else c.setAttribute("open", "");
+}
+
+$("barra-comparar").addEventListener("click", abreComparador);
+$("cmp-cerrar").addEventListener("click", () => $("comparador").close());
+$("cmp-visita").addEventListener("click", () => { $("comparador").close(); abreDialogo(seleccionados()); });
+$("cmp-vaciar").addEventListener("click", () => {
+  estado.interes.clear(); guardaInteres(); pintaFicha(); pintaLista2d(); pintaBarra();
+  $("comparador").close();
+});
+$("cmp-tabla").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-quitar]");
+  if (!b) return;
+  alternaInteres(b.dataset.quitar);
+  if (seleccionados().length < 2) $("comparador").close(); else abreComparador();
+});
+
+/* ==========================================================================
+   Modo escaparate: si nadie toca nada, el carrusel gira solo.
+   Pensado para la tele del local (?auto=1 arranca ya, ?secs=N marca el ritmo).
+   ========================================================================== */
+const AUTO = {
+  espera: 30000,
+  cada: Math.max(3, parseInt(params.get("secs") || "8", 10)) * 1000,
+};
+let esperaAuto = null, tickAuto = null, autoEnMarcha = false, ultimoAviso = 0;
+
+function arrancaAuto() {
+  if (autoEnMarcha || reducido || !escena3d || hayDialogoAbierto()) return;
+  autoEnMarcha = true;
+  $("aviso-auto").hidden = false;
+  tickAuto = setInterval(() => {
+    if (!escena3d || hayDialogoAbierto()) return;
+    const total = elementosEscena().length;
+    escena3d.ir((estado.activo + 1) % total);
+  }, AUTO.cada);
+}
+
+function paraAuto() {
+  if (!autoEnMarcha) return;
+  autoEnMarcha = false;
+  clearInterval(tickAuto);
+  $("aviso-auto").hidden = true;
+}
+
+function reprogramaAuto() {
+  clearTimeout(esperaAuto);
+  esperaAuto = setTimeout(arrancaAuto, AUTO.espera);
+}
+
+["pointerdown", "keydown", "wheel", "touchstart"].forEach((ev) =>
+  addEventListener(ev, () => { paraAuto(); reprogramaAuto(); }, { passive: true }));
+addEventListener("pointermove", () => {
+  const ahora = Date.now();
+  if (ahora - ultimoAviso < 1000) return;                 // no reprogramar en cada píxel
+  ultimoAviso = ahora;
+  paraAuto(); reprogramaAuto();
+}, { passive: true });
+document.addEventListener("visibilitychange", () => { if (document.hidden) paraAuto(); else reprogramaAuto(); });
+
+if (params.get("auto") === "1") setTimeout(arrancaAuto, 1200); else reprogramaAuto();
 
 </script>
 </body>

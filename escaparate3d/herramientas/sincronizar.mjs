@@ -6,6 +6,7 @@
 //    node escaparate3d/herramientas/sincronizar.mjs
 //    node escaparate3d/herramientas/sincronizar.mjs --sin-fotos   (solo datos)
 //    node escaparate3d/herramientas/sincronizar.mjs --refotos     (rebaja las ya bajadas)
+//    node escaparate3d/herramientas/sincronizar.mjs --maxfotos 10  (fotos por inmueble, 6 por defecto)
 //    node escaparate3d/herramientas/sincronizar.mjs --dry         (enseña sin escribir)
 //
 //  Qué hace y qué NO hace:
@@ -14,6 +15,9 @@
 //     lo que no consta en la web, se queda a null.
 //   - Actualiza precio, título, metros, habitaciones y baños de cada anuncio y
 //     le pone la fecha de comprobación (campo "verificado").
+//   - Entra en la ficha de cada inmueble y se trae TODAS sus fotos (hasta el
+//     máximo) para que la galería del escaparate funcione sin depender de la
+//     web oficial.
 //   - Conserva lo que hayas escrito a mano (descripción, planta, fotos extra).
 //   - Un inmueble que ya no aparece en la web NO se borra: se marca
 //     "activo": false y deja de salir en el escaparate, pero queda el histórico.
@@ -23,6 +27,7 @@ import { writeFile, readFile, mkdir, access } from "node:fs/promises";
 import { dirname, join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { obtenerCartera } from "../../lib/cartera.js";
+import { extraeFotos } from "../../lib/fotos-ficha.js";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const CARPETA = join(AQUI, "..");
@@ -31,6 +36,9 @@ const FOTOS = join(CARPETA, "fotos");
 
 const opciones = new Set(process.argv.slice(2));
 const sinFotos = opciones.has("--sin-fotos");
+const argumentos = process.argv.slice(2);
+const posicion = argumentos.indexOf("--maxfotos");
+const MAX_FOTOS = posicion >= 0 ? Math.max(1, parseInt(argumentos[posicion + 1], 10) || 6) : 6;
 const refotos = opciones.has("--refotos");
 const enSeco = opciones.has("--dry");
 
@@ -60,6 +68,25 @@ async function bajaFoto(url, nombre) {
   await mkdir(FOTOS, { recursive: true });
   await writeFile(destino, bytes);
   return relativa;
+}
+
+// Entra en la ficha del inmueble y devuelve todas sus fotos.
+async function fotosDeLaFicha(url) {
+  const ctrl = new AbortController();
+  const temporizador = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const r = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+        "Accept-Language": "es-ES,es;q=0.9",
+      },
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return extraeFotos(await r.text(), url, MAX_FOTOS);
+  } finally {
+    clearTimeout(temporizador);
+  }
 }
 
 async function leeActual() {
@@ -94,13 +121,26 @@ const main = async () => {
     const antes = previos.get(k) || {};
 
     let imagenes = Array.isArray(antes.imagenes) ? [...antes.imagenes] : [];
-    if (!sinFotos && it.foto) {
-      const nombre = babel(it.ref || it.titulo) + "-01";
-      try {
-        const ruta = await bajaFoto(it.foto, nombre);
-        if (!imagenes.includes(ruta)) { imagenes.unshift(ruta); fotosNuevas++; }
-      } catch (e) {
-        console.warn(`  foto de ${it.ref || it.titulo}: ${e.message}`);
+    if (!sinFotos) {
+      const raiz = babel(it.ref || it.titulo);
+      // Primero la ficha completa (todas las fotos); si falla, la del listado.
+      let origenes = [];
+      if (it.url) {
+        try {
+          origenes = await fotosDeLaFicha(it.url);
+        } catch (e) {
+          console.warn(`  ficha de ${it.ref || it.titulo}: ${e.message}`);
+        }
+      }
+      if (!origenes.length && it.foto) origenes = [it.foto];
+      for (const [n, origen] of origenes.slice(0, MAX_FOTOS).entries()) {
+        const nombre = `${raiz}-${String(n + 1).padStart(2, "0")}`;
+        try {
+          const ruta = await bajaFoto(origen, nombre);
+          if (!imagenes.includes(ruta)) { imagenes.push(ruta); fotosNuevas++; }
+        } catch (e) {
+          console.warn(`  foto ${n + 1} de ${it.ref || it.titulo}: ${e.message}`);
+        }
       }
     }
 
