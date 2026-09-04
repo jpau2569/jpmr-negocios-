@@ -1,29 +1,78 @@
 {
-  "id": "/sol-niebla-agua/",
+  "id": "./",
   "name": "Sol Niebla y Agua — El tiempo en Asturias",
   "short_name": "Sol Niebla Agua",
   "description": "Oviedo, Mieres y Gijón comparados en un vistazo: sol, niebla y agua interpretados para decidir si sales, conduces, haces fotos o enseñas pisos.",
   "start_url": "app.html",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#f4f3ef",
   "theme_color": "#f4f3ef",
   "lang": "es-ES",
   "dir": "ltr",
-  "categories": ["weather", "utilities", "lifestyle"],
+  "categories": [
+    "weather",
+    "utilities",
+    "lifestyle"
+  ],
   "icons": [
-    { "src": "icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icono-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "icono-monocromo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "monochrome" }
+    {
+      "src": "icono-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icono-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icono-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icono-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icono.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icono-monocromo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "monochrome"
+    }
   ],
   "shortcuts": [
-    { "name": "Modo Carretera", "short_name": "Carretera", "url": "app.html?modo=carretera" },
-    { "name": "Modo Visitas", "short_name": "Visitas", "url": "app.html?modo=visitas" },
-    { "name": "Modo Fotos", "short_name": "Fotos", "url": "app.html?modo=fotos" }
+    {
+      "name": "Modo Carretera",
+      "short_name": "Carretera",
+      "url": "app.html?modo=carretera"
+    },
+    {
+      "name": "Modo Visitas",
+      "short_name": "Visitas",
+      "url": "app.html?modo=visitas"
+    },
+    {
+      "name": "Modo Fotos",
+      "short_name": "Fotos",
+      "url": "app.html?modo=fotos"
+    }
   ]
 }

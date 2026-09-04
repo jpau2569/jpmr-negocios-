@@ -6,12 +6,13 @@
      guardada, para que la app siga siendo útil sin cobertura.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'sna-v2.2.0';
+const VERSION = 'sna-v2.3.0';
 const CASCO  = `${VERSION}-casco`;
 const DATOS  = `${VERSION}-datos`;
 
 const RECURSOS = [
   './',
+  './index.html',
   './app.html',
   './styles.css',
   './app.js',
@@ -29,12 +30,19 @@ const RECURSOS = [
   './icono-maskable-512.png'
 ];
 
+/* Se guardan de uno en uno a propósito: `addAll` es todo o nada, así que un
+   solo recurso que falte (por ejemplo un icono aún no generado, o una ruta
+   que el hosting sirva distinto) dejaba a la app entera sin modo offline. */
 self.addEventListener('install', evento => {
-  evento.waitUntil(
-    caches.open(CASCO)
-      .then(c => c.addAll(RECURSOS))
-      .then(() => self.skipWaiting())
-  );
+  evento.waitUntil((async () => {
+    const cache = await caches.open(CASCO);
+    const resultados = await Promise.allSettled(RECURSOS.map(r => cache.add(r)));
+    const fallidos = resultados
+      .map((r, i) => r.status === 'rejected' ? RECURSOS[i] : null)
+      .filter(Boolean);
+    if (fallidos.length) console.warn('[SNA] sin cachear:', fallidos.join(', '));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', evento => {

@@ -15,7 +15,7 @@ export const CONFIG = {
   rutaApi: '/api/tiempo',   // backend propio; si no existe, se cae a Open-Meteo
   horasVista: 12,          // franjas mostradas en "Próximas horas"
   zonaHoraria: 'Europe/Madrid',
-  version: '2.2.0'
+  version: '2.3.0'
 };
 
 export const CIUDADES = [

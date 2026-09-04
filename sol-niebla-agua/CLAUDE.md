@@ -51,6 +51,9 @@ El código está separado por capas. Cada una solo conoce a la de debajo:
 - `service-worker.js`: caché y experiencia instalable
 - `herramientas/generar-iconos.mjs`: regenera los PNG de los iconos
 - `api/tiempo.js`: backend serverless (AEMET + Open-Meteo)
+- `index.html`: redirección a `app.html`. No es adorno: sin él, un hosting
+  que no liste directorios (GitHub Pages) devuelve 404 en la raíz de la
+  carpeta y el service worker, que cachea `./`, no llegaba a instalarse.
 - `vercel.json`: despliegue de esta carpeta como proyecto propio
 - `package.json`: solo declara `"type": "module"`. Sin él, al desplegar
   con Root Directory = `sol-niebla-agua`, Vercel trata `api/tiempo.js` como
@@ -62,6 +65,9 @@ reintroducir ese ciclo.
 
 Al tocar cualquier `.js`, añadirlo a la lista `RECURSOS` del service worker y
 subir su `VERSION`, o el móvil seguirá sirviendo la versión vieja.
+
+El service worker guarda los recursos de uno en uno a propósito: `addAll` es
+todo o nada y un solo archivo que falte dejaba a la app sin modo offline.
 
 ## Ciudades objetivo
 
