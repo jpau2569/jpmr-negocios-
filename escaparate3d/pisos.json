@@ -1,0 +1,7 @@
+{
+  "negocio": "Asesoría Castresana",
+  "web": "https://www.asesoriacastresana.com",
+  "actualizado": null,
+  "nota": "Se rellena con: node escaparate3d/herramientas/sincronizar.mjs (lee la web oficial y descarga las fotos a escaparate3d/fotos/). Mientras esté vacío, el escaparate lee /api/escaparate en vivo. Esquema comentado en pisos.ejemplo.json.",
+  "inmuebles": []
+}

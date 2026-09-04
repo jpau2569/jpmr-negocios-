@@ -1,0 +1,1753 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Pisos en Oviedo y Asturias · Asesoría Castresana</title>
+<meta name="description" content="Escaparate 3D de los inmuebles en venta y alquiler de Asesoría Castresana (Oviedo). Marca los que te interesan y pídenos visita por WhatsApp o por correo en un clic." />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Pisos en Oviedo y Asturias · Asesoría Castresana" />
+<meta property="og:description" content="Escaparate 3D de nuestra cartera. Elige los pisos que te interesan y pide visita por WhatsApp o correo." />
+<meta name="theme-color" content="#0b0f14" />
+<!--
+  ============================================================================
+   ESCAPARATE 3D · Asesoría Castresana
+  ----------------------------------------------------------------------------
+   Web de una sola página con la cartera de inmuebles en un carrusel 3D (WebGL),
+   pensada para subirse tal cual a cualquier hosting (Vercel, Hostinger…).
+
+   Datos (cascada, de más fiable a menos):
+     1. pisos.json          → datos y fotos PROPIOS (no caducan nunca)
+     2. /api/escaparate     → lectura en vivo de www.asesoriacastresana.com
+     3. respaldo embebido   → la cartera guardada en este archivo
+
+   Parámetros por URL:
+     ?fuente=json|api|respaldo   fuerza un origen de datos concreto
+     ?op=venta|alquiler          abre filtrado por operación
+     ?ref=PIS0160                abre con ese inmueble seleccionado
+     ?2d=1                       fuerza la lista 2D (sin 3D)
+
+   Contacto: todo el texto real vive en el HTML (no dentro del canvas) para que
+   sea accesible, indexable y clicable. El canvas es decorativo.
+
+   Para reutilizar esta plantilla en otro negocio, edita SOLO el bloque CONFIG
+   del <script> del final.
+  ============================================================================
+-->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --fondo:#0b0f14; --fondo2:#131a22; --acento:#c9a227; --texto:#f4f1ea; --apagado:#9aa5b1;
+    --linea:rgba(244,241,234,.16);
+    --display:"Fraunces",Georgia,serif; --ui:"Inter",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{margin:0;min-height:100%;background:var(--fondo);color:var(--texto);font-family:var(--ui);-webkit-font-smoothing:antialiased}
+  body{overflow:hidden}
+  body.sin3d{overflow:auto}
+  img{max-width:100%}
+  button{font:inherit;color:inherit}
+
+  /* ---------- Escena 3D ---------- */
+  #escena{position:fixed;inset:0;display:block;touch-action:none}
+  .velo{position:fixed;inset:0;pointer-events:none;background:
+    radial-gradient(120% 90% at 50% 8%,transparent 42%,rgba(0,0,0,.6) 100%),
+    linear-gradient(180deg,rgba(5,8,15,.85),transparent 26%,transparent 46%,rgba(5,8,15,.92))}
+  body.sin3d #escena,body.sin3d .velo,body.sin3d .escenario,body.sin3d .flecha{display:none}
+
+  /* ---------- Capa de interfaz ---------- */
+  .ui{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:space-between;
+      padding:clamp(14px,2.4vw,32px);pointer-events:none;gap:12px}
+  .ui a,.ui button,.ui select,.ui input{pointer-events:auto}
+  body.sin3d .ui{position:static;min-height:0;padding-bottom:0}
+
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .marca{font-family:var(--display);font-weight:800;font-size:clamp(19px,2.4vw,28px);line-height:1.05;margin:0}
+  .marca span{display:block;font-family:var(--ui);font-weight:500;font-size:11px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--acento);margin-top:6px}
+  .acciones{display:flex;gap:8px;flex-wrap:wrap}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--linea);
+    background:rgba(255,255,255,.07);color:var(--texto);padding:10px 16px;border-radius:999px;text-decoration:none;
+    font-size:14px;font-weight:500;cursor:pointer;backdrop-filter:blur(10px);transition:background .2s,border-color .2s,color .2s}
+  .btn:hover,.btn:focus-visible{background:var(--acento);border-color:var(--acento);color:#10131a}
+  .btn.solido{background:var(--acento);border-color:var(--acento);color:#10131a;font-weight:600}
+  .btn.solido:hover,.btn.solido:focus-visible{filter:brightness(1.12)}
+  .btn.marcado{background:rgba(201,162,39,.2);border-color:var(--acento);color:var(--acento)}
+  .btn[disabled],.btn[aria-disabled="true"]{opacity:.4;pointer-events:none}
+  .btn.pequeno{padding:8px 13px;font-size:13px}
+  :focus-visible{outline:2px solid var(--acento);outline-offset:3px}
+
+  /* ---------- Filtros ---------- */
+  .filtros{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .chip{border:1px solid var(--linea);background:rgba(255,255,255,.05);color:var(--apagado);
+    padding:7px 14px;border-radius:999px;font-size:13px;cursor:pointer}
+  .chip[aria-pressed="true"]{background:var(--acento);border-color:var(--acento);color:#10131a;font-weight:600}
+  .filtros select{border:1px solid var(--linea);background:rgba(255,255,255,.05);color:var(--texto);
+    padding:7px 12px;border-radius:999px;font-size:13px}
+  .filtros select option{background:var(--fondo2);color:var(--texto)}
+
+  /* ---------- Ficha del inmueble activo (sobre el 3D) ---------- */
+  .escenario{flex:1;display:flex;align-items:flex-end;justify-content:center;min-height:0;padding-bottom:6px}
+  .ficha{text-align:center;max-width:min(680px,92vw)}
+  .ficha .etiqueta{margin:0 0 6px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--acento)}
+  .ficha h2{font-family:var(--display);font-size:clamp(21px,3.4vw,40px);margin:0 0 6px;line-height:1.1}
+  .ficha .datos{margin:0 0 4px;color:var(--apagado);font-size:clamp(13px,1.5vw,16px)}
+  .ficha .precio{margin:0 0 14px;font-size:clamp(20px,2.6vw,30px);font-weight:700;color:var(--acento)}
+  .ficha .precio small{font-size:.55em;font-weight:500;color:var(--apagado)}
+  .ficha .cta{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .ficha .verificado{margin:10px 0 0;font-size:11px;color:var(--apagado)}
+
+  .flecha{position:fixed;top:50%;transform:translateY(-50%);z-index:3;width:52px;height:52px;border-radius:50%;
+    border:1px solid var(--linea);background:rgba(11,15,20,.55);color:var(--texto);font-size:26px;line-height:1;
+    cursor:pointer;backdrop-filter:blur(10px)}
+  .flecha:hover:not([disabled]){background:var(--acento);color:#10131a;border-color:var(--acento)}
+  .flecha[disabled]{opacity:.25;cursor:default}
+  .flecha.izq{left:clamp(8px,2vw,26px)} .flecha.der{right:clamp(8px,2vw,26px)}
+
+  footer.pie{position:fixed;left:0;right:0;bottom:0;z-index:2;display:flex;justify-content:space-between;
+    gap:10px 20px;flex-wrap:wrap;font-size:12px;color:var(--apagado);
+    padding:10px clamp(14px,3vw,32px);background:linear-gradient(180deg,transparent,rgba(5,8,15,.85))}
+  footer.pie a{color:var(--apagado)}
+  body.con-seleccion footer.pie{display:none}
+  .escenario{padding-bottom:52px}
+
+  /* ---------- Lista 2D: móvil, sin WebGL y SEO ---------- */
+  .lista2d{display:none;padding:16px clamp(14px,3vw,32px) 140px;background:linear-gradient(180deg,var(--fondo),var(--fondo2))}
+  body.sin3d .lista2d{display:block}
+  .lista2d h2{font-family:var(--display);font-size:22px;margin:22px 0 14px}
+  .rejilla{list-style:none;margin:0;padding:0;display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+  .tarjeta{border:1px solid var(--linea);border-radius:18px;overflow:hidden;background:rgba(255,255,255,.04);display:flex;flex-direction:column}
+  .tarjeta .foto{aspect-ratio:4/3;background:linear-gradient(140deg,#22303d,#0e151d);position:relative;overflow:hidden}
+  .tarjeta .foto img{width:100%;height:100%;object-fit:cover;display:block}
+  .tarjeta .foto .sinfoto{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:var(--apagado);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+  .tarjeta .op{position:absolute;top:10px;left:10px;background:rgba(11,15,20,.78);border:1px solid var(--linea);
+    color:var(--acento);font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:5px 10px;border-radius:999px}
+  .tarjeta .cuerpo{padding:14px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .tarjeta h3{font-family:var(--display);font-size:18px;margin:0;line-height:1.2}
+  .tarjeta .datos{margin:0;color:var(--apagado);font-size:13px}
+  .tarjeta .precio{margin:2px 0 8px;font-size:20px;font-weight:700;color:var(--acento)}
+  .tarjeta .cta{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+
+  /* ---------- Barra de "me interesa" ---------- */
+  .barra{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;align-items:center;justify-content:center;
+    gap:10px;flex-wrap:wrap;padding:12px clamp(12px,3vw,28px);background:rgba(8,11,16,.94);
+    border-top:1px solid var(--linea);backdrop-filter:blur(14px)}
+  .barra[hidden]{display:none}
+  .barra .cuenta{font-size:14px;font-weight:600}
+  .barra .cuenta small{display:block;font-weight:400;color:var(--apagado);font-size:12px}
+
+  /* ---------- Diálogo de contacto ---------- */
+  dialog{border:1px solid var(--linea);border-radius:20px;background:var(--fondo2);color:var(--texto);
+    padding:0;width:min(520px,94vw);max-height:88vh;overflow:auto;overscroll-behavior:contain}
+  dialog::backdrop{background:rgba(4,6,10,.72)}
+  .dlg{padding:22px}
+  .dlg h2{font-family:var(--display);font-size:23px;margin:0 0 4px}
+  .dlg p.sub{margin:0 0 16px;color:var(--apagado);font-size:14px}
+  .dlg ul.sel{list-style:none;margin:0 0 16px;padding:12px;border:1px solid var(--linea);border-radius:14px;
+    max-height:150px;overflow:auto;font-size:13px;display:grid;gap:6px;background:rgba(0,0,0,.2)}
+  .dlg label{display:block;font-size:12px;color:var(--apagado);margin:10px 0 4px}
+  .dlg input,.dlg textarea,.dlg select{width:100%;border:1px solid var(--linea);border-radius:12px;
+    background:rgba(255,255,255,.05);color:var(--texto);padding:11px 13px;font:inherit;font-size:14px}
+  .dlg textarea{min-height:74px;resize:vertical}
+  .dlg .envios{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+  .dlg .envios .btn{flex:1 1 160px}
+  .dlg .aviso{margin:14px 0 0;font-size:11px;color:var(--apagado);line-height:1.5}
+  .dlg .cerrar{position:sticky;top:0;float:right;margin:-6px -6px 0 0;width:34px;height:34px;border-radius:50%;
+    background:rgba(19,26,34,.9);border:1px solid var(--linea);color:var(--apagado);font-size:20px;line-height:1;cursor:pointer;z-index:2}
+  .dlg .cerrar:hover{color:var(--texto)}
+
+  /* ---------- Guía de compraventa ---------- */
+  dialog.ancho{width:min(680px,96vw)}
+  .pestanas{display:flex;gap:8px;margin:0 0 14px}
+  .pestanas .chip{flex:1;justify-content:center;text-align:center;padding:10px 14px}
+  .progreso{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:12px;color:var(--apagado)}
+  .progreso .via{flex:1;height:6px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+  .progreso .via i{display:block;height:100%;width:0;background:var(--acento);transition:width .3s}
+  .checklist{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:8px}
+  .checklist li{border:1px solid var(--linea);border-radius:14px;padding:11px 13px;background:rgba(0,0,0,.18)}
+  .checklist li.listo{border-color:rgba(201,162,39,.55);background:rgba(201,162,39,.09)}
+  .checklist label{display:flex;gap:10px;align-items:flex-start;margin:0;font-size:14px;font-weight:600;color:var(--texto);cursor:pointer}
+  .checklist input{width:18px;height:18px;flex:0 0 auto;margin-top:1px;accent-color:var(--acento)}
+  .checklist p{margin:6px 0 0 28px;font-size:12.5px;color:var(--apagado);line-height:1.55}
+  .checklist .cuando{margin-left:8px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--acento);font-weight:600}
+  .calc{border:1px solid var(--linea);border-radius:16px;padding:14px;background:rgba(0,0,0,.2)}
+  .calc h3{font-family:var(--display);font-size:18px;margin:0 0 4px}
+  .calc .pista{margin:0 0 12px;font-size:12px;color:var(--apagado);line-height:1.5}
+  .calc .campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px}
+  .calc .campos label{margin:0 0 4px}
+  .resultado{margin-top:14px;display:grid;gap:6px;font-size:14px}
+  .resultado .fila{display:flex;justify-content:space-between;gap:12px;color:var(--apagado)}
+  .resultado .fila b{color:var(--texto);font-variant-numeric:tabular-nums}
+  .resultado .total{border-top:1px solid var(--linea);margin-top:5px;padding-top:9px;font-size:15px}
+  .resultado .total b{color:var(--acento);font-size:19px}
+  .tarjeta.guia{border-color:rgba(201,162,39,.5);background:linear-gradient(160deg,rgba(201,162,39,.14),rgba(255,255,255,.03))}
+  .tarjeta.guia .cuerpo{padding:18px}
+  .tarjeta.guia .eti{margin:0 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--acento);font-weight:600}
+
+  /* ---------- Galería de fotos ---------- */
+  dialog.galeria{width:min(1040px,96vw);background:#0a0e13}
+  .visor{position:relative;background:#05080d;aspect-ratio:16/10;max-height:58vh;
+    display:flex;align-items:center;justify-content:center}
+  .visor img{width:100%;height:100%;object-fit:contain;display:block}
+  .visor .estado{position:absolute;color:var(--apagado);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+  .gal-nav{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;
+    border:1px solid var(--linea);background:rgba(11,15,20,.72);color:var(--texto);font-size:24px;line-height:1;cursor:pointer;backdrop-filter:blur(8px)}
+  .gal-nav:hover:not([disabled]){background:var(--acento);color:#10131a;border-color:var(--acento)}
+  .gal-nav[disabled]{opacity:.25;cursor:default}
+  .gal-nav.izq{left:10px} .gal-nav.der{right:10px}
+  .gal-cuenta{position:absolute;right:12px;bottom:12px;background:rgba(5,8,13,.82);border:1px solid var(--linea);
+    border-radius:999px;padding:5px 12px;font-size:12px;color:var(--apagado)}
+  .minis{display:flex;gap:8px;overflow-x:auto;padding:10px 14px;background:#080b10}
+  .minis button{flex:0 0 auto;width:78px;height:56px;padding:0;border:2px solid transparent;border-radius:9px;
+    overflow:hidden;background:none;cursor:pointer}
+  .minis button[aria-current="true"]{border-color:var(--acento)}
+  .minis img{width:100%;height:100%;object-fit:cover;display:block}
+  .gal-pie{padding:14px 18px 18px;display:flex;gap:16px;justify-content:space-between;align-items:flex-end;flex-wrap:wrap}
+  .gal-pie h3{font-family:var(--display);font-size:20px;margin:0 0 4px;line-height:1.2}
+  .gal-pie p{margin:0;color:var(--apagado);font-size:13px}
+  .gal-pie .precio{margin-top:6px;color:var(--acento);font-weight:700;font-size:19px}
+  button.foto{border:0;padding:0;width:100%;display:block;font:inherit;color:inherit;text-align:left;cursor:zoom-in}
+
+  /* ---------- Comparador ---------- */
+  .envoltorio-tabla{overflow-x:auto;border:1px solid var(--linea);border-radius:14px}
+  .comparar{width:100%;border-collapse:collapse;font-size:13px}
+  .comparar th,.comparar td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--linea);white-space:nowrap}
+  .comparar tbody tr:last-child th,.comparar tbody tr:last-child td{border-bottom:0}
+  .comparar th[scope="row"]{color:var(--apagado);font-weight:500;position:sticky;left:0;background:var(--fondo2)}
+  .comparar thead th{font-family:var(--display);font-size:14px;white-space:normal;min-width:160px;vertical-align:top;line-height:1.25}
+  .comparar thead th small{display:block;font-family:var(--ui);font-size:11px;font-weight:400;color:var(--apagado);margin-top:3px}
+  .comparar td.mejor{color:var(--acento);font-weight:700}
+  .comparar td.mejor::after{content:" ✓";font-size:11px}
+
+  /* ---------- Modo escaparate ---------- */
+  #aviso-auto{position:fixed;left:clamp(12px,3vw,28px);bottom:52px;z-index:4;display:flex;align-items:center;gap:8px;
+    padding:8px 14px;border-radius:999px;border:1px solid rgba(201,162,39,.5);background:rgba(11,15,20,.75);
+    color:var(--acento);font-size:12px;letter-spacing:.1em;text-transform:uppercase;backdrop-filter:blur(8px)}
+
+  .cargando{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:8;
+    background:var(--fondo);color:var(--apagado);font-size:14px;letter-spacing:.1em;text-transform:uppercase}
+  .cargando[hidden]{display:none}
+  .visualmente-oculto{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  @media (max-width:860px){
+    body{overflow:auto}
+    #escena,.velo,.escenario,.flecha{display:none}
+    .lista2d{display:block}
+    .ui{position:static;padding-bottom:0}
+    header{flex-direction:column;align-items:flex-start}
+    footer.pie{position:static;background:none;padding:22px clamp(14px,3vw,32px) 120px}
+    body.con-seleccion footer.pie{display:flex}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<canvas id="escena" aria-hidden="true"></canvas>
+<div class="velo" aria-hidden="true"></div>
+
+<div class="cargando" id="cargando">Cargando la cartera…</div>
+
+<div class="ui">
+  <header>
+    <h1 class="marca">Asesoría Castresana<span id="claim">Inmobiliaria en Oviedo</span></h1>
+    <nav class="acciones" aria-label="Contacto directo">
+      <a class="btn" id="tel-cabecera" href="tel:+34985210468">Llamar</a>
+      <a class="btn" id="mail-cabecera" href="mailto:asesoriacastresana@gmail.com">Escribir</a>
+      <button class="btn" id="abrir-guia">Comprar o vender</button>
+      <a class="btn solido" id="wasap-cabecera" href="#" hidden>WhatsApp</a>
+    </nav>
+  </header>
+
+  <div class="filtros" role="group" aria-label="Filtrar inmuebles">
+    <button class="chip" data-op="todas" aria-pressed="true">Todo</button>
+    <button class="chip" data-op="venta" aria-pressed="false">Venta</button>
+    <button class="chip" data-op="alquiler" aria-pressed="false">Alquiler</button>
+    <label class="visualmente-oculto" for="zona">Zona</label>
+    <select id="zona" aria-label="Zona"><option value="">Todas las zonas</option></select>
+    <span id="contador" class="chip" style="cursor:default" aria-live="polite"></span>
+  </div>
+
+  <div class="escenario">
+    <article class="ficha" id="ficha" aria-live="polite">
+      <p class="etiqueta" id="f-etiqueta">Cartera de Asesoría Castresana</p>
+      <h2 id="f-titulo">Elige tu próxima casa</h2>
+      <p class="datos" id="f-datos">Pisos, casas y locales en Oviedo, Mieres y alrededores.</p>
+      <p class="precio" id="f-precio"></p>
+      <div class="cta">
+        <button class="btn" id="f-fotos" hidden>Ver fotos</button>
+        <a class="btn" id="f-ficha" href="#lista" hidden>Ver ficha completa</a>
+        <button class="btn" id="f-interesa" hidden>Me interesa</button>
+        <button class="btn solido" id="f-visita" hidden>Solicitar visita</button>
+        <button class="btn solido" id="f-guia" hidden>Abrir la guía</button>
+      </div>
+      <p class="verificado" id="f-verificado"></p>
+    </article>
+  </div>
+</div>
+
+<button class="flecha izq" id="anterior" aria-label="Inmueble anterior">‹</button>
+<button class="flecha der" id="siguiente" aria-label="Inmueble siguiente">›</button>
+
+<main class="lista2d" id="lista">
+  <h2 id="titulo-lista">Inmuebles disponibles</h2>
+  <ul class="rejilla" id="rejilla"></ul>
+</main>
+
+<footer class="pie">
+  <span>C/ Cabo Noval, 8 Bajo 2 · 33007 Oviedo · <a href="tel:+34985210468">985 21 04 68</a></span>
+  <span><a href="https://www.asesoriacastresana.com" rel="noopener">www.asesoriacastresana.com</a> · <span id="pie-horario">L-V 10:00-13:30 y 16:30-19:30</span></span>
+</footer>
+
+<div class="barra" id="barra" hidden>
+  <span class="cuenta" id="barra-cuenta">0 inmuebles marcados<small>Te enviamos solo estos, sin llamadas de más.</small></span>
+  <button class="btn" id="barra-comparar" hidden>Comparar</button>
+  <button class="btn solido" id="barra-pedir">Pedir visita de los marcados</button>
+  <button class="btn pequeno" id="barra-limpiar">Vaciar</button>
+</div>
+
+<dialog id="dlg" aria-labelledby="dlg-titulo">
+  <form method="dialog" class="dlg" id="dlg-form">
+    <button type="button" class="cerrar" id="dlg-cerrar" aria-label="Cerrar">×</button>
+    <h2 id="dlg-titulo">Solicitar visita</h2>
+    <p class="sub" id="dlg-sub">Dinos cómo localizarte y te confirmamos día y hora.</p>
+
+    <ul class="sel" id="dlg-lista"></ul>
+
+    <label for="dlg-nombre">Tu nombre</label>
+    <input id="dlg-nombre" name="nombre" autocomplete="name" maxlength="120" placeholder="Nombre y apellidos" />
+
+    <label for="dlg-telefono">Teléfono</label>
+    <input id="dlg-telefono" name="telefono" type="tel" autocomplete="tel" maxlength="40" placeholder="Para avisarte de la visita" />
+
+    <label for="dlg-email">Correo (opcional)</label>
+    <input id="dlg-email" name="email" type="email" autocomplete="email" maxlength="200" placeholder="tucorreo@ejemplo.com" />
+
+    <label for="dlg-cuando">¿Cuándo te viene bien?</label>
+    <select id="dlg-cuando" name="cuando">
+      <option value="Mañanas entre semana">Mañanas entre semana</option>
+      <option value="Tardes entre semana">Tardes entre semana</option>
+      <option value="Sábado por la mañana">Sábado por la mañana</option>
+      <option value="Me da igual, llamadme">Me da igual, llamadme</option>
+    </select>
+
+    <label for="dlg-mensaje">Algo que debamos saber (opcional)</label>
+    <textarea id="dlg-mensaje" name="mensaje" maxlength="600" placeholder="Presupuesto, zona preferida, si necesitas financiación…"></textarea>
+
+    <div class="envios">
+      <button type="button" class="btn solido" id="dlg-wasap">Enviar por WhatsApp</button>
+      <button type="button" class="btn" id="dlg-mail">Enviar por correo</button>
+    </div>
+    <p class="aviso" id="dlg-aviso">Se abre tu WhatsApp o tu correo con el mensaje ya escrito: solo tienes que darle a enviar. Usamos tus datos únicamente para contestarte sobre estos inmuebles.</p>
+  </form>
+</dialog>
+
+<dialog id="guia" class="ancho" aria-labelledby="guia-titulo">
+  <div class="dlg">
+    <button type="button" class="cerrar" id="guia-cerrar" aria-label="Cerrar">×</button>
+    <h2 id="guia-titulo">Comprar o vender con todo en regla</h2>
+    <p class="sub">Los papeles que te va a pedir la notaría y lo que cuesta de verdad la operación. Marca lo que ya tengas: se queda guardado en este dispositivo.</p>
+
+    <div class="pestanas" role="group" aria-label="Qué vas a hacer">
+      <button type="button" class="chip" data-modo="compra" aria-pressed="true">Voy a comprar</button>
+      <button type="button" class="chip" data-modo="venta" aria-pressed="false">Voy a vender</button>
+    </div>
+
+    <div class="progreso"><span class="via"><i id="guia-via"></i></span><span id="guia-progreso"></span></div>
+    <ul class="checklist" id="guia-lista"></ul>
+    <section class="calc" id="guia-calc"></section>
+
+    <div class="envios">
+      <button type="button" class="btn solido" id="guia-wasap">Mandármelo por WhatsApp</button>
+      <button type="button" class="btn" id="guia-mail">Mandármelo por correo</button>
+    </div>
+    <p class="aviso">Orientativo. Los tipos de impuestos, las bonificaciones y lo que pide cada notaría cambian, y cada caso tiene lo suyo (herencias, VPO, no residentes, hipoteca sin cancelar). Antes de firmar, confírmalo con la notaría o con tu gestoría — o pásanoslo y te lo miramos sin compromiso.</p>
+  </div>
+</dialog>
+
+<dialog id="galeria" class="galeria" aria-labelledby="gal-titulo">
+  <div class="visor">
+    <img id="gal-img" alt="" />
+    <span class="estado" id="gal-estado" hidden>Cargando fotos…</span>
+    <button type="button" class="gal-nav izq" id="gal-ant" aria-label="Foto anterior">‹</button>
+    <button type="button" class="gal-nav der" id="gal-sig" aria-label="Foto siguiente">›</button>
+    <span class="gal-cuenta" id="gal-cuenta"></span>
+  </div>
+  <div class="minis" id="gal-minis"></div>
+  <div class="gal-pie">
+    <div>
+      <h3 id="gal-titulo"></h3>
+      <p id="gal-datos"></p>
+      <p class="precio" id="gal-precio"></p>
+    </div>
+    <div class="cta" style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn pequeno" id="gal-ficha" href="#" target="_blank" rel="noopener">Ver ficha</a>
+      <button type="button" class="btn pequeno" id="gal-interesa">Me interesa</button>
+      <button type="button" class="btn pequeno solido" id="gal-visita">Solicitar visita</button>
+      <button type="button" class="btn pequeno" id="gal-cerrar">Cerrar</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="comparador" class="ancho" aria-labelledby="cmp-titulo">
+  <div class="dlg">
+    <button type="button" class="cerrar" id="cmp-cerrar" aria-label="Cerrar">×</button>
+    <h2 id="cmp-titulo">Comparar los marcados</h2>
+    <p class="sub" id="cmp-sub"></p>
+    <div class="envoltorio-tabla"><table class="comparar" id="cmp-tabla"></table></div>
+    <p class="aviso">La cuota es orientativa: 80 % financiado a 25 años al 3 % de interés fijo. El precio por metro sale del precio y de la superficie construida que publica cada anuncio.</p>
+    <div class="envios">
+      <button type="button" class="btn solido" id="cmp-visita">Pedir visita de estos</button>
+      <button type="button" class="btn" id="cmp-vaciar">Vaciar la selección</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="aviso-auto" hidden>Modo escaparate · toca para tomar el mando</div>
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"RealEstateAgent","name":"Asesoría Castresana",
+"url":"https://www.asesoriacastresana.com","email":"asesoriacastresana@gmail.com","telephone":"+34985210468",
+"address":{"@type":"PostalAddress","streetAddress":"C/ Cabo Noval, 8 Bajo 2","addressLocality":"Oviedo","postalCode":"33007","addressRegion":"Asturias","addressCountry":"ES"},
+"areaServed":["Oviedo","Mieres","Asturias"],
+"openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"10:00","closes":"13:30"},{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"16:30","closes":"19:30"}]}
+</script>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.169.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.169.0/examples/jsm/"}}
+</script>
+
+<script type="module">
+/* ==========================================================================
+   CONFIG — edita SOLO este bloque para adaptar el escaparate a otro negocio
+   ========================================================================== */
+const CONFIG = {
+  marca: "Asesoría Castresana",
+  claim: "Inmobiliaria en Oviedo",
+  web: "https://www.asesoriacastresana.com",
+  contacto: {
+    telefono: "+34985210468",
+    telefonoTexto: "985 21 04 68",
+    email: "asesoriacastresana@gmail.com",
+    // WhatsApp: móvil en formato internacional SIN "+" ni espacios.
+    // Si se deja vacío, los botones de WhatsApp se ocultan solos y queda el correo.
+    whatsapp: "34672775721",
+    direccion: "C/ Cabo Noval, 8 Bajo 2 · 33007 Oviedo",
+    horario: "L-V 10:00-13:30 y 16:30-19:30",
+  },
+  colores: { fondo: 0x0b0f14, tarjeta: 0x18212b, acento: 0xc9a227, contra: 0x2f6bff },
+  // Tarjetas que se montan en la escena 3D. El resto siguen accesibles en la lista de abajo.
+  maxTarjetas3D: 26,
+  // Inmuebles que caben en un mensaje de WhatsApp / correo sin que se corte.
+  maxEnMensaje: 12,
+  // Origen de los datos, en cascada: el primero que devuelva inmuebles gana.
+  origenes: ["pisos.json", "/api/escaparate"],
+};
+
+/* ==========================================================================
+   Cartera de respaldo — última cartera conocida guardada en este archivo.
+   Solo se usa si pisos.json y /api/escaparate fallan, para que el escaparate
+   nunca aparezca vacío. No se inventa nada: si un dato no consta, va a null.
+   ========================================================================== */
+const RESPALDO = [
+  { referencia: "PIS0160", titulo: "Piso 4º exterior en El Fontán, junto al casco antiguo", operacion: "venta", zona: "Oviedo", precio: 330000, superficieConstruida: 99, habitaciones: 3, banos: 2 },
+  { referencia: null, titulo: "Piso súper céntrico en Plaza de América", operacion: "venta", zona: "Oviedo", precio: 270000, superficieConstruida: 80, habitaciones: null, banos: null },
+  { referencia: null, titulo: "Ático con ascensor en Calle Rosal · zona Parque San Francisco", operacion: "venta", zona: "Oviedo", precio: 145000, superficieConstruida: 51, habitaciones: 1, banos: 1 },
+  { referencia: "es1616045", titulo: "Piso a reformar con ascensor en Calle Rosal, centro de Oviedo", operacion: "venta", zona: "Oviedo", precio: null, superficieConstruida: 70, habitaciones: null, banos: null },
+  { referencia: null, titulo: "Piso 2º en zona Ayuntamiento con cocina independiente", operacion: "venta", zona: "Oviedo", precio: null, superficieConstruida: 50, habitaciones: 1, banos: 1 },
+  { referencia: null, titulo: "Piso de 3 habitaciones en San Pedro – Siana, Mieres", operacion: "venta", zona: "Mieres", precio: 120000, superficieConstruida: 90, habitaciones: 3, banos: 1 },
+  { referencia: null, titulo: "Piso con 2 baños en pleno centro, Calle Avilés, Mieres", operacion: "venta", zona: "Mieres", precio: null, superficieConstruida: 85, habitaciones: 2, banos: 2 },
+];
+
+/* ==========================================================================
+   Utilidades
+   ========================================================================== */
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const miles = (n) => Number(n).toLocaleString("es-ES");
+const escapa = (t) => String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const sinTildes = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const babel = (t) => sinTildes(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+function precioTexto(p) {
+  if (p.precioTexto) return p.precioTexto;
+  if (!p.precio) return "Precio a consultar";
+  return miles(p.precio) + " €" + (p.operacion === "alquiler" ? "/mes" : "");
+}
+
+function datosTexto(p) {
+  const partes = [];
+  if (p.superficieConstruida) partes.push(p.superficieConstruida + " m²");
+  if (p.habitaciones) partes.push(p.habitaciones + (p.habitaciones === 1 ? " habitación" : " habitaciones"));
+  if (p.banos) partes.push(p.banos + (p.banos === 1 ? " baño" : " baños"));
+  if (p.planta) partes.push("planta " + p.planta);
+  return partes.join(" · ");
+}
+
+/* ==========================================================================
+   Normalización: admite el esquema propio de pisos.json y el de /api/escaparate
+   ========================================================================== */
+function normaliza(bruto) {
+  const p = bruto || {};
+  const imagenes = []
+    .concat(Array.isArray(p.imagenes) ? p.imagenes : [])
+    .concat(p.imagen ? [p.imagen] : [])
+    .concat(p.foto ? [p.foto] : [])
+    .filter((v, i, a) => v && a.indexOf(v) === i);
+  const titulo = String(p.titulo || p.title || "Inmueble disponible").trim();
+  const referencia = p.referencia || p.ref || null;
+  return {
+    id: babel(referencia || p.url || titulo),
+    referencia,
+    titulo,
+    operacion: (p.operacion || "venta").toLowerCase() === "alquiler" ? "alquiler" : "venta",
+    zona: p.zona || p.localidad || null,
+    precio: Number.isFinite(p.precio) ? p.precio : null,
+    precioTexto: p.precioTexto || null,
+    habitaciones: p.habitaciones ?? null,
+    banos: p.banos ?? null,
+    superficieConstruida: p.superficieConstruida ?? p.m2 ?? null,
+    planta: p.planta ?? null,
+    descripcion: p.descripcion || null,
+    imagenes,
+    imagen: imagenes[0] || null,
+    url: p.url || null,
+    verificado: p.verificado || null,
+    activo: p.activo !== false,
+  };
+}
+
+/* ==========================================================================
+   Carga de datos en cascada
+   ========================================================================== */
+async function leeOrigen(url) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal, cache: "no-cache" });
+    if (!r.ok) return null;
+    const datos = await r.json();
+    const lista = Array.isArray(datos) ? datos : datos.inmuebles || datos.items || [];
+    return lista.length ? lista : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function cargaCartera() {
+  const forzado = params.get("fuente");
+  if (forzado === "respaldo") return { items: RESPALDO, origen: "respaldo" };
+  const origenes = forzado === "json" ? ["pisos.json"]
+    : forzado === "api" ? ["/api/escaparate"]
+    : CONFIG.origenes;
+  for (const url of origenes) {
+    const lista = await leeOrigen(url);
+    if (lista) return { items: lista, origen: url };
+  }
+  return { items: RESPALDO, origen: "respaldo" };
+}
+
+/* ==========================================================================
+   Estado
+   ========================================================================== */
+const CLAVE_INTERES = "castresana:interes";
+const estado = {
+  todos: [],
+  visibles: [],
+  activo: 0,
+  filtro: { operacion: params.get("op") || "todas", zona: "" },
+  interes: new Set(),
+  origen: null,
+};
+
+try {
+  const guardado = JSON.parse(localStorage.getItem(CLAVE_INTERES) || "[]");
+  if (Array.isArray(guardado)) guardado.forEach((id) => estado.interes.add(id));
+} catch { /* sin almacenamiento: la selección dura lo que la visita */ }
+
+function guardaInteres() {
+  try { localStorage.setItem(CLAVE_INTERES, JSON.stringify([...estado.interes])); } catch { /* da igual */ }
+}
+
+const seleccionados = () => estado.todos.filter((p) => estado.interes.has(p.id));
+
+/* ==========================================================================
+   Mensajes de contacto (WhatsApp y correo)
+   ========================================================================== */
+function lineaInmueble(p, i) {
+  const partes = [`${i + 1}) ${p.titulo}`, precioTexto(p)];
+  const d = datosTexto(p);
+  if (d) partes.push(d);
+  if (p.zona) partes.push(p.zona);
+  if (p.referencia) partes.push("ref " + p.referencia);
+  let linea = partes.join(" — ");
+  if (p.url) linea += "\n   " + p.url;
+  return linea;
+}
+
+function textoMensaje(lista, datos = {}) {
+  const recorte = lista.slice(0, CONFIG.maxEnMensaje);
+  const saludo = datos.nombre ? `Hola, soy ${datos.nombre}.` : "Hola,";
+  const cuerpo = [
+    `${saludo} Os escribo desde el escaparate de ${CONFIG.marca}.`,
+    "",
+    recorte.length === 1 ? "Me interesa este inmueble:" : `Me interesan estos ${recorte.length} inmuebles:`,
+    "",
+    recorte.map(lineaInmueble).join("\n"),
+  ];
+  if (lista.length > recorte.length) cuerpo.push(`(y ${lista.length - recorte.length} más marcados en la web)`);
+  cuerpo.push("");
+  if (datos.cuando) cuerpo.push("Cuándo me viene bien: " + datos.cuando);
+  if (datos.telefono) cuerpo.push("Mi teléfono: " + datos.telefono);
+  if (datos.email) cuerpo.push("Mi correo: " + datos.email);
+  if (datos.mensaje) cuerpo.push("", datos.mensaje);
+  cuerpo.push("", "¿Podemos ver alguno esta semana?");
+  return cuerpo.join("\n");
+}
+
+function asunto(lista) {
+  const refs = lista.map((p) => p.referencia).filter(Boolean).slice(0, 4).join(", ");
+  const base = lista.length === 1 ? "Me interesa un inmueble" : `Me interesan ${lista.length} inmuebles`;
+  return refs ? `${base} (${refs})` : base;
+}
+
+const hayWasap = () => Boolean(CONFIG.contacto.whatsapp);
+
+function abreWhatsApp(lista, datos) {
+  if (!lista.length) return;
+  const texto = encodeURIComponent(textoMensaje(lista, datos));
+  const url = hayWasap()
+    ? `https://wa.me/${CONFIG.contacto.whatsapp}?text=${texto}`
+    : `https://wa.me/?text=${texto}`; // sin número configurado: WhatsApp pide elegir contacto
+  window.open(url, "_blank", "noopener");
+}
+
+function abreCorreo(lista, datos) {
+  if (!lista.length) return;
+  const url = `mailto:${CONFIG.contacto.email}?subject=${encodeURIComponent(asunto(lista))}`
+    + `&body=${encodeURIComponent(textoMensaje(lista, datos))}`;
+  location.href = url;
+}
+
+// Registro del lead en el CRM (Supabase), reutilizando /api/lead. Si no está
+// configurado o falla, no pasa nada: el mensaje del cliente ya ha salido.
+function registraLead(datos, lista) {
+  if (!datos.email || !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(datos.email)) return;
+  const refs = lista.map((p) => p.referencia || p.titulo).slice(0, 5).join(" | ");
+  fetch("/api/lead", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origen: "escaparate3d",
+      nombre: datos.nombre || "",
+      email: datos.email,
+      telefono: datos.telefono || "",
+      tipo: "visita: " + refs,
+    }),
+  }).catch(() => { /* silencioso a propósito */ });
+}
+
+/* ==========================================================================
+   Interfaz: filtros, ficha activa, lista 2D y barra de seleccionados
+   ========================================================================== */
+let escena3d = null; // lo rellena la escena WebGL si arranca
+
+// Tarjeta fija que cierra el carrusel: la guía de compraventa (ver más abajo).
+const GUIA = {
+  id: "guia-notaria", __guia: true,
+  titulo: "Comprar o vender con todo en regla",
+  subtitulo: "Los papeles que pide la notaría y lo que cuesta de verdad.",
+  operacion: "guia",
+};
+const elementosEscena = () => estado.visibles.slice(0, CONFIG.maxTarjetas3D).concat([GUIA]);
+
+function aplicaFiltros(conservarId) {
+  const { operacion, zona } = estado.filtro;
+  estado.visibles = estado.todos.filter((p) => {
+    if (operacion !== "todas" && p.operacion !== operacion) return false;
+    if (zona && p.zona !== zona) return false;
+    return true;
+  });
+  const i = conservarId ? estado.visibles.findIndex((p) => p.id === conservarId) : -1;
+  estado.activo = i >= 0 ? i : 0;
+  $("contador").textContent = estado.visibles.length
+    ? `${estado.visibles.length} inmueble${estado.visibles.length === 1 ? "" : "s"}`
+    : "Sin resultados";
+  pintaLista2d();
+  pintaFicha();
+  if (escena3d) escena3d.montar(elementosEscena(), estado.activo);
+}
+
+function pintaZonas() {
+  const zonas = [...new Set(estado.todos.map((p) => p.zona).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+  $("zona").innerHTML = '<option value="">Todas las zonas</option>'
+    + zonas.map((z) => `<option value="${escapa(z)}">${escapa(z)}</option>`).join("");
+}
+
+function pintaFicha() {
+  const p = (escena3d ? elementosEscena() : estado.visibles)[estado.activo];
+  const ficha = $("f-ficha"), interesa = $("f-interesa"), visita = $("f-visita"), guia = $("f-guia");
+  const verFotos = $("f-fotos");
+  guia.hidden = true; verFotos.hidden = true;
+  if (p && p.__guia) {
+    $("f-etiqueta").textContent = "Guía práctica · gratis";
+    $("f-titulo").textContent = p.titulo;
+    $("f-datos").textContent = p.subtitulo;
+    $("f-precio").textContent = "";
+    $("f-verificado").textContent = "";
+    [ficha, interesa, visita].forEach((b) => (b.hidden = true));
+    guia.hidden = false;
+    return;
+  }
+  if (!p) {
+    $("f-etiqueta").textContent = "Cartera de " + CONFIG.marca;
+    $("f-titulo").textContent = estado.visibles.length ? "Elige tu próxima casa" : "No hay inmuebles con ese filtro";
+    $("f-datos").textContent = estado.visibles.length ? "" : "Prueba a quitar el filtro de operación o de zona.";
+    $("f-precio").textContent = "";
+    $("f-verificado").textContent = "";
+    [ficha, interesa, visita].forEach((b) => (b.hidden = true));
+    return;
+  }
+  const etiqueta = [p.operacion === "alquiler" ? "Alquiler" : "Venta", p.zona, p.referencia ? "ref " + p.referencia : null]
+    .filter(Boolean).join(" · ");
+  $("f-etiqueta").textContent = etiqueta;
+  $("f-titulo").textContent = p.titulo;
+  $("f-datos").textContent = datosTexto(p) || (p.descripcion || "");
+  $("f-precio").textContent = precioTexto(p);
+  $("f-verificado").textContent = p.verificado ? "Anuncio comprobado el " + fechaCorta(p.verificado) : "";
+
+  verFotos.hidden = !(p.imagen || p.url);
+  verFotos.textContent = (p.imagenes && p.imagenes.length > 1) ? `Ver ${p.imagenes.length} fotos` : "Ver fotos";
+  verFotos.onclick = () => abreGaleria(p);
+  ficha.hidden = !p.url;
+  if (p.url) { ficha.href = p.url; ficha.target = "_blank"; ficha.rel = "noopener"; }
+  interesa.hidden = false;
+  interesa.textContent = estado.interes.has(p.id) ? "✓ Marcado" : "Me interesa";
+  interesa.classList.toggle("marcado", estado.interes.has(p.id));
+  interesa.onclick = () => alternaInteres(p.id);
+  visita.hidden = false;
+  visita.onclick = () => abreDialogo([p]);
+}
+
+function fechaCorta(iso) {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleDateString("es-ES");
+}
+
+function pintaLista2d() {
+  const rejilla = $("rejilla");
+
+  const tarjetaGuia = `<li class="tarjeta guia">
+      <div class="cuerpo">
+        <p class="eti">Guía práctica · gratis</p>
+        <h3>Comprar o vender con todo en regla</h3>
+        <p class="datos">Los papeles que pide la notaría, los impuestos y lo que necesitas tener el día de la firma. Con calculadora.</p>
+        <div class="cta"><button class="btn pequeno solido" data-accion="guia">Abrir la guía</button></div>
+      </div>
+    </li>`;
+  const fichas = estado.visibles.map((p) => {
+    const marcado = estado.interes.has(p.id);
+    const foto = p.imagen
+      ? `<img src="${escapa(fotoServida(p.imagen))}" data-alterna="${escapa(p.imagen)}"
+             alt="${escapa(p.titulo)}" loading="lazy" decoding="async" />`
+      : `<span class="sinfoto">Fotos en la ficha</span>`;
+    return `<li class="tarjeta" data-id="${escapa(p.id)}">
+      <button type="button" class="foto" data-accion="fotos" aria-label="Ver fotos de ${escapa(p.titulo)}">
+        ${foto}<span class="op">${p.operacion === "alquiler" ? "Alquiler" : "Venta"}</span></button>
+      <div class="cuerpo">
+        <h3>${escapa(p.titulo)}</h3>
+        <p class="datos">${escapa([datosTexto(p), p.zona].filter(Boolean).join(" · "))}</p>
+        <p class="precio">${escapa(precioTexto(p))}</p>
+        <div class="cta">
+          ${p.url ? `<a class="btn pequeno" href="${escapa(p.url)}" target="_blank" rel="noopener">Ver ficha</a>` : ""}
+          <button class="btn pequeno ${marcado ? "marcado" : ""}" data-accion="interes">${marcado ? "✓ Marcado" : "Me interesa"}</button>
+          <button class="btn pequeno solido" data-accion="visita">Visita</button>
+        </div>
+      </div>
+    </li>`;
+  }).join("");
+  rejilla.innerHTML = tarjetaGuia
+    + (fichas || '<li style="color:var(--apagado)">No hay inmuebles con ese filtro.</li>');
+
+  // Si /api/foto no existe (hosting sin backend), se prueba la URL original.
+  rejilla.querySelectorAll("img[data-alterna]").forEach((img) => {
+    img.addEventListener("error", () => {
+      const alterna = img.dataset.alterna;
+      if (alterna && !img.src.endsWith(alterna)) img.src = alterna;
+      else img.closest(".foto")?.insertAdjacentHTML("beforeend", '<span class="sinfoto">Fotos en la ficha</span>');
+    });
+  });
+}
+
+function pintaBarra() {
+  const lista = seleccionados();
+  const barra = $("barra");
+  barra.hidden = lista.length === 0;
+  document.body.classList.toggle("con-seleccion", lista.length > 0);
+  $("barra-cuenta").innerHTML = `${lista.length} inmueble${lista.length === 1 ? "" : "s"} marcado${lista.length === 1 ? "" : "s"}`
+    + `<small>Te enviamos solo estos, nada más.</small>`;
+  $("barra-comparar").hidden = lista.length < 2;
+}
+
+function alternaInteres(id) {
+  if (estado.interes.has(id)) estado.interes.delete(id); else estado.interes.add(id);
+  guardaInteres();
+  pintaFicha();
+  pintaLista2d();
+  pintaBarra();
+}
+
+/* ==========================================================================
+   Diálogo de solicitud de visita
+   ========================================================================== */
+const dlg = $("dlg");
+let listaDialogo = [];
+
+function abreDialogo(lista) {
+  listaDialogo = lista.filter(Boolean);
+  if (!listaDialogo.length) return;
+  $("dlg-titulo").textContent = listaDialogo.length === 1 ? "Solicitar visita" : `Solicitar visita · ${listaDialogo.length} inmuebles`;
+  $("dlg-lista").innerHTML = listaDialogo.map((p) =>
+    `<li>• ${escapa(p.titulo)} — <b>${escapa(precioTexto(p))}</b>${p.referencia ? " · ref " + escapa(p.referencia) : ""}</li>`
+  ).join("");
+  $("dlg-wasap").textContent = hayWasap() ? "Enviar por WhatsApp" : "Abrir en WhatsApp";
+  if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
+}
+
+function datosDelFormulario() {
+  return {
+    nombre: $("dlg-nombre").value.trim(),
+    telefono: $("dlg-telefono").value.trim(),
+    email: $("dlg-email").value.trim(),
+    cuando: $("dlg-cuando").value,
+    mensaje: $("dlg-mensaje").value.trim(),
+  };
+}
+
+$("dlg-cerrar").addEventListener("click", () => dlg.close());
+// Enter dentro del formulario no cierra el diálogo: se elige canal a propósito.
+$("dlg-form").addEventListener("submit", (e) => e.preventDefault());
+$("dlg-wasap").addEventListener("click", () => {
+  const datos = datosDelFormulario();
+  registraLead(datos, listaDialogo);
+  abreWhatsApp(listaDialogo, datos);
+  dlg.close();
+});
+$("dlg-mail").addEventListener("click", () => {
+  const datos = datosDelFormulario();
+  registraLead(datos, listaDialogo);
+  abreCorreo(listaDialogo, datos);
+  dlg.close();
+});
+
+/* ==========================================================================
+   Eventos de la interfaz
+   ========================================================================== */
+document.querySelectorAll(".chip[data-op]").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    estado.filtro.operacion = chip.dataset.op;
+    document.querySelectorAll(".chip[data-op]").forEach((c) =>
+      c.setAttribute("aria-pressed", String(c === chip)));
+    aplicaFiltros();
+  });
+});
+$("zona").addEventListener("change", (e) => { estado.filtro.zona = e.target.value; aplicaFiltros(); });
+
+$("rejilla").addEventListener("click", (e) => {
+  const boton = e.target.closest("button[data-accion]");
+  if (!boton) return;
+  if (boton.dataset.accion === "guia") return abreGuia();
+  const id = boton.closest(".tarjeta")?.dataset.id;
+  const p = estado.todos.find((x) => x.id === id);
+  if (!p) return;
+  if (boton.dataset.accion === "interes") alternaInteres(id);
+  else if (boton.dataset.accion === "fotos") abreGaleria(p);
+  else abreDialogo([p]);
+});
+
+$("barra-pedir").addEventListener("click", () => abreDialogo(seleccionados()));
+$("barra-limpiar").addEventListener("click", () => {
+  estado.interes.clear(); guardaInteres(); pintaFicha(); pintaLista2d(); pintaBarra();
+});
+
+$("anterior").addEventListener("click", () => escena3d && escena3d.mover(-1));
+$("siguiente").addEventListener("click", () => escena3d && escena3d.mover(1));
+const hayDialogoAbierto = () => Boolean(document.querySelector("dialog[open]"));
+
+addEventListener("keydown", (e) => {
+  if (hayDialogoAbierto() || !escena3d) return;
+  if (e.key === "ArrowLeft") { escena3d.mover(-1); e.preventDefault(); }
+  if (e.key === "ArrowRight") { escena3d.mover(1); e.preventDefault(); }
+});
+
+/* Contacto de cabecera y pie, tomados de CONFIG */
+$("claim").textContent = CONFIG.claim;
+$("tel-cabecera").href = "tel:" + CONFIG.contacto.telefono;
+$("mail-cabecera").href = "mailto:" + CONFIG.contacto.email
+  + "?subject=" + encodeURIComponent("Consulta desde el escaparate de " + CONFIG.marca);
+$("pie-horario").textContent = CONFIG.contacto.horario;
+if (hayWasap()) {
+  const b = $("wasap-cabecera");
+  b.hidden = false;
+  b.href = `https://wa.me/${CONFIG.contacto.whatsapp}?text=`
+    + encodeURIComponent(`Hola, os escribo desde la web de ${CONFIG.marca}. Quería consultaros una cosa.`);
+  b.target = "_blank"; b.rel = "noopener";
+}
+
+/* ==========================================================================
+   Escena 3D (Three.js). Todo lo de aquí es decorativo: si falla, la web sigue
+   funcionando con la lista 2D, que tiene exactamente las mismas acciones.
+   ========================================================================== */
+const reducido = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const esMovil = matchMedia("(max-width:860px)").matches;
+
+const LIENZO_W = 512, LIENZO_H = 704;   // proporción de la cara frontal de la tarjeta
+const CARTA_W = 1.7, CARTA_H = 2.34;    // tamaño en la escena (misma proporción)
+const RADIO = 6.5;                      // radio del carrusel cilíndrico
+
+function esRemota(src) {
+  return /^https?:\/\//i.test(src) && !src.startsWith(location.origin);
+}
+
+// Las fotos de la web oficial no autorizan CORS y el canvas 3D no puede pintarlas.
+// Se piden a /api/foto (mismo dominio, con caché). Si no hay backend —hosting
+// estático—, se reintenta la URL original.
+function fotoServida(src) {
+  return src && esRemota(src) ? "/api/foto?u=" + encodeURIComponent(src) : src;
+}
+
+function cargaImagen(src) {
+  return new Promise((resolve) => {
+    if (!src) return resolve(null);
+    const intentos = esRemota(src) ? [fotoServida(src), src] : [src];
+    let i = 0;
+    (function probar() {
+      if (i >= intentos.length) return resolve(null);
+      const url = intentos[i++];
+      const img = new Image();
+      if (esRemota(url)) img.crossOrigin = "anonymous"; // sin esto el canvas se "contamina"
+      img.onload = () => resolve(img);
+      img.onerror = probar;
+      img.decoding = "async";
+      img.src = url;
+    })();
+  });
+}
+
+function parteLineas(ctx, texto, ancho, maximo) {
+  const palabras = String(texto).split(/\s+/);
+  const lineas = [];
+  let actual = "";
+  for (const palabra of palabras) {
+    const prueba = actual ? actual + " " + palabra : palabra;
+    if (ctx.measureText(prueba).width > ancho && actual) { lineas.push(actual); actual = palabra; }
+    else actual = prueba;
+  }
+  if (actual) lineas.push(actual);
+  if (lineas.length > maximo) {
+    lineas.length = maximo;
+    lineas[maximo - 1] = lineas[maximo - 1].replace(/[\s.,;:-]+$/, "") + "…";
+  }
+  return lineas;
+}
+
+const hex = (c) => "#" + c.toString(16).padStart(6, "0");
+
+// Dibuja la cara frontal de una tarjeta: foto + datos reales del inmueble.
+function dibujaTarjeta(p, img) {
+  const c = document.createElement("canvas");
+  c.width = LIENZO_W; c.height = LIENZO_H;
+  const g = c.getContext("2d");
+  const acento = hex(CONFIG.colores.acento);
+  const altoFoto = Math.round(LIENZO_H * 0.6);
+
+  if (p.__guia) return dibujaTarjetaGuia(c, g, acento);
+
+  const fondo = g.createLinearGradient(0, 0, 0, LIENZO_H);
+  fondo.addColorStop(0, "#1b242e"); fondo.addColorStop(1, "#0c1219");
+  g.fillStyle = fondo; g.fillRect(0, 0, LIENZO_W, LIENZO_H);
+
+  if (img && img.naturalWidth) {
+    // "cover": llena el hueco sin deformar la foto
+    const escala = Math.max(LIENZO_W / img.naturalWidth, altoFoto / img.naturalHeight);
+    const w = img.naturalWidth * escala, h = img.naturalHeight * escala;
+    g.save(); g.beginPath(); g.rect(0, 0, LIENZO_W, altoFoto); g.clip();
+    g.drawImage(img, (LIENZO_W - w) / 2, (altoFoto - h) / 2, w, h);
+    g.restore();
+  } else {
+    const sinFoto = g.createLinearGradient(0, 0, LIENZO_W, altoFoto);
+    sinFoto.addColorStop(0, "#243342"); sinFoto.addColorStop(1, "#131c26");
+    g.fillStyle = sinFoto; g.fillRect(0, 0, LIENZO_W, altoFoto);
+    g.fillStyle = "rgba(244,241,234,.35)"; g.font = "500 20px Inter, sans-serif"; g.textAlign = "center";
+    g.fillText("FOTOS EN LA FICHA", LIENZO_W / 2, altoFoto / 2);
+  }
+
+  const velo = g.createLinearGradient(0, altoFoto - 150, 0, altoFoto);
+  velo.addColorStop(0, "rgba(12,18,25,0)"); velo.addColorStop(1, "rgba(12,18,25,.95)");
+  g.fillStyle = velo; g.fillRect(0, altoFoto - 150, LIENZO_W, 150);
+
+  // Chip de operación
+  const op = p.operacion === "alquiler" ? "ALQUILER" : "VENTA";
+  g.font = "600 18px Inter, sans-serif"; g.textAlign = "left";
+  const anchoChip = g.measureText(op).width + 32;
+  g.fillStyle = "rgba(8,12,18,.82)"; g.beginPath();
+  if (g.roundRect) g.roundRect(26, 26, anchoChip, 38, 19); else g.rect(26, 26, anchoChip, 38);
+  g.fill();
+  g.strokeStyle = "rgba(244,241,234,.22)"; g.lineWidth = 1; g.stroke();
+  g.fillStyle = acento; g.fillText(op, 42, 51);
+
+  // Zona y referencia
+  let y = altoFoto + 44;
+  g.textAlign = "center";
+  const cabecera = [p.zona, p.referencia ? "ref " + p.referencia : null].filter(Boolean).join(" · ");
+  if (cabecera) {
+    g.fillStyle = acento; g.font = "600 19px Inter, sans-serif";
+    g.fillText(cabecera.toUpperCase(), LIENZO_W / 2, y);
+  }
+
+  // Título
+  y += 42;
+  g.fillStyle = "#f4f1ea"; g.font = "700 34px Fraunces, Georgia, serif";
+  parteLineas(g, p.titulo, LIENZO_W - 72, 3).forEach((linea, i) => g.fillText(linea, LIENZO_W / 2, y + i * 40));
+
+  // Datos y precio
+  g.fillStyle = "#9aa5b1"; g.font = "400 21px Inter, sans-serif";
+  const datos = datosTexto(p);
+  if (datos) g.fillText(datos, LIENZO_W / 2, LIENZO_H - 92);
+  g.fillStyle = acento; g.font = "700 40px Inter, sans-serif";
+  g.fillText(precioTexto(p), LIENZO_W / 2, LIENZO_H - 40);
+
+  g.strokeStyle = "rgba(201,162,39,.55)"; g.lineWidth = 3;
+  g.strokeRect(14, 14, LIENZO_W - 28, LIENZO_H - 28);
+  return c;
+}
+
+// La tarjeta de la guía: sin foto, en dorado, para que se distinga del stock.
+function dibujaTarjetaGuia(c, g, acento) {
+  const fondo = g.createLinearGradient(0, 0, LIENZO_W, LIENZO_H);
+  fondo.addColorStop(0, "#20242c"); fondo.addColorStop(1, "#0a0d12");
+  g.fillStyle = fondo; g.fillRect(0, 0, LIENZO_W, LIENZO_H);
+
+  g.strokeStyle = acento; g.lineWidth = 4;
+  g.strokeRect(18, 18, LIENZO_W - 36, LIENZO_H - 36);
+  g.strokeStyle = "rgba(201,162,39,.35)"; g.lineWidth = 1;
+  g.strokeRect(34, 34, LIENZO_W - 68, LIENZO_H - 68);
+
+  g.textAlign = "center";
+  g.fillStyle = acento; g.font = "600 19px Inter, sans-serif";
+  g.fillText("GUÍA PRÁCTICA · GRATIS", LIENZO_W / 2, 110);
+
+  g.fillStyle = "#f4f1ea"; g.font = "700 44px Fraunces, Georgia, serif";
+  ["Comprar", "o vender", "con todo", "en regla"].forEach((l, i) => g.fillText(l, LIENZO_W / 2, 210 + i * 54));
+
+  g.fillStyle = "#9aa5b1"; g.font = "400 20px Inter, sans-serif";
+  ["Los papeles que pide la notaría,", "los impuestos y lo que necesitas", "tener el día de la firma."]
+    .forEach((l, i) => g.fillText(l, LIENZO_W / 2, 470 + i * 30));
+
+  g.fillStyle = acento; g.font = "700 26px Inter, sans-serif";
+  g.fillText("Ábrela y llévatela", LIENZO_W / 2, 612);
+  g.fillStyle = "#9aa5b1"; g.font = "400 18px Inter, sans-serif";
+  g.fillText("por WhatsApp o por correo", LIENZO_W / 2, 642);
+  return c;
+}
+
+async function inicia3D() {
+  const THREE = await import("three");
+  const { RoomEnvironment } = await import("three/addons/environments/RoomEnvironment.js");
+
+  const lienzo = $("escena");
+  const renderer = new THREE.WebGLRenderer({ canvas: lienzo, antialias: true, powerPreference: "high-performance" });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); // sin tope, los móviles con DPR 3-4 se funden
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+
+  const escena = new THREE.Scene();
+  escena.background = new THREE.Color(CONFIG.colores.fondo);
+  escena.fog = new THREE.Fog(CONFIG.colores.fondo, 8, 18);
+
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  escena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+  const camara = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 100);
+  // Las tarjetas van en la mitad superior: la ficha de texto ocupa la inferior.
+  camara.position.set(0, 0.35, RADIO + 6.8);
+
+  // Tres luces, ni una más: clave, contra de color de marca y ambiente suave.
+  const clave = new THREE.DirectionalLight(0xffffff, 2.9); clave.position.set(4, 7, 12); escena.add(clave);
+  const contra = new THREE.DirectionalLight(CONFIG.colores.contra, 1.4); contra.position.set(-7, 3, 2); escena.add(contra);
+  escena.add(new THREE.AmbientLight(0xffffff, 0.45));
+
+  const suelo = new THREE.Mesh(
+    new THREE.PlaneGeometry(80, 80),
+    new THREE.MeshPhysicalMaterial({ color: 0x080c11, roughness: 0.35, metalness: 0.75 })
+  );
+  suelo.rotation.x = -Math.PI / 2; suelo.position.y = -1.7; escena.add(suelo);
+
+  const grupo = new THREE.Group(); grupo.position.y = 0.45; escena.add(grupo);
+  const geometria = new THREE.BoxGeometry(CARTA_W, CARTA_H, 0.1);
+
+  let tarjetas = [];
+  let paso = 0.34;
+  let generacion = 0;
+  let rotObjetivo = 0;
+  let encima = null;
+
+  function limpia() {
+    for (const t of tarjetas) {
+      grupo.remove(t);
+      t.material.forEach((m) => { if (m.map) m.map.dispose(); m.dispose(); });
+    }
+    tarjetas = [];
+  }
+
+  function texturaDe(canvas) {
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return tex;
+  }
+
+  function montar(lista, indice = 0) {
+    limpia();
+    const n = lista.length;
+    if (!n) { estado.activo = 0; actualizaFlechas(0); return; }
+    paso = Math.min((Math.PI * 2) / n, 0.34);
+    const gen = ++generacion;
+
+    lista.forEach((p, i) => {
+      const lado = new THREE.MeshPhysicalMaterial({
+        color: CONFIG.colores.tarjeta, roughness: 0.25, metalness: 0.15, clearcoat: 1,
+        emissive: new THREE.Color(CONFIG.colores.acento), emissiveIntensity: 0,
+      });
+      const frente = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff, roughness: 0.28, metalness: 0.05, clearcoat: 1,
+        map: texturaDe(dibujaTarjeta(p, null)),
+        emissive: new THREE.Color(CONFIG.colores.acento), emissiveIntensity: 0,
+      });
+      const malla = new THREE.Mesh(geometria, [lado, lado, lado, lado, frente, lado]);
+      const a = i * paso;
+      malla.position.set(Math.sin(a) * RADIO, 0, Math.cos(a) * RADIO);
+      malla.rotation.y = a;
+      malla.userData = { inmueble: p, indice: i, alto: 0, escala: 1 };
+      grupo.add(malla);
+      tarjetas.push(malla);
+
+      // La foto entra después, sin bloquear el primer render.
+      if (p.imagen) {
+        cargaImagen(p.imagen).then((img) => {
+          if (!img || gen !== generacion || !malla.parent) return;
+          const antigua = frente.map;
+          frente.map = texturaDe(dibujaTarjeta(p, img));
+          frente.needsUpdate = true;
+          if (antigua) antigua.dispose();
+        });
+      }
+    });
+
+    ir(indice);
+  }
+
+  function ir(i) {
+    if (!tarjetas.length) return;
+    estado.activo = Math.max(0, Math.min(tarjetas.length - 1, i));
+    rotObjetivo = -estado.activo * paso;
+    actualizaFlechas(tarjetas.length);
+    pintaFicha();
+  }
+
+  function mover(delta) { ir(estado.activo + delta); }
+
+  function actualizaFlechas(n) {
+    $("anterior").disabled = estado.activo <= 0 || n <= 1;
+    $("siguiente").disabled = estado.activo >= n - 1 || n <= 1;
+  }
+
+  /* ---- Interacción: puntero, arrastre y rueda ---- */
+  const rayo = new THREE.Raycaster();
+  const puntero = new THREE.Vector2(-2, -2);
+  let px = 0, py = 0, arrastrando = false, x0 = 0, acumulado = 0, movido = 0;
+
+  lienzo.addEventListener("pointermove", (e) => {
+    puntero.x = (e.clientX / innerWidth) * 2 - 1;
+    puntero.y = -(e.clientY / innerHeight) * 2 + 1;
+    px = puntero.x * 0.3; py = puntero.y * 0.16;
+    if (!arrastrando) return;
+    const dx = e.clientX - x0; x0 = e.clientX;
+    acumulado += dx; movido += Math.abs(dx);
+    if (Math.abs(acumulado) > 70) { mover(acumulado > 0 ? -1 : 1); acumulado = 0; }
+  });
+  lienzo.addEventListener("pointerdown", (e) => {
+    arrastrando = true; x0 = e.clientX; acumulado = 0; movido = 0;
+    lienzo.setPointerCapture?.(e.pointerId);
+  });
+  lienzo.addEventListener("pointerup", () => {
+    arrastrando = false;
+    if (movido >= 8 || !encima) return;                      // era un arrastre
+    const i = encima.userData.indice;
+    if (i !== estado.activo) return ir(i);                   // clic en una tarjeta lateral: se centra
+    const item = encima.userData.inmueble;                   // clic en la de delante: se abre
+    if (item.__guia) abreGuia(); else abreGaleria(item);
+  });
+  lienzo.addEventListener("pointerleave", () => { arrastrando = false; puntero.set(-2, -2); });
+
+  let ruedaAcum = 0;
+  lienzo.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    ruedaAcum += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (Math.abs(ruedaAcum) > 45) { mover(ruedaAcum > 0 ? 1 : -1); ruedaAcum = 0; }
+  }, { passive: false });
+
+  let temporizadorMedida = null;
+  addEventListener("resize", () => {
+    clearTimeout(temporizadorMedida);
+    temporizadorMedida = setTimeout(() => {
+      camara.aspect = innerWidth / innerHeight;
+      camara.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    }, 150);
+  });
+
+  let corriendo = true;
+  document.addEventListener("visibilitychange", () => { corriendo = !document.hidden; });
+
+  const reloj = new THREE.Clock();
+  function fotograma() {
+    requestAnimationFrame(fotograma);
+    if (!corriendo || !tarjetas.length) return;
+    const t = reloj.getElapsedTime();
+
+    rayo.setFromCamera(puntero, camara);
+    const visibles = tarjetas.filter((c) => c.visible);
+    const impacto = rayo.intersectObjects(visibles, false)[0];
+    const nuevo = impacto ? impacto.object : null;
+    if (nuevo !== encima) {
+      encima = nuevo;
+      document.body.style.cursor = encima ? "pointer" : "default";
+    }
+
+    grupo.rotation.y += (rotObjetivo - grupo.rotation.y) * (reducido ? 0.4 : 0.14);
+
+    tarjetas.forEach((c, i) => {
+      const distancia = Math.abs(i - estado.activo);
+      c.visible = distancia <= 7;                     // presupuesto: solo la ventana visible
+      if (!c.visible) return;
+      const activa = i === estado.activo;
+      const resaltada = activa || c === encima;
+      const flotar = reducido ? 0 : Math.sin(t * 0.8 + i) * 0.05;
+      const alto = (activa ? 0.28 : 0) + flotar;
+      c.position.y += (alto - c.position.y) * 0.1;
+      const escala = activa ? 1.06 : c === encima ? 1.02 : 0.93;
+      c.scale.setScalar(c.scale.x + (escala - c.scale.x) * 0.1);
+      // El marco se enciende; la cara con la foto casi nada, para no lavar los colores.
+      c.material.forEach((m, j) => {
+        const objetivo = resaltada ? (j === 4 ? 0.04 : 0.26) : 0;
+        m.emissiveIntensity += (objetivo - m.emissiveIntensity) * 0.1;
+      });
+    });
+
+    if (!reducido) {
+      camara.position.x += (px - camara.position.x) * 0.045;
+      camara.position.y += (0.35 + py - camara.position.y) * 0.045;
+    }
+    camara.lookAt(0, 0.15, RADIO);
+    renderer.render(escena, camara);
+  }
+  fotograma();
+
+  escena3d = { montar, mover, ir };
+  montar(elementosEscena(), estado.activo);
+}
+
+/* ==========================================================================
+   Arranque
+   ========================================================================== */
+(async function arranca() {
+  const { items, origen } = await cargaCartera();
+  estado.origen = origen;
+  estado.todos = items.map(normaliza).filter((p) => p.activo);
+  // Primero los que tienen foto propia: el escaparate entra por los ojos.
+  estado.todos.sort((a, b) => (b.imagen ? 1 : 0) - (a.imagen ? 1 : 0));
+
+  pintaZonas();
+  if (estado.filtro.operacion !== "todas") {
+    document.querySelectorAll(".chip[data-op]").forEach((c) =>
+      c.setAttribute("aria-pressed", String(c.dataset.op === estado.filtro.operacion)));
+  }
+  const refInicial = params.get("ref");
+  const inicial = refInicial ? estado.todos.find((p) => p.referencia === refInicial || p.id === babel(refInicial)) : null;
+  aplicaFiltros(inicial ? inicial.id : null);
+  pintaBarra();
+  $("cargando").hidden = true;
+  document.title = `${estado.todos.length} inmuebles en Oviedo y Asturias · ${CONFIG.marca}`;
+
+  const sin3d = params.get("2d") === "1" || esMovil;
+  if (sin3d) { document.body.classList.add("sin3d"); return; }
+  try {
+    if (document.fonts && document.fonts.ready) await document.fonts.ready; // rótulos nítidos a la primera
+    await inicia3D();
+  } catch (e) {
+    console.warn("Sin WebGL: se usa la lista 2D.", e);
+    document.body.classList.add("sin3d");
+  }
+})();
+/* ==========================================================================
+   Guía de compraventa: lo que pide la notaría + calculadora de gastos.
+   Todo se calcula en el navegador; los importes son orientativos y así se dice.
+   ========================================================================== */
+const GUIA_CLAVE = "castresana:guia";
+
+const PAPELES = {
+  compra: [
+    { id: "dni", titulo: "DNI o NIE en vigor", detalle: "De todos los que compráis. Caducado no vale: la notaría no firma." },
+    { id: "civil", titulo: "Estado civil y régimen económico", detalle: "Casado en gananciales o en separación de bienes, pareja de hecho, capitulaciones… Decide a nombre de quién queda el piso y hay que declararlo en la escritura." },
+    { id: "pago", titulo: "Justificación de los medios de pago", detalle: "Obligatorio por la ley contra el blanqueo: transferencias o cheque bancario con sus justificantes. El notario hace constar cómo se ha pagado cada euro." },
+    { id: "arras", titulo: "Contrato de arras y justificante de la señal", detalle: "Si has dado señal. Ahí quedan fijados el precio, el plazo para firmar y qué pasa si alguien se echa atrás." },
+    { id: "banco", titulo: "Papeles del banco, si pides hipoteca", detalle: "La FEIN te la entregan al menos 10 días antes de la firma y con el notario firmas un acta previa gratuita antes de la escritura. Añade la tasación.", cuando: "empieza pronto" },
+    { id: "fondos", titulo: "Provisión de fondos, aparte del precio", detalle: "Impuesto, notaría, registro y gestoría no van dentro del precio. Ten el dinero disponible el día de la firma." },
+    { id: "nota", titulo: "Nota simple actualizada del inmueble", detalle: "Para ver cargas, superficie y titularidad reales. El notario la pide, pero conviene mirarla antes de dar la señal." },
+    { id: "comunidad", titulo: "Certificado de la comunidad al corriente", detalle: "Lo aporta el vendedor. Puedes renunciar a él, pero entonces las deudas pendientes pueden acabar siendo tuyas." },
+    { id: "cee", titulo: "Certificado de eficiencia energética", detalle: "Lo entrega el vendedor en la firma; es obligatorio para vender." },
+    { id: "suministros", titulo: "Último IBI y facturas de suministros", detalle: "Para cambiar la titularidad de IBI, agua, luz, gas y comunidad sin cortes." },
+    { id: "despues", titulo: "Después de firmar: impuesto y Registro", detalle: "Liquidar el ITP en plazo (en Asturias, 30 días hábiles) e inscribir la escritura en el Registro de la Propiedad. Suele encargarse la gestoría.", cuando: "después" },
+  ],
+  venta: [
+    { id: "dni", titulo: "DNI o NIE en vigor de todos los titulares", detalle: "Y del cónyuge si el piso es ganancial o hace falta su consentimiento." },
+    { id: "titulo", titulo: "Título de propiedad", detalle: "La escritura de cuando lo compraste, heredaste o te lo donaron. Si vino de herencia: aceptación y el impuesto de sucesiones ya liquidado." },
+    { id: "nota", titulo: "Nota simple actualizada", detalle: "Confirma que en el Registro consta lo que crees: superficie, titulares y cargas." },
+    { id: "hipoteca", titulo: "Certificado de deuda pendiente del banco", detalle: "Si queda hipoteca, el banco emite el certificado de saldo. Si ya la pagaste pero sigue inscrita, hay que cancelarla en el Registro y eso lleva semanas.", cuando: "empieza pronto" },
+    { id: "ibi", titulo: "Último recibo del IBI pagado", detalle: "Con la referencia catastral. El IBI del año se suele prorratear entre las dos partes." },
+    { id: "comunidad", titulo: "Certificado de la comunidad al corriente", detalle: "Lo firma el administrador con el visto bueno del presidente. Pídelo con margen: no sale en el día.", cuando: "empieza pronto" },
+    { id: "cee", titulo: "Certificado de eficiencia energética en vigor", detalle: "Obligatorio para vender y registrado en el Principado. Si el tuyo caducó, hay que renovarlo." },
+    { id: "actas", titulo: "Estatutos, actas recientes y derramas", detalle: "Si hay una derrama aprobada y sin pagar, hay que decirlo: es la discusión clásica el día de la firma." },
+    { id: "especiales", titulo: "Casos especiales: ITE, VPO, no residente", detalle: "Si el edificio tiene ITE o IEE pasada, llévala. Si el piso es protegido, mira plazos y descalificación. Si no eres residente fiscal en España, el comprador te retiene el 3 % (modelo 211)." },
+    { id: "licencia", titulo: "Licencia de primera ocupación o cédula, según el caso", detalle: "En Asturias no se exige con carácter general para revender, pero según el municipio y el tipo de inmueble puede hacer falta. Pregúntalo en tu ayuntamiento." },
+    { id: "despues", titulo: "Después de firmar: plusvalía e IRPF", detalle: "Plusvalía municipal en el ayuntamiento, en plazo corto tras la firma, y la ganancia en la declaración de la renta del año siguiente.", cuando: "después" },
+  ],
+};
+
+let modoGuia = "compra";
+const marcasGuia = { compra: new Set(), venta: new Set() };
+try {
+  const g = JSON.parse(localStorage.getItem(GUIA_CLAVE) || "{}");
+  ["compra", "venta"].forEach((m) => (g[m] || []).forEach((id) => marcasGuia[m].add(id)));
+} catch { /* sin almacenamiento: la guía funciona igual, sin recordar */ }
+
+function guardaGuia() {
+  try {
+    localStorage.setItem(GUIA_CLAVE, JSON.stringify({
+      compra: [...marcasGuia.compra], venta: [...marcasGuia.venta],
+    }));
+  } catch { /* da igual */ }
+}
+
+const eurosGuia = (n) => miles(Math.round(n)) + " €";
+const numeroDe = (id, porDefecto) => {
+  const v = parseFloat(String($(id)?.value ?? "").replace(",", "."));
+  return Number.isFinite(v) && v >= 0 ? v : porDefecto;
+};
+
+// Cuota de una hipoteca a tipo fijo (sistema francés).
+function cuotaHipoteca(capital, interesAnual, anos) {
+  const n = Math.max(1, Math.round(anos * 12));
+  const i = interesAnual / 100 / 12;
+  if (capital <= 0) return 0;
+  return i === 0 ? capital / n : (capital * i) / (1 - Math.pow(1 + i, -n));
+}
+
+// IRPF orientativo de la ganancia, escala estatal del ahorro.
+function irpfAhorro(ganancia) {
+  const tramos = [[6000, 0.19], [44000, 0.21], [150000, 0.23], [100000, 0.27]];
+  let resto = Math.max(0, ganancia), total = 0;
+  for (const [ancho, tipo] of tramos) {
+    const parte = Math.min(resto, ancho);
+    total += parte * tipo; resto -= parte;
+    if (resto <= 0) break;
+  }
+  return total + Math.max(0, resto) * 0.28;
+}
+
+function pintaChecklist() {
+  const papeles = PAPELES[modoGuia];
+  const marcas = marcasGuia[modoGuia];
+  $("guia-lista").innerHTML = papeles.map((d) => `
+    <li class="${marcas.has(d.id) ? "listo" : ""}" data-doc="${d.id}">
+      <label><input type="checkbox" ${marcas.has(d.id) ? "checked" : ""} />
+        <span>${escapa(d.titulo)}${d.cuando ? `<span class="cuando">${escapa(d.cuando)}</span>` : ""}</span>
+      </label>
+      <p>${escapa(d.detalle)}</p>
+    </li>`).join("");
+  const listos = papeles.filter((d) => marcas.has(d.id)).length;
+  $("guia-via").style.width = Math.round((listos / papeles.length) * 100) + "%";
+  $("guia-progreso").textContent = `${listos} de ${papeles.length} listos`;
+}
+
+function pintaCalculadora() {
+  const activo = estado.visibles[estado.activo];
+  const precioBase = activo && activo.precio && activo.operacion === "venta" ? activo.precio : 200000;
+  $("guia-calc").innerHTML = modoGuia === "compra" ? `
+    <h3>Cuánto necesitas de verdad</h3>
+    <p class="pista">Cambia los números si tienes datos mejores. El ITP por defecto es el 8 % de vivienda usada en Asturias: sube por tramos en precios altos y hay tipos reducidos (jóvenes, familia numerosa, VPO). Confírmalo con la gestoría.</p>
+    <div class="campos">
+      <div><label for="g-precio">Precio del piso (€)</label><input id="g-precio" type="number" min="0" step="1000" value="${precioBase}" /></div>
+      <div><label for="g-itp">Impuesto ITP (%)</label><input id="g-itp" type="number" min="0" step="0.5" value="8" /></div>
+      <div><label for="g-gastos">Notaría, registro y gestoría (€)</label><input id="g-gastos" type="number" min="0" step="50" value="1700" /></div>
+      <div><label for="g-fin">Te financia el banco (%)</label><input id="g-fin" type="number" min="0" max="100" step="5" value="80" /></div>
+      <div><label for="g-anos">Años de hipoteca</label><input id="g-anos" type="number" min="1" max="40" step="1" value="25" /></div>
+      <div><label for="g-int">Interés anual (%)</label><input id="g-int" type="number" min="0" step="0.1" value="3" /></div>
+    </div>
+    <div class="resultado" id="g-resultado"></div>` : `
+    <h3>Qué te queda de la venta</h3>
+    <p class="pista">La ganancia tributa en la renta del año siguiente por la escala del ahorro (19-28 %). Hay exenciones importantes —reinversión en vivienda habitual, mayores de 65 años— que aquí no se aplican. La plusvalía municipal va aparte y la calcula tu ayuntamiento.</p>
+    <div class="campos">
+      <div><label for="v-precio">Precio de venta (€)</label><input id="v-precio" type="number" min="0" step="1000" value="${precioBase}" /></div>
+      <div><label for="v-compra">Lo que pagaste al comprarlo (€)</label><input id="v-compra" type="number" min="0" step="1000" value="${Math.round(precioBase * 0.7)}" /></div>
+      <div><label for="v-gcompra">Gastos e impuestos de entonces (€)</label><input id="v-gcompra" type="number" min="0" step="500" value="${Math.round(precioBase * 0.07)}" /></div>
+      <div><label for="v-gventa">Gastos de la venta (€)</label><input id="v-gventa" type="number" min="0" step="500" value="${Math.round(precioBase * 0.04)}" /></div>
+      <div><label for="v-hipoteca">Hipoteca pendiente (€)</label><input id="v-hipoteca" type="number" min="0" step="1000" value="0" /></div>
+    </div>
+    <div class="resultado" id="v-resultado"></div>`;
+  calcula();
+  $("guia-calc").querySelectorAll("input").forEach((i) => i.addEventListener("input", calcula));
+}
+
+let ultimoCalculo = "";
+
+function calcula() {
+  if (modoGuia === "compra") {
+    const precio = numeroDe("g-precio", 0);
+    const impuesto = precio * (numeroDe("g-itp", 8) / 100);
+    const gastos = numeroDe("g-gastos", 0);
+    const hipoteca = precio * (Math.min(100, numeroDe("g-fin", 0)) / 100);
+    const entrada = Math.max(0, precio - hipoteca);
+    const firma = entrada + impuesto + gastos;
+    const cuota = cuotaHipoteca(hipoteca, numeroDe("g-int", 0), numeroDe("g-anos", 25));
+    $("g-resultado").innerHTML = `
+      <div class="fila"><span>Entrada (lo que no financia el banco)</span><b>${eurosGuia(entrada)}</b></div>
+      <div class="fila"><span>Impuesto de transmisiones</span><b>${eurosGuia(impuesto)}</b></div>
+      <div class="fila"><span>Notaría, registro y gestoría</span><b>${eurosGuia(gastos)}</b></div>
+      <div class="fila total"><span>Necesitas el día de la firma</span><b>${eurosGuia(firma)}</b></div>
+      <div class="fila total"><span>Cuota estimada de hipoteca</span><b>${eurosGuia(cuota)}/mes</b></div>`;
+    ultimoCalculo = `Precio ${eurosGuia(precio)} · entrada ${eurosGuia(entrada)} · impuesto ${eurosGuia(impuesto)}`
+      + ` · notaría, registro y gestoría ${eurosGuia(gastos)} → necesito ${eurosGuia(firma)} el día de la firma.`
+      + ` Hipoteca de ${eurosGuia(hipoteca)}: cuota estimada ${eurosGuia(cuota)}/mes.`;
+  } else {
+    const venta = numeroDe("v-precio", 0);
+    const compra = numeroDe("v-compra", 0);
+    const gcompra = numeroDe("v-gcompra", 0);
+    const gventa = numeroDe("v-gventa", 0);
+    const pendiente = numeroDe("v-hipoteca", 0);
+    const ganancia = Math.max(0, venta - compra - gcompra - gventa);
+    const irpf = irpfAhorro(ganancia);
+    const neto = venta - gventa - irpf - pendiente;
+    $("v-resultado").innerHTML = `
+      <div class="fila"><span>Ganancia sujeta a IRPF</span><b>${eurosGuia(ganancia)}</b></div>
+      <div class="fila"><span>IRPF orientativo de la ganancia</span><b>${eurosGuia(irpf)}</b></div>
+      <div class="fila"><span>Gastos de la venta</span><b>${eurosGuia(gventa)}</b></div>
+      <div class="fila"><span>Cancelas de hipoteca</span><b>${eurosGuia(pendiente)}</b></div>
+      <div class="fila total"><span>Te quedarían, sin contar plusvalía municipal</span><b>${eurosGuia(neto)}</b></div>`;
+    ultimoCalculo = `Vendo por ${eurosGuia(venta)} · ganancia ${eurosGuia(ganancia)} · IRPF orientativo ${eurosGuia(irpf)}`
+      + ` · me quedarían ${eurosGuia(neto)} sin contar la plusvalía municipal.`;
+  }
+}
+
+function textoGuia() {
+  const papeles = PAPELES[modoGuia];
+  const marcas = marcasGuia[modoGuia];
+  const tengo = papeles.filter((d) => marcas.has(d.id));
+  const falta = papeles.filter((d) => !marcas.has(d.id));
+  return [
+    `Hola, os escribo desde la web de ${CONFIG.marca}.`,
+    "",
+    modoGuia === "compra" ? "Estoy preparando una COMPRA." : "Estoy preparando una VENTA.",
+    "",
+    tengo.length ? "Ya tengo:\n" + tengo.map((d) => "✔ " + d.titulo).join("\n") : "Todavía no tengo nada preparado.",
+    "",
+    falta.length ? "Me falta:\n" + falta.map((d) => "· " + d.titulo).join("\n") : "Lo tengo todo.",
+    "",
+    "Números orientativos de la calculadora:",
+    ultimoCalculo,
+    "",
+    "¿Me lo revisáis y me decís por dónde empiezo?",
+  ].join("\n");
+}
+
+const urlWasap = (texto) => (hayWasap() ? `https://wa.me/${CONFIG.contacto.whatsapp}` : "https://wa.me/")
+  + "?text=" + encodeURIComponent(texto);
+
+function abreGuia(modo) {
+  if (modo) modoGuia = modo;
+  document.querySelectorAll("#guia .chip[data-modo]").forEach((c) =>
+    c.setAttribute("aria-pressed", String(c.dataset.modo === modoGuia)));
+  pintaChecklist();
+  pintaCalculadora();
+  const g = $("guia");
+  if (typeof g.showModal === "function") g.showModal(); else g.setAttribute("open", "");
+}
+
+$("abrir-guia").addEventListener("click", () => abreGuia());
+$("f-guia").addEventListener("click", () => abreGuia());
+$("guia-cerrar").addEventListener("click", () => $("guia").close());
+document.querySelectorAll("#guia .chip[data-modo]").forEach((chip) => {
+  chip.addEventListener("click", () => abreGuia(chip.dataset.modo));
+});
+$("guia-lista").addEventListener("change", (e) => {
+  const li = e.target.closest("li[data-doc]");
+  if (!li) return;
+  const marcas = marcasGuia[modoGuia];
+  if (e.target.checked) marcas.add(li.dataset.doc); else marcas.delete(li.dataset.doc);
+  guardaGuia();
+  pintaChecklist();
+});
+$("guia-wasap").addEventListener("click", () => window.open(urlWasap(textoGuia()), "_blank", "noopener"));
+$("guia-mail").addEventListener("click", () => {
+  location.href = `mailto:${CONFIG.contacto.email}`
+    + `?subject=${encodeURIComponent((modoGuia === "compra" ? "Voy a comprar" : "Voy a vender") + ": ¿me revisáis los papeles?")}`
+    + `&body=${encodeURIComponent(textoGuia())}`;
+});
+
+/* ==========================================================================
+   Galería: todas las fotos del inmueble sin salir de la web.
+   Si pisos.json ya trae varias, se usan esas (hosting propio). Si no, se piden
+   a /api/fotos, que lee la ficha oficial. Si tampoco, queda la foto del listado.
+   ========================================================================== */
+const gal = { p: null, fotos: [], i: 0, gen: 0 };
+
+async function fotosDe(p) {
+  if (p.imagenes && p.imagenes.length > 1) return p.imagenes;
+  if (p.__fotos) return p.__fotos;
+  if (!p.url) return p.imagenes || [];
+  try {
+    const r = await fetch("/api/fotos?u=" + encodeURIComponent(p.url));
+    if (!r.ok) throw new Error("sin galería");
+    const d = await r.json();
+    if (Array.isArray(d.fotos) && d.fotos.length) { p.__fotos = d.fotos; return d.fotos; }
+  } catch { /* sin backend o ficha caída: nos quedamos con lo que ya tenemos */ }
+  return p.imagenes || [];
+}
+
+function pintaGaleria() {
+  const n = gal.fotos.length;
+  const img = $("gal-img"), estado_ = $("gal-estado");
+  $("gal-ant").disabled = n < 2;
+  $("gal-sig").disabled = n < 2;
+  $("gal-cuenta").textContent = n ? `${gal.i + 1} / ${n}` : "";
+  if (!n) {
+    img.removeAttribute("src"); img.alt = "";
+    $("gal-minis").innerHTML = "";
+    estado_.hidden = false;
+    estado_.textContent = "Sin fotos publicadas";
+    return;
+  }
+  const actual = gal.fotos[gal.i];
+  img.onerror = () => { if (!img.src.endsWith(actual)) img.src = actual; };  // sin /api/foto, la original
+  img.src = fotoServida(actual);
+  img.alt = `${gal.p.titulo} — foto ${gal.i + 1} de ${n}`;
+  $("gal-minis").innerHTML = gal.fotos.map((f, k) =>
+    `<button type="button" data-k="${k}" aria-current="${k === gal.i}" aria-label="Foto ${k + 1}">
+       <img src="${escapa(fotoServida(f))}" alt="" loading="lazy" /></button>`).join("");
+  const enMiniaturas = document.activeElement?.closest?.("#gal-minis");
+  const actualMini = $("gal-minis").querySelector('[aria-current="true"]');
+  actualMini?.scrollIntoView({ block: "nearest", inline: "center" });
+  if (enMiniaturas) actualMini?.focus();   // el repintado no debe dejar sin foco
+  if (n > 1) { const sig = new Image(); sig.src = fotoServida(gal.fotos[(gal.i + 1) % n]); } // precarga
+}
+
+function vaFoto(salto) {
+  const n = gal.fotos.length;
+  if (n < 2) return;
+  gal.i = (gal.i + salto + n) % n;
+  pintaGaleria();
+}
+
+async function abreGaleria(p) {
+  if (!p || p.__guia) return;
+  gal.p = p;
+  gal.fotos = p.imagenes && p.imagenes.length ? [...p.imagenes] : p.imagen ? [p.imagen] : [];
+  gal.i = 0;
+  const gen = ++gal.gen;
+
+  $("gal-titulo").textContent = p.titulo;
+  $("gal-datos").textContent = [datosTexto(p), p.zona, p.referencia ? "ref " + p.referencia : null]
+    .filter(Boolean).join(" · ");
+  $("gal-precio").textContent = precioTexto(p);
+  const ficha = $("gal-ficha");
+  ficha.hidden = !p.url;
+  if (p.url) ficha.href = p.url;
+  const interesa = $("gal-interesa");
+  const pintaBotonInteres = () => {
+    interesa.textContent = estado.interes.has(p.id) ? "✓ Marcado" : "Me interesa";
+    interesa.classList.toggle("marcado", estado.interes.has(p.id));
+  };
+  pintaBotonInteres();
+  interesa.onclick = () => { alternaInteres(p.id); pintaBotonInteres(); };
+  $("gal-visita").onclick = () => { $("galeria").close(); abreDialogo([p]); };
+
+  const g = $("galeria");
+  if (typeof g.showModal === "function") g.showModal(); else g.setAttribute("open", "");
+  $("gal-estado").hidden = gal.fotos.length > 0;
+  $("gal-estado").textContent = "Cargando fotos…";
+  pintaGaleria();
+
+  if (gal.fotos.length < 2) {
+    const todas = await fotosDe(p);
+    if (gen !== gal.gen) return;                       // se abrió otra galería mientras tanto
+    if (todas.length) { gal.fotos = todas; gal.i = 0; }
+    $("gal-estado").hidden = gal.fotos.length > 0;
+    pintaGaleria();
+  }
+}
+
+$("gal-ant").addEventListener("click", () => vaFoto(-1));
+$("gal-sig").addEventListener("click", () => vaFoto(1));
+$("gal-cerrar").addEventListener("click", () => $("galeria").close());
+$("gal-minis").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-k]");
+  if (b) { gal.i = Number(b.dataset.k); pintaGaleria(); }
+});
+// A nivel de documento: al repintar las miniaturas se pierde el foco dentro del
+// diálogo, y un escuchador colgado del <dialog> se quedaría sin oír las flechas.
+addEventListener("keydown", (e) => {
+  if (!$("galeria").open) return;
+  if (e.key === "ArrowLeft") { vaFoto(-1); e.preventDefault(); }
+  if (e.key === "ArrowRight") { vaFoto(1); e.preventDefault(); }
+});
+{ // deslizar con el dedo en el móvil
+  let x0 = null;
+  const visor = document.querySelector("#galeria .visor");
+  visor.addEventListener("pointerdown", (e) => { x0 = e.clientX; });
+  visor.addEventListener("pointerup", (e) => {
+    if (x0 === null) return;
+    const dx = e.clientX - x0; x0 = null;
+    if (Math.abs(dx) > 45) vaFoto(dx > 0 ? -1 : 1);
+  });
+}
+
+/* ==========================================================================
+   Comparador: los marcados, enfrentados
+   ========================================================================== */
+const CUOTA_EJEMPLO = { financiado: 0.8, anos: 25, interes: 3 };
+
+function abreComparador() {
+  const lista = seleccionados().slice(0, 4);
+  if (lista.length < 2) return;
+  const total = seleccionados().length;
+  $("cmp-sub").textContent = total > lista.length
+    ? `Los 4 primeros de tus ${total} marcados, uno al lado del otro.`
+    : "Los que has marcado, uno al lado del otro.";
+
+  const eur = (v, sufijo = "") => (v == null ? "—" : miles(Math.round(v)) + " €" + sufijo);
+  const precioM2 = lista.map((p) => (p.precio && p.superficieConstruida ? p.precio / p.superficieConstruida : null));
+  const cuotas = lista.map((p) => (p.precio && p.operacion === "venta"
+    ? cuotaHipoteca(p.precio * CUOTA_EJEMPLO.financiado, CUOTA_EJEMPLO.interes, CUOTA_EJEMPLO.anos) : null));
+
+  // Solo se marca "el mejor" si hay al menos dos valores que comparar.
+  const mejor = (valores, mayor) => {
+    const conValor = valores.filter((v) => v != null);
+    if (conValor.length < 2) return -1;
+    let i = -1;
+    valores.forEach((v, k) => { if (v != null && (i < 0 || (mayor ? v > valores[i] : v < valores[i]))) i = k; });
+    return i;
+  };
+
+  const fila = (titulo, valores, destacado = -1) =>
+    `<tr><th scope="row">${escapa(titulo)}</th>` +
+    valores.map((v, i) => `<td class="${i === destacado ? "mejor" : ""}">${v}</td>`).join("") + "</tr>";
+
+  $("cmp-tabla").innerHTML = `
+    <thead><tr><th></th>${lista.map((p) =>
+      `<th scope="col">${escapa(p.titulo)}<small>${escapa([p.zona, p.referencia ? "ref " + p.referencia : null]
+        .filter(Boolean).join(" · "))}</small></th>`).join("")}</tr></thead>
+    <tbody>
+      ${fila("Operación", lista.map((p) => (p.operacion === "alquiler" ? "Alquiler" : "Venta")))}
+      ${fila("Precio", lista.map((p) => escapa(precioTexto(p))),
+        mejor(lista.map((p) => p.precio), false))}
+      ${fila("Precio por m²", precioM2.map((v) => (v == null ? "—" : miles(Math.round(v)) + " €/m²")),
+        mejor(precioM2, false))}
+      ${fila("Superficie", lista.map((p) => (p.superficieConstruida ? p.superficieConstruida + " m²" : "—")),
+        mejor(lista.map((p) => p.superficieConstruida), true))}
+      ${fila("Habitaciones", lista.map((p) => p.habitaciones ?? "—"),
+        mejor(lista.map((p) => p.habitaciones), true))}
+      ${fila("Baños", lista.map((p) => p.banos ?? "—"), mejor(lista.map((p) => p.banos), true))}
+      ${fila("Planta", lista.map((p) => p.planta ?? "—"))}
+      ${fila(`Cuota estimada (${CUOTA_EJEMPLO.anos} años)`, cuotas.map((v) => eur(v, "/mes")), mejor(cuotas, false))}
+      ${fila("", lista.map((p) => `${p.url ? `<a class="btn pequeno" href="${escapa(p.url)}" target="_blank" rel="noopener">Ficha</a> ` : ""}`
+        + `<button type="button" class="btn pequeno" data-quitar="${escapa(p.id)}">Quitar</button>`))}
+    </tbody>`;
+
+  const c = $("comparador");
+  if (typeof c.showModal === "function") c.showModal(); else c.setAttribute("open", "");
+}
+
+$("barra-comparar").addEventListener("click", abreComparador);
+$("cmp-cerrar").addEventListener("click", () => $("comparador").close());
+$("cmp-visita").addEventListener("click", () => { $("comparador").close(); abreDialogo(seleccionados()); });
+$("cmp-vaciar").addEventListener("click", () => {
+  estado.interes.clear(); guardaInteres(); pintaFicha(); pintaLista2d(); pintaBarra();
+  $("comparador").close();
+});
+$("cmp-tabla").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-quitar]");
+  if (!b) return;
+  alternaInteres(b.dataset.quitar);
+  if (seleccionados().length < 2) $("comparador").close(); else abreComparador();
+});
+
+/* ==========================================================================
+   Modo escaparate: si nadie toca nada, el carrusel gira solo.
+   Pensado para la tele del local (?auto=1 arranca ya, ?secs=N marca el ritmo).
+   ========================================================================== */
+const AUTO = {
+  espera: 30000,
+  cada: Math.max(3, parseInt(params.get("secs") || "8", 10)) * 1000,
+};
+let esperaAuto = null, tickAuto = null, autoEnMarcha = false, ultimoAviso = 0;
+
+function arrancaAuto() {
+  if (autoEnMarcha || reducido || !escena3d || hayDialogoAbierto()) return;
+  autoEnMarcha = true;
+  $("aviso-auto").hidden = false;
+  tickAuto = setInterval(() => {
+    if (!escena3d || hayDialogoAbierto()) return;
+    const total = elementosEscena().length;
+    escena3d.ir((estado.activo + 1) % total);
+  }, AUTO.cada);
+}
+
+function paraAuto() {
+  if (!autoEnMarcha) return;
+  autoEnMarcha = false;
+  clearInterval(tickAuto);
+  $("aviso-auto").hidden = true;
+}
+
+function reprogramaAuto() {
+  clearTimeout(esperaAuto);
+  esperaAuto = setTimeout(arrancaAuto, AUTO.espera);
+}
+
+["pointerdown", "keydown", "wheel", "touchstart"].forEach((ev) =>
+  addEventListener(ev, () => { paraAuto(); reprogramaAuto(); }, { passive: true }));
+addEventListener("pointermove", () => {
+  const ahora = Date.now();
+  if (ahora - ultimoAviso < 1000) return;                 // no reprogramar en cada píxel
+  ultimoAviso = ahora;
+  paraAuto(); reprogramaAuto();
+}, { passive: true });
+document.addEventListener("visibilitychange", () => { if (document.hidden) paraAuto(); else reprogramaAuto(); });
+
+if (params.get("auto") === "1") setTimeout(arrancaAuto, 1200); else reprogramaAuto();
+
+</script>
+</body>
+</html>
