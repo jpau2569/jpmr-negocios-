@@ -1,0 +1,28 @@
+{
+  "negocio": "Asesoría Castresana",
+  "web": "https://www.asesoriacastresana.com",
+  "actualizado": "2026-09-04",
+  "inmuebles": [
+    {
+      "referencia": "PIS0190",
+      "titulo": "Piso reformado de 3 habitaciones en el centro",
+      "operacion": "venta",
+      "zona": "Centro, Oviedo",
+      "precio": 265000,
+      "precioTexto": "265.000 €",
+      "habitaciones": 3,
+      "banos": 2,
+      "superficieConstruida": 100,
+      "planta": 3,
+      "descripcion": "Una línea corta que se ve en la lista y en la ficha.",
+      "imagen": "fotos/PIS0190-01.webp",
+      "imagenes": [
+        "fotos/PIS0190-01.webp",
+        "fotos/PIS0190-02.webp"
+      ],
+      "url": "https://www.asesoriacastresana.com/piso-en-oviedo-es1616045.html",
+      "activo": true,
+      "verificado": "2026-09-04"
+    }
+  ]
+}

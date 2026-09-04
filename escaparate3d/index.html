@@ -1,0 +1,1074 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Pisos en Oviedo y Asturias · Asesoría Castresana</title>
+<meta name="description" content="Escaparate 3D de los inmuebles en venta y alquiler de Asesoría Castresana (Oviedo). Marca los que te interesan y pídenos visita por WhatsApp o por correo en un clic." />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Pisos en Oviedo y Asturias · Asesoría Castresana" />
+<meta property="og:description" content="Escaparate 3D de nuestra cartera. Elige los pisos que te interesan y pide visita por WhatsApp o correo." />
+<meta name="theme-color" content="#0b0f14" />
+<!--
+  ============================================================================
+   ESCAPARATE 3D · Asesoría Castresana
+  ----------------------------------------------------------------------------
+   Web de una sola página con la cartera de inmuebles en un carrusel 3D (WebGL),
+   pensada para subirse tal cual a cualquier hosting (Vercel, Hostinger…).
+
+   Datos (cascada, de más fiable a menos):
+     1. pisos.json          → datos y fotos PROPIOS (no caducan nunca)
+     2. /api/escaparate     → lectura en vivo de www.asesoriacastresana.com
+     3. respaldo embebido   → la cartera guardada en este archivo
+
+   Parámetros por URL:
+     ?fuente=json|api|respaldo   fuerza un origen de datos concreto
+     ?op=venta|alquiler          abre filtrado por operación
+     ?ref=PIS0160                abre con ese inmueble seleccionado
+     ?2d=1                       fuerza la lista 2D (sin 3D)
+
+   Contacto: todo el texto real vive en el HTML (no dentro del canvas) para que
+   sea accesible, indexable y clicable. El canvas es decorativo.
+
+   Para reutilizar esta plantilla en otro negocio, edita SOLO el bloque CONFIG
+   del <script> del final.
+  ============================================================================
+-->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --fondo:#0b0f14; --fondo2:#131a22; --acento:#c9a227; --texto:#f4f1ea; --apagado:#9aa5b1;
+    --linea:rgba(244,241,234,.16);
+    --display:"Fraunces",Georgia,serif; --ui:"Inter",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{margin:0;min-height:100%;background:var(--fondo);color:var(--texto);font-family:var(--ui);-webkit-font-smoothing:antialiased}
+  body{overflow:hidden}
+  body.sin3d{overflow:auto}
+  img{max-width:100%}
+  button{font:inherit;color:inherit}
+
+  /* ---------- Escena 3D ---------- */
+  #escena{position:fixed;inset:0;display:block;touch-action:none}
+  .velo{position:fixed;inset:0;pointer-events:none;background:
+    radial-gradient(120% 90% at 50% 8%,transparent 42%,rgba(0,0,0,.6) 100%),
+    linear-gradient(180deg,rgba(5,8,15,.85),transparent 26%,transparent 46%,rgba(5,8,15,.92))}
+  body.sin3d #escena,body.sin3d .velo,body.sin3d .escenario,body.sin3d .flecha{display:none}
+
+  /* ---------- Capa de interfaz ---------- */
+  .ui{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:space-between;
+      padding:clamp(14px,2.4vw,32px);pointer-events:none;gap:12px}
+  .ui a,.ui button,.ui select,.ui input{pointer-events:auto}
+  body.sin3d .ui{position:static;min-height:0;padding-bottom:0}
+
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .marca{font-family:var(--display);font-weight:800;font-size:clamp(19px,2.4vw,28px);line-height:1.05;margin:0}
+  .marca span{display:block;font-family:var(--ui);font-weight:500;font-size:11px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--acento);margin-top:6px}
+  .acciones{display:flex;gap:8px;flex-wrap:wrap}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--linea);
+    background:rgba(255,255,255,.07);color:var(--texto);padding:10px 16px;border-radius:999px;text-decoration:none;
+    font-size:14px;font-weight:500;cursor:pointer;backdrop-filter:blur(10px);transition:background .2s,border-color .2s,color .2s}
+  .btn:hover,.btn:focus-visible{background:var(--acento);border-color:var(--acento);color:#10131a}
+  .btn.solido{background:var(--acento);border-color:var(--acento);color:#10131a;font-weight:600}
+  .btn.solido:hover,.btn.solido:focus-visible{filter:brightness(1.12)}
+  .btn.marcado{background:rgba(201,162,39,.2);border-color:var(--acento);color:var(--acento)}
+  .btn[disabled],.btn[aria-disabled="true"]{opacity:.4;pointer-events:none}
+  .btn.pequeno{padding:8px 13px;font-size:13px}
+  :focus-visible{outline:2px solid var(--acento);outline-offset:3px}
+
+  /* ---------- Filtros ---------- */
+  .filtros{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .chip{border:1px solid var(--linea);background:rgba(255,255,255,.05);color:var(--apagado);
+    padding:7px 14px;border-radius:999px;font-size:13px;cursor:pointer}
+  .chip[aria-pressed="true"]{background:var(--acento);border-color:var(--acento);color:#10131a;font-weight:600}
+  .filtros select{border:1px solid var(--linea);background:rgba(255,255,255,.05);color:var(--texto);
+    padding:7px 12px;border-radius:999px;font-size:13px}
+  .filtros select option{background:var(--fondo2);color:var(--texto)}
+
+  /* ---------- Ficha del inmueble activo (sobre el 3D) ---------- */
+  .escenario{flex:1;display:flex;align-items:flex-end;justify-content:center;min-height:0;padding-bottom:6px}
+  .ficha{text-align:center;max-width:min(680px,92vw)}
+  .ficha .etiqueta{margin:0 0 6px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--acento)}
+  .ficha h2{font-family:var(--display);font-size:clamp(21px,3.4vw,40px);margin:0 0 6px;line-height:1.1}
+  .ficha .datos{margin:0 0 4px;color:var(--apagado);font-size:clamp(13px,1.5vw,16px)}
+  .ficha .precio{margin:0 0 14px;font-size:clamp(20px,2.6vw,30px);font-weight:700;color:var(--acento)}
+  .ficha .precio small{font-size:.55em;font-weight:500;color:var(--apagado)}
+  .ficha .cta{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .ficha .verificado{margin:10px 0 0;font-size:11px;color:var(--apagado)}
+
+  .flecha{position:fixed;top:50%;transform:translateY(-50%);z-index:3;width:52px;height:52px;border-radius:50%;
+    border:1px solid var(--linea);background:rgba(11,15,20,.55);color:var(--texto);font-size:26px;line-height:1;
+    cursor:pointer;backdrop-filter:blur(10px)}
+  .flecha:hover:not([disabled]){background:var(--acento);color:#10131a;border-color:var(--acento)}
+  .flecha[disabled]{opacity:.25;cursor:default}
+  .flecha.izq{left:clamp(8px,2vw,26px)} .flecha.der{right:clamp(8px,2vw,26px)}
+
+  footer.pie{position:fixed;left:0;right:0;bottom:0;z-index:2;display:flex;justify-content:space-between;
+    gap:10px 20px;flex-wrap:wrap;font-size:12px;color:var(--apagado);
+    padding:10px clamp(14px,3vw,32px);background:linear-gradient(180deg,transparent,rgba(5,8,15,.85))}
+  footer.pie a{color:var(--apagado)}
+  body.con-seleccion footer.pie{display:none}
+  .escenario{padding-bottom:52px}
+
+  /* ---------- Lista 2D: móvil, sin WebGL y SEO ---------- */
+  .lista2d{display:none;padding:16px clamp(14px,3vw,32px) 140px;background:linear-gradient(180deg,var(--fondo),var(--fondo2))}
+  body.sin3d .lista2d{display:block}
+  .lista2d h2{font-family:var(--display);font-size:22px;margin:22px 0 14px}
+  .rejilla{list-style:none;margin:0;padding:0;display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+  .tarjeta{border:1px solid var(--linea);border-radius:18px;overflow:hidden;background:rgba(255,255,255,.04);display:flex;flex-direction:column}
+  .tarjeta .foto{aspect-ratio:4/3;background:linear-gradient(140deg,#22303d,#0e151d);position:relative;overflow:hidden}
+  .tarjeta .foto img{width:100%;height:100%;object-fit:cover;display:block}
+  .tarjeta .foto .sinfoto{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:var(--apagado);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+  .tarjeta .op{position:absolute;top:10px;left:10px;background:rgba(11,15,20,.78);border:1px solid var(--linea);
+    color:var(--acento);font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:5px 10px;border-radius:999px}
+  .tarjeta .cuerpo{padding:14px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .tarjeta h3{font-family:var(--display);font-size:18px;margin:0;line-height:1.2}
+  .tarjeta .datos{margin:0;color:var(--apagado);font-size:13px}
+  .tarjeta .precio{margin:2px 0 8px;font-size:20px;font-weight:700;color:var(--acento)}
+  .tarjeta .cta{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+
+  /* ---------- Barra de "me interesa" ---------- */
+  .barra{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;align-items:center;justify-content:center;
+    gap:10px;flex-wrap:wrap;padding:12px clamp(12px,3vw,28px);background:rgba(8,11,16,.94);
+    border-top:1px solid var(--linea);backdrop-filter:blur(14px)}
+  .barra[hidden]{display:none}
+  .barra .cuenta{font-size:14px;font-weight:600}
+  .barra .cuenta small{display:block;font-weight:400;color:var(--apagado);font-size:12px}
+
+  /* ---------- Diálogo de contacto ---------- */
+  dialog{border:1px solid var(--linea);border-radius:20px;background:var(--fondo2);color:var(--texto);
+    padding:0;width:min(520px,94vw);max-height:88vh}
+  dialog::backdrop{background:rgba(4,6,10,.72)}
+  .dlg{padding:22px}
+  .dlg h2{font-family:var(--display);font-size:23px;margin:0 0 4px}
+  .dlg p.sub{margin:0 0 16px;color:var(--apagado);font-size:14px}
+  .dlg ul.sel{list-style:none;margin:0 0 16px;padding:12px;border:1px solid var(--linea);border-radius:14px;
+    max-height:150px;overflow:auto;font-size:13px;display:grid;gap:6px;background:rgba(0,0,0,.2)}
+  .dlg label{display:block;font-size:12px;color:var(--apagado);margin:10px 0 4px}
+  .dlg input,.dlg textarea,.dlg select{width:100%;border:1px solid var(--linea);border-radius:12px;
+    background:rgba(255,255,255,.05);color:var(--texto);padding:11px 13px;font:inherit;font-size:14px}
+  .dlg textarea{min-height:74px;resize:vertical}
+  .dlg .envios{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+  .dlg .envios .btn{flex:1 1 160px}
+  .dlg .aviso{margin:14px 0 0;font-size:11px;color:var(--apagado);line-height:1.5}
+  .dlg .cerrar{position:absolute;top:12px;right:14px;background:none;border:0;color:var(--apagado);font-size:24px;cursor:pointer}
+
+  .cargando{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:8;
+    background:var(--fondo);color:var(--apagado);font-size:14px;letter-spacing:.1em;text-transform:uppercase}
+  .cargando[hidden]{display:none}
+  .visualmente-oculto{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  @media (max-width:860px){
+    body{overflow:auto}
+    #escena,.velo,.escenario,.flecha{display:none}
+    .lista2d{display:block}
+    .ui{position:static;padding-bottom:0}
+    header{flex-direction:column;align-items:flex-start}
+    footer.pie{position:static;background:none;padding:22px clamp(14px,3vw,32px) 120px}
+    body.con-seleccion footer.pie{display:flex}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<canvas id="escena" aria-hidden="true"></canvas>
+<div class="velo" aria-hidden="true"></div>
+
+<div class="cargando" id="cargando">Cargando la cartera…</div>
+
+<div class="ui">
+  <header>
+    <h1 class="marca">Asesoría Castresana<span id="claim">Inmobiliaria en Oviedo</span></h1>
+    <nav class="acciones" aria-label="Contacto directo">
+      <a class="btn" id="tel-cabecera" href="tel:+34985210468">Llamar</a>
+      <a class="btn" id="mail-cabecera" href="mailto:asesoriacastresana@gmail.com">Escribir</a>
+      <a class="btn solido" id="wasap-cabecera" href="#" hidden>WhatsApp</a>
+    </nav>
+  </header>
+
+  <div class="filtros" role="group" aria-label="Filtrar inmuebles">
+    <button class="chip" data-op="todas" aria-pressed="true">Todo</button>
+    <button class="chip" data-op="venta" aria-pressed="false">Venta</button>
+    <button class="chip" data-op="alquiler" aria-pressed="false">Alquiler</button>
+    <label class="visualmente-oculto" for="zona">Zona</label>
+    <select id="zona" aria-label="Zona"><option value="">Todas las zonas</option></select>
+    <span id="contador" class="chip" style="cursor:default" aria-live="polite"></span>
+  </div>
+
+  <div class="escenario">
+    <article class="ficha" id="ficha" aria-live="polite">
+      <p class="etiqueta" id="f-etiqueta">Cartera de Asesoría Castresana</p>
+      <h2 id="f-titulo">Elige tu próxima casa</h2>
+      <p class="datos" id="f-datos">Pisos, casas y locales en Oviedo, Mieres y alrededores.</p>
+      <p class="precio" id="f-precio"></p>
+      <div class="cta">
+        <a class="btn" id="f-ficha" href="#lista" hidden>Ver ficha completa</a>
+        <button class="btn" id="f-interesa" hidden>Me interesa</button>
+        <button class="btn solido" id="f-visita" hidden>Solicitar visita</button>
+      </div>
+      <p class="verificado" id="f-verificado"></p>
+    </article>
+  </div>
+</div>
+
+<button class="flecha izq" id="anterior" aria-label="Inmueble anterior">‹</button>
+<button class="flecha der" id="siguiente" aria-label="Inmueble siguiente">›</button>
+
+<main class="lista2d" id="lista">
+  <h2 id="titulo-lista">Inmuebles disponibles</h2>
+  <ul class="rejilla" id="rejilla"></ul>
+</main>
+
+<footer class="pie">
+  <span>C/ Cabo Noval, 8 Bajo 2 · 33007 Oviedo · <a href="tel:+34985210468">985 21 04 68</a></span>
+  <span><a href="https://www.asesoriacastresana.com" rel="noopener">www.asesoriacastresana.com</a> · <span id="pie-horario">L-V 10:00-13:30 y 16:30-19:30</span></span>
+</footer>
+
+<div class="barra" id="barra" hidden>
+  <span class="cuenta" id="barra-cuenta">0 inmuebles marcados<small>Te enviamos solo estos, sin llamadas de más.</small></span>
+  <button class="btn solido" id="barra-pedir">Pedir visita de los marcados</button>
+  <button class="btn pequeno" id="barra-limpiar">Vaciar</button>
+</div>
+
+<dialog id="dlg" aria-labelledby="dlg-titulo">
+  <form method="dialog" class="dlg" id="dlg-form">
+    <button type="button" class="cerrar" id="dlg-cerrar" aria-label="Cerrar">×</button>
+    <h2 id="dlg-titulo">Solicitar visita</h2>
+    <p class="sub" id="dlg-sub">Dinos cómo localizarte y te confirmamos día y hora.</p>
+
+    <ul class="sel" id="dlg-lista"></ul>
+
+    <label for="dlg-nombre">Tu nombre</label>
+    <input id="dlg-nombre" name="nombre" autocomplete="name" maxlength="120" placeholder="Nombre y apellidos" />
+
+    <label for="dlg-telefono">Teléfono</label>
+    <input id="dlg-telefono" name="telefono" type="tel" autocomplete="tel" maxlength="40" placeholder="Para avisarte de la visita" />
+
+    <label for="dlg-email">Correo (opcional)</label>
+    <input id="dlg-email" name="email" type="email" autocomplete="email" maxlength="200" placeholder="tucorreo@ejemplo.com" />
+
+    <label for="dlg-cuando">¿Cuándo te viene bien?</label>
+    <select id="dlg-cuando" name="cuando">
+      <option value="Mañanas entre semana">Mañanas entre semana</option>
+      <option value="Tardes entre semana">Tardes entre semana</option>
+      <option value="Sábado por la mañana">Sábado por la mañana</option>
+      <option value="Me da igual, llamadme">Me da igual, llamadme</option>
+    </select>
+
+    <label for="dlg-mensaje">Algo que debamos saber (opcional)</label>
+    <textarea id="dlg-mensaje" name="mensaje" maxlength="600" placeholder="Presupuesto, zona preferida, si necesitas financiación…"></textarea>
+
+    <div class="envios">
+      <button type="button" class="btn solido" id="dlg-wasap">Enviar por WhatsApp</button>
+      <button type="button" class="btn" id="dlg-mail">Enviar por correo</button>
+    </div>
+    <p class="aviso" id="dlg-aviso">Se abre tu WhatsApp o tu correo con el mensaje ya escrito: solo tienes que darle a enviar. Usamos tus datos únicamente para contestarte sobre estos inmuebles.</p>
+  </form>
+</dialog>
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"RealEstateAgent","name":"Asesoría Castresana",
+"url":"https://www.asesoriacastresana.com","email":"asesoriacastresana@gmail.com","telephone":"+34985210468",
+"address":{"@type":"PostalAddress","streetAddress":"C/ Cabo Noval, 8 Bajo 2","addressLocality":"Oviedo","postalCode":"33007","addressRegion":"Asturias","addressCountry":"ES"},
+"areaServed":["Oviedo","Mieres","Asturias"],
+"openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"10:00","closes":"13:30"},{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"16:30","closes":"19:30"}]}
+</script>
+
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.169.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.169.0/examples/jsm/"}}
+</script>
+
+<script type="module">
+/* ==========================================================================
+   CONFIG — edita SOLO este bloque para adaptar el escaparate a otro negocio
+   ========================================================================== */
+const CONFIG = {
+  marca: "Asesoría Castresana",
+  claim: "Inmobiliaria en Oviedo",
+  web: "https://www.asesoriacastresana.com",
+  contacto: {
+    telefono: "+34985210468",
+    telefonoTexto: "985 21 04 68",
+    email: "asesoriacastresana@gmail.com",
+    // WhatsApp: móvil en formato internacional SIN "+" ni espacios, p. ej. "34600112233".
+    // Si se deja vacío, los botones de WhatsApp se ocultan solos y queda el correo.
+    whatsapp: "",
+    direccion: "C/ Cabo Noval, 8 Bajo 2 · 33007 Oviedo",
+    horario: "L-V 10:00-13:30 y 16:30-19:30",
+  },
+  colores: { fondo: 0x0b0f14, tarjeta: 0x18212b, acento: 0xc9a227, contra: 0x2f6bff },
+  // Tarjetas que se montan en la escena 3D. El resto siguen accesibles en la lista de abajo.
+  maxTarjetas3D: 26,
+  // Inmuebles que caben en un mensaje de WhatsApp / correo sin que se corte.
+  maxEnMensaje: 12,
+  // Origen de los datos, en cascada: el primero que devuelva inmuebles gana.
+  origenes: ["pisos.json", "/api/escaparate"],
+};
+
+/* ==========================================================================
+   Cartera de respaldo — última cartera conocida guardada en este archivo.
+   Solo se usa si pisos.json y /api/escaparate fallan, para que el escaparate
+   nunca aparezca vacío. No se inventa nada: si un dato no consta, va a null.
+   ========================================================================== */
+const RESPALDO = [
+  { referencia: "PIS0160", titulo: "Piso 4º exterior en El Fontán, junto al casco antiguo", operacion: "venta", zona: "Oviedo", precio: 330000, superficieConstruida: 99, habitaciones: 3, banos: 2 },
+  { referencia: null, titulo: "Piso súper céntrico en Plaza de América", operacion: "venta", zona: "Oviedo", precio: 270000, superficieConstruida: 80, habitaciones: null, banos: null },
+  { referencia: null, titulo: "Ático con ascensor en Calle Rosal · zona Parque San Francisco", operacion: "venta", zona: "Oviedo", precio: 145000, superficieConstruida: 51, habitaciones: 1, banos: 1 },
+  { referencia: "es1616045", titulo: "Piso a reformar con ascensor en Calle Rosal, centro de Oviedo", operacion: "venta", zona: "Oviedo", precio: null, superficieConstruida: 70, habitaciones: null, banos: null },
+  { referencia: null, titulo: "Piso 2º en zona Ayuntamiento con cocina independiente", operacion: "venta", zona: "Oviedo", precio: null, superficieConstruida: 50, habitaciones: 1, banos: 1 },
+  { referencia: null, titulo: "Piso de 3 habitaciones en San Pedro – Siana, Mieres", operacion: "venta", zona: "Mieres", precio: 120000, superficieConstruida: 90, habitaciones: 3, banos: 1 },
+  { referencia: null, titulo: "Piso con 2 baños en pleno centro, Calle Avilés, Mieres", operacion: "venta", zona: "Mieres", precio: null, superficieConstruida: 85, habitaciones: 2, banos: 2 },
+];
+
+/* ==========================================================================
+   Utilidades
+   ========================================================================== */
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const miles = (n) => Number(n).toLocaleString("es-ES");
+const escapa = (t) => String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const sinTildes = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const babel = (t) => sinTildes(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+function precioTexto(p) {
+  if (p.precioTexto) return p.precioTexto;
+  if (!p.precio) return "Precio a consultar";
+  return miles(p.precio) + " €" + (p.operacion === "alquiler" ? "/mes" : "");
+}
+
+function datosTexto(p) {
+  const partes = [];
+  if (p.superficieConstruida) partes.push(p.superficieConstruida + " m²");
+  if (p.habitaciones) partes.push(p.habitaciones + (p.habitaciones === 1 ? " habitación" : " habitaciones"));
+  if (p.banos) partes.push(p.banos + (p.banos === 1 ? " baño" : " baños"));
+  if (p.planta) partes.push("planta " + p.planta);
+  return partes.join(" · ");
+}
+
+/* ==========================================================================
+   Normalización: admite el esquema propio de pisos.json y el de /api/escaparate
+   ========================================================================== */
+function normaliza(bruto) {
+  const p = bruto || {};
+  const imagenes = []
+    .concat(Array.isArray(p.imagenes) ? p.imagenes : [])
+    .concat(p.imagen ? [p.imagen] : [])
+    .concat(p.foto ? [p.foto] : [])
+    .filter((v, i, a) => v && a.indexOf(v) === i);
+  const titulo = String(p.titulo || p.title || "Inmueble disponible").trim();
+  const referencia = p.referencia || p.ref || null;
+  return {
+    id: babel(referencia || p.url || titulo),
+    referencia,
+    titulo,
+    operacion: (p.operacion || "venta").toLowerCase() === "alquiler" ? "alquiler" : "venta",
+    zona: p.zona || p.localidad || null,
+    precio: Number.isFinite(p.precio) ? p.precio : null,
+    precioTexto: p.precioTexto || null,
+    habitaciones: p.habitaciones ?? null,
+    banos: p.banos ?? null,
+    superficieConstruida: p.superficieConstruida ?? p.m2 ?? null,
+    planta: p.planta ?? null,
+    descripcion: p.descripcion || null,
+    imagenes,
+    imagen: imagenes[0] || null,
+    url: p.url || null,
+    verificado: p.verificado || null,
+    activo: p.activo !== false,
+  };
+}
+
+/* ==========================================================================
+   Carga de datos en cascada
+   ========================================================================== */
+async function leeOrigen(url) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal, cache: "no-cache" });
+    if (!r.ok) return null;
+    const datos = await r.json();
+    const lista = Array.isArray(datos) ? datos : datos.inmuebles || datos.items || [];
+    return lista.length ? lista : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function cargaCartera() {
+  const forzado = params.get("fuente");
+  if (forzado === "respaldo") return { items: RESPALDO, origen: "respaldo" };
+  const origenes = forzado === "json" ? ["pisos.json"]
+    : forzado === "api" ? ["/api/escaparate"]
+    : CONFIG.origenes;
+  for (const url of origenes) {
+    const lista = await leeOrigen(url);
+    if (lista) return { items: lista, origen: url };
+  }
+  return { items: RESPALDO, origen: "respaldo" };
+}
+
+/* ==========================================================================
+   Estado
+   ========================================================================== */
+const CLAVE_INTERES = "castresana:interes";
+const estado = {
+  todos: [],
+  visibles: [],
+  activo: 0,
+  filtro: { operacion: params.get("op") || "todas", zona: "" },
+  interes: new Set(),
+  origen: null,
+};
+
+try {
+  const guardado = JSON.parse(localStorage.getItem(CLAVE_INTERES) || "[]");
+  if (Array.isArray(guardado)) guardado.forEach((id) => estado.interes.add(id));
+} catch { /* sin almacenamiento: la selección dura lo que la visita */ }
+
+function guardaInteres() {
+  try { localStorage.setItem(CLAVE_INTERES, JSON.stringify([...estado.interes])); } catch { /* da igual */ }
+}
+
+const seleccionados = () => estado.todos.filter((p) => estado.interes.has(p.id));
+
+/* ==========================================================================
+   Mensajes de contacto (WhatsApp y correo)
+   ========================================================================== */
+function lineaInmueble(p, i) {
+  const partes = [`${i + 1}) ${p.titulo}`, precioTexto(p)];
+  const d = datosTexto(p);
+  if (d) partes.push(d);
+  if (p.zona) partes.push(p.zona);
+  if (p.referencia) partes.push("ref " + p.referencia);
+  let linea = partes.join(" — ");
+  if (p.url) linea += "\n   " + p.url;
+  return linea;
+}
+
+function textoMensaje(lista, datos = {}) {
+  const recorte = lista.slice(0, CONFIG.maxEnMensaje);
+  const saludo = datos.nombre ? `Hola, soy ${datos.nombre}.` : "Hola,";
+  const cuerpo = [
+    `${saludo} Os escribo desde el escaparate de ${CONFIG.marca}.`,
+    "",
+    recorte.length === 1 ? "Me interesa este inmueble:" : `Me interesan estos ${recorte.length} inmuebles:`,
+    "",
+    recorte.map(lineaInmueble).join("\n"),
+  ];
+  if (lista.length > recorte.length) cuerpo.push(`(y ${lista.length - recorte.length} más marcados en la web)`);
+  cuerpo.push("");
+  if (datos.cuando) cuerpo.push("Cuándo me viene bien: " + datos.cuando);
+  if (datos.telefono) cuerpo.push("Mi teléfono: " + datos.telefono);
+  if (datos.email) cuerpo.push("Mi correo: " + datos.email);
+  if (datos.mensaje) cuerpo.push("", datos.mensaje);
+  cuerpo.push("", "¿Podemos ver alguno esta semana?");
+  return cuerpo.join("\n");
+}
+
+function asunto(lista) {
+  const refs = lista.map((p) => p.referencia).filter(Boolean).slice(0, 4).join(", ");
+  const base = lista.length === 1 ? "Me interesa un inmueble" : `Me interesan ${lista.length} inmuebles`;
+  return refs ? `${base} (${refs})` : base;
+}
+
+const hayWasap = () => Boolean(CONFIG.contacto.whatsapp);
+
+function abreWhatsApp(lista, datos) {
+  if (!lista.length) return;
+  const texto = encodeURIComponent(textoMensaje(lista, datos));
+  const url = hayWasap()
+    ? `https://wa.me/${CONFIG.contacto.whatsapp}?text=${texto}`
+    : `https://wa.me/?text=${texto}`; // sin número configurado: WhatsApp pide elegir contacto
+  window.open(url, "_blank", "noopener");
+}
+
+function abreCorreo(lista, datos) {
+  if (!lista.length) return;
+  const url = `mailto:${CONFIG.contacto.email}?subject=${encodeURIComponent(asunto(lista))}`
+    + `&body=${encodeURIComponent(textoMensaje(lista, datos))}`;
+  location.href = url;
+}
+
+// Registro del lead en el CRM (Supabase), reutilizando /api/lead. Si no está
+// configurado o falla, no pasa nada: el mensaje del cliente ya ha salido.
+function registraLead(datos, lista) {
+  if (!datos.email || !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(datos.email)) return;
+  const refs = lista.map((p) => p.referencia || p.titulo).slice(0, 5).join(" | ");
+  fetch("/api/lead", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origen: "escaparate3d",
+      nombre: datos.nombre || "",
+      email: datos.email,
+      telefono: datos.telefono || "",
+      tipo: "visita: " + refs,
+    }),
+  }).catch(() => { /* silencioso a propósito */ });
+}
+
+/* ==========================================================================
+   Interfaz: filtros, ficha activa, lista 2D y barra de seleccionados
+   ========================================================================== */
+let escena3d = null; // lo rellena la escena WebGL si arranca
+
+function aplicaFiltros(conservarId) {
+  const { operacion, zona } = estado.filtro;
+  estado.visibles = estado.todos.filter((p) => {
+    if (operacion !== "todas" && p.operacion !== operacion) return false;
+    if (zona && p.zona !== zona) return false;
+    return true;
+  });
+  const i = conservarId ? estado.visibles.findIndex((p) => p.id === conservarId) : -1;
+  estado.activo = i >= 0 ? i : 0;
+  $("contador").textContent = estado.visibles.length
+    ? `${estado.visibles.length} inmueble${estado.visibles.length === 1 ? "" : "s"}`
+    : "Sin resultados";
+  pintaLista2d();
+  pintaFicha();
+  if (escena3d) escena3d.montar(estado.visibles.slice(0, CONFIG.maxTarjetas3D), estado.activo);
+}
+
+function pintaZonas() {
+  const zonas = [...new Set(estado.todos.map((p) => p.zona).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+  $("zona").innerHTML = '<option value="">Todas las zonas</option>'
+    + zonas.map((z) => `<option value="${escapa(z)}">${escapa(z)}</option>`).join("");
+}
+
+function pintaFicha() {
+  const p = estado.visibles[estado.activo];
+  const ficha = $("f-ficha"), interesa = $("f-interesa"), visita = $("f-visita");
+  if (!p) {
+    $("f-etiqueta").textContent = "Cartera de " + CONFIG.marca;
+    $("f-titulo").textContent = estado.visibles.length ? "Elige tu próxima casa" : "No hay inmuebles con ese filtro";
+    $("f-datos").textContent = estado.visibles.length ? "" : "Prueba a quitar el filtro de operación o de zona.";
+    $("f-precio").textContent = "";
+    $("f-verificado").textContent = "";
+    [ficha, interesa, visita].forEach((b) => (b.hidden = true));
+    return;
+  }
+  const etiqueta = [p.operacion === "alquiler" ? "Alquiler" : "Venta", p.zona, p.referencia ? "ref " + p.referencia : null]
+    .filter(Boolean).join(" · ");
+  $("f-etiqueta").textContent = etiqueta;
+  $("f-titulo").textContent = p.titulo;
+  $("f-datos").textContent = datosTexto(p) || (p.descripcion || "");
+  $("f-precio").textContent = precioTexto(p);
+  $("f-verificado").textContent = p.verificado ? "Anuncio comprobado el " + fechaCorta(p.verificado) : "";
+
+  ficha.hidden = !p.url;
+  if (p.url) { ficha.href = p.url; ficha.target = "_blank"; ficha.rel = "noopener"; }
+  interesa.hidden = false;
+  interesa.textContent = estado.interes.has(p.id) ? "✓ Marcado" : "Me interesa";
+  interesa.classList.toggle("marcado", estado.interes.has(p.id));
+  interesa.onclick = () => alternaInteres(p.id);
+  visita.hidden = false;
+  visita.onclick = () => abreDialogo([p]);
+}
+
+function fechaCorta(iso) {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleDateString("es-ES");
+}
+
+function pintaLista2d() {
+  const rejilla = $("rejilla");
+  if (!estado.visibles.length) {
+    rejilla.innerHTML = '<li style="color:var(--apagado)">No hay inmuebles con ese filtro.</li>';
+    return;
+  }
+  rejilla.innerHTML = estado.visibles.map((p) => {
+    const marcado = estado.interes.has(p.id);
+    const foto = p.imagen
+      ? `<img src="${escapa(p.imagen)}" alt="${escapa(p.titulo)}" loading="lazy" decoding="async" />`
+      : `<span class="sinfoto">Fotos en la ficha</span>`;
+    return `<li class="tarjeta" data-id="${escapa(p.id)}">
+      <div class="foto">${foto}<span class="op">${p.operacion === "alquiler" ? "Alquiler" : "Venta"}</span></div>
+      <div class="cuerpo">
+        <h3>${escapa(p.titulo)}</h3>
+        <p class="datos">${escapa([datosTexto(p), p.zona].filter(Boolean).join(" · "))}</p>
+        <p class="precio">${escapa(precioTexto(p))}</p>
+        <div class="cta">
+          ${p.url ? `<a class="btn pequeno" href="${escapa(p.url)}" target="_blank" rel="noopener">Ver ficha</a>` : ""}
+          <button class="btn pequeno ${marcado ? "marcado" : ""}" data-accion="interes">${marcado ? "✓ Marcado" : "Me interesa"}</button>
+          <button class="btn pequeno solido" data-accion="visita">Visita</button>
+        </div>
+      </div>
+    </li>`;
+  }).join("");
+}
+
+function pintaBarra() {
+  const lista = seleccionados();
+  const barra = $("barra");
+  barra.hidden = lista.length === 0;
+  document.body.classList.toggle("con-seleccion", lista.length > 0);
+  $("barra-cuenta").innerHTML = `${lista.length} inmueble${lista.length === 1 ? "" : "s"} marcado${lista.length === 1 ? "" : "s"}`
+    + `<small>Te enviamos solo estos, nada más.</small>`;
+}
+
+function alternaInteres(id) {
+  if (estado.interes.has(id)) estado.interes.delete(id); else estado.interes.add(id);
+  guardaInteres();
+  pintaFicha();
+  pintaLista2d();
+  pintaBarra();
+}
+
+/* ==========================================================================
+   Diálogo de solicitud de visita
+   ========================================================================== */
+const dlg = $("dlg");
+let listaDialogo = [];
+
+function abreDialogo(lista) {
+  listaDialogo = lista.filter(Boolean);
+  if (!listaDialogo.length) return;
+  $("dlg-titulo").textContent = listaDialogo.length === 1 ? "Solicitar visita" : `Solicitar visita · ${listaDialogo.length} inmuebles`;
+  $("dlg-lista").innerHTML = listaDialogo.map((p) =>
+    `<li>• ${escapa(p.titulo)} — <b>${escapa(precioTexto(p))}</b>${p.referencia ? " · ref " + escapa(p.referencia) : ""}</li>`
+  ).join("");
+  $("dlg-wasap").textContent = hayWasap() ? "Enviar por WhatsApp" : "Abrir en WhatsApp";
+  if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
+}
+
+function datosDelFormulario() {
+  return {
+    nombre: $("dlg-nombre").value.trim(),
+    telefono: $("dlg-telefono").value.trim(),
+    email: $("dlg-email").value.trim(),
+    cuando: $("dlg-cuando").value,
+    mensaje: $("dlg-mensaje").value.trim(),
+  };
+}
+
+$("dlg-cerrar").addEventListener("click", () => dlg.close());
+// Enter dentro del formulario no cierra el diálogo: se elige canal a propósito.
+$("dlg-form").addEventListener("submit", (e) => e.preventDefault());
+$("dlg-wasap").addEventListener("click", () => {
+  const datos = datosDelFormulario();
+  registraLead(datos, listaDialogo);
+  abreWhatsApp(listaDialogo, datos);
+  dlg.close();
+});
+$("dlg-mail").addEventListener("click", () => {
+  const datos = datosDelFormulario();
+  registraLead(datos, listaDialogo);
+  abreCorreo(listaDialogo, datos);
+  dlg.close();
+});
+
+/* ==========================================================================
+   Eventos de la interfaz
+   ========================================================================== */
+document.querySelectorAll(".chip[data-op]").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    estado.filtro.operacion = chip.dataset.op;
+    document.querySelectorAll(".chip[data-op]").forEach((c) =>
+      c.setAttribute("aria-pressed", String(c === chip)));
+    aplicaFiltros();
+  });
+});
+$("zona").addEventListener("change", (e) => { estado.filtro.zona = e.target.value; aplicaFiltros(); });
+
+$("rejilla").addEventListener("click", (e) => {
+  const boton = e.target.closest("button[data-accion]");
+  if (!boton) return;
+  const id = boton.closest(".tarjeta")?.dataset.id;
+  const p = estado.todos.find((x) => x.id === id);
+  if (!p) return;
+  if (boton.dataset.accion === "interes") alternaInteres(id);
+  else abreDialogo([p]);
+});
+
+$("barra-pedir").addEventListener("click", () => abreDialogo(seleccionados()));
+$("barra-limpiar").addEventListener("click", () => {
+  estado.interes.clear(); guardaInteres(); pintaFicha(); pintaLista2d(); pintaBarra();
+});
+
+$("anterior").addEventListener("click", () => escena3d && escena3d.mover(-1));
+$("siguiente").addEventListener("click", () => escena3d && escena3d.mover(1));
+addEventListener("keydown", (e) => {
+  if (dlg.open || !escena3d) return;
+  if (e.key === "ArrowLeft") { escena3d.mover(-1); e.preventDefault(); }
+  if (e.key === "ArrowRight") { escena3d.mover(1); e.preventDefault(); }
+});
+
+/* Contacto de cabecera y pie, tomados de CONFIG */
+$("claim").textContent = CONFIG.claim;
+$("tel-cabecera").href = "tel:" + CONFIG.contacto.telefono;
+$("mail-cabecera").href = "mailto:" + CONFIG.contacto.email
+  + "?subject=" + encodeURIComponent("Consulta desde el escaparate de " + CONFIG.marca);
+$("pie-horario").textContent = CONFIG.contacto.horario;
+if (hayWasap()) {
+  const b = $("wasap-cabecera");
+  b.hidden = false;
+  b.href = `https://wa.me/${CONFIG.contacto.whatsapp}?text=`
+    + encodeURIComponent(`Hola, os escribo desde la web de ${CONFIG.marca}. Quería consultaros una cosa.`);
+  b.target = "_blank"; b.rel = "noopener";
+}
+
+/* ==========================================================================
+   Escena 3D (Three.js). Todo lo de aquí es decorativo: si falla, la web sigue
+   funcionando con la lista 2D, que tiene exactamente las mismas acciones.
+   ========================================================================== */
+const reducido = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const esMovil = matchMedia("(max-width:860px)").matches;
+
+const LIENZO_W = 512, LIENZO_H = 704;   // proporción de la cara frontal de la tarjeta
+const CARTA_W = 1.7, CARTA_H = 2.34;    // tamaño en la escena (misma proporción)
+const RADIO = 6.5;                      // radio del carrusel cilíndrico
+
+function esRemota(src) {
+  return /^https?:\/\//i.test(src) && !src.startsWith(location.origin);
+}
+
+function cargaImagen(src) {
+  return new Promise((resolve) => {
+    if (!src) return resolve(null);
+    const img = new Image();
+    if (esRemota(src)) img.crossOrigin = "anonymous"; // sin esto el canvas se "contamina" y WebGL lo rechaza
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.decoding = "async";
+    img.src = src;
+  });
+}
+
+function parteLineas(ctx, texto, ancho, maximo) {
+  const palabras = String(texto).split(/\s+/);
+  const lineas = [];
+  let actual = "";
+  for (const palabra of palabras) {
+    const prueba = actual ? actual + " " + palabra : palabra;
+    if (ctx.measureText(prueba).width > ancho && actual) { lineas.push(actual); actual = palabra; }
+    else actual = prueba;
+  }
+  if (actual) lineas.push(actual);
+  if (lineas.length > maximo) {
+    lineas.length = maximo;
+    lineas[maximo - 1] = lineas[maximo - 1].replace(/[\s.,;:-]+$/, "") + "…";
+  }
+  return lineas;
+}
+
+const hex = (c) => "#" + c.toString(16).padStart(6, "0");
+
+// Dibuja la cara frontal de una tarjeta: foto + datos reales del inmueble.
+function dibujaTarjeta(p, img) {
+  const c = document.createElement("canvas");
+  c.width = LIENZO_W; c.height = LIENZO_H;
+  const g = c.getContext("2d");
+  const acento = hex(CONFIG.colores.acento);
+  const altoFoto = Math.round(LIENZO_H * 0.6);
+
+  const fondo = g.createLinearGradient(0, 0, 0, LIENZO_H);
+  fondo.addColorStop(0, "#1b242e"); fondo.addColorStop(1, "#0c1219");
+  g.fillStyle = fondo; g.fillRect(0, 0, LIENZO_W, LIENZO_H);
+
+  if (img && img.naturalWidth) {
+    // "cover": llena el hueco sin deformar la foto
+    const escala = Math.max(LIENZO_W / img.naturalWidth, altoFoto / img.naturalHeight);
+    const w = img.naturalWidth * escala, h = img.naturalHeight * escala;
+    g.save(); g.beginPath(); g.rect(0, 0, LIENZO_W, altoFoto); g.clip();
+    g.drawImage(img, (LIENZO_W - w) / 2, (altoFoto - h) / 2, w, h);
+    g.restore();
+  } else {
+    const sinFoto = g.createLinearGradient(0, 0, LIENZO_W, altoFoto);
+    sinFoto.addColorStop(0, "#243342"); sinFoto.addColorStop(1, "#131c26");
+    g.fillStyle = sinFoto; g.fillRect(0, 0, LIENZO_W, altoFoto);
+    g.fillStyle = "rgba(244,241,234,.35)"; g.font = "500 20px Inter, sans-serif"; g.textAlign = "center";
+    g.fillText("FOTOS EN LA FICHA", LIENZO_W / 2, altoFoto / 2);
+  }
+
+  const velo = g.createLinearGradient(0, altoFoto - 150, 0, altoFoto);
+  velo.addColorStop(0, "rgba(12,18,25,0)"); velo.addColorStop(1, "rgba(12,18,25,.95)");
+  g.fillStyle = velo; g.fillRect(0, altoFoto - 150, LIENZO_W, 150);
+
+  // Chip de operación
+  const op = p.operacion === "alquiler" ? "ALQUILER" : "VENTA";
+  g.font = "600 18px Inter, sans-serif"; g.textAlign = "left";
+  const anchoChip = g.measureText(op).width + 32;
+  g.fillStyle = "rgba(8,12,18,.82)"; g.beginPath();
+  if (g.roundRect) g.roundRect(26, 26, anchoChip, 38, 19); else g.rect(26, 26, anchoChip, 38);
+  g.fill();
+  g.strokeStyle = "rgba(244,241,234,.22)"; g.lineWidth = 1; g.stroke();
+  g.fillStyle = acento; g.fillText(op, 42, 51);
+
+  // Zona y referencia
+  let y = altoFoto + 44;
+  g.textAlign = "center";
+  const cabecera = [p.zona, p.referencia ? "ref " + p.referencia : null].filter(Boolean).join(" · ");
+  if (cabecera) {
+    g.fillStyle = acento; g.font = "600 19px Inter, sans-serif";
+    g.fillText(cabecera.toUpperCase(), LIENZO_W / 2, y);
+  }
+
+  // Título
+  y += 42;
+  g.fillStyle = "#f4f1ea"; g.font = "700 34px Fraunces, Georgia, serif";
+  parteLineas(g, p.titulo, LIENZO_W - 72, 3).forEach((linea, i) => g.fillText(linea, LIENZO_W / 2, y + i * 40));
+
+  // Datos y precio
+  g.fillStyle = "#9aa5b1"; g.font = "400 21px Inter, sans-serif";
+  const datos = datosTexto(p);
+  if (datos) g.fillText(datos, LIENZO_W / 2, LIENZO_H - 92);
+  g.fillStyle = acento; g.font = "700 40px Inter, sans-serif";
+  g.fillText(precioTexto(p), LIENZO_W / 2, LIENZO_H - 40);
+
+  g.strokeStyle = "rgba(201,162,39,.55)"; g.lineWidth = 3;
+  g.strokeRect(14, 14, LIENZO_W - 28, LIENZO_H - 28);
+  return c;
+}
+
+async function inicia3D() {
+  const THREE = await import("three");
+  const { RoomEnvironment } = await import("three/addons/environments/RoomEnvironment.js");
+
+  const lienzo = $("escena");
+  const renderer = new THREE.WebGLRenderer({ canvas: lienzo, antialias: true, powerPreference: "high-performance" });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); // sin tope, los móviles con DPR 3-4 se funden
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+
+  const escena = new THREE.Scene();
+  escena.background = new THREE.Color(CONFIG.colores.fondo);
+  escena.fog = new THREE.Fog(CONFIG.colores.fondo, 8, 18);
+
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  escena.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+  const camara = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 100);
+  // Las tarjetas van en la mitad superior: la ficha de texto ocupa la inferior.
+  camara.position.set(0, 0.35, RADIO + 6.8);
+
+  // Tres luces, ni una más: clave, contra de color de marca y ambiente suave.
+  const clave = new THREE.DirectionalLight(0xffffff, 2.9); clave.position.set(4, 7, 12); escena.add(clave);
+  const contra = new THREE.DirectionalLight(CONFIG.colores.contra, 1.4); contra.position.set(-7, 3, 2); escena.add(contra);
+  escena.add(new THREE.AmbientLight(0xffffff, 0.45));
+
+  const suelo = new THREE.Mesh(
+    new THREE.PlaneGeometry(80, 80),
+    new THREE.MeshPhysicalMaterial({ color: 0x080c11, roughness: 0.35, metalness: 0.75 })
+  );
+  suelo.rotation.x = -Math.PI / 2; suelo.position.y = -1.7; escena.add(suelo);
+
+  const grupo = new THREE.Group(); grupo.position.y = 0.45; escena.add(grupo);
+  const geometria = new THREE.BoxGeometry(CARTA_W, CARTA_H, 0.1);
+
+  let tarjetas = [];
+  let paso = 0.34;
+  let generacion = 0;
+  let rotObjetivo = 0;
+  let encima = null;
+
+  function limpia() {
+    for (const t of tarjetas) {
+      grupo.remove(t);
+      t.material.forEach((m) => { if (m.map) m.map.dispose(); m.dispose(); });
+    }
+    tarjetas = [];
+  }
+
+  function texturaDe(canvas) {
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return tex;
+  }
+
+  function montar(lista, indice = 0) {
+    limpia();
+    const n = lista.length;
+    if (!n) { estado.activo = 0; actualizaFlechas(0); return; }
+    paso = Math.min((Math.PI * 2) / n, 0.34);
+    const gen = ++generacion;
+
+    lista.forEach((p, i) => {
+      const lado = new THREE.MeshPhysicalMaterial({
+        color: CONFIG.colores.tarjeta, roughness: 0.25, metalness: 0.15, clearcoat: 1,
+        emissive: new THREE.Color(CONFIG.colores.acento), emissiveIntensity: 0,
+      });
+      const frente = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff, roughness: 0.28, metalness: 0.05, clearcoat: 1,
+        map: texturaDe(dibujaTarjeta(p, null)),
+        emissive: new THREE.Color(CONFIG.colores.acento), emissiveIntensity: 0,
+      });
+      const malla = new THREE.Mesh(geometria, [lado, lado, lado, lado, frente, lado]);
+      const a = i * paso;
+      malla.position.set(Math.sin(a) * RADIO, 0, Math.cos(a) * RADIO);
+      malla.rotation.y = a;
+      malla.userData = { inmueble: p, indice: i, alto: 0, escala: 1 };
+      grupo.add(malla);
+      tarjetas.push(malla);
+
+      // La foto entra después, sin bloquear el primer render.
+      if (p.imagen) {
+        cargaImagen(p.imagen).then((img) => {
+          if (!img || gen !== generacion || !malla.parent) return;
+          const antigua = frente.map;
+          frente.map = texturaDe(dibujaTarjeta(p, img));
+          frente.needsUpdate = true;
+          if (antigua) antigua.dispose();
+        });
+      }
+    });
+
+    ir(indice);
+  }
+
+  function ir(i) {
+    if (!tarjetas.length) return;
+    estado.activo = Math.max(0, Math.min(tarjetas.length - 1, i));
+    rotObjetivo = -estado.activo * paso;
+    actualizaFlechas(tarjetas.length);
+    pintaFicha();
+  }
+
+  function mover(delta) { ir(estado.activo + delta); }
+
+  function actualizaFlechas(n) {
+    $("anterior").disabled = estado.activo <= 0 || n <= 1;
+    $("siguiente").disabled = estado.activo >= n - 1 || n <= 1;
+  }
+
+  /* ---- Interacción: puntero, arrastre y rueda ---- */
+  const rayo = new THREE.Raycaster();
+  const puntero = new THREE.Vector2(-2, -2);
+  let px = 0, py = 0, arrastrando = false, x0 = 0, acumulado = 0, movido = 0;
+
+  lienzo.addEventListener("pointermove", (e) => {
+    puntero.x = (e.clientX / innerWidth) * 2 - 1;
+    puntero.y = -(e.clientY / innerHeight) * 2 + 1;
+    px = puntero.x * 0.3; py = puntero.y * 0.16;
+    if (!arrastrando) return;
+    const dx = e.clientX - x0; x0 = e.clientX;
+    acumulado += dx; movido += Math.abs(dx);
+    if (Math.abs(acumulado) > 70) { mover(acumulado > 0 ? -1 : 1); acumulado = 0; }
+  });
+  lienzo.addEventListener("pointerdown", (e) => {
+    arrastrando = true; x0 = e.clientX; acumulado = 0; movido = 0;
+    lienzo.setPointerCapture?.(e.pointerId);
+  });
+  lienzo.addEventListener("pointerup", () => {
+    arrastrando = false;
+    if (movido < 8 && encima) ir(encima.userData.indice); // clic limpio sobre una tarjeta
+  });
+  lienzo.addEventListener("pointerleave", () => { arrastrando = false; puntero.set(-2, -2); });
+
+  let ruedaAcum = 0;
+  lienzo.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    ruedaAcum += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (Math.abs(ruedaAcum) > 45) { mover(ruedaAcum > 0 ? 1 : -1); ruedaAcum = 0; }
+  }, { passive: false });
+
+  let temporizadorMedida = null;
+  addEventListener("resize", () => {
+    clearTimeout(temporizadorMedida);
+    temporizadorMedida = setTimeout(() => {
+      camara.aspect = innerWidth / innerHeight;
+      camara.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+    }, 150);
+  });
+
+  let corriendo = true;
+  document.addEventListener("visibilitychange", () => { corriendo = !document.hidden; });
+
+  const reloj = new THREE.Clock();
+  function fotograma() {
+    requestAnimationFrame(fotograma);
+    if (!corriendo || !tarjetas.length) return;
+    const t = reloj.getElapsedTime();
+
+    rayo.setFromCamera(puntero, camara);
+    const visibles = tarjetas.filter((c) => c.visible);
+    const impacto = rayo.intersectObjects(visibles, false)[0];
+    const nuevo = impacto ? impacto.object : null;
+    if (nuevo !== encima) {
+      encima = nuevo;
+      document.body.style.cursor = encima ? "pointer" : "default";
+    }
+
+    grupo.rotation.y += (rotObjetivo - grupo.rotation.y) * (reducido ? 0.3 : 0.1);
+
+    tarjetas.forEach((c, i) => {
+      const distancia = Math.abs(i - estado.activo);
+      c.visible = distancia <= 7;                     // presupuesto: solo la ventana visible
+      if (!c.visible) return;
+      const activa = i === estado.activo;
+      const resaltada = activa || c === encima;
+      const flotar = reducido ? 0 : Math.sin(t * 0.8 + i) * 0.05;
+      const alto = (activa ? 0.28 : 0) + flotar;
+      c.position.y += (alto - c.position.y) * 0.1;
+      const escala = activa ? 1.06 : c === encima ? 1.02 : 0.93;
+      c.scale.setScalar(c.scale.x + (escala - c.scale.x) * 0.1);
+      // El marco se enciende; la cara con la foto casi nada, para no lavar los colores.
+      c.material.forEach((m, j) => {
+        const objetivo = resaltada ? (j === 4 ? 0.04 : 0.26) : 0;
+        m.emissiveIntensity += (objetivo - m.emissiveIntensity) * 0.1;
+      });
+    });
+
+    if (!reducido) {
+      camara.position.x += (px - camara.position.x) * 0.045;
+      camara.position.y += (0.35 + py - camara.position.y) * 0.045;
+    }
+    camara.lookAt(0, 0.15, RADIO);
+    renderer.render(escena, camara);
+  }
+  fotograma();
+
+  escena3d = { montar, mover, ir };
+  montar(estado.visibles.slice(0, CONFIG.maxTarjetas3D), estado.activo);
+}
+
+/* ==========================================================================
+   Arranque
+   ========================================================================== */
+(async function arranca() {
+  const { items, origen } = await cargaCartera();
+  estado.origen = origen;
+  estado.todos = items.map(normaliza).filter((p) => p.activo);
+  // Primero los que tienen foto propia: el escaparate entra por los ojos.
+  estado.todos.sort((a, b) => (b.imagen ? 1 : 0) - (a.imagen ? 1 : 0));
+
+  pintaZonas();
+  if (estado.filtro.operacion !== "todas") {
+    document.querySelectorAll(".chip[data-op]").forEach((c) =>
+      c.setAttribute("aria-pressed", String(c.dataset.op === estado.filtro.operacion)));
+  }
+  const refInicial = params.get("ref");
+  const inicial = refInicial ? estado.todos.find((p) => p.referencia === refInicial || p.id === babel(refInicial)) : null;
+  aplicaFiltros(inicial ? inicial.id : null);
+  pintaBarra();
+  $("cargando").hidden = true;
+  document.title = `${estado.todos.length} inmuebles en Oviedo y Asturias · ${CONFIG.marca}`;
+
+  const sin3d = params.get("2d") === "1" || esMovil;
+  if (sin3d) { document.body.classList.add("sin3d"); return; }
+  try {
+    if (document.fonts && document.fonts.ready) await document.fonts.ready; // rótulos nítidos a la primera
+    await inicia3D();
+  } catch (e) {
+    console.warn("Sin WebGL: se usa la lista 2D.", e);
+    document.body.classList.add("sin3d");
+  }
+})();
+</script>
+</body>
+</html>
