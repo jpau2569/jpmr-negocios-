@@ -33,20 +33,38 @@ El correo va a `asesoriacastresana@gmail.com` y el WhatsApp al móvil que se
 configure. Si además hay Supabase configurado, el contacto se registra en el CRM
 por `/api/lead` (origen `escaparate3d`) sin molestar al cliente.
 
-## Lo único que hay que configurar
+## Contacto configurado
 
-En `index.html`, bloque `CONFIG` (arriba del `<script type="module">`):
+Todo vive en el bloque `CONFIG` de `index.html` (arriba del `<script type="module">`):
+WhatsApp **672 77 57 21**, correo **asesoriacastresana@gmail.com**, teléfono
+985 21 04 68, dirección y horario de la oficina. Para cambiar el móvil, esa línea:
 
 ```js
-whatsapp: "",   // ← móvil en formato internacional SIN "+": "34600112233"
+whatsapp: "34672775721",   // internacional, sin "+" ni espacios
 ```
 
-Mientras esté vacío, los botones de WhatsApp abren la app pidiendo elegir
-contacto (funcionan, pero el cliente tiene que buscarnos) y el botón de WhatsApp
-de la cabecera se oculta. **Poner el número es el paso 1.**
+Si se deja vacío, los botones de WhatsApp siguen funcionando pero abren la app
+pidiendo elegir contacto, y el botón de la cabecera se oculta.
 
-El resto del bloque (marca, teléfono, correo, dirección, horario, colores) ya
-está relleno con los datos reales de la oficina.
+## La tarjeta "Comprar o vender con todo en regla"
+
+Cierra el carrusel 3D y encabeza la lista del móvil. Al abrirla:
+
+- **Checklist de la notaría**, en dos pestañas (voy a comprar / voy a vender):
+  11 puntos cada una, con qué es, dónde se pide y cuáles hay que empezar pronto
+  (cancelación registral de hipoteca, certificado de la comunidad, papeles del
+  banco). Lo marcado se guarda en el dispositivo y sale en la barra de progreso.
+- **Calculadora.** Comprando: entrada, ITP, notaría/registro/gestoría, cuánto
+  hace falta el día de la firma y cuota estimada de hipoteca. Vendiendo:
+  ganancia, IRPF orientativo por la escala del ahorro, hipoteca a cancelar y qué
+  queda limpio. Todos los números son editables.
+- **"Mandármelo por WhatsApp / por correo"**: manda lo que ya tiene, lo que le
+  falta y sus números. Es decir, un lead cualificado que llega con los deberes
+  hechos, no un "hola, información".
+
+Todo se calcula en el navegador y lleva aviso de que es orientativo: los tipos,
+las bonificaciones y lo que pide cada notaría cambian. Los textos están en la
+constante `PAPELES` del final de `index.html`; cambiarlos es editar texto.
 
 ## De dónde salen los datos
 
@@ -83,6 +101,16 @@ súmalas al array `imagenes` de ese inmueble en `pisos.json`.
 
 Cuando exista un feed o una API autorizada de Inmoweb, solo hay que cambiar la
 fuente dentro de `sincronizar.mjs`: el resto del sistema no se entera.
+
+### Las fotos reales antes de sincronizar: `/api/foto`
+
+El escaparate pinta las fotos dentro del canvas y WebGL rechaza las imágenes de
+otro dominio. Las de la web oficial (CDN de Inmoweb) no autorizan CORS, así que
+pasan por `api/foto.js`, que las sirve desde nuestro propio dominio con caché en
+Vercel. Gracias a eso los inmuebles auténticos salen con su foto desde el primer
+día, aunque `pisos.json` esté vacío. **No es un proxy abierto**: solo deja pasar
+`asesoriacastresana.com` y `apinmo.com`. En un hosting sin `/api`, la lista cae
+sola a la URL original de la foto.
 
 ## Publicar
 

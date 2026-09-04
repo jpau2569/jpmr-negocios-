@@ -143,7 +143,7 @@
 
   /* ---------- Diálogo de contacto ---------- */
   dialog{border:1px solid var(--linea);border-radius:20px;background:var(--fondo2);color:var(--texto);
-    padding:0;width:min(520px,94vw);max-height:88vh}
+    padding:0;width:min(520px,94vw);max-height:88vh;overflow:auto;overscroll-behavior:contain}
   dialog::backdrop{background:rgba(4,6,10,.72)}
   .dlg{padding:22px}
   .dlg h2{font-family:var(--display);font-size:23px;margin:0 0 4px}
@@ -157,7 +157,37 @@
   .dlg .envios{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
   .dlg .envios .btn{flex:1 1 160px}
   .dlg .aviso{margin:14px 0 0;font-size:11px;color:var(--apagado);line-height:1.5}
-  .dlg .cerrar{position:absolute;top:12px;right:14px;background:none;border:0;color:var(--apagado);font-size:24px;cursor:pointer}
+  .dlg .cerrar{position:sticky;top:0;float:right;margin:-6px -6px 0 0;width:34px;height:34px;border-radius:50%;
+    background:rgba(19,26,34,.9);border:1px solid var(--linea);color:var(--apagado);font-size:20px;line-height:1;cursor:pointer;z-index:2}
+  .dlg .cerrar:hover{color:var(--texto)}
+
+  /* ---------- Guía de compraventa ---------- */
+  dialog.ancho{width:min(680px,96vw)}
+  .pestanas{display:flex;gap:8px;margin:0 0 14px}
+  .pestanas .chip{flex:1;justify-content:center;text-align:center;padding:10px 14px}
+  .progreso{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:12px;color:var(--apagado)}
+  .progreso .via{flex:1;height:6px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+  .progreso .via i{display:block;height:100%;width:0;background:var(--acento);transition:width .3s}
+  .checklist{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:8px}
+  .checklist li{border:1px solid var(--linea);border-radius:14px;padding:11px 13px;background:rgba(0,0,0,.18)}
+  .checklist li.listo{border-color:rgba(201,162,39,.55);background:rgba(201,162,39,.09)}
+  .checklist label{display:flex;gap:10px;align-items:flex-start;margin:0;font-size:14px;font-weight:600;color:var(--texto);cursor:pointer}
+  .checklist input{width:18px;height:18px;flex:0 0 auto;margin-top:1px;accent-color:var(--acento)}
+  .checklist p{margin:6px 0 0 28px;font-size:12.5px;color:var(--apagado);line-height:1.55}
+  .checklist .cuando{margin-left:8px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--acento);font-weight:600}
+  .calc{border:1px solid var(--linea);border-radius:16px;padding:14px;background:rgba(0,0,0,.2)}
+  .calc h3{font-family:var(--display);font-size:18px;margin:0 0 4px}
+  .calc .pista{margin:0 0 12px;font-size:12px;color:var(--apagado);line-height:1.5}
+  .calc .campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px}
+  .calc .campos label{margin:0 0 4px}
+  .resultado{margin-top:14px;display:grid;gap:6px;font-size:14px}
+  .resultado .fila{display:flex;justify-content:space-between;gap:12px;color:var(--apagado)}
+  .resultado .fila b{color:var(--texto);font-variant-numeric:tabular-nums}
+  .resultado .total{border-top:1px solid var(--linea);margin-top:5px;padding-top:9px;font-size:15px}
+  .resultado .total b{color:var(--acento);font-size:19px}
+  .tarjeta.guia{border-color:rgba(201,162,39,.5);background:linear-gradient(160deg,rgba(201,162,39,.14),rgba(255,255,255,.03))}
+  .tarjeta.guia .cuerpo{padding:18px}
+  .tarjeta.guia .eti{margin:0 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--acento);font-weight:600}
 
   .cargando{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:8;
     background:var(--fondo);color:var(--apagado);font-size:14px;letter-spacing:.1em;text-transform:uppercase}
@@ -189,6 +219,7 @@
     <nav class="acciones" aria-label="Contacto directo">
       <a class="btn" id="tel-cabecera" href="tel:+34985210468">Llamar</a>
       <a class="btn" id="mail-cabecera" href="mailto:asesoriacastresana@gmail.com">Escribir</a>
+      <button class="btn" id="abrir-guia">Comprar o vender</button>
       <a class="btn solido" id="wasap-cabecera" href="#" hidden>WhatsApp</a>
     </nav>
   </header>
@@ -212,6 +243,7 @@
         <a class="btn" id="f-ficha" href="#lista" hidden>Ver ficha completa</a>
         <button class="btn" id="f-interesa" hidden>Me interesa</button>
         <button class="btn solido" id="f-visita" hidden>Solicitar visita</button>
+        <button class="btn solido" id="f-guia" hidden>Abrir la guía</button>
       </div>
       <p class="verificado" id="f-verificado"></p>
     </article>
@@ -273,6 +305,29 @@
   </form>
 </dialog>
 
+<dialog id="guia" class="ancho" aria-labelledby="guia-titulo">
+  <div class="dlg">
+    <button type="button" class="cerrar" id="guia-cerrar" aria-label="Cerrar">×</button>
+    <h2 id="guia-titulo">Comprar o vender con todo en regla</h2>
+    <p class="sub">Los papeles que te va a pedir la notaría y lo que cuesta de verdad la operación. Marca lo que ya tengas: se queda guardado en este dispositivo.</p>
+
+    <div class="pestanas" role="group" aria-label="Qué vas a hacer">
+      <button type="button" class="chip" data-modo="compra" aria-pressed="true">Voy a comprar</button>
+      <button type="button" class="chip" data-modo="venta" aria-pressed="false">Voy a vender</button>
+    </div>
+
+    <div class="progreso"><span class="via"><i id="guia-via"></i></span><span id="guia-progreso"></span></div>
+    <ul class="checklist" id="guia-lista"></ul>
+    <section class="calc" id="guia-calc"></section>
+
+    <div class="envios">
+      <button type="button" class="btn solido" id="guia-wasap">Mandármelo por WhatsApp</button>
+      <button type="button" class="btn" id="guia-mail">Mandármelo por correo</button>
+    </div>
+    <p class="aviso">Orientativo. Los tipos de impuestos, las bonificaciones y lo que pide cada notaría cambian, y cada caso tiene lo suyo (herencias, VPO, no residentes, hipoteca sin cancelar). Antes de firmar, confírmalo con la notaría o con tu gestoría — o pásanoslo y te lo miramos sin compromiso.</p>
+  </div>
+</dialog>
+
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"RealEstateAgent","name":"Asesoría Castresana",
 "url":"https://www.asesoriacastresana.com","email":"asesoriacastresana@gmail.com","telephone":"+34985210468",
@@ -297,9 +352,9 @@ const CONFIG = {
     telefono: "+34985210468",
     telefonoTexto: "985 21 04 68",
     email: "asesoriacastresana@gmail.com",
-    // WhatsApp: móvil en formato internacional SIN "+" ni espacios, p. ej. "34600112233".
+    // WhatsApp: móvil en formato internacional SIN "+" ni espacios.
     // Si se deja vacío, los botones de WhatsApp se ocultan solos y queda el correo.
-    whatsapp: "",
+    whatsapp: "34672775721",
     direccion: "C/ Cabo Noval, 8 Bajo 2 · 33007 Oviedo",
     horario: "L-V 10:00-13:30 y 16:30-19:30",
   },
@@ -523,6 +578,15 @@ function registraLead(datos, lista) {
    ========================================================================== */
 let escena3d = null; // lo rellena la escena WebGL si arranca
 
+// Tarjeta fija que cierra el carrusel: la guía de compraventa (ver más abajo).
+const GUIA = {
+  id: "guia-notaria", __guia: true,
+  titulo: "Comprar o vender con todo en regla",
+  subtitulo: "Los papeles que pide la notaría y lo que cuesta de verdad.",
+  operacion: "guia",
+};
+const elementosEscena = () => estado.visibles.slice(0, CONFIG.maxTarjetas3D).concat([GUIA]);
+
 function aplicaFiltros(conservarId) {
   const { operacion, zona } = estado.filtro;
   estado.visibles = estado.todos.filter((p) => {
@@ -537,7 +601,7 @@ function aplicaFiltros(conservarId) {
     : "Sin resultados";
   pintaLista2d();
   pintaFicha();
-  if (escena3d) escena3d.montar(estado.visibles.slice(0, CONFIG.maxTarjetas3D), estado.activo);
+  if (escena3d) escena3d.montar(elementosEscena(), estado.activo);
 }
 
 function pintaZonas() {
@@ -547,8 +611,19 @@ function pintaZonas() {
 }
 
 function pintaFicha() {
-  const p = estado.visibles[estado.activo];
-  const ficha = $("f-ficha"), interesa = $("f-interesa"), visita = $("f-visita");
+  const p = (escena3d ? elementosEscena() : estado.visibles)[estado.activo];
+  const ficha = $("f-ficha"), interesa = $("f-interesa"), visita = $("f-visita"), guia = $("f-guia");
+  guia.hidden = true;
+  if (p && p.__guia) {
+    $("f-etiqueta").textContent = "Guía práctica · gratis";
+    $("f-titulo").textContent = p.titulo;
+    $("f-datos").textContent = p.subtitulo;
+    $("f-precio").textContent = "";
+    $("f-verificado").textContent = "";
+    [ficha, interesa, visita].forEach((b) => (b.hidden = true));
+    guia.hidden = false;
+    return;
+  }
   if (!p) {
     $("f-etiqueta").textContent = "Cartera de " + CONFIG.marca;
     $("f-titulo").textContent = estado.visibles.length ? "Elige tu próxima casa" : "No hay inmuebles con ese filtro";
@@ -583,14 +658,20 @@ function fechaCorta(iso) {
 
 function pintaLista2d() {
   const rejilla = $("rejilla");
-  if (!estado.visibles.length) {
-    rejilla.innerHTML = '<li style="color:var(--apagado)">No hay inmuebles con ese filtro.</li>';
-    return;
-  }
-  rejilla.innerHTML = estado.visibles.map((p) => {
+
+  const tarjetaGuia = `<li class="tarjeta guia">
+      <div class="cuerpo">
+        <p class="eti">Guía práctica · gratis</p>
+        <h3>Comprar o vender con todo en regla</h3>
+        <p class="datos">Los papeles que pide la notaría, los impuestos y lo que necesitas tener el día de la firma. Con calculadora.</p>
+        <div class="cta"><button class="btn pequeno solido" data-accion="guia">Abrir la guía</button></div>
+      </div>
+    </li>`;
+  const fichas = estado.visibles.map((p) => {
     const marcado = estado.interes.has(p.id);
     const foto = p.imagen
-      ? `<img src="${escapa(p.imagen)}" alt="${escapa(p.titulo)}" loading="lazy" decoding="async" />`
+      ? `<img src="${escapa(fotoServida(p.imagen))}" data-alterna="${escapa(p.imagen)}"
+             alt="${escapa(p.titulo)}" loading="lazy" decoding="async" />`
       : `<span class="sinfoto">Fotos en la ficha</span>`;
     return `<li class="tarjeta" data-id="${escapa(p.id)}">
       <div class="foto">${foto}<span class="op">${p.operacion === "alquiler" ? "Alquiler" : "Venta"}</span></div>
@@ -606,6 +687,17 @@ function pintaLista2d() {
       </div>
     </li>`;
   }).join("");
+  rejilla.innerHTML = tarjetaGuia
+    + (fichas || '<li style="color:var(--apagado)">No hay inmuebles con ese filtro.</li>');
+
+  // Si /api/foto no existe (hosting sin backend), se prueba la URL original.
+  rejilla.querySelectorAll("img[data-alterna]").forEach((img) => {
+    img.addEventListener("error", () => {
+      const alterna = img.dataset.alterna;
+      if (alterna && !img.src.endsWith(alterna)) img.src = alterna;
+      else img.closest(".foto")?.insertAdjacentHTML("beforeend", '<span class="sinfoto">Fotos en la ficha</span>');
+    });
+  });
 }
 
 function pintaBarra() {
@@ -684,6 +776,7 @@ $("zona").addEventListener("change", (e) => { estado.filtro.zona = e.target.valu
 $("rejilla").addEventListener("click", (e) => {
   const boton = e.target.closest("button[data-accion]");
   if (!boton) return;
+  if (boton.dataset.accion === "guia") return abreGuia();
   const id = boton.closest(".tarjeta")?.dataset.id;
   const p = estado.todos.find((x) => x.id === id);
   if (!p) return;
@@ -733,15 +826,28 @@ function esRemota(src) {
   return /^https?:\/\//i.test(src) && !src.startsWith(location.origin);
 }
 
+// Las fotos de la web oficial no autorizan CORS y el canvas 3D no puede pintarlas.
+// Se piden a /api/foto (mismo dominio, con caché). Si no hay backend —hosting
+// estático—, se reintenta la URL original.
+function fotoServida(src) {
+  return src && esRemota(src) ? "/api/foto?u=" + encodeURIComponent(src) : src;
+}
+
 function cargaImagen(src) {
   return new Promise((resolve) => {
     if (!src) return resolve(null);
-    const img = new Image();
-    if (esRemota(src)) img.crossOrigin = "anonymous"; // sin esto el canvas se "contamina" y WebGL lo rechaza
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.decoding = "async";
-    img.src = src;
+    const intentos = esRemota(src) ? [fotoServida(src), src] : [src];
+    let i = 0;
+    (function probar() {
+      if (i >= intentos.length) return resolve(null);
+      const url = intentos[i++];
+      const img = new Image();
+      if (esRemota(url)) img.crossOrigin = "anonymous"; // sin esto el canvas se "contamina"
+      img.onload = () => resolve(img);
+      img.onerror = probar;
+      img.decoding = "async";
+      img.src = url;
+    })();
   });
 }
 
@@ -771,6 +877,8 @@ function dibujaTarjeta(p, img) {
   const g = c.getContext("2d");
   const acento = hex(CONFIG.colores.acento);
   const altoFoto = Math.round(LIENZO_H * 0.6);
+
+  if (p.__guia) return dibujaTarjetaGuia(c, g, acento);
 
   const fondo = g.createLinearGradient(0, 0, 0, LIENZO_H);
   fondo.addColorStop(0, "#1b242e"); fondo.addColorStop(1, "#0c1219");
@@ -828,6 +936,35 @@ function dibujaTarjeta(p, img) {
 
   g.strokeStyle = "rgba(201,162,39,.55)"; g.lineWidth = 3;
   g.strokeRect(14, 14, LIENZO_W - 28, LIENZO_H - 28);
+  return c;
+}
+
+// La tarjeta de la guía: sin foto, en dorado, para que se distinga del stock.
+function dibujaTarjetaGuia(c, g, acento) {
+  const fondo = g.createLinearGradient(0, 0, LIENZO_W, LIENZO_H);
+  fondo.addColorStop(0, "#20242c"); fondo.addColorStop(1, "#0a0d12");
+  g.fillStyle = fondo; g.fillRect(0, 0, LIENZO_W, LIENZO_H);
+
+  g.strokeStyle = acento; g.lineWidth = 4;
+  g.strokeRect(18, 18, LIENZO_W - 36, LIENZO_H - 36);
+  g.strokeStyle = "rgba(201,162,39,.35)"; g.lineWidth = 1;
+  g.strokeRect(34, 34, LIENZO_W - 68, LIENZO_H - 68);
+
+  g.textAlign = "center";
+  g.fillStyle = acento; g.font = "600 19px Inter, sans-serif";
+  g.fillText("GUÍA PRÁCTICA · GRATIS", LIENZO_W / 2, 110);
+
+  g.fillStyle = "#f4f1ea"; g.font = "700 44px Fraunces, Georgia, serif";
+  ["Comprar", "o vender", "con todo", "en regla"].forEach((l, i) => g.fillText(l, LIENZO_W / 2, 210 + i * 54));
+
+  g.fillStyle = "#9aa5b1"; g.font = "400 20px Inter, sans-serif";
+  ["Los papeles que pide la notaría,", "los impuestos y lo que necesitas", "tener el día de la firma."]
+    .forEach((l, i) => g.fillText(l, LIENZO_W / 2, 470 + i * 30));
+
+  g.fillStyle = acento; g.font = "700 26px Inter, sans-serif";
+  g.fillText("Ábrela y llévatela", LIENZO_W / 2, 612);
+  g.fillStyle = "#9aa5b1"; g.font = "400 18px Inter, sans-serif";
+  g.fillText("por WhatsApp o por correo", LIENZO_W / 2, 642);
   return c;
 }
 
@@ -1004,7 +1141,7 @@ async function inicia3D() {
       document.body.style.cursor = encima ? "pointer" : "default";
     }
 
-    grupo.rotation.y += (rotObjetivo - grupo.rotation.y) * (reducido ? 0.3 : 0.1);
+    grupo.rotation.y += (rotObjetivo - grupo.rotation.y) * (reducido ? 0.4 : 0.14);
 
     tarjetas.forEach((c, i) => {
       const distancia = Math.abs(i - estado.activo);
@@ -1034,7 +1171,7 @@ async function inicia3D() {
   fotograma();
 
   escena3d = { montar, mover, ir };
-  montar(estado.visibles.slice(0, CONFIG.maxTarjetas3D), estado.activo);
+  montar(elementosEscena(), estado.activo);
 }
 
 /* ==========================================================================
@@ -1069,6 +1206,221 @@ async function inicia3D() {
     document.body.classList.add("sin3d");
   }
 })();
+/* ==========================================================================
+   Guía de compraventa: lo que pide la notaría + calculadora de gastos.
+   Todo se calcula en el navegador; los importes son orientativos y así se dice.
+   ========================================================================== */
+const GUIA_CLAVE = "castresana:guia";
+
+const PAPELES = {
+  compra: [
+    { id: "dni", titulo: "DNI o NIE en vigor", detalle: "De todos los que compráis. Caducado no vale: la notaría no firma." },
+    { id: "civil", titulo: "Estado civil y régimen económico", detalle: "Casado en gananciales o en separación de bienes, pareja de hecho, capitulaciones… Decide a nombre de quién queda el piso y hay que declararlo en la escritura." },
+    { id: "pago", titulo: "Justificación de los medios de pago", detalle: "Obligatorio por la ley contra el blanqueo: transferencias o cheque bancario con sus justificantes. El notario hace constar cómo se ha pagado cada euro." },
+    { id: "arras", titulo: "Contrato de arras y justificante de la señal", detalle: "Si has dado señal. Ahí quedan fijados el precio, el plazo para firmar y qué pasa si alguien se echa atrás." },
+    { id: "banco", titulo: "Papeles del banco, si pides hipoteca", detalle: "La FEIN te la entregan al menos 10 días antes de la firma y con el notario firmas un acta previa gratuita antes de la escritura. Añade la tasación.", cuando: "empieza pronto" },
+    { id: "fondos", titulo: "Provisión de fondos, aparte del precio", detalle: "Impuesto, notaría, registro y gestoría no van dentro del precio. Ten el dinero disponible el día de la firma." },
+    { id: "nota", titulo: "Nota simple actualizada del inmueble", detalle: "Para ver cargas, superficie y titularidad reales. El notario la pide, pero conviene mirarla antes de dar la señal." },
+    { id: "comunidad", titulo: "Certificado de la comunidad al corriente", detalle: "Lo aporta el vendedor. Puedes renunciar a él, pero entonces las deudas pendientes pueden acabar siendo tuyas." },
+    { id: "cee", titulo: "Certificado de eficiencia energética", detalle: "Lo entrega el vendedor en la firma; es obligatorio para vender." },
+    { id: "suministros", titulo: "Último IBI y facturas de suministros", detalle: "Para cambiar la titularidad de IBI, agua, luz, gas y comunidad sin cortes." },
+    { id: "despues", titulo: "Después de firmar: impuesto y Registro", detalle: "Liquidar el ITP en plazo (en Asturias, 30 días hábiles) e inscribir la escritura en el Registro de la Propiedad. Suele encargarse la gestoría.", cuando: "después" },
+  ],
+  venta: [
+    { id: "dni", titulo: "DNI o NIE en vigor de todos los titulares", detalle: "Y del cónyuge si el piso es ganancial o hace falta su consentimiento." },
+    { id: "titulo", titulo: "Título de propiedad", detalle: "La escritura de cuando lo compraste, heredaste o te lo donaron. Si vino de herencia: aceptación y el impuesto de sucesiones ya liquidado." },
+    { id: "nota", titulo: "Nota simple actualizada", detalle: "Confirma que en el Registro consta lo que crees: superficie, titulares y cargas." },
+    { id: "hipoteca", titulo: "Certificado de deuda pendiente del banco", detalle: "Si queda hipoteca, el banco emite el certificado de saldo. Si ya la pagaste pero sigue inscrita, hay que cancelarla en el Registro y eso lleva semanas.", cuando: "empieza pronto" },
+    { id: "ibi", titulo: "Último recibo del IBI pagado", detalle: "Con la referencia catastral. El IBI del año se suele prorratear entre las dos partes." },
+    { id: "comunidad", titulo: "Certificado de la comunidad al corriente", detalle: "Lo firma el administrador con el visto bueno del presidente. Pídelo con margen: no sale en el día.", cuando: "empieza pronto" },
+    { id: "cee", titulo: "Certificado de eficiencia energética en vigor", detalle: "Obligatorio para vender y registrado en el Principado. Si el tuyo caducó, hay que renovarlo." },
+    { id: "actas", titulo: "Estatutos, actas recientes y derramas", detalle: "Si hay una derrama aprobada y sin pagar, hay que decirlo: es la discusión clásica el día de la firma." },
+    { id: "especiales", titulo: "Casos especiales: ITE, VPO, no residente", detalle: "Si el edificio tiene ITE o IEE pasada, llévala. Si el piso es protegido, mira plazos y descalificación. Si no eres residente fiscal en España, el comprador te retiene el 3 % (modelo 211)." },
+    { id: "licencia", titulo: "Licencia de primera ocupación o cédula, según el caso", detalle: "En Asturias no se exige con carácter general para revender, pero según el municipio y el tipo de inmueble puede hacer falta. Pregúntalo en tu ayuntamiento." },
+    { id: "despues", titulo: "Después de firmar: plusvalía e IRPF", detalle: "Plusvalía municipal en el ayuntamiento, en plazo corto tras la firma, y la ganancia en la declaración de la renta del año siguiente.", cuando: "después" },
+  ],
+};
+
+let modoGuia = "compra";
+const marcasGuia = { compra: new Set(), venta: new Set() };
+try {
+  const g = JSON.parse(localStorage.getItem(GUIA_CLAVE) || "{}");
+  ["compra", "venta"].forEach((m) => (g[m] || []).forEach((id) => marcasGuia[m].add(id)));
+} catch { /* sin almacenamiento: la guía funciona igual, sin recordar */ }
+
+function guardaGuia() {
+  try {
+    localStorage.setItem(GUIA_CLAVE, JSON.stringify({
+      compra: [...marcasGuia.compra], venta: [...marcasGuia.venta],
+    }));
+  } catch { /* da igual */ }
+}
+
+const eurosGuia = (n) => miles(Math.round(n)) + " €";
+const numeroDe = (id, porDefecto) => {
+  const v = parseFloat(String($(id)?.value ?? "").replace(",", "."));
+  return Number.isFinite(v) && v >= 0 ? v : porDefecto;
+};
+
+// Cuota de una hipoteca a tipo fijo (sistema francés).
+function cuotaHipoteca(capital, interesAnual, anos) {
+  const n = Math.max(1, Math.round(anos * 12));
+  const i = interesAnual / 100 / 12;
+  if (capital <= 0) return 0;
+  return i === 0 ? capital / n : (capital * i) / (1 - Math.pow(1 + i, -n));
+}
+
+// IRPF orientativo de la ganancia, escala estatal del ahorro.
+function irpfAhorro(ganancia) {
+  const tramos = [[6000, 0.19], [44000, 0.21], [150000, 0.23], [100000, 0.27]];
+  let resto = Math.max(0, ganancia), total = 0;
+  for (const [ancho, tipo] of tramos) {
+    const parte = Math.min(resto, ancho);
+    total += parte * tipo; resto -= parte;
+    if (resto <= 0) break;
+  }
+  return total + Math.max(0, resto) * 0.28;
+}
+
+function pintaChecklist() {
+  const papeles = PAPELES[modoGuia];
+  const marcas = marcasGuia[modoGuia];
+  $("guia-lista").innerHTML = papeles.map((d) => `
+    <li class="${marcas.has(d.id) ? "listo" : ""}" data-doc="${d.id}">
+      <label><input type="checkbox" ${marcas.has(d.id) ? "checked" : ""} />
+        <span>${escapa(d.titulo)}${d.cuando ? `<span class="cuando">${escapa(d.cuando)}</span>` : ""}</span>
+      </label>
+      <p>${escapa(d.detalle)}</p>
+    </li>`).join("");
+  const listos = papeles.filter((d) => marcas.has(d.id)).length;
+  $("guia-via").style.width = Math.round((listos / papeles.length) * 100) + "%";
+  $("guia-progreso").textContent = `${listos} de ${papeles.length} listos`;
+}
+
+function pintaCalculadora() {
+  const activo = estado.visibles[estado.activo];
+  const precioBase = activo && activo.precio && activo.operacion === "venta" ? activo.precio : 200000;
+  $("guia-calc").innerHTML = modoGuia === "compra" ? `
+    <h3>Cuánto necesitas de verdad</h3>
+    <p class="pista">Cambia los números si tienes datos mejores. El ITP por defecto es el 8 % de vivienda usada en Asturias: sube por tramos en precios altos y hay tipos reducidos (jóvenes, familia numerosa, VPO). Confírmalo con la gestoría.</p>
+    <div class="campos">
+      <div><label for="g-precio">Precio del piso (€)</label><input id="g-precio" type="number" min="0" step="1000" value="${precioBase}" /></div>
+      <div><label for="g-itp">Impuesto ITP (%)</label><input id="g-itp" type="number" min="0" step="0.5" value="8" /></div>
+      <div><label for="g-gastos">Notaría, registro y gestoría (€)</label><input id="g-gastos" type="number" min="0" step="50" value="1700" /></div>
+      <div><label for="g-fin">Te financia el banco (%)</label><input id="g-fin" type="number" min="0" max="100" step="5" value="80" /></div>
+      <div><label for="g-anos">Años de hipoteca</label><input id="g-anos" type="number" min="1" max="40" step="1" value="25" /></div>
+      <div><label for="g-int">Interés anual (%)</label><input id="g-int" type="number" min="0" step="0.1" value="3" /></div>
+    </div>
+    <div class="resultado" id="g-resultado"></div>` : `
+    <h3>Qué te queda de la venta</h3>
+    <p class="pista">La ganancia tributa en la renta del año siguiente por la escala del ahorro (19-28 %). Hay exenciones importantes —reinversión en vivienda habitual, mayores de 65 años— que aquí no se aplican. La plusvalía municipal va aparte y la calcula tu ayuntamiento.</p>
+    <div class="campos">
+      <div><label for="v-precio">Precio de venta (€)</label><input id="v-precio" type="number" min="0" step="1000" value="${precioBase}" /></div>
+      <div><label for="v-compra">Lo que pagaste al comprarlo (€)</label><input id="v-compra" type="number" min="0" step="1000" value="${Math.round(precioBase * 0.7)}" /></div>
+      <div><label for="v-gcompra">Gastos e impuestos de entonces (€)</label><input id="v-gcompra" type="number" min="0" step="500" value="${Math.round(precioBase * 0.07)}" /></div>
+      <div><label for="v-gventa">Gastos de la venta (€)</label><input id="v-gventa" type="number" min="0" step="500" value="${Math.round(precioBase * 0.04)}" /></div>
+      <div><label for="v-hipoteca">Hipoteca pendiente (€)</label><input id="v-hipoteca" type="number" min="0" step="1000" value="0" /></div>
+    </div>
+    <div class="resultado" id="v-resultado"></div>`;
+  calcula();
+  $("guia-calc").querySelectorAll("input").forEach((i) => i.addEventListener("input", calcula));
+}
+
+let ultimoCalculo = "";
+
+function calcula() {
+  if (modoGuia === "compra") {
+    const precio = numeroDe("g-precio", 0);
+    const impuesto = precio * (numeroDe("g-itp", 8) / 100);
+    const gastos = numeroDe("g-gastos", 0);
+    const hipoteca = precio * (Math.min(100, numeroDe("g-fin", 0)) / 100);
+    const entrada = Math.max(0, precio - hipoteca);
+    const firma = entrada + impuesto + gastos;
+    const cuota = cuotaHipoteca(hipoteca, numeroDe("g-int", 0), numeroDe("g-anos", 25));
+    $("g-resultado").innerHTML = `
+      <div class="fila"><span>Entrada (lo que no financia el banco)</span><b>${eurosGuia(entrada)}</b></div>
+      <div class="fila"><span>Impuesto de transmisiones</span><b>${eurosGuia(impuesto)}</b></div>
+      <div class="fila"><span>Notaría, registro y gestoría</span><b>${eurosGuia(gastos)}</b></div>
+      <div class="fila total"><span>Necesitas el día de la firma</span><b>${eurosGuia(firma)}</b></div>
+      <div class="fila total"><span>Cuota estimada de hipoteca</span><b>${eurosGuia(cuota)}/mes</b></div>`;
+    ultimoCalculo = `Precio ${eurosGuia(precio)} · entrada ${eurosGuia(entrada)} · impuesto ${eurosGuia(impuesto)}`
+      + ` · notaría, registro y gestoría ${eurosGuia(gastos)} → necesito ${eurosGuia(firma)} el día de la firma.`
+      + ` Hipoteca de ${eurosGuia(hipoteca)}: cuota estimada ${eurosGuia(cuota)}/mes.`;
+  } else {
+    const venta = numeroDe("v-precio", 0);
+    const compra = numeroDe("v-compra", 0);
+    const gcompra = numeroDe("v-gcompra", 0);
+    const gventa = numeroDe("v-gventa", 0);
+    const pendiente = numeroDe("v-hipoteca", 0);
+    const ganancia = Math.max(0, venta - compra - gcompra - gventa);
+    const irpf = irpfAhorro(ganancia);
+    const neto = venta - gventa - irpf - pendiente;
+    $("v-resultado").innerHTML = `
+      <div class="fila"><span>Ganancia sujeta a IRPF</span><b>${eurosGuia(ganancia)}</b></div>
+      <div class="fila"><span>IRPF orientativo de la ganancia</span><b>${eurosGuia(irpf)}</b></div>
+      <div class="fila"><span>Gastos de la venta</span><b>${eurosGuia(gventa)}</b></div>
+      <div class="fila"><span>Cancelas de hipoteca</span><b>${eurosGuia(pendiente)}</b></div>
+      <div class="fila total"><span>Te quedarían, sin contar plusvalía municipal</span><b>${eurosGuia(neto)}</b></div>`;
+    ultimoCalculo = `Vendo por ${eurosGuia(venta)} · ganancia ${eurosGuia(ganancia)} · IRPF orientativo ${eurosGuia(irpf)}`
+      + ` · me quedarían ${eurosGuia(neto)} sin contar la plusvalía municipal.`;
+  }
+}
+
+function textoGuia() {
+  const papeles = PAPELES[modoGuia];
+  const marcas = marcasGuia[modoGuia];
+  const tengo = papeles.filter((d) => marcas.has(d.id));
+  const falta = papeles.filter((d) => !marcas.has(d.id));
+  return [
+    `Hola, os escribo desde la web de ${CONFIG.marca}.`,
+    "",
+    modoGuia === "compra" ? "Estoy preparando una COMPRA." : "Estoy preparando una VENTA.",
+    "",
+    tengo.length ? "Ya tengo:\n" + tengo.map((d) => "✔ " + d.titulo).join("\n") : "Todavía no tengo nada preparado.",
+    "",
+    falta.length ? "Me falta:\n" + falta.map((d) => "· " + d.titulo).join("\n") : "Lo tengo todo.",
+    "",
+    "Números orientativos de la calculadora:",
+    ultimoCalculo,
+    "",
+    "¿Me lo revisáis y me decís por dónde empiezo?",
+  ].join("\n");
+}
+
+const urlWasap = (texto) => (hayWasap() ? `https://wa.me/${CONFIG.contacto.whatsapp}` : "https://wa.me/")
+  + "?text=" + encodeURIComponent(texto);
+
+function abreGuia(modo) {
+  if (modo) modoGuia = modo;
+  document.querySelectorAll("#guia .chip[data-modo]").forEach((c) =>
+    c.setAttribute("aria-pressed", String(c.dataset.modo === modoGuia)));
+  pintaChecklist();
+  pintaCalculadora();
+  const g = $("guia");
+  if (typeof g.showModal === "function") g.showModal(); else g.setAttribute("open", "");
+}
+
+$("abrir-guia").addEventListener("click", () => abreGuia());
+$("f-guia").addEventListener("click", () => abreGuia());
+$("guia-cerrar").addEventListener("click", () => $("guia").close());
+document.querySelectorAll("#guia .chip[data-modo]").forEach((chip) => {
+  chip.addEventListener("click", () => abreGuia(chip.dataset.modo));
+});
+$("guia-lista").addEventListener("change", (e) => {
+  const li = e.target.closest("li[data-doc]");
+  if (!li) return;
+  const marcas = marcasGuia[modoGuia];
+  if (e.target.checked) marcas.add(li.dataset.doc); else marcas.delete(li.dataset.doc);
+  guardaGuia();
+  pintaChecklist();
+});
+$("guia-wasap").addEventListener("click", () => window.open(urlWasap(textoGuia()), "_blank", "noopener"));
+$("guia-mail").addEventListener("click", () => {
+  location.href = `mailto:${CONFIG.contacto.email}`
+    + `?subject=${encodeURIComponent((modoGuia === "compra" ? "Voy a comprar" : "Voy a vender") + ": ¿me revisáis los papeles?")}`
+    + `&body=${encodeURIComponent(textoGuia())}`;
+});
+
 </script>
 </body>
 </html>
