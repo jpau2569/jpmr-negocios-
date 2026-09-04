@@ -1,0 +1,6 @@
+{
+  "name": "sol-niebla-agua",
+  "private": true,
+  "type": "module",
+  "description": "PWA personal del tiempo para Asturias central y costa"
+}

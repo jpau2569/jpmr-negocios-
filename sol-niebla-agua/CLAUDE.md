@@ -52,6 +52,9 @@ El código está separado por capas. Cada una solo conoce a la de debajo:
 - `herramientas/generar-iconos.mjs`: regenera los PNG de los iconos
 - `api/tiempo.js`: backend serverless (AEMET + Open-Meteo)
 - `vercel.json`: despliegue de esta carpeta como proyecto propio
+- `package.json`: solo declara `"type": "module"`. Sin él, al desplegar
+  con Root Directory = `sol-niebla-agua`, Vercel trata `api/tiempo.js` como
+  CommonJS y la función falla con "Unexpected token 'export'".
 
 `interfaz.js` **no importa a `app.js`**: recibe en cada pintada un contexto
 con la ciudad enfocada y las llamadas de vuelta. No volver a juntar capas ni
