@@ -41,6 +41,16 @@ if (-not (Test-Path $SILENCIOSO)) {
 
 $shell = New-Object -ComObject WScript.Shell
 
+# Puerto configurado (para hablar con una copia que ya este funcionando).
+$puerto = 4321
+try {
+  $cfg = Join-Path $env:USERPROFILE ".fotos-faciles\config.json"
+  if (Test-Path $cfg) {
+    $leido = (Get-Content $cfg -Raw | ConvertFrom-Json).puerto
+    if ($leido) { $puerto = $leido }
+  }
+} catch { }
+
 # 1) Arranque con Windows, en segundo plano.
 $lnk = $shell.CreateShortcut($ATAJO)
 $lnk.TargetPath = "wscript.exe"
@@ -52,12 +62,6 @@ Bien "Listo: arrancara solo cada vez que enciendas el ordenador."
 
 # 2) Acceso a la pantalla del programa, para abrirla cuando haga falta.
 try {
-  $puerto = 4321
-  $cfg = Join-Path $env:USERPROFILE ".fotos-faciles\config.json"
-  if (Test-Path $cfg) {
-    $leido = (Get-Content $cfg -Raw | ConvertFrom-Json).puerto
-    if ($leido) { $puerto = $leido }
-  }
   $web = $shell.CreateShortcut((Join-Path $ESCRITORIO "Fotos Faciles (pantalla).lnk"))
   $web.TargetPath = "http://localhost:$puerto/"
   $web.Save()
@@ -67,10 +71,32 @@ try {
 }
 
 # 3) Arrancarlo ya, sin esperar a reiniciar.
+#    Si habia una copia con ventana negra, se apaga primero: si no, la version
+#    silenciosa veria el puerto ocupado, se cerraria sola, y al cerrar la
+#    ventana negra el usuario se quedaria sin programa hasta reiniciar.
+$habia = $false
+try {
+  $ping = Invoke-RestMethod "http://localhost:$puerto/api/estado-publico" -TimeoutSec 3
+  if ($ping.app -eq "Fotos Faciles") { $habia = $true }
+} catch { }
+
+if ($habia) {
+  Aviso "Ya habia una copia abierta (la ventana negra): la cierro y la dejo en segundo plano."
+  try { Invoke-RestMethod "http://localhost:$puerto/api/apagar" -Method Post -TimeoutSec 5 | Out-Null } catch { }
+  Start-Sleep -Seconds 2
+}
+
 Start-Process "wscript.exe" -ArgumentList """$SILENCIOSO""" -WindowStyle Hidden
-Bien "Y lo he arrancado ya, en segundo plano."
+Start-Sleep -Seconds 3
+try {
+  $ok = Invoke-RestMethod "http://localhost:$puerto/api/estado-publico" -TimeoutSec 5
+  if ($ok.app -eq "Fotos Faciles") { Bien "Y ya esta funcionando en segundo plano, sin ventana." }
+  else { Aviso "Arrancado, pero no contesta todavia. Abre la pantalla en unos segundos." }
+} catch {
+  Aviso "Arrancado. Si la pantalla no abre en unos segundos, reinicia el ordenador."
+}
 
 Write-Host ""
 Write-Host "  Para apagarlo: abre la pantalla y pulsa 'Salir'." -ForegroundColor DarkGray
-Write-Host "  Para quitar el arranque automatico: vuelve a ejecutar esto con -Quitar" -ForegroundColor DarkGray
+Write-Host "  Para quitar el arranque automatico: doble clic en QuitarArranqueAutomatico.bat" -ForegroundColor DarkGray
 Write-Host ""
