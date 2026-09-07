@@ -61,13 +61,23 @@ $lnk.Save()
 Bien "Listo: arrancara solo cada vez que enciendas el ordenador."
 
 # 2) Acceso a la pantalla del programa, para abrirla cuando haga falta.
+#    OJO: para una direccion web hace falta un archivo .url (acceso directo de
+#    Internet). Un .lnk con una URL como destino se guarda pero Windows no lo
+#    muestra como acceso valido; ese fue un fallo real de la primera version.
 try {
-  $web = $shell.CreateShortcut((Join-Path $ESCRITORIO "Fotos Faciles (pantalla).lnk"))
-  $web.TargetPath = "http://localhost:$puerto/"
-  $web.Save()
-  Bien "Tienes 'Fotos Faciles (pantalla)' en el Escritorio para abrirlo cuando quieras."
+  $destino = Join-Path $ESCRITORIO "Fotos Faciles (pantalla).url"
+  "[InternetShortcut]`r`nURL=http://localhost:$puerto/`r`nIconIndex=0" |
+    Out-File -FilePath $destino -Encoding ASCII -Force
+  if (Test-Path $destino) {
+    Bien "Tienes 'Fotos Faciles (pantalla)' en el Escritorio para abrirlo cuando quieras."
+  } else {
+    Aviso "No se ha podido crear el acceso del Escritorio. Entra escribiendo localhost:$puerto en el navegador."
+  }
+  # Limpieza del acceso mal creado por la version anterior, si estuviera ahi.
+  $viejo = Join-Path $ESCRITORIO "Fotos Faciles (pantalla).lnk"
+  if (Test-Path $viejo) { Remove-Item $viejo -Force -ErrorAction SilentlyContinue }
 } catch {
-  Aviso "No se ha podido crear el acceso del Escritorio, pero el arranque si esta puesto."
+  Aviso "No se ha podido crear el acceso del Escritorio. Entra escribiendo localhost:$puerto en el navegador."
 }
 
 # 3) Arrancarlo ya, sin esperar a reiniciar.
@@ -97,6 +107,7 @@ try {
 }
 
 Write-Host ""
+Write-Host "  La pantalla del programa: http://localhost:$puerto  (o el icono del Escritorio)" -ForegroundColor DarkGray
 Write-Host "  Para apagarlo: abre la pantalla y pulsa 'Salir'." -ForegroundColor DarkGray
 Write-Host "  Para quitar el arranque automatico: doble clic en QuitarArranqueAutomatico.bat" -ForegroundColor DarkGray
 Write-Host ""

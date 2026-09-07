@@ -7,7 +7,7 @@
 #
 #  Se ejecuta pegando esta linea en PowerShell:
 #
-#    irm https://raw.githubusercontent.com/jpau2569/jpmr-negocios-/claude/fotos-faciles-transferencia-a7urec/fotos-faciles/instalar-windows.ps1 | iex
+#    irm https://raw.githubusercontent.com/jpau2569/jpmr-negocios-/main/fotos-faciles/instalar-windows.ps1 | iex
 #
 #  Volver a ejecutarlo actualiza el programa. Tus fotos y tus ajustes NO se
 #  tocan: viven fuera de esta carpeta (en "Fotos Faciles" y en ".fotos-faciles"
