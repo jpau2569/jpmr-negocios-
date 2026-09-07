@@ -114,6 +114,7 @@ Eso hace tres cosas:
 
 - El programa **arranca solo al encender el ordenador**, sin ninguna ventana.
 - Te deja en el Escritorio el acceso **«Fotos Faciles (pantalla)»** para abrir la pantalla cuando quieras.
+  (Si ese icono no apareciera, da igual: entras escribiendo `localhost:4321` en cualquier navegador.)
 - Y lo arranca ya, sin esperar a reiniciar.
 
 **Para apagarlo:** abre la pantalla y pulsa el botón **Salir**.
@@ -169,7 +170,8 @@ Mientras tanto **no estás bloqueado**: escribe la referencia a mano (`PIS0190`)
 | Lo que ves | Qué pasa y cómo se arregla |
 |---|---|
 | El móvil no abre la página al escanear | El PC y el móvil están en redes distintas, o dijiste «Cancelar» al cortafuegos. Mira el aviso del Paso 3. |
-| «No se puede conectar» en el navegador del PC | La ventana negra se ha cerrado. Vuelve a hacer doble clic en `FotosFaciles.bat`. |
+| «No se puede conectar» en el navegador del PC | El programa no está funcionando. Doble clic en `FotosFaciles.bat` (o en `ArranqueAutomatico.bat` si lo quieres en segundo plano). |
+| No encuentro la pantalla del programa | Escribe `localhost:4321` en cualquier navegador. Es siempre la misma dirección. |
 | El QR va, pero pide un PIN | Normal si escribiste la dirección a mano. El PIN está en la pantalla del ordenador. Si te cansa que cambie, ponle uno fijo (Paso 3 bis). |
 | «No se ha encontrado Node.js» | Falta el Paso 1, o hay que reiniciar el ordenador después de instalarlo. |
 | El desplegable de inmuebles vacío | Falta sincronizar la cartera (Paso 5). |
