@@ -47,7 +47,7 @@ function abrePestana(nombre) {
   APP.pestana = nombre;
   $$(".pestanas button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.panel === nombre)));
   $$(".panel").forEach((p) => { p.hidden = p.id !== `panel-${nombre}`; });
-  if (nombre === "fotos") cargaGaleria(true);
+  if (nombre === "fotos") { cargaGaleria(true); cargaInmuebles(); }
   if (nombre === "compartir") cargaAlbumes();
   if (nombre === "pegar" && !APP.pegar.origen) {
     // Origen: la carpeta personal (donde el Explorador deja lo del móvil).
@@ -144,7 +144,7 @@ function conectaSeleccion(contenedor, conjunto, alCambiar = () => {}) {
 $("#btn-buscar-dispositivos").onclick = async () => {
   $("#estado-dispositivos").textContent = "Buscando…";
   try {
-    const { unidades, carpetas, aviso } = await api("/api/dispositivos");
+    const { unidades, carpetas, aviso, portatiles = [] } = await api("/api/dispositivos");
     $("#aviso-iphone").innerHTML = aviso ? `<div class="aviso">${aviso}</div>` : "";
     const filas = [];
     for (const u of unidades) {
@@ -156,6 +156,11 @@ $("#btn-buscar-dispositivos").onclick = async () => {
           <button data-escanear="${encodeURIComponent(c.ruta)}">Ver fotos</button></li>`);
       }
     }
+    for (const d of portatiles) {
+      filas.push(`<li><span class="nombre">📱 <strong>${d.nombre}</strong> — ${d.tipo}
+        <span class="etiqueta dup">MTP · experimental</span></span>
+        <button data-portatil="${encodeURIComponent(JSON.stringify(d.camino))}">Abrir</button></li>`);
+    }
     for (const c of carpetas) {
       filas.push(`<li><span class="nombre">📁 ${c.etiqueta} — <code class="url">${c.ruta}</code></span>
         <button data-escanear="${encodeURIComponent(c.ruta)}">Ver fotos</button></li>`);
@@ -164,6 +169,9 @@ $("#btn-buscar-dispositivos").onclick = async () => {
     $("#estado-dispositivos").textContent = `${unidades.length} unidades detectadas`;
     $$("#lista-unidades button[data-escanear]").forEach((b) => {
       b.onclick = () => escanea(decodeURIComponent(b.dataset.escanear));
+    });
+    $$("#lista-unidades button[data-portatil]").forEach((b) => {
+      b.onclick = () => abrePortatil(JSON.parse(decodeURIComponent(b.dataset.portatil)));
     });
   } catch (e) { $("#estado-dispositivos").textContent = e.message; }
 };
@@ -202,6 +210,67 @@ $("#btn-ninguna-cable").onclick = () => {
 $("#btn-importar").onclick = async () => {
   const { tarea } = await enviar("/api/dispositivo/importar", { archivos: [...APP.cable.seleccion] });
   sigueTarea(tarea, "Importando del dispositivo", () => escanea(APP.cable.raiz));
+};
+
+// --- Modo A (bis): iPhone/Android por cable, vía MTP -------------------------
+APP.portatil = { camino: [], archivos: [], seleccion: new Set() };
+
+async function abrePortatil(camino) {
+  $("#tarjeta-portatil").hidden = false;
+  $("#estado-dispositivos").textContent = "Leyendo el dispositivo… (puede tardar unos segundos)";
+  try {
+    const datos = await api(`/api/portatil/explorar?camino=${encodeURIComponent(JSON.stringify(camino))}`);
+    APP.portatil = { camino, archivos: datos.archivos, seleccion: new Set() };
+
+    $("#migas-portatil").innerHTML = camino.map((n, i) =>
+      `<button data-nivel="${i + 1}">${n}</button>`).join(" › ") || "<span>Dispositivo</span>";
+    $$("#migas-portatil button").forEach((b) => {
+      b.onclick = () => abrePortatil(camino.slice(0, Number(b.dataset.nivel)));
+    });
+
+    $("#carpetas-portatil").innerHTML = datos.carpetas.map((c) =>
+      `<li><span class="nombre">📁 ${c.nombre}</span>
+       <button data-ir="${encodeURIComponent(JSON.stringify(c.camino))}">Abrir</button></li>`).join("")
+      || (camino.length > 1 ? "" : '<li class="vacio">Sin subcarpetas</li>');
+    $$("#carpetas-portatil button[data-ir]").forEach((b) => {
+      b.onclick = () => abrePortatil(JSON.parse(decodeURIComponent(b.dataset.ir)));
+    });
+
+    pintaArchivosPortatil();
+    $("#estado-dispositivos").textContent = "";
+  } catch (e) {
+    $("#estado-dispositivos").textContent = `No se ha podido leer el dispositivo: ${e.message}. Prueba con el modo WiFi (QR).`;
+  }
+}
+
+function pintaArchivosPortatil() {
+  const { archivos, seleccion } = APP.portatil;
+  $("#archivos-portatil").innerHTML = archivos.length
+    ? archivos.slice(0, 500).map((a) => `<li>
+        <input type="checkbox" data-nombre="${encodeURIComponent(a.nombre)}" ${seleccion.has(a.nombre) ? "checked" : ""} />
+        <span class="nombre">${a.tipo === "video" ? "🎬" : "🖼️"} ${a.nombre}</span>
+        ${a.tamano ? `<span class="etiqueta">${tamanoLegible(a.tamano)}</span>` : ""}
+        <span class="etiqueta ${a.nuevo ? "ok" : "dup"}">${a.nuevo ? "nueva" : "ya la tienes"}</span></li>`).join("")
+    : '<li class="vacio">Esta carpeta no tiene fotos. Entra en DCIM.</li>';
+  $$("#archivos-portatil input[type=checkbox]").forEach((c) => {
+    c.onchange = () => {
+      const n = decodeURIComponent(c.dataset.nombre);
+      if (c.checked) seleccion.add(n); else seleccion.delete(n);
+      $("#btn-importar-portatil").textContent = `Importar seleccionadas (${seleccion.size})`;
+    };
+  });
+  $("#btn-importar-portatil").textContent = `Importar seleccionadas (${seleccion.size})`;
+}
+
+$("#btn-todas-portatil").onclick = () => {
+  APP.portatil.seleccion = new Set(APP.portatil.archivos.filter((a) => a.nuevo).map((a) => a.nombre));
+  pintaArchivosPortatil();
+};
+$("#btn-importar-portatil").onclick = async () => {
+  const nombres = [...APP.portatil.seleccion];
+  if (!nombres.length) return;
+  const { tarea } = await enviar("/api/portatil/importar", { camino: APP.portatil.camino, nombres });
+  sigueTarea(tarea, "Copiando del dispositivo (MTP es lento, ten paciencia)", () => abrePortatil(APP.portatil.camino));
 };
 
 // --- Modo C: explorador dual ------------------------------------------------
@@ -269,7 +338,7 @@ async function cargaGaleria(reinicia = false) {
   pintaBotonEnlace();
   const { historial } = await api("/api/historial");
   $("#lista-historial").innerHTML = historial.map((h) => `<li>
-    <span class="nombre">${{ movil: "📶 Móvil (WiFi)", cable: "🔌 Cable/USB", pegar: "📋 Pegado", mover: "📋 Movido", enlace: "🔗 Enlace" }[h.tipo] || h.tipo}
+    <span class="nombre">${{ movil: "📶 Móvil (WiFi)", cable: "🔌 Cable/USB", pegar: "📋 Pegado", mover: "📋 Movido", enlace: "🔗 Enlace", escaparate: "🏠 Escaparate 3D", limpiafotos: "🪄 LimpiaFotos" }[h.tipo] || h.tipo}
       ${h.nombre ? ` — ${h.nombre}` : ""}</span>
     <span class="etiqueta ok">${h.fotos || 0} archivos</span>
     ${h.duplicados ? `<span class="etiqueta dup">${h.duplicados} repetidos</span>` : ""}
@@ -295,6 +364,117 @@ $("#btn-enlace").onclick = async () => {
   alert(`Enlace creado y copiado al portapapeles:\n\n${album.publico || album.local}\n\nCaduca en ${dias} días.`);
   abrePestana("compartir");
 };
+
+// --- Puentes con el ecosistema ----------------------------------------------
+let CARTERA = { inmuebles: [], hay: false };
+
+async function cargaInmuebles() {
+  try {
+    CARTERA = await api("/api/inmuebles");
+  } catch { CARTERA = { inmuebles: [], hay: false }; }
+
+  const sel = $("#sel-inmueble");
+  sel.innerHTML = '<option value="">— Escribir a mano —</option>' +
+    CARTERA.inmuebles.map((p, i) => `<option value="${i}">${p.etiqueta}${p.zona ? ` · ${p.zona}` : ""}</option>`).join("");
+  sel.onchange = () => {
+    const p = CARTERA.inmuebles[Number(sel.value)];
+    if (!p) return;
+    $("#eco-referencia").value = p.referencia || "";
+    $("#eco-titulo").value = p.titulo || "";
+  };
+
+  // Si ya había un inmueble elegido, se vuelve a marcar tras recargar la lista.
+  const refActual = $("#eco-referencia").value.trim().toLowerCase();
+  if (refActual) {
+    const i = CARTERA.inmuebles.findIndex((p) => (p.referencia || "").toLowerCase() === refActual);
+    if (i >= 0) sel.value = String(i);
+  }
+
+  $("#lista-inmuebles").innerHTML = CARTERA.inmuebles.map((p) => `<option value="${p.carpeta}"></option>`).join("");
+  $("#cfg-cartera").textContent = CARTERA.hay
+    ? (CARTERA.inmuebles.length
+      ? `${CARTERA.inmuebles.length} inmuebles leídos de tu escaparate 3D.`
+      : "Tu escaparate 3D todavía no tiene inmuebles: ejecuta sincronizar.mjs o escribe el nombre a mano.")
+    : "Fotos Fáciles no está dentro del repositorio, así que no puede leer tu cartera.";
+
+  const hayRepo = !!APP.estado?.repo;
+  $("#btn-escaparate").disabled = !hayRepo;
+  $("#btn-escaparate").title = hayRepo ? "" : "Solo disponible si Fotos Fáciles está dentro del repositorio";
+}
+
+/**
+ * Reduce una foto a 1600 px de lado con el propio navegador. Así el escaparate
+ * recibe fotos del peso recomendado sin instalar ninguna librería de imagen.
+ */
+function reduceFoto(url, lado = 1600, calidad = 0.82) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const escala = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight));
+      const lienzo = document.createElement("canvas");
+      lienzo.width = Math.max(1, Math.round(img.naturalWidth * escala));
+      lienzo.height = Math.max(1, Math.round(img.naturalHeight * escala));
+      const ctx = lienzo.getContext("2d");
+      ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
+      lienzo.toBlob((b) => (b ? resolve(b) : reject(new Error("no se ha podido convertir"))), "image/jpeg", calidad);
+    };
+    img.onerror = () => reject(new Error("el navegador no puede abrir esta foto (¿es HEIC?)"));
+    img.src = url;
+  });
+}
+
+$("#btn-escaparate").onclick = async () => {
+  const elegidas = [...APP.galeria.seleccion];
+  const referencia = $("#eco-referencia").value.trim();
+  const titulo = $("#eco-titulo").value.trim();
+  if (!elegidas.length) return avisoEco("Selecciona antes las fotos que quieres publicar.", "error");
+  if (!referencia && !titulo) return avisoEco("Elige un inmueble de la lista o escribe su referencia.", "error");
+
+  const boton = $("#btn-escaparate");
+  boton.disabled = true;
+  const relativas = [];
+  const fallos = [];
+  try {
+    for (const [i, ruta] of elegidas.entries()) {
+      avisoEco(`Preparando foto ${i + 1} de ${elegidas.length}…`);
+      try {
+        const reducida = await reduceFoto(`/api/archivo?ruta=${encodeURIComponent(ruta)}`);
+        const destino = `/api/escaparate/foto?referencia=${encodeURIComponent(referencia)}&titulo=${encodeURIComponent(titulo)}&ext=.jpg`;
+        const res = await fetch(destino, { method: "PUT", headers: { "content-type": "image/jpeg" }, body: reducida });
+        const cuerpo = await res.json();
+        if (!res.ok) throw new Error(cuerpo.error || `error ${res.status}`);
+        relativas.push(cuerpo.relativa);
+      } catch (e) {
+        fallos.push(`${ruta.split(/[\\/]/).pop()}: ${e.message}`);
+      }
+    }
+    if (!relativas.length) throw new Error(fallos[0] || "No se ha podido preparar ninguna foto");
+    const r = await enviar("/api/escaparate/publicar", { referencia, titulo, relativas });
+    avisoEco(`✅ ${relativas.length} fotos publicadas en «${r.titulo}»${r.nueva ? " (inmueble nuevo en pisos.json)" : ""}. ` +
+      `La portada del escaparate pasa a ser la primera.${fallos.length ? ` ${fallos.length} no se pudieron convertir.` : ""}`, "ok");
+    cargaInmuebles();
+  } catch (e) {
+    avisoEco(`❌ ${e.message}`, "error");
+  } finally { boton.disabled = false; }
+};
+
+$("#btn-limpiafotos").onclick = async () => {
+  const elegidas = [...APP.galeria.seleccion];
+  if (!elegidas.length) return avisoEco("Selecciona antes las fotos.", "error");
+  try {
+    const etiqueta = $("#eco-referencia").value.trim() || $("#eco-titulo").value.trim() || "fotos";
+    const r = await enviar("/api/limpiafotos", { archivos: elegidas, etiqueta });
+    avisoEco(`✅ ${r.copiadas} fotos copiadas a ${r.carpeta}. Se ha abierto la carpeta: arrástralas a LimpiaFotos.`, "ok");
+  } catch (e) { avisoEco(`❌ ${e.message}`, "error"); }
+};
+
+$("#btn-abrir-carpeta").onclick = () => enviar("/api/abrir-carpeta", { ruta: APP.estado?.destino }).catch(() => {});
+
+function avisoEco(texto, tipo = "") {
+  const el = $("#eco-estado");
+  el.textContent = texto;
+  el.style.color = tipo === "error" ? "var(--rojo)" : tipo === "ok" ? "var(--verde)" : "var(--suave)";
+}
 
 // --- Compartir --------------------------------------------------------------
 async function cargaAlbumes() {

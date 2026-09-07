@@ -73,6 +73,20 @@
       <ul class="lista" id="lista-unidades"></ul>
     </div>
 
+    <div class="tarjeta" id="tarjeta-portatil" hidden>
+      <h2>Dispositivo portátil <span class="etiqueta dup">experimental</span></h2>
+      <p class="ayuda">Lectura directa del iPhone/Android por cable (MTP). Aquí no hay miniaturas:
+        el móvil no deja verlas sin copiar antes el archivo. Si algo falla, usa el modo WiFi con QR.</p>
+      <div class="migas" id="migas-portatil"></div>
+      <ul class="lista" id="carpetas-portatil"></ul>
+      <div class="fila" style="margin:12px 0">
+        <button id="btn-todas-portatil">Seleccionar todas las nuevas</button>
+        <div class="crece"></div>
+        <button class="principal-btn" id="btn-importar-portatil">Importar seleccionadas</button>
+      </div>
+      <ul class="lista" id="archivos-portatil"></ul>
+    </div>
+
     <div class="tarjeta" id="tarjeta-escaneo" hidden>
       <h2 id="titulo-escaneo">Fotos encontradas</h2>
       <div class="fila" style="margin-bottom:12px">
@@ -126,6 +140,24 @@
         <div class="crece"></div>
         <button class="principal-btn" id="btn-enlace">🔗 Generar enlace de las seleccionadas</button>
       </div>
+
+      <div class="tarjeta" style="background:#151a22;margin-bottom:14px" id="caja-ecosistema">
+        <h3 style="margin-top:0">Enviar al resto de tus herramientas</h3>
+        <div class="fila" style="margin-bottom:10px">
+          <label class="campo" style="flex:1 1 320px;margin:0"><span>Inmueble de la cartera</span>
+            <select id="sel-inmueble"><option value="">— Escribir a mano —</option></select></label>
+          <label class="campo" style="flex:1 1 260px;margin:0"><span>Referencia</span>
+            <input type="text" id="eco-referencia" placeholder="PIS0190" /></label>
+          <label class="campo" style="flex:2 1 320px;margin:0"><span>Título</span>
+            <input type="text" id="eco-titulo" placeholder="Piso reformado de 3 habitaciones en el centro" /></label>
+        </div>
+        <div class="fila">
+          <button class="principal-btn" id="btn-escaparate">🏠 Publicar en el escaparate 3D</button>
+          <button id="btn-limpiafotos">🪄 Preparar para LimpiaFotos</button>
+          <button id="btn-abrir-carpeta">📂 Abrir la carpeta de fotos</button>
+        </div>
+        <p class="ayuda" id="eco-estado" style="margin:10px 0 0"></p>
+      </div>
       <div class="galeria" id="galeria-todo"></div>
       <p class="vacio" id="vacio-galeria" hidden>Todavía no has importado nada.</p>
       <div class="fila" style="margin-top:12px"><button id="btn-mas">Ver más</button></div>
@@ -163,7 +195,9 @@
               <option value="ninguna">Todo junto en la carpeta principal</option>
             </select></label>
           <label class="campo"><span>Inmueble actual (para el modo por inmueble)</span>
-            <input type="text" id="cfg-inmueble" placeholder="Piso Oviedo — Calle Uría 12" /></label>
+            <input type="text" id="cfg-inmueble" list="lista-inmuebles" placeholder="PIS0190 - Piso reformado de 3 habitaciones" />
+            <datalist id="lista-inmuebles"></datalist></label>
+          <p class="ayuda" id="cfg-cartera" style="margin:-6px 0 12px"></p>
         </div>
         <div>
           <label class="campo"><input type="checkbox" id="cfg-renombrar" />

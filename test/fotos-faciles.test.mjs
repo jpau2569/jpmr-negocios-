@@ -23,6 +23,19 @@ function check(nombre, cond, detalle = "") {
 const RAIZ = await fsp.mkdtemp(path.join(os.tmpdir(), "fotos-faciles-test-"));
 const DESTINO = path.join(RAIZ, "destino");
 process.env.FOTOS_FACILES_HOME = path.join(RAIZ, "config");
+// Repositorio de mentira: los puentes con el ecosistema no deben tocar el real.
+const REPO = path.join(RAIZ, "repo");
+process.env.FOTOS_FACILES_REPO = REPO;
+await fsp.mkdir(path.join(REPO, "escaparate3d", "fotos"), { recursive: true });
+await fsp.writeFile(path.join(REPO, "escaparate3d", "pisos.json"), JSON.stringify({
+  negocio: "Asesoría Castresana", web: "https://www.asesoriacastresana.com", actualizado: null,
+  inmuebles: [{
+    referencia: "PIS0190", titulo: "Piso reformado de 3 habitaciones en el centro",
+    zona: "Centro, Oviedo", precio: 265000,
+    imagen: "fotos/pis0190-01.jpg", imagenes: ["fotos/pis0190-01.jpg", "fotos/pis0190-02.jpg"],
+    activo: true,
+  }],
+}, null, 2), "utf8");
 await fsp.mkdir(DESTINO, { recursive: true });
 
 const { matriz, svg, ascii } = await import("../fotos-faciles/nucleo/qr.mjs");
@@ -33,6 +46,9 @@ const { copiarArchivos, listaCarpeta } = await import("../fotos-faciles/nucleo/e
 const { Seguridad } = await import("../fotos-faciles/nucleo/seguridad.mjs");
 const { guardarConfig } = await import("../fotos-faciles/nucleo/config.mjs");
 const { escanea } = await import("../fotos-faciles/nucleo/dispositivos.mjs");
+const eco = await import("../fotos-faciles/nucleo/ecosistema.mjs");
+const wpd = await import("../fotos-faciles/nucleo/wpd.mjs");
+const { registraRecursos, recursoEmbebido, empaquetado } = await import("../fotos-faciles/nucleo/recursos.mjs");
 
 const huella = (m) => crypto.createHash("sha256").update(m.modulos.map((f) => f.join("")).join("")).digest("hex").slice(0, 32);
 
@@ -257,6 +273,100 @@ console.log("\n🔐 Seguridad");
 }
 
 // ============================================================================
+console.log("\n🏠 Puente con el escaparate 3D y LimpiaFotos");
+{
+  // El "slug" TIENE que ser idéntico al de escaparate3d/herramientas/sincronizar.mjs:
+  // si no, las fotos propias chocarían con las que descarga ese script.
+  const babelDelEscaparate = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+  const muestras = ["PIS0190", "Ático en Calle Rosal", "es1616045", "Piso 4º exterior, El Fontán"];
+  check("usa el mismo nombre de archivo que sincronizar.mjs",
+    muestras.every((m) => eco.babel(m) === babelDelEscaparate(m)));
+
+  check("encuentra el repositorio", eco.localizaRepo() === REPO);
+  const cartera = await eco.leeCartera();
+  check("lee la cartera del escaparate", cartera.hay && cartera.inmuebles.length === 1);
+  check("compone la etiqueta y la carpeta del inmueble",
+    cartera.inmuebles[0].etiqueta.startsWith("PIS0190 — ") &&
+    cartera.inmuebles[0].carpeta === "PIS0190 - Piso reformado de 3 habitaciones en el centro",
+    cartera.inmuebles[0].carpeta);
+
+  const rel1 = await eco.guardaFotoEscaparate({ referencia: "PIS0190", datos: Buffer.from("foto1"), extensionArchivo: ".jpg" });
+  const rel2 = await eco.guardaFotoEscaparate({ referencia: "PIS0190", datos: Buffer.from("foto2"), extensionArchivo: ".jpg" });
+  check("numera las fotos propias sin pisar las del portal",
+    rel1 === "fotos/pis0190-propia-01.jpg" && rel2 === "fotos/pis0190-propia-02.jpg", `${rel1} / ${rel2}`);
+  check("no admite formatos que el navegador no pinta",
+    (await eco.guardaFotoEscaparate({ referencia: "PIS0190", datos: Buffer.from("x"), extensionArchivo: ".heic" })).endsWith(".jpg"));
+  check("distingue lo publicable", eco.publicable("salon.jpg") && !eco.publicable("salon.heic"));
+
+  const r = await eco.publicaEnEscaparate({ referencia: "PIS0190", relativas: [rel1, rel2] });
+  const pisos = JSON.parse(await fsp.readFile(path.join(REPO, "escaparate3d", "pisos.json"), "utf8"));
+  const ficha = pisos.inmuebles.find((p) => p.referencia === "PIS0190");
+  check("las fotos propias quedan las primeras (portada)", ficha.imagen === rel1 && ficha.imagenes[0] === rel1);
+  check("conserva las fotos que ya tenía del portal",
+    ficha.imagenes.includes("fotos/pis0190-01.jpg") && ficha.imagenes.length === 4, JSON.stringify(ficha.imagenes));
+  check("no duplica un inmueble que ya existía", !r.nueva && pisos.inmuebles.length === 1);
+  check("deja copia de seguridad de pisos.json", fs.existsSync(path.join(REPO, "escaparate3d", "pisos.json.bak")));
+
+  const nueva = await eco.publicaEnEscaparate({ referencia: "PIS9999", titulo: "Ático nuevo", relativas: ["fotos/pis9999-propia-01.jpg"] });
+  const pisos2 = JSON.parse(await fsp.readFile(path.join(REPO, "escaparate3d", "pisos.json"), "utf8"));
+  check("da de alta un inmueble que aún no estaba", nueva.nueva && pisos2.inmuebles.length === 2 &&
+    pisos2.inmuebles[1].titulo === "Ático nuevo" && pisos2.inmuebles[1].activo === true);
+
+  const origen = path.join(RAIZ, "camara", "IMG_0001.jpg");
+  const prep = await eco.preparaLimpiaFotos({ carpetaBase: DESTINO, etiqueta: "PIS0190", archivos: [origen] });
+  check("prepara la carpeta para LimpiaFotos",
+    prep.copiadas === 1 && fs.existsSync(path.join(prep.carpeta, "IMG_0001.jpg")) && fs.existsSync(origen));
+  const prep2 = await eco.preparaLimpiaFotos({ carpetaBase: DESTINO, etiqueta: "PIS0190", archivos: [origen] });
+  check("no vuelve a copiar lo que ya preparó", prep2.copiadas === 0);
+}
+
+// ============================================================================
+console.log("\n📱 iPhone por cable en Windows (MTP/WPD)");
+{
+  check("solo se activa en Windows", wpd.disponible() === (process.platform === "win32"));
+  check("lee una respuesta con varios elementos", wpd.comoLista('[{"nombre":"a"},{"nombre":"b"}]').length === 2);
+  check("lee una respuesta con un solo elemento (PowerShell no la mete en lista)",
+    wpd.comoLista('{"nombre":"Apple iPhone"}').length === 1);
+  check("aguanta una respuesta vacía o rota",
+    wpd.comoLista("").length === 0 && wpd.comoLista("no es json").length === 0 && wpd.comoLista("null").length === 0);
+
+  check("escapa las comillas al construir el guion", wpd.escapaPs("Piso d'Oviedo") === "Piso d''Oviedo");
+  const guion = wpd.guionNavegar(["Apple iPhone", "Internal Storage", "DCIM"]);
+  check("el guion navega paso a paso por nombres",
+    guion.includes("$shell.NameSpace(17)") && guion.includes("'Apple iPhone'") && guion.includes("'DCIM'"));
+  const guionMalo = wpd.guionNavegar(["x'; Remove-Item C:\\ -Recurse; '"]);
+  check("un nombre con comillas no puede inyectar órdenes",
+    !/\$it\.Name -eq 'x'; Remove/.test(guionMalo) && guionMalo.includes("''"));
+
+  const dispositivos = wpd.interpretaDispositivos('[{"nombre":"Apple iPhone","tipo":"Dispositivo portátil"}]');
+  check("interpreta la lista de dispositivos",
+    dispositivos.length === 1 && dispositivos[0].camino[0] === "Apple iPhone" && dispositivos[0].portatil);
+
+  const contenido = wpd.interpretaContenido(
+    '[{"nombre":"DCIM","carpeta":true},{"nombre":"IMG_0001.HEIC","carpeta":false,"tamano":"2048","modificado":"2026-09-07T10:00:00"}]',
+    ["Apple iPhone"],
+  );
+  check("separa carpetas y archivos con su camino completo",
+    contenido.carpetas.length === 1 && contenido.archivos.length === 1 &&
+    contenido.archivos[0].tamano === 2048 &&
+    contenido.archivos[0].camino.join("/") === "Apple iPhone/IMG_0001.HEIC");
+
+  const fake = async () => '[{"nombre":"Apple iPhone"}]';
+  check("fuera de Windows no intenta nada", (await wpd.dispositivos(fake)).length === (process.platform === "win32" ? 1 : 0));
+}
+
+// ============================================================================
+console.log("\n📦 Recursos incrustados (ejecutable único)");
+{
+  check("sin registrar nada, no está empaquetado", empaquetado() === false && recursoEmbebido("pc.html") === null);
+  registraRecursos({ "prueba.html": Buffer.from("<h1>hola</h1>").toString("base64") });
+  check("tras registrar, sirve el recurso desde memoria",
+    empaquetado() && recursoEmbebido("prueba.html").toString() === "<h1>hola</h1>");
+  check("da igual la barra inicial", recursoEmbebido("/prueba.html").toString() === "<h1>hola</h1>");
+}
+
+// ============================================================================
 console.log("\n🌐 Servidor completo (subida desde el móvil, corte incluido)");
 {
   guardarConfig({ carpetaDestino: DESTINO, organizarPor: "fecha", renombrar: false, abrirNavegador: false });
@@ -365,6 +475,34 @@ console.log("\n🌐 Servidor completo (subida desde el móvil, corte incluido)")
   check("descarga la foto del álbum", archivoAlbum.status === 200);
   const inventado = await pide("/api/album/token-inventado");
   check("un enlace inventado no abre nada", inventado.res.status === 404);
+
+  // --- Puentes con el ecosistema por HTTP ----------------------------------
+  const inmuebles = await pide("/api/inmuebles");
+  check("la API ofrece la cartera para el desplegable",
+    inmuebles.cuerpo.hay && inmuebles.cuerpo.inmuebles.some((i) => i.referencia === "PIS0190"));
+
+  const subeFoto = await fetch(`${base}/api/escaparate/foto?referencia=PIS0190&ext=.jpg`, {
+    method: "PUT", headers: { "content-type": "image/jpeg" }, body: contenido,
+  });
+  const fotoPublicada = await subeFoto.json();
+  check("acepta una foto ya reducida para el escaparate",
+    subeFoto.status === 200 && /^fotos\/pis0190-propia-\d{2}\.jpg$/.test(fotoPublicada.relativa), JSON.stringify(fotoPublicada));
+
+  const publicada = await pide("/api/escaparate/publicar", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ referencia: "PIS0190", relativas: [fotoPublicada.relativa] }),
+  });
+  check("la publica en pisos.json", publicada.res.status === 200 && publicada.cuerpo.portada === fotoPublicada.relativa);
+
+  const limpia = await pide("/api/limpiafotos", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ archivos: [cerrada.cuerpo.ruta], etiqueta: "PIS0190", abrir: false }),
+  });
+  check("prepara la carpeta de LimpiaFotos por HTTP", limpia.res.status === 200 && fs.existsSync(limpia.cuerpo.carpeta));
+
+  const portatil = await pide("/api/portatil/explorar?camino=%5B%5D");
+  check("fuera de Windows, el modo MTP lo dice en vez de fallar raro",
+    process.platform === "win32" ? portatil.res.status === 200 : portatil.res.status === 400);
 
   // --- El original no se ha tocado -----------------------------------------
   check("compartir no mueve ni renombra el original", fs.existsSync(cerrada.cuerpo.ruta));

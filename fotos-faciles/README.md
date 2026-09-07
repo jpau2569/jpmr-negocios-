@@ -17,6 +17,8 @@ listas para editar y publicar.
 | **🔌 Por cable / USB** | Detecta pendrives, tarjetas SD, cámaras y Android en modo "transferencia de archivos". Enseña solo lo que **todavía no tienes** y lo importa ordenado. |
 | **📋 Copiar y pegar** | Un explorador doble dentro de la app: eliges fotos en una carpeta (incluida la de WhatsApp de un Android) y las pegas en otra con Ctrl+C / Ctrl+V. |
 | **🔗 Compartir** | Seleccionas fotos ya guardadas y generas un enlace para enseñárselas a un cliente. Nunca toca los originales. |
+| **🏠 Escaparate 3D** | Publica las fotos elegidas en tu carrusel de la cartera: las reduce, las copia a `escaparate3d/fotos/` y las pone de portada en `pisos.json`. |
+| **🪄 LimpiaFotos** | Prepara una carpeta con las fotos seleccionadas y la abre, para arrastrarlas de una vez a la herramienta de retoque. |
 
 ---
 
@@ -126,6 +128,74 @@ Si no configuras el túnel, la app te lo dice claramente en vez de darte un enla
 
 ---
 
+## Enganche con el resto de tus herramientas
+
+En **Mis fotos** hay una caja, *Enviar al resto de tus herramientas*, con un desplegable que lee
+**tu cartera real** desde `escaparate3d/pisos.json`. Eliges el inmueble (o escribes su referencia) y:
+
+### 🏠 Publicar en el escaparate 3D
+
+1. Cada foto se **reduce a 1600 px** en el propio navegador (canvas), que es el tamaño que
+   recomienda `escaparate3d/fotos/LEEME.md`. Sin instalar nada: pasa de ~4 MB a ~200 KB.
+2. Se copia a `escaparate3d/fotos/` como `<referencia>-propia-01.jpg`, `-02`…
+3. Se apunta en `pisos.json` **delante** de las fotos del portal, así que **tu foto pasa a ser la portada**.
+
+Dos detalles pensados a propósito:
+
+- El sufijo `-propia-` evita chocar con `sincronizar.mjs`, que nombra las suyas `<referencia>-01.jpg`.
+- Ese script **conserva** las `imagenes` que ya había, así que tus fotos **sobreviven a cada
+  sincronización** y siguen siendo la portada. Antes de tocar `pisos.json` se guarda `pisos.json.bak`.
+- Si el inmueble aún no está en la cartera, se crea su entrada mínima (referencia, título, activo).
+- Las fotos HEIC del iPhone no se pueden publicar tal cual: el navegador no las sabe pintar y te lo
+  dice. Pásalas por el modo WiFi (el iPhone las convierte a JPG al enviarlas) o cambia el ajuste
+  del iPhone a "Más compatible".
+
+### 🪄 Preparar para LimpiaFotos
+
+Copia las seleccionadas a `_Para LimpiaFotos/<referencia>/` dentro de tu carpeta de fotos y **abre esa
+carpeta** en el Explorador, para arrastrarlas todas de golpe a la herramienta web. Los originales no
+se tocan y no se vuelve a copiar lo que ya estaba preparado.
+
+---
+
+## iPhone por cable en Windows (experimental)
+
+Además del modo WiFi, la pestaña *Por cable / USB* ahora lista los **dispositivos portátiles**
+(iPhone y Android en MTP). Se leen con la interfaz COM `Shell.Application` a través de PowerShell,
+que es la misma que usa el Explorador de Windows — sin módulos nativos que compilar.
+
+Cómo funciona: se navega por nombres (*Apple iPhone → Internal Storage → DCIM → 100APPLE*),
+se marcan las fotos (las que ya tienes salen señaladas) y se copian en tandas a una carpeta temporal
+antes de entrar en su sitio. Ahí no hay miniaturas: MTP no las deja ver sin copiar el archivo entero.
+
+**Honestidad primero:** esta parte está probada en su lógica (construcción del guion, lectura de la
+respuesta, escapado contra inyección), pero **no sobre un iPhone real** — el entorno donde se
+desarrolló es Linux. Por eso sale marcada como *experimental* y, si falla, la app te manda al modo
+WiFi, que es más rápido de todas formas.
+
+---
+
+## Convertirlo en un programa que no necesita Node
+
+```bash
+npm install --no-save esbuild postject      # solo para construir
+node fotos-faciles/herramientas/empaquetar.mjs                        # para este sistema
+node fotos-faciles/herramientas/empaquetar.mjs --plataforma win-x64   # .exe de Windows
+```
+
+Usa las [Single Executable Applications](https://nodejs.org/api/single-executable-applications.html)
+oficiales de Node: el código y las tres pantallas web se incrustan dentro de una copia del binario de
+Node y sale un único archivo que **se abre con doble clic en un ordenador sin Node instalado**.
+El resultado queda en `fotos-faciles/dist/`.
+
+**Aviso de tamaño, sin adornos:** el ejecutable pesa unos **83 MB en Windows** y **119 MB en Linux**,
+porque lleva Node entero dentro (comprimido en ZIP, unos 40 MB). Un envoltorio de Tauri daría una
+**ventana nativa** en vez de una pestaña del navegador, pero ocuparía eso *más* los ~5 MB de Tauri:
+no ahorra tamaño, solo cambia el aspecto. Como el objetivo era "no depender de Node", el ejecutable
+único ya lo cumple; la ventana nativa queda como mejora aparte.
+
+---
+
 ## Dónde acaban las fotos
 
 Por defecto en `Fotos Faciles` dentro de tu carpeta personal, organizadas por el **día real de la
@@ -170,6 +240,9 @@ fotos-faciles/
 │   ├── almacen.mjs          índice por SHA-256, dónde va cada archivo, historial
 │   ├── subidas.mjs          subidas reanudables (.parcial + identificador estable)
 │   ├── exif.mjs             fecha real y miniatura incrustada (JPEG/HEIC/MP4/MOV)
+│   ├── ecosistema.mjs       puentes con el escaparate 3D y con LimpiaFotos
+│   ├── wpd.mjs              iPhone/Android por cable en Windows (MTP, experimental)
+│   ├── recursos.mjs         pantallas web: del disco o desde dentro del ejecutable
 │   ├── dispositivos.mjs     Modo A: unidades, carpetas típicas, escaneo
 │   ├── explorador.mjs       Modo C: navegar y pegar sin sobrescribir
 │   ├── compartir.mjs        álbumes y enlaces con caducidad
@@ -178,6 +251,8 @@ fotos-faciles/
 │   ├── red.mjs              IPv4 locales, descartando adaptadores virtuales
 │   ├── config.mjs           ~/.fotos-faciles/config.json
 │   └── util.mjs             nombres seguros, tipos, tamaños, rutas
+├── herramientas/
+│   └── empaquetar.mjs       construye el ejecutable único (Windows/macOS/Linux)
 └── web/
     ├── pc.html / pc.js      pantalla del ordenador (6 pestañas)
     ├── movil.html / movil.js pantalla del móvil (PIN + subida)
@@ -205,14 +280,17 @@ npm test                       # desde la raíz del repositorio (incluye Fotos F
 node test/fotos-faciles.test.mjs
 ```
 
-74 comprobaciones: QR contra referencia, nombres seguros, EXIF, organización por fecha,
-duplicados, la regla de no sobrescribir, seguridad, y el servidor completo levantado de verdad
+106 comprobaciones: QR contra referencia, nombres seguros, EXIF, organización por fecha,
+duplicados, la regla de no sobrescribir, seguridad, el puente con el escaparate 3D (incluido que el
+nombre de archivo coincide con el de `sincronizar.mjs`), el guion de PowerShell del modo MTP
+(con su prueba de inyección), los recursos incrustados, y el servidor completo levantado de verdad
 (subida cortada y reanudada, rangos, permisos de ruta y enlaces compartidos).
 
-### Qué falta por hacer (siguientes fases)
+### Qué falta por hacer
 
-1. **Empaquetado en un `.exe` / `.dmg`** con Tauri (envoltorio de ~5 MB alrededor de este mismo
-   servidor) para no depender de que Node esté instalado.
-2. **Lectura del iPhone por cable** en Windows usando la API WPD (requiere un módulo nativo).
+1. **Probar el modo MTP sobre un iPhone real** y ajustar los nombres de carpeta que use cada versión
+   de iOS/Android.
+2. **Ventana nativa con Tauri** alrededor del ejecutable, si molesta que se abra una pestaña del
+   navegador (no ahorra tamaño, ver arriba).
 3. **Compresión opcional** de vídeos largos antes de importar (ffmpeg como binario externo).
 4. **Copia de seguridad automática** a una segunda carpeta o disco.

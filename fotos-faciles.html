@@ -45,7 +45,7 @@
   </header>
 
   <div class="tarjeta">
-    <h2>Cuatro formas de pasar fotos</h2>
+    <h2>Todo lo que hace</h2>
     <div class="modos">
       <div class="modo"><span class="ico">📶</span><h3>Sin cables (QR)</h3>
         <p>El ordenador enseña un código QR. Lo escaneas con la cámara del móvil, eliges las fotos y van directas al PC por la WiFi. No hay que instalar nada en el móvil.</p></div>
@@ -55,6 +55,10 @@
         <p>Explorador doble dentro de la app, con Ctrl+C y Ctrl+V. Nunca sobrescribe nada de lo que ya tenías guardado.</p></div>
       <div class="modo"><span class="ico">🔗</span><h3>Compartir</h3>
         <p>Genera un enlace con caducidad para enseñarle las fotos de un piso a un cliente, sin tocar los originales.</p></div>
+      <div class="modo"><span class="ico">🏠</span><h3>Al escaparate 3D</h3>
+        <p>Publica las fotos del inmueble en tu carrusel de la cartera con un botón: las reduce al tamaño correcto y las pone de portada.</p></div>
+      <div class="modo"><span class="ico">🪄</span><h3>A LimpiaFotos</h3>
+        <p>Prepara una carpeta con las fotos elegidas y la abre, para arrastrarlas de una vez a la herramienta de retoque.</p></div>
     </div>
   </div>
 
@@ -65,7 +69,9 @@
       <li>Descarga el proyecto:<br /><code>git clone https://github.com/jpau2569/jpmr-negocios-.git</code></li>
       <li>En Windows, doble clic en <code>fotos-faciles\FotosFaciles.bat</code>. En Mac, en <code>iniciar.command</code>.</li>
     </ol>
-    <p style="color:var(--suave);font-size:15px">No hace falta <code>npm install</code>: el programa no tiene ninguna dependencia.</p>
+    <p style="color:var(--suave);font-size:15px">No hace falta <code>npm install</code>: el programa no tiene ninguna dependencia.
+      Y si prefieres no instalar ni Node, se puede construir un <strong>ejecutable único</strong> con
+      <code>node fotos-faciles/herramientas/empaquetar.mjs</code> y llevártelo en un pendrive.</p>
     <p style="margin-bottom:6px">También desde el terminal:</p>
     <pre>node fotos-faciles/iniciar.mjs
 node fotos-faciles/iniciar.mjs --destino "D:\Fotos" --puerto 5000</pre>
@@ -86,9 +92,10 @@ node fotos-faciles/iniciar.mjs --destino "D:\Fotos" --puerto 5000</pre>
   <div class="tarjeta">
     <h2>Sobre el iPhone por cable</h2>
     <div class="aviso">En Windows el iPhone se conecta por MTP y <strong>no recibe letra de unidad</strong>:
-      aparece como «dispositivo portátil» del Explorador. Por eso, para el iPhone lo recomendable es el
-      <strong>modo sin cables (QR)</strong>, que además es más rápido. Pendrives, tarjetas SD y Android
-      en «Transferencia de archivos» sí funcionan por cable.</div>
+      aparece como «dispositivo portátil» del Explorador. La app sabe leerlo por ahí (función marcada como
+      <strong>experimental</strong>: está probada en su lógica, pero no sobre un iPhone real), y si falla te
+      manda al <strong>modo sin cables (QR)</strong>, que además es más rápido. Pendrives, tarjetas SD y
+      Android en «Transferencia de archivos» funcionan por cable sin ningún truco.</div>
   </div>
 
   <div class="tarjeta">

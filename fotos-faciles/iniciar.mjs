@@ -6,7 +6,9 @@
 //    node fotos-faciles/iniciar.mjs
 //    node fotos-faciles/iniciar.mjs --puerto 5000 --destino "D:\Fotos" --sin-navegador
 // ============================================================================
+import path from "node:path";
 import { execFile } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { arranca, VERSION } from "./nucleo/servidor.mjs";
 import { leerConfig, guardarConfig } from "./nucleo/config.mjs";
 import { direccionesLocales } from "./nucleo/red.mjs";
@@ -37,7 +39,7 @@ function abreNavegador(url) {
 
 const AZUL = "\x1b[36m", VERDE = "\x1b[32m", GRIS = "\x1b[90m", FUERTE = "\x1b[1m", FIN = "\x1b[0m";
 
-async function principal() {
+export async function principal() {
   const args = argumentos(process.argv.slice(2));
   if (args.ayuda) {
     console.log(`Fotos Fáciles ${VERSION}
@@ -82,7 +84,21 @@ async function principal() {
   process.on("SIGTERM", adios);
 }
 
-principal().catch((e) => {
-  console.error(`\n❌  No se ha podido arrancar: ${e.message}\n`);
-  process.exit(1);
-});
+/**
+ * Arranca por su cuenta solo cuando se llama directamente (`node iniciar.mjs`). Dentro
+ * del ejecutable único quien manda es `build/entrada.mjs`, que primero registra
+ * las pantallas incrustadas y después llama a `principal()`.
+ */
+const llamadoDirectamente = (() => {
+  try { return !!process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]); }
+  catch { return false; }
+})();
+
+export function arrancaPrograma() {
+  return principal().catch((e) => {
+    console.error(`\n❌  No se ha podido arrancar: ${e.message}\n`);
+    process.exit(1);
+  });
+}
+
+if (llamadoDirectamente) arrancaPrograma();

@@ -21,12 +21,23 @@ import { Seguridad, ipDe } from "./seguridad.mjs";
 import { Albumes, enlacesDe } from "./compartir.mjs";
 import { listaUnidades, escanea, carpetasDelUsuario, carpetasConFotos } from "./dispositivos.mjs";
 import { listaCarpeta, copiarArchivos, crearCarpeta } from "./explorador.mjs";
+import * as wpd from "./wpd.mjs";
 import { nuevaTarea, verTarea, cancelaTarea, terminaTarea } from "./tareas.mjs";
 import { miniaturaIncrustada } from "./exif.mjs";
-import { mime, dentroDe, esFoto, tamanoLegible } from "./util.mjs";
+import {
+  leeCartera, guardaFotoEscaparate, publicaEnEscaparate, preparaLimpiaFotos,
+  abreCarpeta, localizaRepo, publicable,
+} from "./ecosistema.mjs";
+import { mime, dentroDe, esFoto, esMedia, tamanoLegible } from "./util.mjs";
+import { recursoEmbebido, empaquetado } from "./recursos.mjs";
 
-export const VERSION = "1.0.0";
-const AQUI = path.dirname(fileURLToPath(import.meta.url));
+export const VERSION = "1.1.0";
+// Al empaquetar en un ejecutable único no hay `import.meta.url`: en ese caso
+// las pantallas viajan incrustadas y esta ruta no llega a usarse.
+const AQUI = (() => {
+  try { return path.dirname(fileURLToPath(import.meta.url)); }
+  catch { return path.dirname(process.execPath); }
+})();
 const WEB = path.join(AQUI, "..", "web");
 const MAX_JSON = 4 * 1024 * 1024;
 
@@ -52,6 +63,23 @@ function leeJson(req) {
       datos += t;
     });
     req.on("end", () => { try { resolve(datos ? JSON.parse(datos) : {}); } catch (e) { reject(e); } });
+    req.on("error", reject);
+  });
+}
+
+const MAX_FOTO = 12 * 1024 * 1024;
+
+/** Lee un cuerpo binario entero en memoria (fotos ya reducidas, no vídeos). */
+function leeBinario(req, tope = MAX_FOTO) {
+  return new Promise((resolve, reject) => {
+    const trozos = [];
+    let total = 0;
+    req.on("data", (t) => {
+      total += t.length;
+      if (total > tope) { reject(new Error("La foto es demasiado grande")); req.destroy(); return; }
+      trozos.push(t);
+    });
+    req.on("end", () => resolve(Buffer.concat(trozos)));
     req.on("error", reject);
   });
 }
@@ -93,6 +121,11 @@ async function enviaArchivo(req, res, ruta, { descarga = false } = {}) {
 }
 
 async function enviaEstatico(res, nombre) {
+  const incrustado = recursoEmbebido(nombre);
+  if (incrustado) {
+    res.writeHead(200, { "content-type": mime(nombre), "cache-control": "no-cache", "content-length": incrustado.length });
+    return res.end(incrustado);
+  }
   const ruta = path.join(WEB, nombre);
   if (!dentroDe(WEB, ruta)) return json(res, 403, { error: "Prohibido" });
   try {
@@ -290,14 +323,40 @@ export async function crearServidor(opciones = {}) {
 
     // ---- Modo A: unidades por cable ----------------------------------------
     if (ruta === "/api/dispositivos") {
-      const unidades = await listaUnidades();
+      const [unidades, portatiles] = await Promise.all([listaUnidades(), wpd.dispositivos()]);
       return json(res, 200, {
         unidades,
+        portatiles,
         carpetas: carpetasDelUsuario(),
         aviso: process.platform === "win32"
-          ? "El iPhone se conecta por MTP y Windows no le da letra de unidad: para el iPhone usa el Modo WiFi (QR)."
+          ? "El iPhone se conecta por MTP y no tiene letra de unidad. Aquí abajo aparece como «dispositivo portátil» (experimental). Si da guerra, el camino seguro y más rápido es el modo WiFi con QR."
           : null,
       });
+    }
+    if (ruta === "/api/portatil/explorar") {
+      if (!wpd.disponible()) return json(res, 400, { error: "Los dispositivos portátiles solo se leen en Windows" });
+      let camino = [];
+      try { camino = JSON.parse(url.searchParams.get("camino") || "[]"); } catch { camino = []; }
+      if (!Array.isArray(camino)) return json(res, 400, { error: "Camino no válido" });
+      const contenido = await wpd.explora(camino.map(String));
+      return json(res, 200, {
+        camino,
+        ...contenido,
+        archivos: contenido.archivos.map((a) => ({
+          ...a, tipo: esFoto(a.nombre) ? "foto" : "video",
+          nuevo: !estado.almacen.yaTengoHuella(a.nombre, a.tamano),
+        })).filter((a) => esMedia(a.nombre)),
+      });
+    }
+    if (ruta === "/api/portatil/importar" && req.method === "POST") {
+      if (!wpd.disponible()) return json(res, 400, { error: "Los dispositivos portátiles solo se leen en Windows" });
+      const cuerpo = await leeJson(req);
+      const camino = Array.isArray(cuerpo.camino) ? cuerpo.camino.map(String) : [];
+      const nombres = Array.isArray(cuerpo.nombres) ? cuerpo.nombres.map(String) : [];
+      if (!nombres.length) return json(res, 400, { error: "No has elegido ninguna foto" });
+      const tarea = nuevaTarea("Importando del dispositivo portátil", nombres.length);
+      importaPortatil(tarea, camino, nombres, cuerpo).catch((e) => terminaTarea(tarea, { error: e.message }));
+      return json(res, 200, { tarea: tarea.id });
     }
     if (ruta === "/api/dispositivo/escanear") {
       const raiz = path.resolve(url.searchParams.get("ruta") || "");
@@ -347,6 +406,52 @@ export async function crearServidor(opciones = {}) {
     }
     const mCancelar = /^\/api\/tarea\/([a-f0-9]+)\/cancelar$/.exec(ruta);
     if (mCancelar && req.method === "POST") return json(res, 200, { ok: cancelaTarea(mCancelar[1]) });
+
+    // ---- Puentes con el ecosistema (escaparate 3D y LimpiaFotos) -----------
+    if (ruta === "/api/inmuebles") {
+      const cartera = await leeCartera();
+      return json(res, 200, { ...cartera, actual: estado.config.inmueble || "" });
+    }
+    if (ruta === "/api/escaparate/foto" && (req.method === "PUT" || req.method === "POST")) {
+      const datos = await leeBinario(req);
+      if (!datos.length) return json(res, 400, { error: "No ha llegado la foto" });
+      const relativa = await guardaFotoEscaparate({
+        referencia: url.searchParams.get("referencia") || "",
+        titulo: url.searchParams.get("titulo") || "",
+        extensionArchivo: url.searchParams.get("ext") || ".jpg",
+        datos,
+      });
+      return json(res, 200, { relativa });
+    }
+    if (ruta === "/api/escaparate/publicar" && req.method === "POST") {
+      const cuerpo = await leeJson(req);
+      const resultado = await publicaEnEscaparate({
+        referencia: cuerpo.referencia, titulo: cuerpo.titulo, relativas: cuerpo.relativas || [],
+      });
+      estado.almacen.apunta({
+        tipo: "escaparate", nombre: resultado.titulo, fotos: (cuerpo.relativas || []).length,
+      });
+      return json(res, 200, resultado);
+    }
+    if (ruta === "/api/limpiafotos" && req.method === "POST") {
+      const cuerpo = await leeJson(req);
+      const archivos = (cuerpo.archivos || []).map((r) => path.resolve(String(r))).filter(rutaPermitida);
+      const r = await preparaLimpiaFotos({
+        carpetaBase: estado.config.carpetaDestino,
+        etiqueta: cuerpo.etiqueta || estado.config.inmueble || "fotos",
+        archivos,
+      });
+      if (cuerpo.abrir !== false) abreCarpeta(r.carpeta);
+      estado.almacen.apunta({ tipo: "limpiafotos", nombre: cuerpo.etiqueta || "", fotos: r.copiadas });
+      return json(res, 200, r);
+    }
+    if (ruta === "/api/abrir-carpeta" && req.method === "POST") {
+      const cuerpo = await leeJson(req);
+      const destino = path.resolve(String(cuerpo.ruta || estado.config.carpetaDestino));
+      if (!rutaPermitida(destino)) return json(res, 403, { error: "Ruta no permitida" });
+      await abreCarpeta(destino);
+      return json(res, 200, { ok: true });
+    }
 
     // ---- Compartir ----------------------------------------------------------
     if (ruta === "/api/albumes" && req.method === "GET") {
@@ -419,6 +524,9 @@ export async function crearServidor(opciones = {}) {
       })(),
       destino: estado.config.carpetaDestino,
       casa: os.homedir(),
+      repo: localizaRepo(),
+      empaquetado: empaquetado(),
+      extensionesPublicables: [".jpg", ".jpeg", ".png", ".webp"],
       plataforma: process.platform,
     };
   }
@@ -445,6 +553,55 @@ export async function crearServidor(opciones = {}) {
     estado.almacen.guardaAhora();
     estado.almacen.apunta({
       tipo: "cable", fotos: tarea.copiados, duplicados: tarea.duplicados,
+      fallidos: tarea.fallidos, bytes: tarea.bytes,
+    });
+    terminaTarea(tarea);
+  }
+
+  /**
+   * MTP no deja leer un archivo en streaming: primero se copia a una carpeta
+   * temporal del PC (en tandas, para ir enseñando avance) y de ahí al almacén.
+   */
+  async function importaPortatil(tarea, camino, nombres, opciones) {
+    const temporal = wpd.carpetaTemporal();
+    await fsp.mkdir(temporal, { recursive: true });
+    const TANDA = 10;
+    try {
+      for (let i = 0; i < nombres.length && !tarea.cancelada; i += TANDA) {
+        const tanda = nombres.slice(i, i + TANDA);
+        tarea.archivo = tanda[0];
+        let copiados = [];
+        try { copiados = await wpd.copia(camino, tanda, temporal); }
+        catch (e) {
+          tarea.fallidos += tanda.length;
+          tarea.hechos += tanda.length;
+          tarea.detalles.push({ nombre: tanda[0], error: e.message });
+          continue;
+        }
+        for (const temporalRuta of copiados) {
+          try {
+            const r = await estado.almacen.incorporar(temporalRuta, {
+              nombre: path.basename(temporalRuta), origen: "iphone-cable", mover: true,
+              organizarPor: estado.config.organizarPor,
+              inmueble: opciones.inmueble ?? estado.config.inmueble,
+              renombrar: estado.config.renombrar,
+            });
+            if (r.estado === "duplicado") tarea.duplicados++;
+            else { tarea.copiados++; tarea.bytes += r.ficha.tamano; }
+          } catch (e) {
+            tarea.fallidos++;
+            tarea.detalles.push({ nombre: path.basename(temporalRuta), error: e.message });
+          }
+          tarea.hechos++;
+        }
+        tarea.hechos = Math.max(tarea.hechos, Math.min(nombres.length, i + tanda.length));
+      }
+    } finally {
+      await fsp.rm(temporal, { recursive: true, force: true }).catch(() => {});
+    }
+    estado.almacen.guardaAhora();
+    estado.almacen.apunta({
+      tipo: "iphone-cable", fotos: tarea.copiados, duplicados: tarea.duplicados,
       fallidos: tarea.fallidos, bytes: tarea.bytes,
     });
     terminaTarea(tarea);
