@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0e1116" />
+<title>Fotos Fáciles — enviar al ordenador</title>
+<link rel="icon" href="/web/icono.svg" />
+<link rel="stylesheet" href="/web/estilos.css" />
+</head>
+<body>
+<div class="movil">
+
+  <header class="principal" style="padding-bottom:10px">
+    <div class="logo">📷</div>
+    <div><h1 style="font-size:19px">Fotos Fáciles</h1><p class="sub" id="sub">Enviar al ordenador</p></div>
+  </header>
+
+  <!-- PIN -->
+  <section class="tarjeta" id="paso-pin" hidden>
+    <h2>Escribe el PIN</h2>
+    <p class="ayuda">Es el número de 4 cifras que aparece en la pantalla del ordenador.</p>
+    <div class="huecos-pin" id="huecos"><i></i><i></i><i></i><i></i></div>
+    <div id="error-pin"></div>
+    <div class="teclado-pin" id="teclado"></div>
+  </section>
+
+  <!-- SUBIDA -->
+  <section id="paso-subir" hidden>
+    <div class="tarjeta">
+      <h2>Elige lo que quieras pasar</h2>
+      <p class="ayuda">Vale todo: fotos del Carrete, vídeos, o imágenes que hayas guardado de WhatsApp.
+        Se guardan directamente en el ordenador, no pasan por internet.</p>
+      <label class="campo" id="campo-inmueble" hidden>
+        <span>Inmueble (se creará su carpeta)</span>
+        <input type="text" id="inmueble" placeholder="Piso Oviedo — Calle Uría 12" />
+      </label>
+      <input type="file" id="selector" multiple accept="image/*,video/*" hidden />
+      <button class="gigante principal-btn" id="btn-elegir">📁 Elegir fotos y vídeos</button>
+      <div class="zona-arrastre" id="zona">…o arrástralas aquí</div>
+      <p class="ayuda" id="destino-info"></p>
+    </div>
+
+    <div class="tarjeta" id="tarjeta-progreso" hidden>
+      <h2 id="titulo-progreso">Enviando…</h2>
+      <div class="barra"><i id="barra"></i></div>
+      <p class="ayuda" id="detalle-progreso"></p>
+      <div class="fila"><button id="btn-parar">Parar</button><button id="btn-reintentar" hidden>Reintentar los fallidos</button></div>
+      <ul class="lista" id="lista-archivos"></ul>
+    </div>
+  </section>
+
+  <p class="ayuda" style="text-align:center;margin-top:22px">
+    🔒 Tus fotos van directas a tu ordenador por la WiFi. No se suben a ninguna nube.
+  </p>
+</div>
+<script type="module" src="/web/movil.js"></script>
+</body>
+</html>

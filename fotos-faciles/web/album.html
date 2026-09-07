@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#0e1116" />
+<title>Fotos compartidas</title>
+<link rel="icon" href="/web/icono.svg" />
+<link rel="stylesheet" href="/web/estilos.css" />
+</head>
+<body>
+<div class="envoltorio" style="max-width:940px">
+  <header class="principal">
+    <div class="logo">🖼️</div>
+    <div><h1 id="titulo">Fotos compartidas</h1><p class="sub" id="sub">Cargando…</p></div>
+  </header>
+  <div id="mensaje"></div>
+  <div class="galeria" id="galeria"></div>
+</div>
+<div class="visor" id="visor" hidden><button class="cerrar" id="cerrar">✕</button><div id="contenido"></div></div>
+<script type="module" src="/web/album.js"></script>
+</body>
+</html>

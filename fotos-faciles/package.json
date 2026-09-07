@@ -1,0 +1,14 @@
+{
+  "name": "fotos-faciles",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pasa fotos y vídeos del móvil, de un pendrive o de otra carpeta a tu ordenador, sin cables y sin nube.",
+  "bin": { "fotos-faciles": "./iniciar.mjs" },
+  "scripts": {
+    "start": "node iniciar.mjs",
+    "test": "node ../test/fotos-faciles.test.mjs"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {}
+}

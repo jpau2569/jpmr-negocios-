@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fotos Fáciles — Pasar a Ordenador</title>
+<meta name="description" content="Pasa fotos y vídeos del móvil, de un pendrive o de otra carpeta a tu ordenador, sin cables y sin nube. Programa gratuito y local." />
+<style>
+  :root { --fondo:#0e1116; --tarjeta:#1b2129; --borde:#2a323d; --texto:#eef2f7; --suave:#9aa7b8; --azul:#4da3ff; --ambar:#ffc857; }
+  * { box-sizing:border-box }
+  body { margin:0; background:radial-gradient(1200px 600px at 20% -10%, #1a2433 0%, var(--fondo) 60%);
+         color:var(--texto); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.6 }
+  .wrap { max-width:880px; margin:0 auto; padding:36px 20px 70px }
+  a { color:var(--azul) }
+  header { text-align:center; margin-bottom:34px }
+  .logo { display:inline-grid; place-items:center; width:64px; height:64px; border-radius:18px; font-size:32px;
+          background:linear-gradient(140deg,#4da3ff,#7d5cff); margin-bottom:12px }
+  h1 { margin:0 0 6px; font-size:32px; letter-spacing:-.02em }
+  h1 span { color:var(--suave); font-weight:400 }
+  .lema { color:var(--suave); max-width:620px; margin:0 auto; font-size:17px }
+  .tarjeta { background:var(--tarjeta); border:1px solid var(--borde); border-radius:16px; padding:22px; margin-bottom:16px }
+  .tarjeta h2 { margin:0 0 10px; font-size:19px }
+  .modos { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px }
+  .modo { background:#151a22; border:1px solid var(--borde); border-radius:14px; padding:16px }
+  .modo .ico { font-size:26px; display:block; margin-bottom:6px }
+  .modo h3 { margin:0 0 6px; font-size:16px }
+  .modo p { margin:0; color:var(--suave); font-size:14px }
+  ol { padding-left:22px } ol li { margin-bottom:8px }
+  code { background:#10151c; border:1px solid var(--borde); border-radius:7px; padding:3px 8px; font-size:14px }
+  pre { background:#10151c; border:1px solid var(--borde); border-radius:10px; padding:14px; overflow-x:auto; font-size:14px }
+  .aviso { border-left:3px solid var(--ambar); background:#ffc85712; padding:12px 16px; border-radius:0 10px 10px 0; font-size:15px }
+  .volver { display:inline-block; margin-top:8px; color:var(--suave); text-decoration:none; font-size:14px }
+  footer { text-align:center; color:var(--suave); font-size:13px; margin-top:30px }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">📷</div>
+    <h1>Fotos Fáciles <span>— Pasar a Ordenador</span></h1>
+    <p class="lema">Pasa las fotos y vídeos del móvil, de un pendrive o de otra carpeta a tu ordenador
+      en segundos. Sin iTunes, sin drivers raros y <strong>sin que nada salga a internet</strong>.</p>
+    <a class="volver" href="/">← Volver a JPMR Negocios</a>
+  </header>
+
+  <div class="tarjeta">
+    <h2>Cuatro formas de pasar fotos</h2>
+    <div class="modos">
+      <div class="modo"><span class="ico">📶</span><h3>Sin cables (QR)</h3>
+        <p>El ordenador enseña un código QR. Lo escaneas con la cámara del móvil, eliges las fotos y van directas al PC por la WiFi. No hay que instalar nada en el móvil.</p></div>
+      <div class="modo"><span class="ico">🔌</span><h3>Por cable / USB</h3>
+        <p>Detecta pendrives, tarjetas SD y Android. Enseña solo lo que todavía no tienes y lo importa ordenado por fecha.</p></div>
+      <div class="modo"><span class="ico">📋</span><h3>Copiar y pegar</h3>
+        <p>Explorador doble dentro de la app, con Ctrl+C y Ctrl+V. Nunca sobrescribe nada de lo que ya tenías guardado.</p></div>
+      <div class="modo"><span class="ico">🔗</span><h3>Compartir</h3>
+        <p>Genera un enlace con caducidad para enseñarle las fotos de un piso a un cliente, sin tocar los originales.</p></div>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Cómo instalarlo (una sola vez, 3 minutos)</h2>
+    <ol>
+      <li>Instala <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a> — versión <strong>LTS</strong>, Siguiente hasta el final.</li>
+      <li>Descarga el proyecto:<br /><code>git clone https://github.com/jpau2569/jpmr-negocios-.git</code></li>
+      <li>En Windows, doble clic en <code>fotos-faciles\FotosFaciles.bat</code>. En Mac, en <code>iniciar.command</code>.</li>
+    </ol>
+    <p style="color:var(--suave);font-size:15px">No hace falta <code>npm install</code>: el programa no tiene ninguna dependencia.</p>
+    <p style="margin-bottom:6px">También desde el terminal:</p>
+    <pre>node fotos-faciles/iniciar.mjs
+node fotos-faciles/iniciar.mjs --destino "D:\Fotos" --puerto 5000</pre>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Cómo se usa con el móvil</h2>
+    <ol>
+      <li>Arranca el programa en el ordenador: verás un <strong>QR grande</strong> y un <strong>PIN de 4 cifras</strong>.</li>
+      <li>Con el móvil en la <strong>misma WiFi</strong>, abre la cámara y apunta al QR.</li>
+      <li>Se abre el navegador del móvil. Pulsa «Elegir fotos y vídeos» y selecciona.</li>
+      <li>Las fotos van llegando al ordenador, ordenadas por el día real en que se hicieron.</li>
+    </ol>
+    <p style="color:var(--suave);font-size:15px">Si mandas el mismo álbum dos veces no se duplica nada, y si se corta la WiFi
+      la subida se reanuda por donde iba.</p>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Sobre el iPhone por cable</h2>
+    <div class="aviso">En Windows el iPhone se conecta por MTP y <strong>no recibe letra de unidad</strong>:
+      aparece como «dispositivo portátil» del Explorador. Por eso, para el iPhone lo recomendable es el
+      <strong>modo sin cables (QR)</strong>, que además es más rápido. Pendrives, tarjetas SD y Android
+      en «Transferencia de archivos» sí funcionan por cable.</div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Privacidad</h2>
+    <p style="color:var(--suave);margin:0">Ninguna foto sale de tu ordenador: no hay cuentas, ni nube, ni analítica.
+      El servidor solo escucha en tu red local y solo mientras el programa está abierto. El PIN y el código de
+      sesión se generan nuevos en cada arranque.</p>
+  </div>
+
+  <footer>Documentación completa en <code>fotos-faciles/README.md</code> · JPMR Negocios</footer>
+</div>
+</body>
+</html>
