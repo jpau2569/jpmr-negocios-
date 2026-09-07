@@ -17,7 +17,7 @@ import { mejorDireccion, direccionesLocales } from "./red.mjs";
 import { svg as qrSvg } from "./qr.mjs";
 import { abrirAlmacen } from "./almacen.mjs";
 import { Subidas } from "./subidas.mjs";
-import { Seguridad, ipDe } from "./seguridad.mjs";
+import { Seguridad, ipDe, nuevoToken } from "./seguridad.mjs";
 import { Albumes, enlacesDe } from "./compartir.mjs";
 import { listaUnidades, escanea, carpetasDelUsuario, carpetasConFotos } from "./dispositivos.mjs";
 import { listaCarpeta, copiarArchivos, crearCarpeta } from "./explorador.mjs";
@@ -145,7 +145,16 @@ export async function crearServidor(opciones = {}) {
 
   const almacen = await abrirAlmacen(config.carpetaDestino);
   const subidas = await new Subidas(config.carpetaDestino).preparar();
-  const seguridad = new Seguridad({ pedirPin: config.pedirPin });
+  // Si se ha pedido enlace fijo y todavía no hay token guardado, se crea ahora
+  // y se deja escrito para que el QR siga valiendo tras reiniciar el programa.
+  if (config.enlaceFijo && !config.token) {
+    Object.assign(config, guardarConfig({ token: nuevoToken() }));
+  }
+  const seguridad = new Seguridad({
+    pedirPin: config.pedirPin,
+    pin: config.pin,
+    token: config.enlaceFijo ? config.token : "",
+  });
   const albumes = await new Albumes(config.carpetaDestino).preparar(seguridad);
 
   const estado = { config, almacen, subidas, seguridad, albumes, arrancado: Date.now(), ultimaSubida: 0 };
@@ -218,7 +227,10 @@ export async function crearServidor(opciones = {}) {
             : `PIN incorrecto. Te quedan ${intento.restantes} intentos.`,
         });
       }
-      res.setHeader("set-cookie", `fotos_token=${encodeURIComponent(intento.token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
+      // Con enlace fijo la sesión dura un mes; si no, un día (el token cambia
+      // al reiniciar de todas formas).
+      const duracion = seguridad.tokenFijo ? 30 * 86400 : 86400;
+      res.setHeader("set-cookie", `fotos_token=${encodeURIComponent(intento.token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${duracion}`);
       return json(res, 200, { token: intento.token });
     }
 
@@ -230,10 +242,21 @@ export async function crearServidor(opciones = {}) {
 
     if (ruta === "/api/config" && req.method === "POST") {
       const cambios = await leeJson(req);
-      const permitidos = ["carpetaDestino", "organizarPor", "inmueble", "renombrar", "pedirPin", "urlPublica", "abrirNavegador"];
+      const permitidos = ["carpetaDestino", "organizarPor", "inmueble", "renombrar", "pedirPin",
+        "urlPublica", "abrirNavegador", "pin", "enlaceFijo"];
       const limpio = Object.fromEntries(Object.entries(cambios).filter(([k]) => permitidos.includes(k)));
       estado.config = guardarConfig(limpio);
       seguridad.pedirPin = estado.config.pedirPin;
+
+      // El PIN y el enlace se cambian en caliente, sin reiniciar el programa.
+      if ("pin" in limpio || "enlaceFijo" in limpio) {
+        const token = seguridad.aplicaAjustes({
+          pin: estado.config.pin,
+          enlaceFijo: estado.config.enlaceFijo,
+          token: estado.config.token,
+        });
+        estado.config = guardarConfig({ token });
+      }
       if (limpio.carpetaDestino) {
         await fsp.mkdir(estado.config.carpetaDestino, { recursive: true });
         estado.almacen = await abrirAlmacen(estado.config.carpetaDestino);
@@ -524,6 +547,8 @@ export async function crearServidor(opciones = {}) {
       urlMovil,
       qr: qrSvg(urlMovil, { nivel: "M", margen: 2 }),
       pin: local ? seguridad.pin : null,
+      pinFijo: seguridad.pinFijo,
+      enlaceFijo: seguridad.tokenFijo,
       token: local ? seguridad.token : null,
       resumen: estado.almacen.resumen(),
       resumenTexto: (() => {

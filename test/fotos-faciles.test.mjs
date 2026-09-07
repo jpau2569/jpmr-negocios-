@@ -268,6 +268,24 @@ console.log("\n🔐 Seguridad");
   check("con el token del QR entra",
     s.autorizada({ socket: { remoteAddress: "192.168.1.99" }, headers: { "x-fotos-token": s.token } }, new URL("http://x/api/estado")));
 
+  // PIN fijo y enlace fijo (lo que pidió Pau para no depender de la ventana abierta)
+  const fija = new Seguridad({ pin: "1969", token: "T".repeat(32) });
+  check("acepta un PIN fijo", fija.pin === "1969" && fija.pinFijo === true);
+  check("acepta un enlace fijo", fija.token === "T".repeat(32) && fija.tokenFijo === true);
+  check("un PIN demasiado corto se ignora y vuelve a ser aleatorio",
+    new Seguridad({ pin: "12" }).pinFijo === false);
+  check("el PIN fijo también entra bien", fija.entrarConPin("1.1.1.1", "1969").ok === true);
+
+  const cambiada = new Seguridad({});
+  const tokenViejo = cambiada.token;
+  const tokenGuardado = cambiada.aplicaAjustes({ pin: "4321", enlaceFijo: true });
+  check("se puede fijar el PIN sin reiniciar", cambiada.pin === "4321" && cambiada.pinFijo);
+  check("al fijar el enlace devuelve el token para guardarlo",
+    tokenGuardado === cambiada.token && tokenGuardado.length >= 24);
+  cambiada.aplicaAjustes({ enlaceFijo: false });
+  check("al quitar el enlace fijo se genera uno nuevo",
+    cambiada.token !== tokenGuardado && cambiada.token !== tokenViejo && !cambiada.tokenFijo);
+
   const { token } = s.nuevoTokenAlbum("abc", 7);
   check("el token de álbum abre solo ese álbum", s.albumDeToken(token) === "abc" && s.albumDeToken("inventado") === null);
 }
@@ -540,13 +558,37 @@ console.log("\n🌐 Servidor completo (subida desde el móvil, corte incluido)")
   check("fuera de Windows, el modo MTP lo dice en vez de fallar raro",
     process.platform === "win32" ? portatil.res.status === 200 : portatil.res.status === 400);
 
+  // --- PIN y enlace fijos sobreviven al reinicio ---------------------------
+  const antes = (await pide("/api/estado")).cuerpo;
+  await pide("/api/config", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ pin: "1969", enlaceFijo: true }),
+  });
+  const conFijos = (await pide("/api/estado")).cuerpo;
+  check("la pantalla puede fijar el PIN sin reiniciar",
+    conFijos.pin === "1969" && conFijos.pinFijo === true, conFijos.pin);
+  // Al fijar el enlace se conserva el token que ya estaba en uso: así el móvil
+  // que acabas de emparejar no tiene que volver a escanear el QR.
+  check("y fijar el enlace del móvil sin invalidar el que ya está emparejado",
+    conFijos.enlaceFijo === true && conFijos.token === antes.token);
+
+  // Se apaga y se vuelve a levantar: es la prueba de verdad.
+  await new Promise((r) => servidor.close(r));
+  const { olvidarConfig } = await import("../fotos-faciles/nucleo/config.mjs");
+  olvidarConfig();
+  const segundo = await arranca({ puerto: 0 });
+  const base2 = `http://127.0.0.1:${segundo.puerto}`;
+  const trasReinicio = await (await fetch(`${base2}/api/estado`)).json();
+  check("tras reiniciar, el PIN sigue siendo el mismo", trasReinicio.pin === "1969", trasReinicio.pin);
+  check("tras reiniciar, el enlace del móvil sigue siendo el mismo",
+    trasReinicio.token === conFijos.token && trasReinicio.enlaceFijo === true);
+  await new Promise((r) => segundo.servidor.close(r));
+
   // --- El original no se ha tocado -----------------------------------------
   check("compartir no mueve ni renombra el original", fs.existsSync(cerrada.cuerpo.ruta));
 
   // --- Sin token desde fuera del ordenador ---------------------------------
-  check("el PIN de la sesión sigue siendo el del arranque", seguridad.pin.length === 4);
-
-  await new Promise((r) => servidor.close(r));
+  check("el PIN de la sesión tiene el formato esperado", /^\d{4}$/.test(seguridad.pin));
 }
 
 // ============================================================================

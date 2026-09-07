@@ -204,6 +204,14 @@
             Renombrar al importar (2026-09-07_Piso-Oviedo_001.jpg)</label>
           <label class="campo"><input type="checkbox" id="cfg-pin" />
             Pedir PIN a los móviles que entren sin escanear el QR</label>
+          <label class="campo"><span>PIN fijo (déjalo vacío para uno nuevo en cada arranque)</span>
+            <input type="text" id="cfg-pin-fijo" inputmode="numeric" maxlength="8" placeholder="1969" /></label>
+          <label class="campo"><input type="checkbox" id="cfg-enlace-fijo" />
+            Que el QR y el enlace del móvil <strong>no cambien</strong> al reiniciar</label>
+          <p class="ayuda" style="margin:-6px 0 12px">Con las dos cosas activadas puedes guardar la página
+            en la pantalla de inicio del móvil y entrar siempre igual, aunque apagues el ordenador.
+            A cambio, cualquiera que averigüe el PIN en tu WiFi podría entrar: en la oficina va bien,
+            en una WiFi pública mejor dejarlo como está.</p>
           <label class="campo"><span>Dominio propio para enlaces fuera de casa (opcional)</span>
             <input type="text" id="cfg-publica" placeholder="https://fotos.midominio.com" spellcheck="false" />
           </label>

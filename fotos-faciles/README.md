@@ -38,6 +38,19 @@ listas para editar y publicar.
 ### En Windows
 Haz **doble clic en `FotosFaciles.bat`**. Se abre una ventana negra y, detrás, el navegador con la pantalla del programa.
 
+**Sin ventana y arrancando solo con Windows:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File fotos-faciles\herramientas\arranque-automatico.ps1
+```
+
+Pone un acceso directo en la carpeta de Inicio que lanza `FotosFacilesSilencioso.vbs` (Node en
+segundo plano, ventana oculta), deja en el Escritorio un acceso a la pantalla y lo arranca ya.
+Con `-Quitar` se deshace. Para apagar el programa, el botón «Salir» de la pantalla.
+
+Arrancarlo dos veces no rompe nada: si ya hay una copia escuchando en su puerto, la segunda lo
+detecta, avisa y solo abre la pantalla.
+
 ### En Mac
 Haz **doble clic en `iniciar.command`** (la primera vez: botón derecho → Abrir).
 
@@ -52,6 +65,7 @@ Opciones útiles:
 node fotos-faciles/iniciar.mjs --puerto 5000            # otro puerto
 node fotos-faciles/iniciar.mjs --destino "D:\Fotos"     # otra carpeta de destino
 node fotos-faciles/iniciar.mjs --sin-navegador          # no abrir el navegador
+node fotos-faciles/iniciar.mjs --pin 1969 --enlace-fijo # PIN y enlace que no cambian
 node fotos-faciles/iniciar.mjs --ayuda
 ```
 
@@ -74,6 +88,11 @@ node fotos-faciles/iniciar.mjs --ayuda
 - **Tres archivos a la vez**, con barra de progreso real y botón de reintentar los fallidos.
 - **PIN.** Si alguien escribe la dirección a mano (por ejemplo en la WiFi de la oficina) le pide
   el PIN, y tras varios fallos se bloquea un par de minutos. Quien escanea el QR entra directo.
+- **PIN fijo y enlace fijo, si los quieres.** Por defecto ambos cambian en cada arranque, que es
+  lo más seguro. En Ajustes puedes fijarlos (o `--pin 1969 --enlace-fijo` al arrancar): entonces
+  el móvil guarda la página en su pantalla de inicio y entra siempre igual, aunque apagues el PC.
+  Al activar el enlace fijo se conserva el token que ya estaba en uso, así que el móvil que
+  acabas de emparejar **no tiene que volver a escanear nada**.
 
 > **¿Y si el móvil no abre la página?** Casi siempre es que el PC está en otra red (cable vs WiFi,
 > o una red de invitados). En Ajustes tienes todas las direcciones detectadas; también puedes
@@ -277,8 +296,10 @@ fotos-faciles/
 │   ├── red.mjs              IPv4 locales, descartando adaptadores virtuales
 │   ├── config.mjs           ~/.fotos-faciles/config.json
 │   └── util.mjs             nombres seguros, tipos, tamaños, rutas
+├── FotosFacilesSilencioso.vbs   arranque sin ventana (Windows)
 ├── herramientas/
-│   └── empaquetar.mjs       construye el ejecutable único (Windows/macOS/Linux)
+│   ├── empaquetar.mjs       construye el ejecutable único (Windows/macOS/Linux)
+│   └── arranque-automatico.ps1  que arranque solo con Windows, en segundo plano
 └── web/
     ├── pc.html / pc.js      pantalla del ordenador (6 pestañas)
     ├── movil.html / movil.js pantalla del móvil (PIN + subida)
@@ -306,7 +327,7 @@ npm test                       # desde la raíz del repositorio (incluye Fotos F
 node test/fotos-faciles.test.mjs
 ```
 
-110 comprobaciones: QR contra referencia, nombres seguros, EXIF, organización por fecha,
+121 comprobaciones: QR contra referencia, nombres seguros, EXIF, organización por fecha,
 duplicados, la regla de no sobrescribir, seguridad, el puente con el escaparate 3D (incluido que el
 nombre de archivo coincide con el de `sincronizar.mjs`), el guion de PowerShell del modo MTP
 (con su prueba de inyección), los recursos incrustados, y el servidor completo levantado de verdad

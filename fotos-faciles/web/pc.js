@@ -80,6 +80,10 @@ async function cargaEstado() {
   $("#cfg-renombrar").checked = !!e.config.renombrar;
   $("#cfg-pin").checked = !!e.config.pedirPin;
   $("#cfg-publica").value = e.config.urlPublica || "";
+  $("#cfg-pin-fijo").value = e.config.pin || "";
+  $("#cfg-enlace-fijo").checked = !!e.config.enlaceFijo;
+  // Se avisa junto al PIN de si es fijo o de esta sesión, que es la duda típica.
+  $("#pin").title = e.pinFijo ? "PIN fijo: no cambia al reiniciar" : "Cambia cada vez que arrancas el programa";
 }
 
 // --- Galería en vivo (modo WiFi) -------------------------------------------
@@ -508,6 +512,8 @@ $("#btn-guardar-config").onclick = async () => {
       renombrar: $("#cfg-renombrar").checked,
       pedirPin: $("#cfg-pin").checked,
       urlPublica: $("#cfg-publica").value.trim(),
+      pin: $("#cfg-pin-fijo").value.trim(),
+      enlaceFijo: $("#cfg-enlace-fijo").checked,
     });
     await cargaEstado();
     $("#estado-config").textContent = "✅ Guardado";

@@ -16,12 +16,38 @@ const VENTANA_MS = 60_000;
 const CASTIGO_MS = 120_000;
 
 export class Seguridad {
-  constructor({ pedirPin = true } = {}) {
+  /**
+   * `pin` y `token` fijos son opcionales. Sin ellos se generan nuevos en cada
+   * arranque (lo más seguro); con ellos, el PIN y el enlace del móvil no
+   * cambian nunca, que es lo cómodo si el ordenador es de la oficina y el
+   * móvil ya tiene la página guardada.
+   */
+  constructor({ pedirPin = true, pin = "", token = "" } = {}) {
     this.pedirPin = pedirPin;
-    this.pin = String(crypto.randomInt(0, 10000)).padStart(4, "0");
-    this.token = crypto.randomBytes(24).toString("base64url");
+    this.pinFijo = /^\d{4,8}$/.test(String(pin || ""));
+    this.pin = this.pinFijo ? String(pin) : String(crypto.randomInt(0, 10000)).padStart(4, "0");
+    this.tokenFijo = typeof token === "string" && token.length >= 24;
+    this.token = this.tokenFijo ? token : crypto.randomBytes(24).toString("base64url");
     this.tokensLectura = new Map();     // token de álbum → { hasta, album }
     this.intentos = new Map();          // ip → { veces, desde, bloqueadoHasta }
+  }
+
+  /**
+   * Cambia el PIN y el enlace sin reiniciar el programa. Devuelve el token que
+   * hay que guardar en la configuración cuando se pide enlace fijo.
+   */
+  aplicaAjustes({ pin = null, enlaceFijo = null, token = "" } = {}) {
+    if (pin !== null) {
+      this.pinFijo = /^\d{4,8}$/.test(String(pin));
+      if (this.pinFijo) this.pin = String(pin);
+      else if (!this.pinFijo) this.pin = String(crypto.randomInt(0, 10000)).padStart(4, "0");
+    }
+    if (enlaceFijo !== null) {
+      this.tokenFijo = !!enlaceFijo;
+      if (this.tokenFijo) this.token = token && token.length >= 24 ? token : this.token;
+      else this.token = crypto.randomBytes(24).toString("base64url");
+    }
+    return this.tokenFijo ? this.token : "";
   }
 
   /** Comparación en tiempo constante: no filtra el PIN por el tiempo de respuesta. */
@@ -99,3 +125,6 @@ export class Seguridad {
 }
 
 export const ipDe = (req) => String(req.socket?.remoteAddress || "desconocida");
+
+/** Token nuevo para guardar en la configuración cuando se pide enlace fijo. */
+export const nuevoToken = () => crypto.randomBytes(24).toString("base64url");
