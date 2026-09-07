@@ -1,0 +1,5 @@
+# Fotos Fáciles es un programa que se ejecuta en el ordenador de casa, no en la
+# web: sus pantallas llaman a un servidor local y en Vercel solo serían páginas
+# rotas. La ficha pública es `fotos-faciles.html`, que sí se despliega.
+fotos-faciles/
+test/

@@ -16,10 +16,14 @@
 
 $ErrorActionPreference = "Stop"
 
-$RAMA    = "claude/fotos-faciles-transferencia-a7urec"
-$ZIP_URL = "https://github.com/jpau2569/jpmr-negocios-/archive/refs/heads/$RAMA.zip"
-$BASE    = Join-Path $env:USERPROFILE "FotosFaciles"
-$APP     = Join-Path $BASE "programa"
+# Se prueba primero la rama principal y, si ahi todavia no esta el programa
+# (porque la rama de trabajo aun no se ha fusionado), se cae a la rama de
+# trabajo. Asi el mismo comando sirve antes y despues de fusionar el PR.
+$REPO  = "https://github.com/jpau2569/jpmr-negocios-"
+$RAMAS = @("main", "claude/fotos-faciles-transferencia-a7urec")
+$MARCA = Join-Path "fotos-faciles" "FotosFaciles.bat"   # con esto sabemos que el ZIP sirve
+$BASE  = Join-Path $env:USERPROFILE "FotosFaciles"
+$APP   = Join-Path $BASE "programa"
 
 function Paso($texto) { Write-Host "  $texto" -ForegroundColor Cyan }
 function Bien($texto) { Write-Host "  $texto" -ForegroundColor Green }
@@ -54,31 +58,47 @@ Bien "Node.js $(& node -v) encontrado."
 Paso "2/4  Descargando el programa desde GitHub..."
 $temporal = Join-Path $env:TEMP ("fotos-faciles-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Force -Path $temporal | Out-Null
-$zip = Join-Path $temporal "descarga.zip"
-try {
-  $anterior = $ProgressPreference
-  $ProgressPreference = "SilentlyContinue"   # sin esto la descarga va lentisima
-  Invoke-WebRequest -Uri $ZIP_URL -OutFile $zip -UseBasicParsing
-  $ProgressPreference = $anterior
-} catch {
-  Mal "No se ha podido descargar: $($_.Exception.Message)"
+
+$extraido = $null
+$fallo = ""
+foreach ($rama in $RAMAS) {
+  $carpetaRama = Join-Path $temporal ($rama -replace "[\\/]", "-")
+  $zip = "$carpetaRama.zip"
+  try {
+    $anterior = $ProgressPreference
+    $ProgressPreference = "SilentlyContinue"   # sin esto la descarga va lentisima
+    Invoke-WebRequest -Uri "$REPO/archive/refs/heads/$rama.zip" -OutFile $zip -UseBasicParsing
+    $ProgressPreference = $anterior
+  } catch {
+    $fallo = $_.Exception.Message
+    continue
+  }
+  Expand-Archive -Path $zip -DestinationPath $carpetaRama -Force
+  $candidato = Get-ChildItem $carpetaRama -Directory | Select-Object -First 1
+  if ($candidato -and (Test-Path (Join-Path $candidato.FullName $MARCA))) {
+    $extraido = $candidato
+    Bien ("Descargado de la rama '$rama' (" + [math]::Round((Get-Item $zip).Length / 1KB) + " KB).")
+    break
+  }
+}
+
+if (-not $extraido) {
+  Mal "No se ha podido descargar el programa."
+  if ($fallo) { Write-Host "     Detalle: $fallo" }
   Write-Host "     Comprueba que tienes internet y vuelve a intentarlo."
+  Remove-Item $temporal -Recurse -Force -ErrorAction SilentlyContinue
   return
 }
-Bien ("Descargado (" + [math]::Round((Get-Item $zip).Length / 1KB) + " KB).")
 
 # --- 3. Instalar ------------------------------------------------------------
 Paso "3/4  Colocandolo en $BASE ..."
-Expand-Archive -Path $zip -DestinationPath $temporal -Force
-$extraido = Get-ChildItem $temporal -Directory | Select-Object -First 1
-if (-not $extraido) { Mal "El archivo descargado no tiene lo que se esperaba."; return }
 
 New-Item -ItemType Directory -Force -Path $BASE | Out-Null
 if (Test-Path $APP) { Remove-Item $APP -Recurse -Force }   # solo el programa; las fotos estan fuera
 Move-Item $extraido.FullName $APP
 Remove-Item $temporal -Recurse -Force -ErrorAction SilentlyContinue
 
-$arranque = Join-Path $APP "fotos-faciles\FotosFaciles.bat"
+$arranque = Join-Path $APP $MARCA
 if (-not (Test-Path $arranque)) { Mal "Falta el arranque del programa. Avisa a Claude."; return }
 Bien "Instalado."
 
