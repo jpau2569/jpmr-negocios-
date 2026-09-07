@@ -82,6 +82,49 @@ Permitir una aplicación*, buscando **Node.js** y marcando **Privada**.
 
 ---
 
+## Paso 3 bis · Que funcione SIN la ventana negra (recomendado)
+
+Si te molesta tener la ventana negra abierta y que el PIN cambie cada vez, se arregla con dos cosas.
+
+### 1. Un PIN fijo y un enlace que no cambia
+
+En la pantalla del programa, pestaña **⚙️ Ajustes**:
+
+- **PIN fijo** → escribe el que quieras, por ejemplo `1969` (de 4 a 8 cifras).
+- Marca **«Que el QR y el enlace del móvil no cambien al reiniciar»**.
+- Pulsa **Guardar ajustes**.
+
+A partir de ahí el PIN es siempre el mismo y el enlace del móvil también, así que puedes
+**guardar la página en la pantalla de inicio del iPhone** (en Safari: botón de compartir →
+*Añadir a pantalla de inicio*) y entrar de un toque, sin escanear nada.
+
+> Lo que ganas y lo que pierdes, sin adornos: ganas comodidad; pierdes que el PIN caduque solo.
+> En la WiFi de tu casa o tu oficina no pasa nada. En una WiFi pública o compartida con
+> desconocidos, mejor dejarlo como venía.
+
+### 2. Que arranque solo con Windows, en segundo plano
+
+Pulsa la tecla **Windows**, escribe `powershell`, Intro, y pega esta línea:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\FotosFaciles\programa\fotos-faciles\herramientas\arranque-automatico.ps1"
+```
+
+Eso hace tres cosas:
+
+- El programa **arranca solo al encender el ordenador**, sin ninguna ventana.
+- Te deja en el Escritorio el acceso **«Fotos Faciles (pantalla)»** para abrir la pantalla cuando quieras.
+- Y lo arranca ya, sin esperar a reiniciar.
+
+**Para apagarlo:** abre la pantalla y pulsa el botón **Salir**.
+**Para quitar el arranque automático:** la misma línea, añadiendo ` -Quitar` al final.
+
+> Ya no hace falta la ventana negra: el programa vive en segundo plano. Si algún día haces doble
+> clic en el icono de siempre y ya estaba funcionando, te lo dice y simplemente abre la pantalla,
+> en vez de arrancar una segunda copia.
+
+---
+
 ## Paso 4 · Manda las primeras fotos desde el móvil
 
 1. Comprueba que el **móvil y el PC están en la misma WiFi**
@@ -127,7 +170,7 @@ Mientras tanto **no estás bloqueado**: escribe la referencia a mano (`PIS0190`)
 |---|---|
 | El móvil no abre la página al escanear | El PC y el móvil están en redes distintas, o dijiste «Cancelar» al cortafuegos. Mira el aviso del Paso 3. |
 | «No se puede conectar» en el navegador del PC | La ventana negra se ha cerrado. Vuelve a hacer doble clic en `FotosFaciles.bat`. |
-| El QR va, pero pide un PIN | Normal si escribiste la dirección a mano. El PIN está en la pantalla del ordenador, y **cambia cada vez que arrancas**. |
+| El QR va, pero pide un PIN | Normal si escribiste la dirección a mano. El PIN está en la pantalla del ordenador. Si te cansa que cambie, ponle uno fijo (Paso 3 bis). |
 | «No se ha encontrado Node.js» | Falta el Paso 1, o hay que reiniciar el ordenador después de instalarlo. |
 | El desplegable de inmuebles vacío | Falta sincronizar la cartera (Paso 5). |
 | Fotos HEIC que no se publican | El iPhone las manda en HEIC y el navegador no las sabe pintar. Arréglalo de raíz: *Ajustes → Cámara → Formatos → **Más compatible***. |
@@ -139,9 +182,10 @@ Mientras tanto **no estás bloqueado**: escribe la referencia a mano (`PIS0190`)
 
 - **Nada sale a internet.** Las fotos van del móvil a tu PC por la WiFi de casa o de la oficina.
 - **La ventana negra es el programa.** Mientras esté abierta, funciona; al cerrarla, se apaga
-  (y los enlaces que hayas compartido dejan de abrirse).
+  (y los enlaces que hayas compartido dejan de abrirse). Con el arranque automático del Paso 3 bis
+  ya no hay ventana: vive en segundo plano y se apaga desde el botón «Salir».
 - **Nunca se sobrescribe nada.** Si mandas dos veces la misma foto, se ignora; si hay dos
   distintas con el mismo nombre, la segunda se guarda como `IMG_001 (2).jpg`.
-- **El PIN cambia en cada arranque.** Es a propósito.
+- **El PIN cambia en cada arranque**, salvo que le pongas uno fijo en Ajustes (Paso 3 bis).
 
 Detalle completo de todo en [`README.md`](README.md).
