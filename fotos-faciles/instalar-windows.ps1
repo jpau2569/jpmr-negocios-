@@ -127,8 +127,8 @@ Write-Host ""
 Write-Host "   Carpeta del programa: $APP" -ForegroundColor DarkGray
 Write-Host "   Tus fotos iran a:     $env:USERPROFILE\Fotos Faciles" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "   ?Quieres que arranque solo con Windows y sin ventana?" -ForegroundColor DarkGray
-Write-Host "   Doble clic en: $(Join-Path (Split-Path $arranque) 'ArranqueAutomatico.bat')" -ForegroundColor DarkGray
+Write-Host "   Para que arranque solo con Windows y sin ventana, doble clic en:" -ForegroundColor DarkGray
+Write-Host "   $(Join-Path (Split-Path $arranque) 'ArranqueAutomatico.bat')" -ForegroundColor DarkGray
 Write-Host ""
 Paso "Abriendo el programa..."
 Write-Host ""
