@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0e1116" />
+<title>Fotos Fáciles — enviar al ordenador</title>
+<link rel="icon" href="/web/icono.svg" />
+<link rel="stylesheet" href="/web/estilos.css" />
+</head>
+<body>
+<div class="movil">
+
+  <header class="principal" style="padding-bottom:10px">
+    <div class="logo">📷</div>
+    <div><h1 style="font-size:19px">Fotos Fáciles</h1><p class="sub" id="sub">Enviar al ordenador</p></div>
+  </header>
+
+  <!-- PIN -->
+  <section class="tarjeta" id="paso-pin" hidden>
+    <h2>Escribe el PIN</h2>
+    <p class="ayuda">Es el número de 4 cifras que aparece en la pantalla del ordenador.</p>
+    <div class="huecos-pin" id="huecos"><i></i><i></i><i></i><i></i></div>
+    <div id="error-pin"></div>
+    <div class="teclado-pin" id="teclado"></div>
+  </section>
+
+  <!-- SUBIDA -->
+  <section id="paso-subir" hidden>
+
+    <!-- ¿Dónde se guardan? -->
+    <div class="tarjeta">
+      <h2>¿Dónde te las guardo?</h2>
+      <div class="opciones" id="opciones-destino">
+        <label class="opcion"><input type="radio" name="destino" value="fecha" checked />
+          <span><strong>Por día</strong><small id="ejemplo-fecha">Fotos Faciles / 2026-09-07</small></span></label>
+        <label class="opcion"><input type="radio" name="destino" value="inmueble" />
+          <span><strong>En un inmueble</strong><small>Su carpeta, con la fecha dentro</small></span></label>
+        <label class="opcion"><input type="radio" name="destino" value="carpeta" />
+          <span><strong>En una carpeta del PC</strong><small>La eliges tú, con su nombre original</small></span></label>
+      </div>
+
+      <div id="bloque-inmueble" hidden style="margin-top:12px">
+        <label class="campo"><span>Inmueble</span>
+          <select id="sel-inmueble-movil"><option value="">— Escribir a mano —</option></select></label>
+        <label class="campo"><span>Nombre o referencia</span>
+          <input type="text" id="inmueble" placeholder="PIS0190 - Piso en Calle Uría" /></label>
+      </div>
+
+      <div id="bloque-carpeta" hidden style="margin-top:12px">
+        <p class="ayuda" style="margin:0 0 8px">Carpeta elegida:</p>
+        <p><code class="url" id="carpeta-elegida">…</code></p>
+        <button id="btn-elegir-carpeta">📂 Cambiar carpeta</button>
+      </div>
+    </div>
+
+    <!-- Explorador de carpetas del PC, desde el móvil -->
+    <div class="tarjeta" id="explorador" hidden>
+      <h2>Elige la carpeta del ordenador</h2>
+      <p class="ayuda" id="ruta-actual">…</p>
+      <div class="fila" style="margin-bottom:10px">
+        <button id="btn-subir-carpeta">⬆ Subir</button>
+        <button id="btn-nueva-carpeta-movil">➕ Nueva</button>
+        <div class="crece"></div>
+        <button class="principal-btn" id="btn-usar-carpeta">Guardar aquí</button>
+      </div>
+      <ul class="lista" id="lista-carpetas"></ul>
+    </div>
+
+    <!-- Elegir fotos -->
+    <div class="tarjeta">
+      <h2>Elige lo que quieras pasar</h2>
+      <p class="ayuda">Vale todo: fotos del Carrete, vídeos, o imágenes que hayas guardado de WhatsApp.
+        Se guardan directamente en el ordenador, no pasan por internet.</p>
+      <input type="file" id="selector" multiple accept="image/*,video/*" hidden />
+      <button class="gigante principal-btn" id="btn-elegir">📁 Elegir fotos y vídeos</button>
+      <div class="zona-arrastre" id="zona">…o arrástralas aquí</div>
+      <p class="ayuda" id="destino-info"></p>
+    </div>
+
+    <!-- Progreso -->
+    <div class="tarjeta" id="tarjeta-progreso" hidden>
+      <h2 id="titulo-progreso">Enviando…</h2>
+      <div class="barra"><i id="barra"></i></div>
+      <p class="ayuda" id="detalle-progreso"></p>
+      <div class="fila"><button id="btn-parar">Parar</button><button id="btn-reintentar" hidden>Reintentar los fallidos</button></div>
+      <ul class="lista" id="lista-archivos"></ul>
+    </div>
+
+    <!-- Publicar en el escaparate 3D, desde el móvil -->
+    <div class="tarjeta" id="tarjeta-escaparate" hidden>
+      <h2>¿Las pongo en el escaparate 3D?</h2>
+      <p class="ayuda">Se reducen aquí mismo al tamaño que pide el carrusel y se ponen de portada
+        del inmueble. Los originales que acabas de enviar no se tocan.</p>
+      <label class="campo"><span>Inmueble</span>
+        <select id="sel-escaparate"><option value="">— Escribir a mano —</option></select></label>
+      <label class="campo"><span>Referencia</span>
+        <input type="text" id="eco-referencia-movil" placeholder="PIS0190" /></label>
+      <button class="gigante principal-btn" id="btn-publicar-movil">🏠 Publicar en el escaparate</button>
+      <div id="aviso-escaparate"></div>
+    </div>
+  </section>
+
+  <p class="ayuda" style="text-align:center;margin-top:22px">
+    🔒 Tus fotos van directas a tu ordenador por la WiFi. No se suben a ninguna nube.
+  </p>
+</div>
+<script type="module" src="/web/movil.js"></script>
+</body>
+</html>
