@@ -38,15 +38,13 @@ listas para editar y publicar.
 ### En Windows
 Haz **doble clic en `FotosFaciles.bat`**. Se abre una ventana negra y, detrás, el navegador con la pantalla del programa.
 
-**Sin ventana y arrancando solo con Windows:**
-
-```powershell
-powershell -ExecutionPolicy Bypass -File fotos-faciles\herramientas\arranque-automatico.ps1
-```
+**Sin ventana y arrancando solo con Windows:** doble clic en `ArranqueAutomatico.bat`
+(y `QuitarArranqueAutomatico.bat` para deshacerlo). Por debajo llaman a
+`herramientas/arranque-automatico.ps1`, que también acepta `-Quitar` si prefieres el terminal.
 
 Pone un acceso directo en la carpeta de Inicio que lanza `FotosFacilesSilencioso.vbs` (Node en
 segundo plano, ventana oculta), deja en el Escritorio un acceso a la pantalla y lo arranca ya.
-Con `-Quitar` se deshace. Para apagar el programa, el botón «Salir» de la pantalla.
+Para apagar el programa, el botón «Salir» de la pantalla.
 
 Arrancarlo dos veces no rompe nada: si ya hay una copia escuchando en su puerto, la segunda lo
 detecta, avisa y solo abre la pantalla.
@@ -297,6 +295,7 @@ fotos-faciles/
 │   ├── config.mjs           ~/.fotos-faciles/config.json
 │   └── util.mjs             nombres seguros, tipos, tamaños, rutas
 ├── FotosFacilesSilencioso.vbs   arranque sin ventana (Windows)
+├── ArranqueAutomatico.bat       doble clic: arrancar solo con Windows (y el de Quitar)
 ├── herramientas/
 │   ├── empaquetar.mjs       construye el ejecutable único (Windows/macOS/Linux)
 │   └── arranque-automatico.ps1  que arranque solo con Windows, en segundo plano

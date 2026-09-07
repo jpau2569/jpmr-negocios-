@@ -104,11 +104,11 @@ A partir de ahí el PIN es siempre el mismo y el enlace del móvil también, as�
 
 ### 2. Que arranque solo con Windows, en segundo plano
 
-Pulsa la tecla **Windows**, escribe `powershell`, Intro, y pega esta línea:
+En la carpeta del programa (la misma donde está `FotosFaciles.bat`), **doble clic en
+`ArranqueAutomatico.bat`**.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\FotosFaciles\programa\fotos-faciles\herramientas\arranque-automatico.ps1"
-```
+> ¿No sabes dónde está esa carpeta? Es la que abre el icono **«Fotos Faciles»** del Escritorio:
+> botón derecho en el icono → *Abrir ubicación del archivo*.
 
 Eso hace tres cosas:
 
@@ -117,7 +117,7 @@ Eso hace tres cosas:
 - Y lo arranca ya, sin esperar a reiniciar.
 
 **Para apagarlo:** abre la pantalla y pulsa el botón **Salir**.
-**Para quitar el arranque automático:** la misma línea, añadiendo ` -Quitar` al final.
+**Para quitar el arranque automático:** doble clic en `QuitarArranqueAutomatico.bat`.
 
 > Ya no hace falta la ventana negra: el programa vive en segundo plano. Si algún día haces doble
 > clic en el icono de siempre y ya estaba funcionando, te lo dice y simplemente abre la pantalla,
