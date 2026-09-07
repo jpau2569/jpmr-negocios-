@@ -18,7 +18,22 @@ Si algo no encaja, salta al final: **«Cuando algo no va»**.
 
 ## Paso 2 · Trae la carpeta a tu ordenador
 
-### Opción A — La rápida (sin saber nada de Git)
+### Opción A — La automática (una sola línea, lo hace todo)
+
+1. Pulsa la tecla **Windows**, escribe `powershell` y pulsa Intro.
+2. Pega **esta línea** y dale a Intro:
+
+```powershell
+irm https://raw.githubusercontent.com/jpau2569/jpmr-negocios-/claude/fotos-faciles-transferencia-a7urec/fotos-faciles/instalar-windows.ps1 | iex
+```
+
+Descarga el programa, lo deja en `Documentos\..\FotosFaciles`, te crea el acceso directo
+**«Fotos Faciles»** en el Escritorio y lo abre. A partir de ahí, doble clic en ese icono y ya está.
+
+Volver a pegar la misma línea **actualiza** el programa. Tus fotos y tus ajustes no se tocan:
+viven fuera de esa carpeta.
+
+### Opción B — A mano (sin saber nada de Git)
 
 1. Abre esta dirección:
    `https://github.com/jpau2569/jpmr-negocios-/tree/claude/fotos-faciles-transferencia-a7urec`
@@ -27,7 +42,7 @@ Si algo no encaja, salta al final: **«Cuando algo no va»**.
 
 Con esto ya puedes usarlo. Lo único: para recibir mejoras habrá que volver a bajar el ZIP.
 
-### Opción B — Con Git (si ya tienes el proyecto clonado)
+### Opción C — Con Git (si ya tienes el proyecto clonado)
 
 Abre el terminal **dentro de la carpeta del proyecto** y ejecuta, en este orden:
 
