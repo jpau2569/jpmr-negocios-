@@ -10,6 +10,11 @@ const A_LA_VEZ = 3;                       // subidas simultáneas
 
 let token = "";
 let parar = false;
+let ESTADO = null;
+let CARTERA = [];
+// Cómo quiere el usuario que se guarden: por día, por inmueble, o en una
+// carpeta concreta del PC que elige navegando desde el propio móvil.
+const DESTINO = { modo: "fecha", carpeta: null };
 
 // --- Token: viene en el QR (#t=…) o del PIN ---------------------------------
 function recuperaToken() {
@@ -81,14 +86,15 @@ async function arrancaSubida() {
   $("#paso-pin").hidden = true;
   $("#paso-subir").hidden = false;
   try {
-    const estado = await api("/api/estado");
+    ESTADO = await api("/api/estado");
     $("#error-pin").innerHTML = "";
-    $("#sub").textContent = `Conectado a ${estado.destino.split(/[\\/]/).pop() || "tu ordenador"}`;
-    $("#destino-info").textContent = `Se guardarán en: ${estado.destino}`;
-    if (estado.config.organizarPor === "inmueble") {
-      $("#campo-inmueble").hidden = false;
-      $("#inmueble").value = estado.config.inmueble || "";
-    }
+    $("#sub").textContent = `Conectado a ${ESTADO.destino.split(/[\\/]/).pop() || "tu ordenador"}`;
+    DESTINO.modo = ESTADO.config.organizarPor === "inmueble" ? "inmueble" : "fecha";
+    document.querySelector(`input[name="destino"][value="${DESTINO.modo}"]`).checked = true;
+    $("#inmueble").value = ESTADO.config.inmueble || "";
+    $("#ejemplo-fecha").textContent = `${ESTADO.destino} / ${new Date().toISOString().slice(0, 10)}`;
+    await cargaCartera();
+    pintaDestino();
   } catch (e) {
     // Si el ordenador se ha reiniciado, el token viejo ya no vale: pedimos el PIN.
     if (e.estado === 401) {
@@ -101,6 +107,88 @@ async function arrancaSubida() {
     }
   }
 }
+
+// --- ¿Dónde se guardan? -----------------------------------------------------
+async function cargaCartera() {
+  try {
+    const datos = await api("/api/inmuebles");
+    CARTERA = datos.inmuebles || [];
+  } catch { CARTERA = []; }
+  const opciones = '<option value="">— Escribir a mano —</option>' +
+    CARTERA.map((p, i) => `<option value="${i}">${p.etiqueta}</option>`).join("");
+  for (const id of ["#sel-inmueble-movil", "#sel-escaparate"]) $(id).innerHTML = opciones;
+
+  $("#sel-inmueble-movil").onchange = () => {
+    const p = CARTERA[Number($("#sel-inmueble-movil").value)];
+    if (p) $("#inmueble").value = p.carpeta;
+  };
+  $("#sel-escaparate").onchange = () => {
+    const p = CARTERA[Number($("#sel-escaparate").value)];
+    if (p) $("#eco-referencia-movil").value = p.referencia || p.titulo || "";
+  };
+}
+
+function pintaDestino() {
+  $("#bloque-inmueble").hidden = DESTINO.modo !== "inmueble";
+  $("#bloque-carpeta").hidden = DESTINO.modo !== "carpeta";
+  $("#carpeta-elegida").textContent = DESTINO.carpeta || "(sin elegir)";
+  const texto = DESTINO.modo === "carpeta"
+    ? (DESTINO.carpeta ? `Se guardarán en: ${DESTINO.carpeta}` : "Elige una carpeta del ordenador.")
+    : DESTINO.modo === "inmueble"
+      ? `Se guardarán en: ${ESTADO?.destino} / ${$("#inmueble").value || "(inmueble)"} / fecha`
+      : `Se guardarán en: ${ESTADO?.destino} / ${new Date().toISOString().slice(0, 10)}`;
+  $("#destino-info").textContent = texto;
+}
+
+document.querySelectorAll('input[name="destino"]').forEach((r) => {
+  r.onchange = () => {
+    DESTINO.modo = r.value;
+    pintaDestino();
+    if (r.value === "carpeta" && !DESTINO.carpeta) abreExplorador(ESTADO?.destino);
+  };
+});
+$("#inmueble").oninput = pintaDestino;
+
+// --- Explorador de las carpetas del PC, manejado desde el móvil -------------
+let carpetaVista = null;
+
+async function abreExplorador(ruta) {
+  $("#explorador").hidden = false;
+  try {
+    const datos = await api(`/api/explorar${ruta ? `?ruta=${encodeURIComponent(ruta)}` : ""}`);
+    carpetaVista = datos;
+    $("#ruta-actual").textContent = datos.ruta;
+    $("#btn-subir-carpeta").disabled = !datos.padre;
+    $("#lista-carpetas").innerHTML = datos.carpetas.length
+      ? datos.carpetas.slice(0, 200).map((c) =>
+        `<li><span class="nombre">📁 ${c.nombre}</span>
+         <button data-ir="${encodeURIComponent(c.ruta)}">Abrir</button></li>`).join("")
+      : '<li class="vacio">Aquí no hay más carpetas. Pulsa «Guardar aquí».</li>';
+    $("#lista-carpetas").querySelectorAll("button[data-ir]").forEach((b) => {
+      b.onclick = () => abreExplorador(decodeURIComponent(b.dataset.ir));
+    });
+  } catch (e) {
+    $("#lista-carpetas").innerHTML = `<li class="vacio">${e.message}</li>`;
+  }
+}
+
+$("#btn-elegir-carpeta").onclick = () => abreExplorador(DESTINO.carpeta || ESTADO?.destino);
+$("#btn-subir-carpeta").onclick = () => carpetaVista?.padre && abreExplorador(carpetaVista.padre);
+$("#btn-usar-carpeta").onclick = () => {
+  DESTINO.carpeta = carpetaVista?.ruta || null;
+  DESTINO.modo = "carpeta";
+  document.querySelector('input[name="destino"][value="carpeta"]').checked = true;
+  $("#explorador").hidden = true;
+  pintaDestino();
+};
+$("#btn-nueva-carpeta-movil").onclick = async () => {
+  const nombre = prompt("Nombre de la carpeta nueva:");
+  if (!nombre) return;
+  try {
+    const { ruta } = await enviar("/api/carpeta", { padre: carpetaVista?.ruta, nombre });
+    abreExplorador(ruta);
+  } catch (e) { alert(e.message); }
+};
 
 $("#btn-elegir").onclick = () => $("#selector").click();
 $("#selector").onchange = (e) => procesa([...e.target.files]);
@@ -161,6 +249,8 @@ async function procesa(archivos) {
     `${bien} enviados${repes ? `, ${repes} ya estaban` : ""}${mal ? `, ${mal} con error` : ""}.`;
   $("#btn-reintentar").hidden = mal === 0;
 
+  ofreceEscaparate();
+
   const bytes = pendientes.filter((p) => p.estado === "hecho").reduce((s, p) => s + p.archivo.size, 0);
   const videos = pendientes.filter((p) => p.estado === "hecho" && /video/i.test(p.archivo.type)).length;
   enviar("/api/subida/resumen", { fotos: bien - videos, videos, bytes, duplicados: repes }).catch(() => {});
@@ -183,7 +273,11 @@ async function sube(trabajo) {
       if (apertura.recibido < archivo.size) {
         await subeTrozo(trabajo, apertura.recibido);
       }
-      const fin = await enviar(`/api/subida/${trabajo.id}/cerrar`, { inmueble: $("#inmueble")?.value || "" });
+      const fin = await enviar(`/api/subida/${trabajo.id}/cerrar`, {
+        organizarPor: DESTINO.modo === "carpeta" ? undefined : DESTINO.modo,
+        inmueble: $("#inmueble")?.value || "",
+        carpeta: DESTINO.modo === "carpeta" ? DESTINO.carpeta : undefined,
+      });
       trabajo.estado = fin.estado === "duplicado" ? "duplicado" : "hecho";
       trabajo.nombreFinal = fin.nombre;
       pintaLista();
@@ -251,6 +345,75 @@ function pintaLista() {
     <span class="etiqueta">${tamanoLegible(p.archivo.size)}</span>
     ${ETIQUETAS[p.estado] || ""}
   </li>`).join("");
+}
+
+// --- Publicar en el escaparate 3D sin tocar el ordenador --------------------
+function publicables() {
+  return pendientes.filter((p) => p.estado === "hecho" && /\.(jpe?g|png|webp)$/i.test(p.archivo.name));
+}
+
+function ofreceEscaparate() {
+  const hay = publicables().length;
+  $("#tarjeta-escaparate").hidden = !(hay && ESTADO?.repo);
+  if (!hay || !ESTADO?.repo) return;
+  if (!$("#eco-referencia-movil").value) {
+    const elegido = CARTERA[Number($("#sel-inmueble-movil").value)];
+    $("#eco-referencia-movil").value = elegido?.referencia || "";
+  }
+  $("#btn-publicar-movil").textContent = `🏠 Publicar ${hay} fotos en el escaparate`;
+}
+
+/** Reduce la foto en el propio móvil, antes de mandarla. */
+function reduceEnElMovil(archivo, lado = 1600, calidad = 0.82) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(archivo);
+    const img = new Image();
+    img.onload = () => {
+      const escala = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight));
+      const lienzo = document.createElement("canvas");
+      lienzo.width = Math.max(1, Math.round(img.naturalWidth * escala));
+      lienzo.height = Math.max(1, Math.round(img.naturalHeight * escala));
+      lienzo.getContext("2d").drawImage(img, 0, 0, lienzo.width, lienzo.height);
+      URL.revokeObjectURL(url);
+      lienzo.toBlob((b) => (b ? resolve(b) : reject(new Error("no se pudo convertir"))), "image/jpeg", calidad);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("este formato no se puede publicar")); };
+    img.src = url;
+  });
+}
+
+$("#btn-publicar-movil").onclick = async () => {
+  const referencia = $("#eco-referencia-movil").value.trim();
+  if (!referencia) return avisaEscaparate("Elige el inmueble o escribe su referencia.", "error");
+  const lista = publicables();
+  const boton = $("#btn-publicar-movil");
+  boton.disabled = true;
+  const relativas = [];
+  let fallos = 0;
+  try {
+    for (const [i, p] of lista.entries()) {
+      avisaEscaparate(`Preparando ${i + 1} de ${lista.length}…`);
+      try {
+        const reducida = await reduceEnElMovil(p.archivo);
+        const res = await fetch(`/api/escaparate/foto?referencia=${encodeURIComponent(referencia)}&ext=.jpg`, {
+          method: "PUT", headers: cabeceras({ "content-type": "image/jpeg" }), body: reducida,
+        });
+        const cuerpo = await res.json();
+        if (!res.ok) throw new Error(cuerpo.error || `error ${res.status}`);
+        relativas.push(cuerpo.relativa);
+      } catch { fallos++; }
+    }
+    if (!relativas.length) throw new Error("No se ha podido preparar ninguna foto");
+    const r = await enviar("/api/escaparate/publicar", { referencia, relativas });
+    avisaEscaparate(`✅ ${relativas.length} fotos ya están en el escaparate de «${r.titulo}»` +
+      `${r.nueva ? " (inmueble nuevo)" : ""}${fallos ? `. ${fallos} no se pudieron convertir.` : "."}`, "ok");
+  } catch (e) {
+    avisaEscaparate(`❌ ${e.message}`, "error");
+  } finally { boton.disabled = false; }
+};
+
+function avisaEscaparate(texto, tipo = "") {
+  $("#aviso-escaparate").innerHTML = `<div class="aviso ${tipo}">${texto}</div>`;
 }
 
 $("#btn-parar").onclick = () => {

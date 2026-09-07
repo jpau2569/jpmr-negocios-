@@ -476,6 +476,42 @@ console.log("\n🌐 Servidor completo (subida desde el móvil, corte incluido)")
   const inventado = await pide("/api/album/token-inventado");
   check("un enlace inventado no abre nada", inventado.res.status === 404);
 
+  // --- El móvil elige carpeta del PC ---------------------------------------
+  const carpetaElegida = path.join(RAIZ, "elegida-desde-el-movil");
+  await fsp.mkdir(carpetaElegida, { recursive: true });
+  const otroContenido = jpegDePrueba({ fecha: "2026:05:20 12:00:00" });
+  const metaCarpeta = { nombre: "IMG_8888.jpg", tamano: otroContenido.length, fechaMod: 1_770_000_111_000, sesion: "movil" };
+  const abre2 = await pide("/api/subida/abrir", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(metaCarpeta),
+  });
+  await pide(`/api/subida/${abre2.cuerpo.id}?desde=0`, { method: "PUT", body: otroContenido });
+  const cierra2 = await pide(`/api/subida/${abre2.cuerpo.id}/cerrar`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ carpeta: carpetaElegida }),
+  });
+  check("el móvil puede mandar las fotos a una carpeta concreta del PC",
+    cierra2.cuerpo.estado === "guardado" && path.dirname(cierra2.cuerpo.ruta) === carpetaElegida, cierra2.cuerpo.ruta);
+  check("al elegir carpeta se respeta el nombre original",
+    path.basename(cierra2.cuerpo.ruta) === "IMG_8888.jpg", cierra2.cuerpo.ruta);
+
+  const meta3 = { nombre: "IMG_7777.jpg", tamano: otroContenido.length, fechaMod: 1_770_000_222_000, sesion: "movil" };
+  const abre3 = await pide("/api/subida/abrir", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(meta3),
+  });
+  await pide(`/api/subida/${abre3.cuerpo.id}?desde=0`, { method: "PUT", body: otroContenido });
+  const prohibida = await pide(`/api/subida/${abre3.cuerpo.id}/cerrar`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ carpeta: "/etc" }),
+  });
+  check("no deja escribir en una carpeta del sistema", prohibida.res.status === 403);
+
+  const carpetaNueva = await pide("/api/carpeta", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ padre: DESTINO, nombre: "Piso Uría 12" }),
+  });
+  check("el móvil puede crear una carpeta nueva en el PC",
+    carpetaNueva.res.status === 200 && fs.existsSync(carpetaNueva.cuerpo.ruta), JSON.stringify(carpetaNueva.cuerpo));
+
   // --- Puentes con el ecosistema por HTTP ----------------------------------
   const inmuebles = await pide("/api/inmuebles");
   check("la API ofrece la cartera para el desplegable",

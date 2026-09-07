@@ -277,12 +277,20 @@ export async function crearServidor(opciones = {}) {
       const cuerpo = await leeJson(req).catch(() => ({}));
       try {
         const { ruta: parcial, ficha } = await estado.subidas.cerrar(mCerrar[1]);
+        // El móvil puede pedir una carpeta concreta del PC. Si lo hace, se
+        // respeta el nombre original: es lo que espera quien elige la carpeta.
+        let carpetaFija = null;
+        if (cuerpo.carpeta) {
+          carpetaFija = path.resolve(String(cuerpo.carpeta));
+          if (!rutaPermitida(carpetaFija)) return json(res, 403, { error: "Carpeta no permitida" });
+        }
         const resultado = await estado.almacen.incorporar(parcial, {
           nombre: ficha.nombre, origen: "movil", mover: true,
-          organizarPor: estado.config.organizarPor,
+          organizarPor: cuerpo.organizarPor || estado.config.organizarPor,
           inmueble: cuerpo.inmueble ?? estado.config.inmueble,
-          renombrar: estado.config.renombrar,
+          renombrar: carpetaFija ? false : estado.config.renombrar,
           fechaCliente: ficha.fechaMod,
+          carpetaFija,
         });
         await estado.subidas.descartar(mCerrar[1]);
         return json(res, 200, {

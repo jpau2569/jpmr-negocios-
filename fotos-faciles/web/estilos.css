@@ -194,3 +194,15 @@ code.url {
   .qr { width: 200px; height: 200px; }
   .pin { font-size: 32px; }
 }
+
+/* --- Opciones grandes de la pantalla del móvil --- */
+.opciones { display: grid; gap: 8px; }
+.opcion {
+  display: flex; align-items: center; gap: 12px; cursor: pointer;
+  border: 1px solid var(--borde); border-radius: 12px; padding: 12px 14px;
+  background: #10151c;
+}
+.opcion:has(input:checked) { border-color: var(--azul); background: #4da3ff14; }
+.opcion input { width: 20px; height: 20px; accent-color: var(--azul); flex: none; }
+.opcion span { display: block; line-height: 1.35; }
+.opcion small { display: block; color: var(--suave); font-size: 13px; }

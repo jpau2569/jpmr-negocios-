@@ -125,6 +125,7 @@ export class Almacen {
     const {
       nombre = path.basename(rutaOrigen), origen = "subida", mover = false,
       organizarPor = "fecha", inmueble = "", renombrar = true, fechaCliente = null,
+      carpetaFija = null,
     } = opciones;
 
     const hash = await hashArchivo(rutaOrigen);
@@ -135,7 +136,9 @@ export class Almacen {
     }
 
     const fecha = await fechaReal(rutaOrigen, fechaCliente ? new Date(fechaCliente) : null, nombre);
-    const carpeta = this.carpetaPara(fecha, { organizarPor, inmueble });
+    // `carpetaFija` gana a todo: es la carpeta que el usuario ha elegido a mano
+    // (por ejemplo desde el móvil, "guárdamelas aquí").
+    const carpeta = carpetaFija ? path.resolve(carpetaFija) : this.carpetaPara(fecha, { organizarPor, inmueble });
     await fsp.mkdir(carpeta, { recursive: true });
     const destino = rutaLibre(
       path.join(carpeta, this.nombrePara(nombre, fecha, carpeta, { renombrar, inmueble })),

@@ -76,6 +76,29 @@ node fotos-faciles/iniciar.mjs --ayuda
 > o una red de invitados). En Ajustes tienes todas las direcciones detectadas; también puedes
 > escribir a mano `http://LA-IP-DEL-PC:4321/m` y meter el PIN.
 
+### Desde el móvil también mandas tú
+
+La pantalla del móvil no es solo "enviar": decide **dónde** caen las fotos y qué se hace con ellas,
+sin tener que tocar el ordenador.
+
+**¿Dónde te las guardo?** — tres opciones, arriba del todo:
+
+| Opción | Qué hace |
+|---|---|
+| **Por día** | Lo de siempre: `Fotos Faciles/2026-09-07/`. |
+| **En un inmueble** | Desplegable con **tu cartera real** del escaparate 3D. Crea `PIS0190 - Piso…/2026-09-07/`. |
+| **En una carpeta del PC** | Abres el explorador del ordenador **desde el móvil**, navegas, puedes **crear una carpeta nueva** y pulsas «Guardar aquí». |
+
+Cuando eliges carpeta a mano se respeta el **nombre original** del archivo (`IMG_2001.jpg`), porque es
+lo que espera quien elige la carpeta; en los otros dos modos sigue funcionando el renombrado
+inteligente. La carpeta tiene que estar dentro de tu carpeta personal, de la de la app o de una
+unidad conectada: el servidor rechaza cualquier otra.
+
+**¿Las pongo en el escaparate 3D?** — al terminar de enviar aparece un botón para publicarlas
+directamente. El móvil reduce las fotos a 1600 px **él mismo** (no hace falta volver a bajarlas del
+PC) y quedan de portada del inmueble. Es el flujo completo desde el coche: haces las fotos del piso,
+escaneas el QR, las mandas, eliges el inmueble y ya están en el escaparate.
+
 ---
 
 ## Modo por cable / USB
@@ -280,7 +303,7 @@ npm test                       # desde la raíz del repositorio (incluye Fotos F
 node test/fotos-faciles.test.mjs
 ```
 
-106 comprobaciones: QR contra referencia, nombres seguros, EXIF, organización por fecha,
+110 comprobaciones: QR contra referencia, nombres seguros, EXIF, organización por fecha,
 duplicados, la regla de no sobrescribir, seguridad, el puente con el escaparate 3D (incluido que el
 nombre de archivo coincide con el de `sincronizar.mjs`), el guion de PowerShell del modo MTP
 (con su prueba de inyección), los recursos incrustados, y el servidor completo levantado de verdad
