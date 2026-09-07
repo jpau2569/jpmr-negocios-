@@ -7,6 +7,9 @@ Pensado para el día a día de una inmobiliaria: haces 60 fotos de un piso con e
 llegas a la oficina, escaneas un QR y ya están en el PC, ordenadas por fecha o por inmueble,
 listas para editar y publicar.
 
+> **¿Es la primera vez?** Ve a **[EMPEZAR-AQUI.md](EMPEZAR-AQUI.md)**: la guía corta, paso a paso,
+> con el aviso del cortafuegos de Windows y qué hacer cuando algo no va.
+
 ---
 
 ## Lo que hace, en una frase por modo
