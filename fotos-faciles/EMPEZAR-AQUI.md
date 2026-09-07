@@ -27,7 +27,7 @@ Si algo no encaja, salta al final: **«Cuando algo no va»**.
 irm https://raw.githubusercontent.com/jpau2569/jpmr-negocios-/claude/fotos-faciles-transferencia-a7urec/fotos-faciles/instalar-windows.ps1 | iex
 ```
 
-Descarga el programa, lo deja en `Documentos\..\FotosFaciles`, te crea el acceso directo
+Descarga el programa, lo deja en `C:\Users\<tu usuario>\FotosFaciles`, te crea el acceso directo
 **«Fotos Faciles»** en el Escritorio y lo abre. A partir de ahí, doble clic en ese icono y ya está.
 
 Volver a pegar la misma línea **actualiza** el programa. Tus fotos y tus ajustes no se tocan:
