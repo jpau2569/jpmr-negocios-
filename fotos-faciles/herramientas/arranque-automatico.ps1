@@ -18,7 +18,18 @@ $APP        = Split-Path -Parent $PSScriptRoot           # ...\fotos-faciles
 $SILENCIOSO = Join-Path $APP "FotosFacilesSilencioso.vbs"
 $INICIO     = [Environment]::GetFolderPath("Startup")
 $ATAJO      = Join-Path $INICIO "Fotos Faciles.lnk"
-$ESCRITORIO = [Environment]::GetFolderPath("Desktop")
+
+# Con OneDrive el Escritorio puede estar en dos sitios: se usan todos los que
+# existan de verdad, para que el icono no acabe en el que no se ve.
+function EscritoriosPosibles {
+  @(
+    [Environment]::GetFolderPath("Desktop"),
+    (Join-Path $env:USERPROFILE "Desktop"),
+    (Join-Path $env:USERPROFILE "Escritorio"),
+    (Join-Path $env:USERPROFILE "OneDrive\Desktop"),
+    (Join-Path $env:USERPROFILE "OneDrive\Escritorio")
+  ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
+}
 
 function Bien($t) { Write-Host "  $t" -ForegroundColor Green }
 function Aviso($t) { Write-Host "  $t" -ForegroundColor Yellow }
@@ -64,21 +75,20 @@ Bien "Listo: arrancara solo cada vez que enciendas el ordenador."
 #    OJO: para una direccion web hace falta un archivo .url (acceso directo de
 #    Internet). Un .lnk con una URL como destino se guarda pero Windows no lo
 #    muestra como acceso valido; ese fue un fallo real de la primera version.
-try {
-  $destino = Join-Path $ESCRITORIO "Fotos Faciles (pantalla).url"
-  "[InternetShortcut]`r`nURL=http://localhost:$puerto/`r`nIconIndex=0" |
-    Out-File -FilePath $destino -Encoding ASCII -Force
-  if (Test-Path $destino) {
-    Bien "Tienes 'Fotos Faciles (pantalla)' en el Escritorio para abrirlo cuando quieras."
-  } else {
-    Aviso "No se ha podido crear el acceso del Escritorio. Entra escribiendo localhost:$puerto en el navegador."
-  }
-  # Limpieza del acceso mal creado por la version anterior, si estuviera ahi.
-  $viejo = Join-Path $ESCRITORIO "Fotos Faciles (pantalla).lnk"
-  if (Test-Path $viejo) { Remove-Item $viejo -Force -ErrorAction SilentlyContinue }
-} catch {
-  Aviso "No se ha podido crear el acceso del Escritorio. Entra escribiendo localhost:$puerto en el navegador."
+$puestos = 0
+foreach ($esc in EscritoriosPosibles) {
+  try {
+    $destino = Join-Path $esc "Fotos Faciles (pantalla).url"
+    "[InternetShortcut]`r`nURL=http://localhost:$puerto/`r`nIconIndex=0" |
+      Out-File -FilePath $destino -Encoding ASCII -Force
+    if (Test-Path $destino) { $puestos++; Write-Host "     -> $esc" -ForegroundColor DarkGray }
+    # Limpieza del .lnk mal creado por la version anterior, si estuviera ahi.
+    $viejo = Join-Path $esc "Fotos Faciles (pantalla).lnk"
+    if (Test-Path $viejo) { Remove-Item $viejo -Force -ErrorAction SilentlyContinue }
+  } catch { }
 }
+if ($puestos -gt 0) { Bien "Tienes 'Fotos Faciles (pantalla)' en el Escritorio." }
+else { Aviso "Sin icono en el Escritorio. Entra escribiendo localhost:$puerto en el navegador." }
 
 # 3) Arrancarlo ya, sin esperar a reiniciar.
 #    Si habia una copia con ventana negra, se apaga primero: si no, la version

@@ -103,17 +103,36 @@ if (-not (Test-Path $arranque)) { Mal "Falta el arranque del programa. Avisa a C
 Bien "Instalado."
 
 # --- 4. Acceso directo en el Escritorio ------------------------------------
+#  Con OneDrive el Escritorio puede estar en dos sitios y el icono aparecer en
+#  el que NO se ve. Se crea en todos los candidatos que existan de verdad.
+function EscritoriosPosibles {
+  @(
+    [Environment]::GetFolderPath("Desktop"),
+    (Join-Path $env:USERPROFILE "Desktop"),
+    (Join-Path $env:USERPROFILE "Escritorio"),
+    (Join-Path $env:USERPROFILE "OneDrive\Desktop"),
+    (Join-Path $env:USERPROFILE "OneDrive\Escritorio")
+  ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
+}
+
 Paso "4/4  Creando el acceso directo en el Escritorio..."
-try {
-  $shell = New-Object -ComObject WScript.Shell
-  $lnk = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath("Desktop")) "Fotos Faciles.lnk"))
-  $lnk.TargetPath = $arranque
-  $lnk.WorkingDirectory = Split-Path $arranque
-  $lnk.Description = "Pasar fotos del movil al ordenador"
-  $lnk.Save()
-  Bien "Listo: tienes 'Fotos Faciles' en el Escritorio."
-} catch {
-  Bien "Instalado (no se ha podido crear el acceso directo, pero da igual)."
+$puestos = 0
+foreach ($esc in EscritoriosPosibles) {
+  try {
+    $shell = New-Object -ComObject WScript.Shell
+    $lnk = $shell.CreateShortcut((Join-Path $esc "Fotos Faciles.lnk"))
+    $lnk.TargetPath = $arranque
+    $lnk.WorkingDirectory = Split-Path $arranque
+    $lnk.Description = "Pasar fotos del movil al ordenador"
+    $lnk.Save()
+    $puestos++
+    Write-Host "     -> $esc" -ForegroundColor DarkGray
+  } catch { }
+}
+if ($puestos -gt 0) { Bien "Listo: tienes 'Fotos Faciles' en el Escritorio." }
+else {
+  Bien "Instalado. No se ha podido crear el icono, pero se abre siempre desde:"
+  Write-Host "     $arranque" -ForegroundColor DarkGray
 }
 
 Write-Host ""
