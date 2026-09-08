@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Nicer Estudia">
+  <rect width="1024" height="1024" rx="225" fill="#0f4c6b"/>
+  <path d="M190 396 498 344v382H190z" fill="#f6f5f2"/>
+  <path d="M834 396 526 344v382h308z" fill="#f6f5f2"/>
+  <path d="M240 470 450 434v32L240 502zM240 560 450 524v32L240 592z" fill="#9db7c6"/>
+  <path d="M574 434 784 470v32L574 466zM574 524 784 560v32L574 556z" fill="#9db7c6"/>
+  <path d="m760 132 30 78 78 30-78 30-30 78-30-78-78-30 78-30z" fill="#f0b255"/>
+</svg>

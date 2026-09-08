@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node test/clara.test.mjs && node test/castebot.test.mjs && node test/escaparate3d.test.mjs && node test/fotos-faciles.test.mjs",
-    "test:ui": "node test/ui.test.mjs"
+    "test": "node test/clara.test.mjs && node test/castebot.test.mjs && node test/escaparate3d.test.mjs && node test/fotos-faciles.test.mjs && node test/nicer-estudia.test.mjs",
+    "test:ui": "node test/ui.test.mjs && node test/nicer-estudia.ui.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0"

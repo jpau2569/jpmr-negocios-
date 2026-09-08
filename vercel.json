@@ -23,6 +23,9 @@
     "api/briefing.js": {
       "maxDuration": 60
     },
+    "api/profe.js": {
+      "maxDuration": 60
+    },
     "api/tiempo.js": {
       "maxDuration": 30,
       "includeFiles": "sol-niebla-agua/api/**"
