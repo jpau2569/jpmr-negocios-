@@ -11,9 +11,9 @@ No es una app de productividad para adultos. Todo se juzga con una pregunta:
 
 Los cuatro problemas que existe para resolver, en este orden:
 
-1. Se le olvidan los deberes → agenda + mochila de mañana
-2. Le cuesta arrancar y se distrae → modo concentración, racha, "solo 5 minutos"
-3. Estudia y se le olvida → tarjetas con repaso espaciado
+1. Se le olvidan los deberes → agenda, prioridad, tareas que se repiten y mochila de mañana
+2. Le cuesta arrancar y se distrae → concentración, sonido de fondo, planta, racha, "solo 5 minutos"
+3. Estudia y se le olvida → tarjetas con repaso espaciado, tests y esquemas
 4. Hay cosas que no entiende → el Profe
 
 Si una idea nueva no ataca uno de esos cuatro, probablemente sobra.
@@ -37,6 +37,12 @@ Se sirve por HTTP, no con `file://`.
   de `api/profe.js`; no lo suavices.
 - **Todo lo que escribe el alumno pasa por `escapa()`** antes de ir al HTML.
 - **La lista de "qué toca ahora" no pasa de 5** y el repaso diario tiene tope.
+- **El sonido de fondo se genera en el móvil** (`ambiente.js`), no se descarga:
+  así funciona sin conexión y no depende de nadie. No metas archivos de audio.
+- **Lo que se falla en un test vuelve al repaso.** Un test que solo pone nota
+  y no cambia nada no sirve para estudiar.
+- Nada de bloquear otras apps: una web no puede, y prometerlo sería mentir.
+  Lo que sí se hace es contar las salidas de la app durante una sesión.
 - Fechas siempre con `aISO()`/`deISO()`, nunca `toISOString()` a pelo: a las
   22:00 en España eso devuelve el día siguiente.
 - Al tocar cualquier `.js`, añadirlo a `RECURSOS` del service worker y subir
@@ -44,7 +50,12 @@ Se sirve por HTTP, no con `file://`.
 
 ## Separación por capas
 
-`utiles.js` → `datos.js` / `repaso.js` → `interfaz.js` → `app.js`
+`utiles.js` → `datos.js` / `repaso.js` / `cuestionario.js` / `esquema.js` /
+`ambiente.js` → `interfaz.js` → `app.js`
+
+Los cinco módulos del medio son **funciones puras** (el azar y la fecha entran
+por parámetro): por eso se pueden probar en Node sin navegador. No metas
+`localStorage` ni DOM en ellos.
 
 `interfaz.js` es render puro: recibe `(estado, ctx)` y devuelve HTML. No
 importa a `app.js` ni guarda nada. El estado vive solo en `app.js`. No juntar
@@ -75,3 +86,6 @@ node test/nicer-estudia.ui.test.mjs   # navegador real, recorrido completo
 
 Si añades una función del motor, añade su prueba. Si tocas una pantalla,
 mírala de verdad a 360 px, en claro y en oscuro.
+
+Al añadir un `.js` nuevo: métele su entrada en `RECURSOS` del service worker
+y sube `VERSION`.

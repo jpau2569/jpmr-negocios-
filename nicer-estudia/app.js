@@ -8,6 +8,9 @@ import { aISO, id, mmss, limita, diasEntre, plural } from './utiles.js';
 import * as D from './datos.js';
 import * as R from './repaso.js';
 import * as UI from './interfaz.js';
+import * as Q from './cuestionario.js';
+import { dibujaEsquema, esquemaDeIA } from './esquema.js';
+import { crearAmbiente, AMBIENTES } from './ambiente.js';
 
 /* ── Estado ─────────────────────────────────────────────────────── */
 let estado = D.cargar();
@@ -15,15 +18,21 @@ let estado = D.cargar();
 const ctx = {
   hoy: aISO(),
   vista: 'hoy',
+  sub: 'tarjetas',          // pestaña dentro de Estudiar
   tarjetaActual: null,
   respuestaVisible: false,
   hechasHoy: 0,
+  test: null,               // test en marcha
   chat: [],
-  propuestas: [],
+  propuestas: [],           // tarjetas que ofrece el Profe
+  testPropuesto: [],
+  esquemaPropuesto: null,
   pensando: false,
   error: null,
   instalable: false
 };
+
+const fondo = crearAmbiente();
 
 const $ = (sel) => document.querySelector(sel);
 const vista = $('#vista');
@@ -45,14 +54,14 @@ if (!estado.asignaturas.length && !estado.tareas.length) {
 function render() {
   ctx.hoy = aISO();
 
-  if (ctx.vista === 'repaso') {
+  if (ctx.vista === 'estudiar' && ctx.sub === 'tarjetas') {
     const cola = R.colaDeHoy(estado.tarjetas, ctx.hoy, estado.ajustes.tarjetasPorDia);
     ctx.tarjetaActual = cola[0] || null;
     if (!ctx.tarjetaActual) ctx.respuestaVisible = false;
   }
 
   const pintores = {
-    hoy: UI.vistaHoy, agenda: UI.vistaAgenda, repaso: UI.vistaRepaso,
+    hoy: UI.vistaHoy, agenda: UI.vistaAgenda, estudiar: UI.vistaEstudiar,
     profe: UI.vistaProfe, yo: UI.vistaYo
   };
   vista.innerHTML = (pintores[ctx.vista] || UI.vistaHoy)(estado, ctx);
@@ -144,6 +153,8 @@ const acciones = {
     estado.tareas.push({
       id: id('ta'), titulo: d.titulo.trim().slice(0, 200),
       asignaturaId: d.asignatura || null, tipo: 'deber',
+      prioridad: d.prioridad === 'alta' ? 'alta' : 'normal',
+      repetir: D.REPETICIONES.includes(d.repetir) ? d.repetir : 'no',
       para: d.para || ctx.hoy, hecha: false, hechaEl: null, creada: ctx.hoy
     });
     persiste(); render();
@@ -153,7 +164,14 @@ const acciones = {
     if (!t) return;
     t.hecha = !t.hecha;
     t.hechaEl = t.hecha ? ctx.hoy : null;
-    if (t.hecha) celebra();
+    if (t.hecha) {
+      celebra();
+      // Si se repite, la siguiente nace en cuanto se marca esta.
+      const siguiente = D.repiteTarea(t, ctx.hoy);
+      if (siguiente && !estado.tareas.some((x) => !x.hecha && x.titulo === t.titulo && x.para === siguiente.para)) {
+        estado.tareas.push(siguiente);
+      }
+    }
     persiste(); render();
   },
   'borrar-tarea': async (el) => {
@@ -175,6 +193,124 @@ const acciones = {
     const e = estado.examenes.find((x) => x.id === el.dataset.id);
     if (!e) return;
     await pide({ titulo: 'Plan de estudio', html: UI.vistaPlan(estado, e, ctx.hoy), aceptar: 'Entendido' });
+  },
+
+  sub: (el) => {
+    ctx.sub = el.dataset.sub;
+    ctx.respuestaVisible = false;
+    render();
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  },
+
+  /* Test */
+  'test-tarjetas': () => {
+    const preguntas = Q.generaDesdeTarjetas(estado.tarjetas, { cuantas: 8 });
+    if (!preguntas.length) return avisa('Necesitas al menos cuatro tarjetas para que el test tenga sentido.');
+    empiezaTest(preguntas, 'Test de tus tarjetas');
+  },
+  'empezar-test-ia': () => {
+    if (!ctx.testPropuesto.length) return;
+    const preguntas = ctx.testPropuesto;
+    ctx.testPropuesto = [];
+    empiezaTest(preguntas, 'Test del Profe');
+    irA('estudiar');
+  },
+  'descartar-test': () => { ctx.testPropuesto = []; render(); },
+  responder: (el) => {
+    if (!ctx.test || ctx.test.terminado) return;
+    const elegida = Number(el.dataset.i);
+    if (ctx.test.respuestas[ctx.test.i] !== null) return;
+    ctx.test.respuestas[ctx.test.i] = elegida;
+    if (elegida === ctx.test.preguntas[ctx.test.i].correcta) celebra();
+    else tono(220, 0.18);
+    render();
+  },
+  'siguiente-pregunta': () => {
+    if (!ctx.test) return;
+    if (ctx.test.i + 1 < ctx.test.preguntas.length) { ctx.test.i += 1; render(); return; }
+    terminaTest();
+  },
+  'cerrar-test': () => { ctx.test = null; render(); },
+
+  /* Esquemas */
+  'guardar-esquema': () => {
+    const propuesto = ctx.esquemaPropuesto;
+    if (!propuesto) return;
+    const asig = propuesto.asignatura ? D.buscaAsignatura(estado, propuesto.asignatura) : null;
+    estado.esquemas.push({
+      id: id('es'), asignaturaId: asig?.id || null,
+      titulo: propuesto.titulo, ramas: propuesto.ramas, fecha: ctx.hoy
+    });
+    ctx.esquemaPropuesto = null;
+    persiste();
+    ctx.sub = 'esquemas';
+    irA('estudiar');
+  },
+  'descartar-esquema': () => { ctx.esquemaPropuesto = null; render(); },
+  'borrar-esquema': async (el) => {
+    if (!(await confirma('¿Borrar este esquema?'))) return;
+    estado.esquemas = estado.esquemas.filter((e) => e.id !== el.dataset.id);
+    persiste(); render();
+  },
+  'ver-esquema': async (el) => {
+    const e = estado.esquemas.find((x) => x.id === el.dataset.id);
+    if (!e) return;
+    const { svg } = dibujaEsquema(e, { color: D.colorAsignatura(estado, e.asignaturaId) });
+    await pide({
+      titulo: e.titulo,
+      html: `<div class="lienzo-esquema lienzo-esquema--grande">${svg}</div>
+        <p style="font-size:.82rem;color:var(--tinta-2);margin-top:8px">Desliza a los lados para verlo entero.</p>`,
+      aceptar: 'Cerrar'
+    });
+  },
+  'descargar-esquema': (el) => descargaEsquema(el.dataset.id),
+
+  /* Apuntes */
+  'nuevo-apunte': async () => {
+    const d = await pide({ titulo: 'Nuevo apunte', html: UI.formApunte(estado) });
+    if (!d || !(d.texto || '').trim()) return;
+    estado.apuntes.push({
+      id: id('ap'), asignaturaId: d.asignatura || null,
+      titulo: (d.titulo || 'Apunte').trim().slice(0, 120),
+      texto: d.texto.trim().slice(0, 20000), fecha: ctx.hoy
+    });
+    persiste(); render();
+  },
+  'editar-apunte': async (el) => {
+    const n = estado.apuntes.find((x) => x.id === el.dataset.id);
+    if (!n) return;
+    const d = await pide({ titulo: 'Apunte', html: UI.formApunte(estado, n) });
+    if (!d) return;
+    n.titulo = (d.titulo || 'Apunte').trim().slice(0, 120);
+    n.texto = (d.texto || '').trim().slice(0, 20000);
+    n.asignaturaId = d.asignatura || null;
+    persiste(); render();
+  },
+  'borrar-apunte': async (el) => {
+    if (!(await confirma('¿Borrar este apunte?'))) return;
+    estado.apuntes = estado.apuntes.filter((x) => x.id !== el.dataset.id);
+    persiste(); render();
+  },
+  'tarjetas-de-apunte': (el) => {
+    const n = estado.apuntes.find((x) => x.id === el.dataset.id);
+    if (!n) return;
+    irA('profe');
+    const caja = $('#profe-texto');
+    if (caja) {
+      caja.value = `Hazme tarjetas de este apunte de ${D.nombreAsignatura(estado, n.asignaturaId)} `
+        + `titulado "${n.titulo}":\n\n${n.texto.slice(0, 3000)}`;
+    }
+    preguntaAlProfe();
+  },
+
+  /* Ambiente de fondo */
+  'elegir-ambiente': (el) => {
+    estado.ajustes.ambiente = el.dataset.id;
+    persiste();
+    if (!foco.el.hidden || el.dataset.id === 'ninguno') aplicaAmbiente();
+    else fondo.reproducir(el.dataset.id, estado.ajustes.volumen); // una probadita al elegirlo
+    render();
+    if (foco.el.hidden && el.dataset.id !== 'ninguno') setTimeout(() => { if (foco.el.hidden) fondo.parar(); }, 4000);
   },
 
   /* Repaso */
@@ -286,7 +422,14 @@ const acciones = {
 
   /* Profe */
   preguntar: () => preguntaAlProfe(),
-  'limpiar-chat': () => { ctx.chat = []; ctx.propuestas = []; ctx.error = null; render(); },
+  'limpiar-chat': () => {
+    ctx.chat = [];
+    ctx.propuestas = [];
+    ctx.testPropuesto = [];
+    ctx.esquemaPropuesto = null;
+    ctx.error = null;
+    render();
+  },
   'guardar-tarjetas': () => {
     for (const p of ctx.propuestas) {
       const asig = p.asignatura ? D.buscaAsignatura(estado, p.asignatura) : null;
@@ -298,11 +441,111 @@ const acciones = {
     const cuantas = ctx.propuestas.length;
     ctx.propuestas = [];
     persiste();
-    irA('repaso');
+    ctx.sub = 'tarjetas';
+    irA('estudiar');
     avisa(`${plural(cuantas, 'tarjeta añadida', 'tarjetas añadidas')}. Ya te tocan hoy.`);
   },
   'descartar-tarjetas': () => { ctx.propuestas = []; render(); }
 };
+
+/* ── Test ───────────────────────────────────────────────────────── */
+function empiezaTest(preguntas, titulo) {
+  ctx.test = {
+    titulo,
+    preguntas,
+    respuestas: preguntas.map(() => null),
+    i: 0,
+    terminado: false,
+    resultado: null
+  };
+  ctx.sub = 'test';
+  render();
+}
+
+/* Al terminar, lo fallado no se queda en un número: vuelve al repaso. Esa es
+   la diferencia entre un test que entretiene y uno que sirve. */
+function terminaTest() {
+  const t = ctx.test;
+  if (!t) return;
+  const resultado = Q.corrige(t.preguntas, t.respuestas);
+  t.resultado = resultado;
+  t.terminado = true;
+
+  for (const fallada of resultado.falladas) {
+    const i = estado.tarjetas.findIndex((c) => c.id === fallada.tarjetaId);
+    if (i >= 0) estado.tarjetas[i] = R.repasada(estado.tarjetas[i], false, ctx.hoy);
+    else if (fallada.tarjetaId === null) {
+      // Pregunta del Profe: se convierte en tarjeta para no perder el fallo.
+      estado.tarjetas.push({
+        id: id('tj'),
+        ...R.nuevaTarjeta({
+          pregunta: fallada.pregunta,
+          respuesta: fallada.opciones[fallada.correcta],
+          asignaturaId: fallada.asignaturaId || null,
+          origen: 'ia'
+        }, ctx.hoy)
+      });
+    }
+  }
+
+  estado.tests.push({
+    id: id('te'),
+    asignaturaId: t.preguntas[0]?.asignaturaId || null,
+    titulo: t.titulo,
+    aciertos: resultado.aciertos,
+    total: resultado.total,
+    nota: resultado.nota,
+    fecha: ctx.hoy
+  });
+
+  ctx.hechasHoy += resultado.total;
+  marcaActividad();
+  if (resultado.nota >= 5) { tono(660, 0.12); tono(880, 0.18, 0.12); }
+  persiste();
+  render();
+}
+
+/* ── Esquemas ───────────────────────────────────────────────────── */
+/* El SVG se pasa a PNG con un canvas: así se puede guardar en la galería y
+   mandarlo por WhatsApp, que es lo que va a hacer de verdad. */
+function descargaEsquema(idEsquema) {
+  const e = estado.esquemas.find((x) => x.id === idEsquema);
+  if (!e) return;
+  const { svg, ancho, alto } = dibujaEsquema(e, { color: D.colorAsignatura(estado, e.asignaturaId) });
+  const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    const lienzo = document.createElement('canvas');
+    lienzo.width = ancho;
+    lienzo.height = alto;
+    const pincel = lienzo.getContext('2d');
+    pincel.fillStyle = '#ffffff';
+    pincel.fillRect(0, 0, ancho, alto);
+    pincel.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    lienzo.toBlob((png) => {
+      if (!png) return avisa('No se ha podido crear la imagen en este navegador.');
+      const enlace = document.createElement('a');
+      enlace.href = URL.createObjectURL(png);
+      enlace.download = `esquema-${e.titulo.toLowerCase().replace(/[^a-z0-9]+/gi, '-').slice(0, 40)}.png`;
+      enlace.click();
+      setTimeout(() => URL.revokeObjectURL(enlace.href), 4000);
+    }, 'image/png');
+  };
+  img.onerror = () => {
+    URL.revokeObjectURL(url);
+    avisa('No se ha podido crear la imagen en este navegador.');
+  };
+  img.src = url;
+}
+
+/* ── Sonido de fondo ────────────────────────────────────────────── */
+function aplicaAmbiente() {
+  const id = estado.ajustes.ambiente;
+  if (foco.el.hidden || id === 'ninguno' || !estado.ajustes.sonido) fondo.parar();
+  else fondo.reproducir(id, estado.ajustes.volumen);
+}
 
 function resuelveTarjeta(acierto) {
   const actual = ctx.tarjetaActual;
@@ -353,17 +596,30 @@ document.addEventListener('change', (ev) => {
 /* ── Modo concentración ─────────────────────────────────────────── */
 const foco = {
   el: $('#foco'), reloj: $('#foco-reloj'), barra: $('#foco-barra'), que: $('#foco-que'),
-  total: 0, restan: 0, tic: null, pausado: false, descanso: false
+  planta: $('#foco-planta'), aguante: $('#foco-aguante'), ambientes: $('#foco-ambientes'),
+  total: 0, restan: 0, tic: null, pausado: false, descanso: false, salidas: 0
 };
+
+/* Los ambientes se eligen desde la propia pantalla de concentración: si hay
+   que salir a Ajustes para cambiar la lluvia, no se cambia nunca. */
+function pintaAmbientes() {
+  foco.ambientes.innerHTML = AMBIENTES.map((a) => `<button class="chip${estado.ajustes.ambiente === a.id ? ' chip--activo' : ''}"
+    data-accion="elegir-ambiente" data-id="${a.id}">${a.emoji}</button>`).join('');
+}
 
 function arrancaFoco(minutos, etiqueta) {
   foco.total = Math.max(1, minutos) * 60;
   foco.restan = foco.total;
   foco.pausado = false;
   foco.descanso = false;
+  foco.salidas = 0;
   foco.que.textContent = etiqueta;
   foco.el.classList.remove('descanso');
   foco.el.hidden = false;
+  foco.planta.innerHTML = UI.mascota(R.rachaVigente(estado.racha, ctx.hoy), 84);
+  foco.aguante.textContent = 'Deja el móvil en la mesa. Si sales de la app, se nota.';
+  pintaAmbientes();
+  aplicaAmbiente();
   $('#foco-pausa').textContent = 'Pausa';
   pintaFoco();
   clearInterval(foco.tic);
@@ -392,7 +648,7 @@ function terminaFoco(completo) {
   const minutos = Math.round((foco.total - foco.restan) / 60);
   clearInterval(foco.tic);
   if (minutos >= 1) {
-    estado.sesiones.push({ fecha: ctx.hoy, minutos, asignaturaId: null });
+    estado.sesiones.push({ fecha: ctx.hoy, minutos, asignaturaId: null, salidas: foco.salidas });
     marcaActividad();
     persiste();
   }
@@ -415,6 +671,7 @@ function cierraFoco() {
   foco.el.hidden = true;
   foco.el.classList.remove('descanso');
   document.body.style.overflow = '';
+  fondo.parar();
   render();
 }
 
@@ -430,7 +687,18 @@ $('#foco-salir').addEventListener('click', () => { clearInterval(foco.tic); cier
 let salidaFoco = null;
 document.addEventListener('visibilitychange', () => {
   if (foco.el.hidden) return;
-  if (document.hidden) { salidaFoco = Date.now(); return; }
+  if (document.hidden) {
+    salidaFoco = Date.now();
+    if (!foco.pausado && !foco.descanso) {
+      foco.salidas += 1;
+      // Sin bloquear nada (una web no puede), pero contándolo: saber que se
+      // nota es justo lo que hace que la próxima vez no se salga.
+      foco.aguante.textContent = foco.salidas === 1
+        ? 'Has salido una vez. Vuelve, que ibas bien.'
+        : `Has salido ${foco.salidas} veces de la app.`;
+    }
+    return;
+  }
   if (salidaFoco && !foco.pausado) {
     foco.restan = Math.max(0, foco.restan - Math.round((Date.now() - salidaFoco) / 1000));
     pintaFoco();
@@ -470,6 +738,8 @@ async function preguntaAlProfe() {
   ctx.pensando = true;
   ctx.error = null;
   ctx.propuestas = [];
+  ctx.testPropuesto = [];
+  ctx.esquemaPropuesto = null;
   render();
 
   try {
@@ -487,6 +757,14 @@ async function preguntaAlProfe() {
     if (!res.ok) throw new Error(datos.error || `Error ${res.status}`);
     ctx.chat.push({ rol: 'profe', texto: datos.reply || 'No he sabido responder a eso.' });
     ctx.propuestas = Array.isArray(datos.tarjetas) ? datos.tarjetas.slice(0, 20) : [];
+    const asigTest = datos.esquema?.asignatura ? D.buscaAsignatura(estado, datos.esquema.asignatura) : null;
+    ctx.testPropuesto = Q.preguntasDeIA(datos.test, asigTest?.id || null);
+    ctx.esquemaPropuesto = datos.esquema
+      ? (() => {
+          const validado = esquemaDeIA(datos.esquema);
+          return validado ? { ...validado, asignatura: datos.esquema.asignatura || '' } : null;
+        })()
+      : null;
   } catch (e) {
     ctx.error = navigator.onLine
       ? `El Profe no ha podido responder: ${e.message}`
@@ -536,6 +814,10 @@ if (estado.racha.ultimoDia && diasEntre(estado.racha.ultimoDia, ctx.hoy) > 1) {
 }
 
 const inicial = new URLSearchParams(location.search).get('vista');
-if (inicial && ['hoy', 'agenda', 'repaso', 'profe', 'yo'].includes(inicial)) ctx.vista = inicial;
+// 'repaso' era el nombre viejo de la pestaña: los accesos directos que ya
+// estén instalados en el móvil tienen que seguir funcionando.
+const equivalencias = { repaso: 'estudiar' };
+const pedida = equivalencias[inicial] || inicial;
+if (pedida && ['hoy', 'agenda', 'estudiar', 'profe', 'yo'].includes(pedida)) ctx.vista = pedida;
 
 render();

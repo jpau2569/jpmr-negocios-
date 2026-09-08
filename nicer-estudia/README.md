@@ -1,8 +1,9 @@
 # Nicer Estudia
 
 App de estudio para el curso 26/27: agenda de deberes y exámenes, repaso
-espaciado con tarjetas, modo concentración y un profesor de IA que explica
-dudas y convierte un tema en tarjetas.
+espaciado con tarjetas, tests de autoevaluación, esquemas visuales, apuntes,
+modo concentración con sonido de fondo y un profesor de IA que explica dudas
+y prepara el material.
 
 Pensada para un alumno de 1º-2º de ESO que usa el móvil y el PC de casa.
 **Todos los datos viven en el dispositivo** (`localStorage`): no hay cuenta,
@@ -19,11 +20,35 @@ Tres cosas con evidencia detrás, traducidas a pantallas:
 | **Repaso espaciado** — repasar justo antes de olvidar fija lo aprendido | Cajas de Leitner: 0, 1, 2, 4, 8, 16 y 32 días |
 | **Práctica repartida** — cuatro ratos en cuatro días rinden más que una noche | Plan de examen automático en D-7, D-5, D-3, D-1 y el día |
 
-Y dos cosas de producto, no de pedagogía:
+Y una cuarta que no es pedagogía sino honestidad: **un test pone nota**.
+Releer engaña, elegir entre cuatro opciones no. Lo que se falla vuelve solo
+al repaso.
+
+Y dos cosas de producto:
 
 - **La lista de hoy nunca pasa de cinco cosas.** Una lista larga no se empieza.
 - **El repaso diario tiene tope** (20 tarjetas por defecto). Una cola infinita
   es la forma más rápida de que un chaval cierre la app y no vuelva.
+
+## De dónde salen las ideas
+
+La versión 2.0 recoge lo que funciona de siete apps conocidas, pero dentro de
+una sola, sin siete cuentas ni siete suscripciones, y sin que los datos de un
+menor acaben en siete servidores:
+
+| Idea de… | Cómo está aquí |
+|---|---|
+| **LifeAt** (espacio de trabajo con Pomodoro) | Modo concentración a pantalla completa con temporizador, planta que crece y sonido de fondo |
+| **I Miss My Cafe** (sonido ambiente) | Lluvia, cafetería, biblioteca y mar **generados en el móvil** con la Web Audio API: cero archivos, cero red |
+| **Cuestia** (cuestionarios con IA) | Tests de opción múltiple: del Profe, o generados sin conexión a partir de sus propias tarjetas |
+| **Visme** (material visual) | Esquemas: el Profe convierte un tema en ramas y la app lo dibuja como mapa, descargable en PNG |
+| **Focus Friend** (compañero y recompensas) | La planta de la racha (semilla → brote → planta → en flor → árbol) y el contador de salidas de la app |
+| **Notion** (organización central) | Apuntes por asignatura, que con un botón se convierten en tarjetas |
+| **Todoist** (tareas) | Prioridad alta y tareas que se repiten cada día o cada semana |
+
+Lo que **no** se ha copiado, a propósito: cuentas de usuario, sincronización
+en la nube y bloqueo de otras apps (una web no puede bloquear el móvil; en su
+lugar se cuenta cuántas veces se sale, que es honesto y funciona parecido).
 
 ## Cómo se abre
 
@@ -48,6 +73,9 @@ Cada capa solo conoce a la de debajo:
 - `utiles.js` — fechas ISO locales, textos, formatos (sin estado)
 - `datos.js` — estado, validación, `localStorage`, copias y consultas derivadas
 - `repaso.js` — motor: Leitner, plan de examen, racha, puntos, plan del día
+- `cuestionario.js` — tests: generación desde tarjetas, corrección y nota
+- `esquema.js` — el mapa del tema dibujado como SVG
+- `ambiente.js` — sonido de fondo generado (ruido filtrado), sin archivos
 - `interfaz.js` — render puro: recibe estado, devuelve HTML
 - `app.js` — estado, eventos, temporizador, Profe y PWA
 - `manifest.json` + `service-worker.js` — instalable y sin conexión
@@ -57,7 +85,7 @@ Cada capa solo conoce a la de debajo:
 ## El Profe
 
 `POST /api/profe` con `{ mensajes, curso, nombre, asignaturas }` devuelve
-`{ reply, tarjetas }`. Necesita `ANTHROPIC_API_KEY` en Vercel.
+`{ reply, tarjetas, test, esquema }`. Necesita `ANTHROPIC_API_KEY` en Vercel.
 
 Dos reglas del prompt que no se tocan, porque al otro lado hay un menor:
 
@@ -67,9 +95,18 @@ Dos reglas del prompt que no se tocan, porque al otro lado hay un menor:
    manda a hablar con su padre, su madre o su tutor, y recuerda el 024 y el
    116 111. Nada más.
 
-Cuando el alumno pide tarjetas, el modelo añade un bloque
-`[[TARJETAS]]…[[/TARJETAS]]` con JSON que el backend extrae y devuelve
-aparte; el alumno nunca ve el bloque.
+Cuando el alumno pide material, el modelo añade un bloque con JSON que el
+backend extrae y devuelve aparte; el alumno nunca ve el bloque:
+
+| Bloque | Se convierte en |
+|---|---|
+| `[[TARJETAS]]` | Tarjetas de repaso espaciado |
+| `[[TEST]]` | Un test de opción múltiple, con lo fallado volviendo al repaso |
+| `[[ESQUEMA]]` | Un mapa del tema, dibujado por `esquema.js` |
+
+Si el JSON viene roto o una pregunta no cuadra (opciones vacías, índice de
+respuesta fuera de rango), esa pieza se descarta y el resto sigue: nunca se
+guarda material inválido.
 
 ## Copias de seguridad
 
@@ -86,6 +123,8 @@ node test/nicer-estudia.ui.test.mjs   # recorrido completo en Chromium real
 ```
 
 El segundo levanta un servidor estático, intercepta `/api/profe` y hace el
-camino entero: apuntar deberes, marcarlos, crear y repasar una tarjeta,
-guardar las del Profe, el modo concentración, recargar y comprobar que a
-360 px no hay desborde horizontal.
+camino entero: apuntar deberes con prioridad y repetición, marcarlos (y
+comprobar que la tarea diaria genera la de mañana), crear y repasar una
+tarjeta, hacer un test del Profe y otro sin conexión, guardar un esquema y un
+apunte, el modo concentración con sus ambientes, recargar y comprobar que a
+360 px no hay desborde horizontal ni botones impulsables.

@@ -5,9 +5,12 @@
    marcan con data-accion y app.js los escucha por delegación.
    ═══════════════════════════════════════════════════════════════════ */
 
-import { escapa, fechaHumana, fechaCorta, cuentaAtras, minutosATexto, plural, DIAS, DIAS_CORTOS, aISO } from './utiles.js';
+import { escapa, fechaHumana, fechaCorta, cuentaAtras, minutosATexto, plural, recorta, DIAS, DIAS_CORTOS, aISO } from './utiles.js';
 import * as D from './datos.js';
 import * as R from './repaso.js';
+import * as Q from './cuestionario.js';
+import { dibujaEsquema } from './esquema.js';
+import { AMBIENTES } from './ambiente.js';
 
 const pct = (n) => `${Math.round(n * 100)}%`;
 
@@ -34,6 +37,34 @@ function anillo(hechos, objetivo) {
 const puntoColor = (estado, asignaturaId) =>
   `<span class="punto" style="background:${escapa(D.colorAsignatura(estado, asignaturaId))}"></span>`;
 
+/* El compañero: una planta que crece con la racha. No es un adorno — es el
+   único marcador que un chaval mira todos los días sin que se lo pidan. Se
+   seca si se rompe la racha, y vuelve a brotar al día siguiente de volver. */
+export const ETAPAS = [
+  { desde: 0, nombre: 'Semilla', frase: 'Estudia hoy y brota.' },
+  { desde: 1, nombre: 'Brote', frase: 'Ha salido. No la dejes ahora.' },
+  { desde: 3, nombre: 'Planta', frase: 'Tres días seguidos. Esto ya es un hábito.' },
+  { desde: 7, nombre: 'En flor', frase: 'Una semana entera. Muy pocos llegan aquí.' },
+  { desde: 14, nombre: 'Árbol', frase: 'Dos semanas. Esto ya no lo tira nadie.' }
+];
+
+export const etapaDe = (dias) => [...ETAPAS].reverse().find((e) => dias >= e.desde) || ETAPAS[0];
+
+export function mascota(dias, tamano = 96) {
+  const nivel = ETAPAS.findIndex((e) => e === etapaDe(dias));
+  const hojas = [];
+  if (nivel >= 1) hojas.push('<path d="M32 42c-9 0-14-6-14-12 8-2 14 3 14 12z" fill="var(--verde)"/>');
+  if (nivel >= 2) hojas.push('<path d="M32 34c9 0 14-6 14-13-8-2-14 4-14 13z" fill="var(--verde)"/>');
+  if (nivel >= 3) hojas.push('<circle cx="32" cy="16" r="7" fill="var(--ambar)"/><circle cx="32" cy="16" r="3" fill="var(--papel)"/>');
+  if (nivel >= 4) hojas.push('<path d="M32 26c-11-1-17-8-17-16 10-3 17 5 17 16z" fill="var(--verde)" opacity=".75"/>');
+  const altura = [46, 42, 34, 24, 20][nivel];
+  return `<svg width="${tamano}" height="${tamano}" viewBox="0 0 64 64" aria-hidden="true">
+    <path d="M32 52V${altura}" stroke="var(--verde)" stroke-width="3.5" stroke-linecap="round" fill="none"${dias ? '' : ' opacity=".35"'}/>
+    ${dias ? hojas.join('') : '<circle cx="32" cy="46" r="5" fill="var(--tinta-2)" opacity=".5"/>'}
+    <path d="M20 52h24l-3 9a2 2 0 0 1-2 2H25a2 2 0 0 1-2-2z" fill="var(--ambar)" opacity=".9"/>
+  </svg>`;
+}
+
 function pastillaFecha(dias) {
   if (dias < 0) return `<span class="pastilla roja">Atrasado ${Math.abs(dias)} d</span>`;
   if (dias === 0) return '<span class="pastilla ambar">Para hoy</span>';
@@ -58,6 +89,8 @@ const tarea = (estado, t) => `
         ${puntoColor(estado, t.asignaturaId)}
         <span style="font-size:.8rem;color:var(--tinta-2)">${escapa(D.nombreAsignatura(estado, t.asignaturaId))}</span>
         ${t.hecha ? '<span class="pastilla verde">Hecha</span>' : pastillaFecha(t.dias ?? 0)}
+        ${t.prioridad === 'alta' && !t.hecha ? '<span class="pastilla roja">Prioridad</span>' : ''}
+        ${t.repetir && t.repetir !== 'no' ? `<span class="pastilla gris">${t.repetir === 'diaria' ? 'Cada día' : 'Cada semana'}</span>` : ''}
       </div>
     </div>
     <button class="borrar" data-accion="borrar-tarea" data-id="${t.id}" aria-label="Borrar">✕</button>
@@ -113,7 +146,7 @@ export function vistaHoy(estado, ctx) {
           <div class="qué">${escapa(p.titulo)}</div>
           <div class="por">${escapa(p.aviso)}</div>
         </div>
-        ${p.tipo === 'repaso' ? '<button class="mini principal" data-accion="ir" data-vista="repaso">Repasar</button>' : ''}
+        ${p.tipo === 'repaso' ? '<button class="mini principal" data-accion="ir" data-vista="estudiar">Repasar</button>' : ''}
         ${p.tipo === 'tarea' || p.tipo === 'atrasada' ? `<button class="mini" data-accion="alternar-tarea" data-id="${p.ref}">Hecha</button>` : ''}
       </div>`).join('')}</div>`
       : '<div class="vacio">Nada pendiente. Si tienes deberes, apúntalos en Agenda.</div>'}
@@ -200,9 +233,37 @@ export function vistaPlan(estado, examen, hoy) {
     <p style="font-size:.84rem;color:var(--tinta-2)">Estudiar en varios días cortos se recuerda mucho mejor que una noche entera.</p>`;
 }
 
-/* ── Vista: REPASO ──────────────────────────────────────────────── */
+/* ── Vista: ESTUDIAR ────────────────────────────────────────────
+   Cuatro materiales, una sola pestaña: tarjetas para memorizar, test para
+   comprobar, esquema para entender el conjunto y apuntes de donde sale
+   todo lo demás. */
 
-export function vistaRepaso(estado, ctx) {
+const SUBS = [
+  { id: 'tarjetas', nombre: 'Tarjetas' },
+  { id: 'test', nombre: 'Test' },
+  { id: 'esquemas', nombre: 'Esquemas' },
+  { id: 'apuntes', nombre: 'Apuntes' }
+];
+
+export function vistaEstudiar(estado, ctx) {
+  const sub = SUBS.some((x) => x.id === ctx.sub) ? ctx.sub : 'tarjetas';
+  const contadores = {
+    tarjetas: R.colaDeHoy(estado.tarjetas, ctx.hoy, estado.ajustes.tarjetasPorDia).length,
+    test: 0,
+    esquemas: (estado.esquemas || []).length,
+    apuntes: (estado.apuntes || []).length
+  };
+
+  const pestanas = `<div class="pestanas" role="tablist">
+    ${SUBS.map((x) => `<button role="tab" data-accion="sub" data-sub="${x.id}"
+      ${x.id === sub ? 'aria-selected="true"' : ''}>${x.nombre}${contadores[x.id] ? ` <span class="cuenta">${contadores[x.id]}</span>` : ''}</button>`).join('')}
+  </div>`;
+
+  const pintor = { tarjetas: subTarjetas, test: subTest, esquemas: subEsquemas, apuntes: subApuntes }[sub];
+  return pestanas + pintor(estado, ctx);
+}
+
+function subTarjetas(estado, ctx) {
   const { hoy, tarjetaActual, respuestaVisible, hechasHoy } = ctx;
   const cola = R.colaDeHoy(estado.tarjetas, hoy, estado.ajustes.tarjetasPorDia);
   const prevision = R.previsionRepaso(estado.tarjetas, hoy);
@@ -218,6 +279,7 @@ export function vistaRepaso(estado, ctx) {
       ? `<div class="tarjeta flash">
           <div class="pregunta">Repaso de hoy terminado ✅</div>
           <p style="color:var(--tinta-2);font-size:.9rem">Vuelve mañana: la app te dirá exactamente qué toca.</p>
+          <button class="mini fantasma" data-accion="sub" data-sub="test">Ponte a prueba con un test</button>
         </div>`
       : tarjetaActual
         ? `<div class="tarjeta flash">
@@ -266,7 +328,145 @@ export function vistaRepaso(estado, ctx) {
           <button class="borrar" data-accion="borrar-tarjeta" data-id="${c.id}" aria-label="Borrar">✕</button>
         </li>`).join('')}
       </ul></div>
-    </details>` : ''}
+    </details>` : ''}`;
+}
+
+/* ── Test (idea tomada de Cuestia, pero con SUS tarjetas y sin cuenta) ── */
+function subTest(estado, ctx) {
+  const t = ctx.test;
+  const historial = (estado.tests || []).slice(-5).reverse();
+
+  if (t && t.terminado) {
+    const { resultado } = t;
+    return `<section class="seccion">
+      <div class="tarjeta flash">
+        <div class="pastilla ${resultado.nota >= 5 ? 'verde' : 'roja'}" style="align-self:center">Nota ${resultado.nota}</div>
+        <div class="pregunta">${resultado.aciertos} de ${resultado.total} bien</div>
+        <p style="color:var(--tinta-2);font-size:.92rem">${escapa(Q.comentario(resultado))}</p>
+        ${resultado.falladas.length ? `<p style="font-size:.86rem;color:var(--tinta-2)">
+          Lo que fallaste vuelve al repaso de mañana automáticamente.</p>` : ''}
+      </div>
+      ${resultado.falladas.length ? `<div class="tarjeta" style="margin-top:10px">
+        <h3 style="margin-bottom:8px">Lo que se te escapó</h3>
+        <ul class="mochila">${resultado.falladas.map((p) => `<li style="display:block">
+          <div style="font-weight:600">${escapa(p.pregunta)}</div>
+          <div style="color:var(--verde);font-size:.88rem">${escapa(p.opciones[p.correcta])}</div>
+        </li>`).join('')}</ul>
+      </div>` : ''}
+      <div class="fila" style="margin-top:10px">
+        <button data-accion="cerrar-test">Cerrar</button>
+        <button class="principal" data-accion="test-tarjetas">Otro test</button>
+      </div>
+    </section>`;
+  }
+
+  if (t) {
+    const p = t.preguntas[t.i];
+    const elegida = t.respuestas[t.i];
+    const contestada = elegida !== undefined && elegida !== null;
+    return `<section class="seccion">
+      <header><h2>Pregunta ${t.i + 1} de ${t.preguntas.length}</h2>
+        <span class="extra">${escapa(t.titulo)}</span></header>
+      <div class="barra-progreso" style="margin-bottom:10px"><i style="width:${pct(t.i / t.preguntas.length)}"></i></div>
+      <div class="tarjeta">
+        <div class="pregunta" style="font-size:1.08rem;font-weight:650">${escapa(p.pregunta)}</div>
+        <div style="display:grid;gap:8px;margin-top:14px">
+          ${p.opciones.map((o, i) => {
+            let clase = '';
+            if (contestada && i === p.correcta) clase = ' opcion--bien';
+            else if (contestada && i === elegida) clase = ' opcion--mal';
+            return `<button class="opcion${clase}" data-accion="responder" data-i="${i}"${contestada ? ' disabled' : ''}>${escapa(o)}</button>`;
+          }).join('')}
+        </div>
+      </div>
+      ${contestada ? `<button class="principal ancho" style="margin-top:10px" data-accion="siguiente-pregunta">
+        ${t.i + 1 < t.preguntas.length ? 'Siguiente' : 'Ver la nota'}</button>` : ''}
+      <button class="fantasma ancho mini" style="margin-top:8px" data-accion="cerrar-test">Dejarlo para luego</button>
+    </section>`;
+  }
+
+  const suficientes = estado.tarjetas.length >= Q.MIN_TARJETAS;
+  return `<section class="seccion">
+    <header><h2>Ponte a prueba</h2></header>
+    <div class="tarjeta">
+      <p style="font-size:.92rem;color:var(--tinta-2)">
+        Un test te dice si de verdad te lo sabes. Releer engaña; elegir entre cuatro opciones, no.
+      </p>
+      <button class="principal ancho grande" style="margin-top:12px" data-accion="test-tarjetas"${suficientes ? '' : ' disabled'}>
+        Test con mis tarjetas
+      </button>
+      ${suficientes ? '<p style="font-size:.8rem;color:var(--tinta-2);margin-top:6px">Funciona sin conexión.</p>'
+        : `<p style="font-size:.84rem;color:var(--tinta-2);margin-top:6px">
+            Te hacen falta ${Q.MIN_TARJETAS} tarjetas para que las opciones falsas tengan sentido. Llevas ${estado.tarjetas.length}.</p>`}
+      <button class="ancho" style="margin-top:10px" data-accion="ir" data-vista="profe">Pedirle un test al Profe</button>
+    </div>
+  </section>
+
+  ${historial.length ? `<section class="seccion">
+    <header><h2>Tus últimos tests</h2></header>
+    <div class="tarjeta"><ul class="mochila">
+      ${historial.map((h) => `<li>
+        ${puntoColor(estado, h.asignaturaId)}
+        <span>${escapa(h.titulo)}</span>
+        <span style="margin-left:auto;color:var(--tinta-2);font-size:.8rem">${escapa(fechaHumana(h.fecha, ctx.hoy))}</span>
+        <span class="pastilla ${h.nota >= 5 ? 'verde' : 'roja'}">${h.nota}</span>
+      </li>`).join('')}
+    </ul></div>
+  </section>` : ''}`;
+}
+
+/* ── Esquemas (la idea de Visme, en versión útil para un examen) ── */
+function subEsquemas(estado, ctx) {
+  const esquemas = (estado.esquemas || []).slice().reverse();
+  return `<section class="seccion">
+    <header><h2>Esquemas</h2><span class="extra">${esquemas.length}</span></header>
+    <div class="tarjeta">
+      <p style="font-size:.92rem;color:var(--tinta-2)">
+        Ver el tema entero de un vistazo antes de memorizar: así las tarjetas tienen de dónde colgarse.
+        Pídeselo al Profe («hazme un esquema de…») y aquí lo tendrás para verlo y descargarlo.
+      </p>
+      <button class="principal ancho" style="margin-top:10px" data-accion="ir" data-vista="profe">Pedir un esquema</button>
+    </div>
+    ${esquemas.map((e) => `<div class="tarjeta" style="margin-top:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        ${puntoColor(estado, e.asignaturaId)}
+        <strong>${escapa(e.titulo)}</strong>
+        <span style="margin-left:auto;color:var(--tinta-2);font-size:.8rem">${escapa(fechaHumana(e.fecha, ctx.hoy))}</span>
+      </div>
+      <div class="lienzo-esquema">${dibujaEsquema(e, { color: D.colorAsignatura(estado, e.asignaturaId) }).svg}</div>
+      <div class="fila" style="margin-top:10px">
+        <button class="mini principal" data-accion="ver-esquema" data-id="${e.id}">Verlo grande</button>
+        <button class="mini" data-accion="descargar-esquema" data-id="${e.id}">Descargar PNG</button>
+        <button class="mini peligro" data-accion="borrar-esquema" data-id="${e.id}">Borrar</button>
+      </div>
+    </div>`).join('')}
+  </section>`;
+}
+
+/* ── Apuntes (lo de Notion que de verdad usa un alumno de ESO) ── */
+function subApuntes(estado, ctx) {
+  const apuntes = D.apuntesDe(estado);
+  return `<section class="seccion">
+    <header><h2>Apuntes</h2><span class="extra">${apuntes.length}</span></header>
+    <button class="principal ancho" data-accion="nuevo-apunte">+ Escribir un apunte</button>
+    ${apuntes.length ? apuntes.map((n) => `<div class="tarjeta" style="margin-top:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        ${puntoColor(estado, n.asignaturaId)}
+        <strong>${escapa(n.titulo)}</strong>
+        <span style="margin-left:auto;color:var(--tinta-2);font-size:.8rem">${escapa(fechaHumana(n.fecha, ctx.hoy))}</span>
+      </div>
+      <p style="margin-top:8px;font-size:.9rem;color:var(--tinta-2);white-space:pre-wrap">${escapa(recorta(n.texto, 220))}</p>
+      <div class="fila" style="margin-top:10px">
+        <button class="mini" data-accion="editar-apunte" data-id="${n.id}">Abrir</button>
+        <button class="mini principal" data-accion="tarjetas-de-apunte" data-id="${n.id}">Hacer tarjetas</button>
+        <button class="mini peligro" data-accion="borrar-apunte" data-id="${n.id}">Borrar</button>
+      </div>
+    </div>`).join('')
+      : `<div class="vacio" style="margin-top:10px">
+          Aquí van los apuntes que quieras tener siempre a mano: lo que dictó el profe,
+          lo que entra en el examen, cómo se hace ese tipo de ejercicio.<br /><br />
+          Luego, con un botón, el Profe los convierte en tarjetas.
+        </div>`}
   </section>`;
 }
 
@@ -280,11 +480,14 @@ export function vistaProfe(estado, ctx) {
     <div class="tarjeta" style="padding:12px">
       <div class="chat" id="chat">
         ${chat.length ? chat.map((m) => `<div class="burbuja ${m.rol === 'user' ? 'yo' : 'profe'}">${escapa(m.texto)}</div>`).join('')
-          : `<div class="burbuja profe">Hola, Nicer. Soy tu profe de guardia.
+          : `<div class="burbuja profe">Hola, ${escapa(estado.alumno.nombre)}. Soy tu profe de guardia.
 
 Pregúntame lo que no entiendas de clase y te lo explico paso a paso. Si son deberes, no te doy la solución hecha: te llevo hasta ella.
 
-También te puedo convertir un tema en tarjetas de repaso: escribe <strong>tarjetas de</strong> y el tema.</div>`}
+Y te preparo material del tema que me digas:
+· «hazme tarjetas de la célula»
+· «ponme un test del tema 2»
+· «hazme un esquema de la Edad Media»</div>`}
         ${pensando ? '<div class="burbuja profe"><span class="escribiendo"><i></i><i></i><i></i></span></div>' : ''}
         ${error ? `<div class="burbuja error">${escapa(error)}</div>` : ''}
       </div>
@@ -293,6 +496,20 @@ También te puedo convertir un tema en tarjetas de repaso: escribe <strong>tarje
         <div class="fila" style="margin-top:8px">
           <button class="mini fantasma" data-accion="descartar-tarjetas">No, gracias</button>
           <button class="mini principal" data-accion="guardar-tarjetas">Añadirlas al repaso</button>
+        </div>
+      </div>` : ''}
+      ${ctx.testPropuesto?.length ? `<div class="aviso-caja" style="margin-top:12px">
+        <strong>Test de ${plural(ctx.testPropuesto.length, 'pregunta', 'preguntas')}</strong> preparado.
+        <div class="fila" style="margin-top:8px">
+          <button class="mini fantasma" data-accion="descartar-test">Ahora no</button>
+          <button class="mini principal" data-accion="empezar-test-ia">Hacerlo ya</button>
+        </div>
+      </div>` : ''}
+      ${ctx.esquemaPropuesto ? `<div class="aviso-caja" style="margin-top:12px">
+        <strong>Esquema de ${escapa(ctx.esquemaPropuesto.titulo)}</strong> listo para guardar.
+        <div class="fila" style="margin-top:8px">
+          <button class="mini fantasma" data-accion="descartar-esquema">Ahora no</button>
+          <button class="mini principal" data-accion="guardar-esquema">Guardarlo</button>
         </div>
       </div>` : ''}
       <div style="margin-top:12px">
@@ -316,11 +533,27 @@ export function vistaYo(estado, ctx) {
   const total = R.puntos(estado);
   const niv = R.nivel(total);
   const semana = R.parteSemanal(estado, hoy);
+  const racha = R.rachaVigente(estado.racha, hoy);
+  const etapa = etapaDe(racha);
+  const tests = D.progresoTests(estado, hoy);
   const { porAsignatura, general } = D.medias(estado);
   const dias = D.minutosPorDia(estado, hoy, 7);
   const maximo = Math.max(30, ...dias.map((d) => d.minutos));
 
   return `
+  <section class="seccion">
+    <div class="tarjeta hero">
+      ${mascota(racha)}
+      <div class="texto">
+        <div class="saludo" style="font-size:1.05rem">${escapa(etapa.nombre)}</div>
+        <div class="frase">${escapa(etapa.frase)}</div>
+        <div style="margin-top:6px;font-size:.82rem;color:var(--tinta-2)">
+          ${racha ? plural(racha, 'día seguido', 'días seguidos') : 'Racha rota'} · récord ${plural(estado.racha.mejor || 0, 'día', 'días')}
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="seccion">
     <div class="tarjeta">
       <div style="display:flex;align-items:center;gap:10px">
@@ -350,6 +583,18 @@ export function vistaYo(estado, ctx) {
         </div>`).join('')}
       </div>
     </div>
+    ${tests.hechos ? `<div class="tarjeta" style="margin-top:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span>Media de tus tests</span>
+        <span class="pastilla ${(tests.media ?? tests.mediaTotal) >= 5 ? 'verde' : 'roja'}" style="margin-left:auto">
+          ${(tests.media ?? tests.mediaTotal).toFixed(1)}
+        </span>
+      </div>
+      <p style="font-size:.8rem;color:var(--tinta-2);margin-top:4px">
+        ${tests.semana ? `${plural(tests.semana, 'test esta semana', 'tests esta semana')} · ${plural(tests.hechos, 'test en total', 'tests en total')}`
+          : `Sin tests esta semana · ${plural(tests.hechos, 'test en total', 'tests en total')}`}
+      </p>
+    </div>` : ''}
     <button class="ancho" style="margin-top:10px" data-accion="parte">Enviar parte de la semana a papá</button>
   </section>
 
@@ -409,6 +654,15 @@ export function vistaYo(estado, ctx) {
         <div class="campo" style="margin:0"><label for="aj-desc">Descanso (min)</label>
           <input id="aj-desc" type="number" min="1" max="30" data-ajuste="ajustes.descanso" value="${estado.ajustes.descanso}" /></div>
       </div>
+      <div class="campo" style="margin-top:12px">
+        <label>Sonido de fondo mientras estudias</label>
+        <div class="chips">
+          ${AMBIENTES.map((a) => `<button class="chip${estado.ajustes.ambiente === a.id ? ' chip--activo' : ''}"
+            data-accion="elegir-ambiente" data-id="${a.id}">${a.emoji} ${a.nombre}</button>`).join('')}
+        </div>
+        <label for="aj-vol" style="margin-top:10px">Volumen</label>
+        <input id="aj-vol" type="range" min="0" max="1" step="0.05" data-ajuste="ajustes.volumen" value="${estado.ajustes.volumen}" />
+      </div>
       <div class="fila" style="margin-top:10px">
         <div class="campo" style="margin:0"><label for="aj-obj">Objetivo diario (min)</label>
           <input id="aj-obj" type="number" min="10" max="240" step="5" data-ajuste="ajustes.objetivoDiario" value="${estado.ajustes.objetivoDiario}" /></div>
@@ -442,7 +696,20 @@ export const formTarea = (estado, hoy) => `
     <input id="f-titulo" name="titulo" placeholder="Ej.: ejercicios 3 y 4 de la página 45" /></div>
   <div class="campo"><label for="f-asig">Asignatura</label>${selectorAsignatura(estado)}</div>
   <div class="campo"><label for="f-para">¿Para cuándo?</label>
-    <input id="f-para" name="para" type="date" value="${hoy}" /></div>`;
+    <input id="f-para" name="para" type="date" value="${hoy}" /></div>
+  <div class="fila" style="margin-top:10px">
+    <div class="campo" style="margin:0"><label for="f-prio">Prioridad</label>
+      <select id="f-prio" name="prioridad">
+        <option value="normal">Normal</option>
+        <option value="alta">Alta — esto primero</option>
+      </select></div>
+    <div class="campo" style="margin:0"><label for="f-rep">¿Se repite?</label>
+      <select id="f-rep" name="repetir">
+        <option value="no">No</option>
+        <option value="diaria">Cada día</option>
+        <option value="semanal">Cada semana</option>
+      </select></div>
+  </div>`;
 
 export const formExamen = (estado, hoy) => `
   <div class="campo"><label for="f-titulo">¿De qué es el examen?</label>
@@ -480,6 +747,13 @@ export const formNota = (estado, hoy) => `
     <input id="f-valor" name="valor" type="number" min="0" max="10" step="0.05" /></div>
   <div class="campo"><label for="f-fecha">Fecha</label>
     <input id="f-fecha" name="fecha" type="date" value="${hoy}" /></div>`;
+
+export const formApunte = (estado, apunte = null) => `
+  <div class="campo"><label for="f-titulo">Título</label>
+    <input id="f-titulo" name="titulo" value="${escapa(apunte?.titulo || '')}" placeholder="Ej.: Tema 2 — la célula" /></div>
+  <div class="campo"><label for="f-asig">Asignatura</label>${selectorAsignatura(estado, apunte?.asignaturaId || '')}</div>
+  <div class="campo"><label for="f-texto">Apunte</label>
+    <textarea id="f-texto" name="texto" rows="10" placeholder="Lo que dictó el profe, lo que entra en el examen, cómo se hace ese ejercicio…">${escapa(apunte?.texto || '')}</textarea></div>`;
 
 export const formImportar = () => `
   <div class="campo"><label for="f-copia">Pega aquí el contenido del archivo de copia</label>

@@ -10,8 +10,11 @@
 //   2. Ante algo serio (acoso, ánimo bajo, hacerse daño) no hace de psicólogo:
 //      responde con calidez y manda a un adulto, con los teléfonos de ayuda.
 //
-//  Si el alumno pide tarjetas de repaso, el modelo añade al final un bloque
-//  [[TARJETAS]]…[[/TARJETAS]] con JSON que aquí se extrae y se devuelve aparte.
+//  Si el alumno pide material, el modelo añade al final un bloque con JSON
+//  que aquí se extrae y se devuelve aparte, sin que el alumno lo vea:
+//    [[TARJETAS]] → tarjetas de repaso
+//    [[TEST]]     → preguntas de opción múltiple para autoevaluarse
+//    [[ESQUEMA]]  → el tema en ramas, que la app dibuja como mapa
 // ============================================================================
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -43,18 +46,33 @@ ${materias}.
 ## Nivel
 Explica al nivel de ${curso}. Nada de vocabulario universitario sin traducirlo.
 
-## Cuando pida tarjetas de repaso
-Si te pide tarjetas (o le vendría bien tenerlas de lo que estáis viendo), primero escribe tu
-respuesta normal y después añade AL FINAL, exactamente con este formato:
+## Material que puedes prepararle
+Cuando te lo pida (o cuando le venga claramente bien), escribe primero tu respuesta normal y
+después añade AL FINAL **un solo bloque** de los siguientes, con este formato exacto. Nunca
+menciones estos bloques en tu texto: el sistema los convierte en material él solo, y el alumno
+solo ve el resultado.
 
+**Tarjetas de repaso** — cuando pida tarjetas o esté estudiando un tema:
 [[TARJETAS]]
-[{"pregunta":"…","respuesta":"…","asignatura":"…"},{"pregunta":"…","respuesta":"…","asignatura":"…"}]
+[{"pregunta":"…","respuesta":"…","asignatura":"…"}]
 [[/TARJETAS]]
+Entre 5 y 12; una sola idea por tarjeta; respuesta de una o dos líneas y con sus palabras.
 
-Reglas de las tarjetas: entre 5 y 12; una sola idea por tarjeta; la pregunta clara y la
-respuesta de una o dos líneas, con sus palabras, no copiada de un libro. El campo
-"asignatura" tiene que ser una de las suyas si encaja. No menciones nunca este bloque en tu
-texto: el sistema lo convierte en tarjetas él solo.
+**Test** — cuando pida un test, un examen de prueba o ponerse a prueba:
+[[TEST]]
+{"titulo":"…","asignatura":"…","preguntas":[{"pregunta":"…","opciones":["…","…","…","…"],"correcta":0}]}
+[[/TEST]]
+Entre 5 y 10 preguntas, 4 opciones cada una, "correcta" es el índice (empezando en 0) de la
+buena. Las opciones falsas tienen que ser creíbles, no absurdas: si no, no se aprende nada.
+
+**Esquema** — cuando pida un esquema, un resumen visual o un mapa del tema:
+[[ESQUEMA]]
+{"titulo":"…","asignatura":"…","ramas":[{"titulo":"…","puntos":["…","…"]}]}
+[[/ESQUEMA]]
+Entre 3 y 6 ramas, cada una con 2 o 4 puntos cortos (una línea). El esquema es para verlo de
+un vistazo antes de memorizar, así que nada de párrafos.
+
+El campo "asignatura" tiene que ser una de las suyas si encaja.
 
 ## Límites
 - Solo estudios y organización del colegio. Si te pregunta otra cosa, lo reconduces con buen humor.
@@ -65,33 +83,86 @@ texto: el sistema lo convierte en tarjetas él solo.
 - Nunca pidas datos personales (dirección, teléfono, contraseñas).`;
 }
 
-/** Separa el texto visible del bloque de tarjetas. */
-export function separaTarjetas(bruto) {
-  const texto = String(bruto || "");
-  const m = /\[\[TARJETAS\]\]([\s\S]*?)\[\[\/TARJETAS\]\]/.exec(texto);
-  if (!m) return { visible: texto.trim(), tarjetas: [] };
-
-  const visible = texto.replace(m[0], "").trim();
-  let crudas = [];
+/** Saca un bloque [[NOMBRE]]…[[/NOMBRE]] y lo quita del texto visible. */
+function extraeBloque(texto, nombre) {
+  const patron = new RegExp(`\\[\\[${nombre}\\]\\]([\\s\\S]*?)\\[\\[/${nombre}\\]\\]`);
+  const m = patron.exec(texto);
+  if (!m) return { texto, datos: null };
+  const limpio = texto.replace(m[0], "").trim();
   try {
-    crudas = JSON.parse(m[1].trim());
+    return { texto: limpio, datos: JSON.parse(m[1].trim()) };
   } catch {
-    return { visible, tarjetas: [] }; // JSON roto: mejor sin tarjetas que con basura
+    return { texto: limpio, datos: null }; // JSON roto: mejor nada que basura
   }
-  if (!Array.isArray(crudas)) return { visible, tarjetas: [] };
+}
 
-  const tarjetas = crudas
-    .filter((t) => t && typeof t.pregunta === "string" && typeof t.respuesta === "string")
+const cadena = (v, largo) => (typeof v === "string" ? v.trim().slice(0, largo) : "");
+
+/**
+ * Separa el texto que ve el alumno del material que genera el modelo.
+ * Devuelve `{ visible, tarjetas, test, esquema }`; lo que no cuadre, se cae.
+ */
+export function separaBloques(bruto) {
+  let texto = String(bruto || "");
+
+  const conTarjetas = extraeBloque(texto, "TARJETAS");
+  texto = conTarjetas.texto;
+  const tarjetas = (Array.isArray(conTarjetas.datos) ? conTarjetas.datos : [])
     .map((t) => ({
-      pregunta: t.pregunta.trim().slice(0, 400),
-      respuesta: t.respuesta.trim().slice(0, 800),
-      asignatura: typeof t.asignatura === "string" ? t.asignatura.trim().slice(0, 60) : "",
+      pregunta: cadena(t?.pregunta, 400),
+      respuesta: cadena(t?.respuesta, 800),
+      asignatura: cadena(t?.asignatura, 60),
     }))
     .filter((t) => t.pregunta && t.respuesta)
     .slice(0, MAX_TARJETAS);
 
-  return { visible, tarjetas };
+  const conTest = extraeBloque(texto, "TEST");
+  texto = conTest.texto;
+  const brutoTest = conTest.datos;
+  const preguntas = (Array.isArray(brutoTest?.preguntas) ? brutoTest.preguntas : [])
+    .map((p) => {
+      const opciones = (Array.isArray(p?.opciones) ? p.opciones : [])
+        .map((o) => cadena(o, 200))
+        .filter(Boolean)
+        .slice(0, 4);
+      const correcta = Number(p?.correcta);
+      if (!cadena(p?.pregunta, 300) || opciones.length < 2) return null;
+      if (!Number.isInteger(correcta) || correcta < 0 || correcta >= opciones.length) return null;
+      return { pregunta: cadena(p.pregunta, 300), opciones, correcta };
+    })
+    .filter(Boolean)
+    .slice(0, 20);
+
+  const conEsquema = extraeBloque(texto, "ESQUEMA");
+  texto = conEsquema.texto;
+  const brutoEsquema = conEsquema.datos;
+  const ramas = (Array.isArray(brutoEsquema?.ramas) ? brutoEsquema.ramas : [])
+    .map((r) => ({
+      titulo: cadena(r?.titulo, 80),
+      puntos: (Array.isArray(r?.puntos) ? r.puntos : []).map((x) => cadena(x, 120)).filter(Boolean).slice(0, 6),
+    }))
+    .filter((r) => r.titulo)
+    .slice(0, 8);
+
+  return {
+    visible: texto.trim(),
+    tarjetas,
+    test: preguntas.length ? preguntas : [],
+    esquema: ramas.length
+      ? {
+          titulo: cadena(brutoEsquema?.titulo, 120) || "Esquema",
+          asignatura: cadena(brutoEsquema?.asignatura, 60),
+          ramas,
+        }
+      : null,
+  };
 }
+
+/** Compatibilidad: solo las tarjetas. */
+export const separaTarjetas = (bruto) => {
+  const { visible, tarjetas } = separaBloques(bruto);
+  return { visible, tarjetas };
+};
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -137,12 +208,14 @@ export default async function handler(req, res) {
       .filter((b) => b.type === "text")
       .map((b) => b.text)
       .join("\n");
-    const { visible, tarjetas } = separaTarjetas(bruto);
+    const { visible, tarjetas, test, esquema } = separaBloques(bruto);
 
     res.setHeader("Cache-Control", "no-store");
     return res.status(200).json({
       reply: visible || "Eso mejor se lo preguntas a tu profesor de clase. ¿Te ayudo con otra cosa?",
       tarjetas,
+      test,
+      esquema,
     });
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError) {

@@ -8,7 +8,7 @@
 import { aISO, sumaDias, diasEntre, diaSemana, id, esISO, limita, horaAMinutos, normalizaTexto } from './utiles.js';
 
 export const CLAVE = 'nicer-estudia:v1';
-export const VERSION_DATOS = 1;
+export const VERSION_DATOS = 2;
 
 /* Asignaturas de arranque para 1º-2º de ESO. Es una lista EDITABLE de
    partida, no el horario oficial del Colegio Lastra: en cuanto Nicer tenga
@@ -28,6 +28,7 @@ export const ASIGNATURAS_ESO = [
 ];
 
 export const TIPOS_TAREA = ['deber', 'trabajo', 'leer', 'estudiar'];
+export const REPETICIONES = ['no', 'diaria', 'semanal'];
 
 export function estadoInicial() {
   return {
@@ -39,15 +40,20 @@ export function estadoInicial() {
       objetivoDiario: 45,    // minutos de estudio al día
       tarjetasPorDia: 20,    // tope de repaso diario, para que nunca agobie
       profeIA: true,
-      sonido: true
+      sonido: true,
+      ambiente: 'ninguno',   // sonido de fondo del modo concentración
+      volumen: 0.5
     },
     asignaturas: [],
     horario: {},             // { '1'..'7': [{ id, asignaturaId, hora }] }
     tareas: [],
     examenes: [],
     tarjetas: [],
-    sesiones: [],            // { fecha, minutos, asignaturaId }
+    sesiones: [],            // { fecha, minutos, asignaturaId, salidas }
     notas: [],               // { id, asignaturaId, titulo, valor, fecha }
+    apuntes: [],             // { id, asignaturaId, titulo, texto, fecha }
+    esquemas: [],            // { id, asignaturaId, titulo, ramas, fecha }
+    tests: [],               // { id, asignaturaId, titulo, nota, aciertos, total, fecha }
     racha: { dias: 0, mejor: 0, ultimoDia: null },
     creado: aISO()
   };
@@ -68,7 +74,9 @@ export function normaliza(bruto) {
     objetivoDiario: limita(bruto.ajustes?.objetivoDiario ?? base.ajustes.objetivoDiario, 10, 240),
     tarjetasPorDia: limita(bruto.ajustes?.tarjetasPorDia ?? base.ajustes.tarjetasPorDia, 5, 100),
     profeIA: bruto.ajustes?.profeIA !== false,
-    sonido: bruto.ajustes?.sonido !== false
+    sonido: bruto.ajustes?.sonido !== false,
+    ambiente: String(bruto.ajustes?.ambiente || 'ninguno').slice(0, 20),
+    volumen: limita(bruto.ajustes?.volumen ?? 0.5, 0, 1)
   };
 
   const asignaturas = lista(bruto.asignaturas).map((a) => ({
@@ -95,6 +103,8 @@ export function normaliza(bruto) {
     asignaturaId: deAsignatura(t.asignaturaId),
     titulo: String(t.titulo || '').slice(0, 200),
     tipo: TIPOS_TAREA.includes(t.tipo) ? t.tipo : 'deber',
+    prioridad: t.prioridad === 'alta' ? 'alta' : 'normal',
+    repetir: REPETICIONES.includes(t.repetir) ? t.repetir : 'no',
     para: esISO(t.para) ? t.para : aISO(),
     hecha: Boolean(t.hecha),
     hechaEl: esISO(t.hechaEl) ? t.hechaEl : null,
@@ -128,7 +138,8 @@ export function normaliza(bruto) {
     .map((s) => ({
       fecha: s.fecha,
       minutos: limita(s.minutos, 0, 600),
-      asignaturaId: deAsignatura(s.asignaturaId)
+      asignaturaId: deAsignatura(s.asignaturaId),
+      salidas: Math.max(0, Number(s.salidas) || 0)
     }));
 
   const notas = lista(bruto.notas).map((n) => ({
@@ -138,6 +149,35 @@ export function normaliza(bruto) {
     valor: limita(n.valor, 0, 10),
     fecha: esISO(n.fecha) ? n.fecha : aISO()
   })).filter((n) => n.asignaturaId);
+
+  const apuntes = lista(bruto.apuntes).map((n) => ({
+    id: n.id || id('ap'),
+    asignaturaId: deAsignatura(n.asignaturaId),
+    titulo: String(n.titulo || 'Apunte').slice(0, 120),
+    texto: String(n.texto || '').slice(0, 20000),
+    fecha: esISO(n.fecha) ? n.fecha : aISO()
+  })).filter((n) => n.texto || n.titulo);
+
+  const esquemas = lista(bruto.esquemas).map((e) => ({
+    id: e.id || id('es'),
+    asignaturaId: deAsignatura(e.asignaturaId),
+    titulo: String(e.titulo || 'Esquema').slice(0, 120),
+    ramas: lista(e.ramas).slice(0, 8).map((r) => ({
+      titulo: String(r?.titulo || '').slice(0, 80),
+      puntos: lista(r?.puntos).slice(0, 6).map((p) => String(p).slice(0, 120)).filter(Boolean)
+    })).filter((r) => r.titulo),
+    fecha: esISO(e.fecha) ? e.fecha : aISO()
+  })).filter((e) => e.ramas.length);
+
+  const tests = lista(bruto.tests).map((t) => ({
+    id: t.id || id('te'),
+    asignaturaId: deAsignatura(t.asignaturaId),
+    titulo: String(t.titulo || 'Test').slice(0, 120),
+    aciertos: Math.max(0, Number(t.aciertos) || 0),
+    total: Math.max(1, Number(t.total) || 1),
+    nota: limita(t.nota, 0, 10),
+    fecha: esISO(t.fecha) ? t.fecha : aISO()
+  }));
 
   const racha = {
     dias: Math.max(0, Number(bruto.racha?.dias) || 0),
@@ -149,7 +189,7 @@ export function normaliza(bruto) {
   return {
     version: VERSION_DATOS,
     alumno, ajustes, asignaturas, horario, tareas, examenes, tarjetas,
-    sesiones, notas, racha,
+    sesiones, notas, apuntes, esquemas, tests, racha,
     creado: esISO(bruto.creado) ? bruto.creado : base.creado
   };
 }
@@ -217,10 +257,28 @@ export const colorAsignatura = (estado, asignaturaId) =>
 
 /** Tareas pendientes ordenadas por urgencia (lo atrasado primero). */
 export function pendientes(estado, hoy = aISO()) {
+  const peso = (t) => (t.prioridad === 'alta' ? 0 : 1);
   return estado.tareas
     .filter((t) => !t.hecha)
-    .sort((a, b) => a.para.localeCompare(b.para) || a.creada.localeCompare(b.creada))
+    .sort((a, b) => a.para.localeCompare(b.para) || peso(a) - peso(b) || a.creada.localeCompare(b.creada))
     .map((t) => ({ ...t, dias: diasEntre(hoy, t.para) }));
+}
+
+/* Tareas que se repiten (leer 20 minutos, flauta los martes): al marcarlas
+   hechas se crea la siguiente. Si la anterior se hizo tarde, la siguiente
+   cuenta desde hoy, no desde una fecha ya pasada: si no, nacía atrasada. */
+export function repiteTarea(tarea, hoy = aISO()) {
+  if (!tarea?.repetir || tarea.repetir === 'no') return null;
+  const salto = tarea.repetir === 'diaria' ? 1 : 7;
+  const base = tarea.para < hoy ? hoy : tarea.para;
+  return {
+    ...tarea,
+    id: id('ta'),
+    para: sumaDias(base, salto),
+    hecha: false,
+    hechaEl: null,
+    creada: hoy
+  };
 }
 
 /** Lo de hoy: lo que vence hoy y todo lo que se quedó atrás. */
@@ -279,6 +337,22 @@ export function medias(estado) {
     ? conNota.reduce((t, p) => t + p.media, 0) / conNota.length
     : null;
   return { porAsignatura, general };
+}
+
+export const apuntesDe = (estado, asignaturaId = null) =>
+  (estado.apuntes || [])
+    .filter((n) => !asignaturaId || n.asignaturaId === asignaturaId)
+    .slice()
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+/** Media de los tests de la última semana y del total: mide de verdad si se
+    está aprendiendo, no solo si se está sentado delante del libro. */
+export function progresoTests(estado, hoy = aISO(), dias = 7) {
+  const desde = sumaDias(hoy, -(dias - 1));
+  const todos = estado.tests || [];
+  const recientes = todos.filter((t) => t.fecha >= desde);
+  const media = (lista) => (lista.length ? lista.reduce((t, x) => t + x.nota, 0) / lista.length : null);
+  return { hechos: todos.length, semana: recientes.length, media: media(recientes), mediaTotal: media(todos) };
 }
 
 /** Busca una asignatura por nombre aproximado (lo usa el Profe IA al crear

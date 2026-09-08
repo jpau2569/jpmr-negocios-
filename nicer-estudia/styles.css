@@ -242,6 +242,58 @@ label { display: block; font-size: .8rem; font-weight: 600; color: var(--tinta-2
 .barra-progreso { height: 6px; border-radius: 999px; background: var(--borde); overflow: hidden; }
 .barra-progreso i { display: block; height: 100%; background: var(--azul); }
 
+/* ── Pestañas de Estudiar ──────────────────────────────────────── */
+.pestanas {
+  display: flex; gap: 4px; margin: 14px 0 4px; padding: 4px;
+  background: color-mix(in srgb, var(--borde) 45%, transparent);
+  border-radius: 12px;
+}
+.pestanas button {
+  flex: 1; min-height: 40px; padding: 0 6px;
+  border: 0; background: transparent; color: var(--tinta-2);
+  font-size: .84rem; font-weight: 600; border-radius: 9px;
+}
+.pestanas button[aria-selected="true"] {
+  background: var(--tarjeta); color: var(--tinta); box-shadow: var(--sombra);
+}
+.pestanas .cuenta {
+  display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 2px;
+  border-radius: 999px; background: var(--azul); color: var(--papel);
+  font-size: .68rem; line-height: 18px;
+}
+@media (prefers-color-scheme: dark) { .pestanas .cuenta { color: #08131a; } }
+
+/* ── Test ──────────────────────────────────────────────────────── */
+.opcion {
+  width: 100%; min-height: 52px; padding: 10px 14px;
+  justify-content: flex-start; text-align: left; font-weight: 500;
+  line-height: 1.35; white-space: normal;
+}
+.opcion--bien { border-color: var(--verde); background: var(--verde-suave); color: var(--tinta); font-weight: 650; }
+.opcion--mal { border-color: var(--rojo); background: var(--rojo-suave); color: var(--tinta); }
+.opcion:disabled { opacity: 1; cursor: default; }
+
+/* ── Esquemas ──────────────────────────────────────────────────── */
+.lienzo-esquema {
+  margin-top: 10px; overflow-x: auto; border: 1px solid var(--borde);
+  border-radius: 10px; background: #fff; -webkit-overflow-scrolling: touch;
+}
+.lienzo-esquema svg { display: block; width: 100%; height: auto; }
+/* La vista previa entra entera (se lee poco, pero se ve la forma del tema);
+   para leerlo se abre en grande, y ahí sí se desplaza a lo ancho. */
+.lienzo-esquema--grande { overflow-x: auto; }
+.lienzo-esquema--grande svg { min-width: 700px; }
+
+/* ── Chips (ambientes) ─────────────────────────────────────────── */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  min-height: 40px; padding: 0 12px; font-size: .84rem; font-weight: 600;
+  border-radius: 999px; background: var(--tarjeta); color: var(--tinta-2);
+}
+.chip--activo { background: var(--azul-suave); color: var(--azul); border-color: var(--azul); }
+
+input[type="range"] { min-height: 32px; padding: 0; accent-color: var(--azul); }
+
 /* ── Concentración ─────────────────────────────────────────────── */
 .foco {
   position: fixed; inset: 0; z-index: 60;
@@ -256,6 +308,9 @@ label { display: block; font-size: .8rem; font-weight: 600; color: var(--tinta-2
 }
 .foco .que { color: var(--tinta-2); font-size: .95rem; }
 .foco .acciones { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.foco .chips { justify-content: center; }
+.foco .planta { opacity: .9; }
+.foco .aguante { font-size: .82rem; color: var(--tinta-2); min-height: 20px; }
 .foco.descanso .reloj { color: var(--verde); }
 
 /* ── Chat del Profe ────────────────────────────────────────────── */

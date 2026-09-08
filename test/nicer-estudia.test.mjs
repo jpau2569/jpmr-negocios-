@@ -9,7 +9,10 @@ import * as U from "../nicer-estudia/utiles.js";
 import * as D from "../nicer-estudia/datos.js";
 import * as R from "../nicer-estudia/repaso.js";
 import * as UI from "../nicer-estudia/interfaz.js";
-import { separaTarjetas } from "../api/profe.js";
+import * as Q from "../nicer-estudia/cuestionario.js";
+import { dibujaEsquema, esquemaDeIA, parteTexto } from "../nicer-estudia/esquema.js";
+import * as A from "../nicer-estudia/ambiente.js";
+import { separaTarjetas, separaBloques } from "../api/profe.js";
 
 let pasados = 0, fallados = 0;
 const check = (nombre, cond, detalle = "") => {
@@ -150,6 +153,11 @@ console.log("\n🖨️  Render");
   check("el render escapa lo que escribe el alumno", !html.includes("<script>alert"));
   check("las vistas se pintan sin datos", UI.vistaHoy(D.normaliza({}), { hoy: HOY }).length > 100);
   check("la vista Yo aguanta el estado vacío", UI.vistaYo(D.normaliza({}), { hoy: HOY }).length > 100);
+  check("Estudiar se pinta en sus cuatro pestañas",
+    ["tarjetas", "test", "esquemas", "apuntes"]
+      .every((sub) => UI.vistaEstudiar(D.normaliza({}), { hoy: HOY, sub, hechasHoy: 0 }).length > 50));
+  check("la planta crece con la racha",
+    UI.etapaDe(0).nombre === "Semilla" && UI.etapaDe(15).nombre === "Árbol");
   check("los contadores de la barra cuadran", UI.contadores(e, HOY).agenda === 1);
 }
 
@@ -167,6 +175,104 @@ console.log("\n🤖 API del Profe");
   check("JSON roto no rompe la respuesta", separaTarjetas("hola [[TARJETAS]]{roto[[/TARJETAS]]").tarjetas.length === 0);
   check("tarjeta incompleta se descarta",
     separaTarjetas('x [[TARJETAS]][{"pregunta":"p"}][[/TARJETAS]]').tarjetas.length === 0);
+
+  const completo = separaBloques(`Ahí va.
+[[TEST]]{"titulo":"T","asignatura":"Mates","preguntas":[{"pregunta":"¿2+2?","opciones":["3","4"],"correcta":1}]}[[/TEST]]
+[[ESQUEMA]]{"titulo":"La célula","ramas":[{"titulo":"Partes","puntos":["Núcleo"]}]}[[/ESQUEMA]]`);
+  check("el test del Profe llega separado", completo.test.length === 1 && completo.test[0].correcta === 1);
+  check("el esquema del Profe llega separado", completo.esquema.titulo === "La célula");
+  check("ni el test ni el esquema llegan al chat",
+    completo.visible === "Ahí va." );
+  check("una pregunta sin opciones se cae",
+    separaBloques('x [[TEST]]{"preguntas":[{"pregunta":"p","opciones":[],"correcta":0}]}[[/TEST]]').test.length === 0);
+  check("un esquema vacío no llega", separaBloques('x [[ESQUEMA]]{"titulo":"t","ramas":[]}[[/ESQUEMA]]').esquema === null);
+}
+
+console.log("\n📝 Cuestionarios");
+{
+  const tarjetas = [1, 2, 3, 4, 5, 6].map((n) => ({
+    id: "t" + n, pregunta: "Pregunta " + n, respuesta: "Respuesta " + n, asignaturaId: "a1"
+  }));
+  // Azar determinista: si no, la prueba dependería de la suerte.
+  let semilla = 7;
+  const azar = () => ((semilla = (semilla * 9301 + 49297) % 233280) / 233280);
+
+  const test = Q.generaDesdeTarjetas(tarjetas, { cuantas: 4, azar });
+  check("el test sale de las tarjetas", test.length === 4);
+  check("cada pregunta tiene cuatro opciones", test.every((p) => p.opciones.length === 4));
+  check("la correcta es la respuesta de su tarjeta",
+    test.every((p) => p.opciones[p.correcta] === "Respuesta " + p.pregunta.split(" ")[1]));
+  check("no hay opciones repetidas", test.every((p) => new Set(p.opciones).size === p.opciones.length));
+  check("con menos de cuatro tarjetas no hay test", Q.generaDesdeTarjetas(tarjetas.slice(0, 3), { azar }).length === 0);
+  check("las tarjetas no se tocan al generar el test", tarjetas.every((t) => !("opciones" in t)));
+
+  const respuestas = test.map((p, i) => (i === 0 ? p.correcta : (p.correcta + 1) % p.opciones.length));
+  const r = Q.corrige(test, respuestas);
+  check("corrige y pone nota sobre 10", r.aciertos === 1 && r.total === 4 && r.nota === 2.5);
+  check("devuelve lo fallado para volver a repasarlo", r.falladas.length === 3);
+  check("sin responder nada, cero", Q.corrige(test, [null, null, null, null]).nota === 0);
+  check("el comentario cambia con la nota",
+    Q.comentario({ nota: 10, total: 4 }) !== Q.comentario({ nota: 2, total: 4 }));
+
+  const deIA = Q.preguntasDeIA([
+    { pregunta: "¿2+2?", opciones: ["3", "4"], correcta: 1 },
+    { pregunta: "rota", opciones: ["1"], correcta: 0 },
+    { pregunta: "fuera de rango", opciones: ["a", "b"], correcta: 9 }
+  ]);
+  check("del test del Profe solo pasa lo válido", deIA.length === 1 && deIA[0].correcta === 1);
+}
+
+console.log("\n🗺️  Esquemas");
+{
+  const esquema = {
+    titulo: "La célula",
+    ramas: [
+      { titulo: "Tipos", puntos: ["Procariota", "Eucariota"] },
+      { titulo: "Partes", puntos: ["Membrana", "Núcleo"] },
+      { titulo: "Funciones", puntos: ["Nutrición"] }
+    ]
+  };
+  const { svg, alto } = dibujaEsquema(esquema);
+  check("dibuja un SVG con todas las ramas",
+    svg.startsWith("<svg") && esquema.ramas.every((r) => svg.includes(r.titulo)));
+  check("el alto se adapta al contenido", alto > 200 && alto < 900);
+  check("el texto del alumno va escapado", dibujaEsquema({ titulo: "<script>", ramas: esquema.ramas }).svg.includes("&lt;script&gt;"));
+  check("parte las líneas largas", parteTexto("una frase bastante larga que no cabe de una sola vez", 20).length >= 3);
+  check("un esquema sin ramas no se guarda", esquemaDeIA({ titulo: "x", ramas: [] }) === null);
+  check("el esquema del Profe se limpia", esquemaDeIA({ titulo: "x", ramas: [{ titulo: "r", puntos: ["a", ""] }] }).ramas[0].puntos.length === 1);
+}
+
+console.log("\n🎧 Sonido de fondo");
+{
+  check("hay ambientes y todos tienen nombre", A.AMBIENTES.length >= 4 && A.AMBIENTES.every((x) => x.nombre));
+  check("cada ambiente que no es silencio tiene perfil",
+    A.AMBIENTES.filter((x) => x.id !== "ninguno").every((x) => A.perfil(x.id)));
+  check("un ambiente inventado no existe", A.perfil("reggaeton") === null);
+  check("sin Web Audio, no revienta: solo no suena",
+    A.crearAmbiente(null).reproducir("lluvia") === false);
+}
+
+console.log("\n🔁 Tareas que se repiten");
+{
+  const base = { id: "t1", titulo: "Leer 20 min", para: "2026-09-08", repetir: "diaria", hecha: true };
+  check("la diaria salta al día siguiente", D.repiteTarea(base, HOY).para === "2026-09-09");
+  check("la semanal salta siete días", D.repiteTarea({ ...base, repetir: "semanal" }, HOY).para === "2026-09-15");
+  check("si se hizo tarde, la siguiente cuenta desde hoy",
+    D.repiteTarea({ ...base, para: "2026-08-01" }, HOY).para === "2026-09-09");
+  check("la que no se repite no genera nada", D.repiteTarea({ ...base, repetir: "no" }, HOY) === null);
+  check("la nueva nace sin marcar", D.repiteTarea(base, HOY).hecha === false);
+}
+
+console.log("\n❗ Prioridad");
+{
+  const e = D.normaliza({
+    asignaturas: [{ id: "a1", nombre: "Mates", color: "#12628a" }],
+    tareas: [
+      { id: "n", titulo: "normal", para: HOY, prioridad: "normal", creada: "2026-09-01" },
+      { id: "a", titulo: "importante", para: HOY, prioridad: "alta", creada: "2026-09-07" }
+    ]
+  });
+  check("lo prioritario del mismo día va primero", D.pendientes(e, HOY)[0].id === "a");
 }
 
 console.log("\n🔎 Búsqueda de asignatura (la usa el Profe al crear tarjetas)");

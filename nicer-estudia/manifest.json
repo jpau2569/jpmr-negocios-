@@ -21,7 +21,7 @@
     { "src": "icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ],
   "shortcuts": [
-    { "name": "Repasar tarjetas", "short_name": "Repaso", "url": "app.html?vista=repaso" },
+    { "name": "Repasar tarjetas", "short_name": "Repaso", "url": "app.html?vista=estudiar" },
     { "name": "Apuntar deberes", "short_name": "Agenda", "url": "app.html?vista=agenda" },
     { "name": "Preguntar al Profe", "short_name": "Profe", "url": "app.html?vista=profe" }
   ]
