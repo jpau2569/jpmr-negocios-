@@ -3,7 +3,7 @@
   "id": "la-vina",
   "sector": "restaurante",
   "nombre": "Restaurante La Viña",
-  "eslogan": "Cocina asturiana de siempre en Cenera, Mieres",
+  "eslogan": "Cocina asturiana desde 1962, en el Valle de Cuna y Cenera",
   "logoUrl": "",
   "demo": {
     "activa": true,
@@ -19,13 +19,16 @@
       "Especialidades citadas: lechazo al horno, lacón con cachelos, cordero a la estaca, callos caseros, casadielles",
       "Instagram: @restaurantelavinacenera (facilitado por Pau)",
       "Ficha de TripAdvisor (facilitada por Pau)",
-      "Localidad: CENERA (confirmado por Pau, que es de allí). La ficha de TripAdvisor la lista bajo Casaviedra, pero la dirección buena es Ctra. de Cenera, 1 · 33615 Cenera, Mieres."
+      "Localidad: CENERA (confirmado por Pau, que es de allí). La ficha de TripAdvisor la lista bajo Casaviedra, pero la dirección buena es Ctra. de Cenera, 1 · 33615 Cenera, Mieres.",
+      "Horario: lunes y de miércoles a domingo, 12:00-02:00. Martes cerrado.",
+      "Correo: Restaurantelagarlavina@gmail.com",
+      "Servicios: consumo en el local, terraza y recogida en el establecimiento.",
+      "Abierto desde 1962, en el Valle de Cuna y Cenera."
     ],
     "pendiente": [
       "Carta completa y precios reales (aquí van precios de muestra).",
-      "Horario exacto de cocina y día de cierre.",
-      "Correo y WhatsApp del restaurante (mientras estén vacíos, la web ofrece llamar por teléfono).",
-      "Zonas y costes de reparto, si hacen comida para llevar o a domicilio.",
+      "WhatsApp del restaurante, si lo tienen (el correo y el teléfono ya están).",
+      "Confirmar si hacen reparto a domicilio: en su ficha solo consta recogida en el establecimiento.",
       "Turnos y aforo reales para las reservas.",
       "Fotos propias de los platos y del comedor."
     ]
@@ -40,9 +43,9 @@
     "telefono": "+34985426690",
     "telefonoTexto": "985 42 66 90",
     "whatsapp": "",
-    "email": "",
+    "email": "Restaurantelagarlavina@gmail.com",
     "direccion": "Ctra. de Cenera, 1 · 33615 Cenera, Mieres (Asturias)",
-    "horario": "Horario pendiente de confirmar con el restaurante",
+    "horario": "Lun y Mié-Dom 12:00-02:00 · Martes cerrado",
     "mapaLat": null,
     "mapaLng": null
   },
@@ -194,29 +197,20 @@
   },
   "pedidos": {
     "recogidaEnLocal": true,
-    "pedidoMinimo": 20,
-    "zonasReparto": [
-      {
-        "nombre": "Cenera",
-        "coste": 0,
-        "minimo": 20
-      },
-      {
-        "nombre": "Mieres casco urbano",
-        "coste": 3,
-        "minimo": 30
-      }
-    ],
+    "pedidoMinimo": 0,
+    "zonasReparto": [],
     "formasPago": [
       "Efectivo al recoger",
       "Tarjeta en el local"
     ],
-    "avisoLegal": "Zonas, costes y mínimos de muestra: los fija el restaurante. El pedido se confirma por teléfono antes de entrar en cocina."
+    "avisoLegal": "En su ficha pública solo consta recogida en el establecimiento, así que aquí el pedido se prepara para recoger. Si hacen reparto, se activa en un minuto desde el panel."
   },
   "reservas": {
     "maxComensales": 20,
     "antelacionDias": 30,
-    "diasCerrado": [],
+    "diasCerrado": [
+      2
+    ],
     "turnos": [
       "13:00",
       "13:30",
@@ -227,7 +221,7 @@
       "21:00",
       "21:30"
     ],
-    "aviso": "Turnos de muestra. Para grupos grandes o celebraciones, mejor llamar al 985 42 66 90."
+    "aviso": "Los martes cierran. Para grupos o celebraciones, mejor llamar al 985 42 66 90."
   },
   "qr": {
     "mesas": 14,

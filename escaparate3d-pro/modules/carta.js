@@ -17,6 +17,10 @@ export const meta = {
   provee3D: true,
 };
 
+// La ficha flotante tapa la tarjeta si el texto es largo: se recorta ahí, no
+// en el dato, que el detalle completo se ve al abrir el plato.
+const recortar = (t, max) => (t.length > max ? t.slice(0, max - 1).trimEnd() + "…" : t);
+
 const platosDe = (config) =>
   (config.carta?.categorias || []).flatMap((c) =>
     (c.platos || []).map((p) => ({ ...p, categoria: c.nombre, categoriaId: c.id })));
@@ -28,8 +32,11 @@ export function crearModulo(ctx) {
   let filtro = "todas";
 
   // --- Tarjetas para la escena 3D ---
+  //  Una carta de 45 platos no cabe en un carrusel: al 3D van los destacados
+  //  primero y hasta 24. La carta entera sigue completa en la lista de abajo.
   function elementos3D() {
-    return todos.map((p) => ({
+    const orden = [...todos].sort((a, b) => Number(Boolean(b.destacado)) - Number(Boolean(a.destacado)));
+    return orden.slice(0, Math.max(1, Number(config.carta?.maxTarjetas3D) || 24)).map((p) => ({
       id: p.id,
       titulo: p.nombre,
       lineas: [p.categoria, p.descripcion].filter(Boolean),
@@ -45,7 +52,7 @@ export function crearModulo(ctx) {
     const p = elemento.datos;
     return {
       titulo: p.nombre,
-      datos: [p.categoria, p.descripcion].filter(Boolean).join(" · "),
+      datos: recortar([p.categoria, p.descripcion].filter(Boolean).join(" · "), 150),
       precio: p.precio ? euros(p.precio, { decimales: p.precio % 1 ? 2 : 0 }) : "",
     };
   }

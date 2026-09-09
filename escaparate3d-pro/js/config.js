@@ -17,6 +17,7 @@
 export const CATALOGO = [
   { id: "castresana", archivo: "inmobiliaria-castresana.json", sector: "inmobiliaria", nombre: "Asesoría Castresana", real: true },
   { id: "la-vina", archivo: "restaurante-la-vina.json", sector: "restaurante", nombre: "Restaurante La Viña (Cenera)", real: true },
+  { id: "la-taberna", archivo: "restaurante-la-taberna.json", sector: "restaurante", nombre: "La Taberna · The White Bar (Mieres)", real: true },
   { id: "inmobiliaria-ejemplo", archivo: "inmobiliaria-ejemplo.json", sector: "inmobiliaria", nombre: "Fincas Ejemplo (ficticia)", real: false },
   { id: "restaurante-ejemplo", archivo: "restaurante-ejemplo.json", sector: "restaurante", nombre: "Casa Ejemplo (ficticia)", real: false },
 ];
