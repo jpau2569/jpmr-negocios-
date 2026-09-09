@@ -21,6 +21,7 @@ import {
 // negocio.json se enciende. Añadir una función nueva al producto es añadir una
 // línea aquí y un archivo en modules/.
 const REGISTRO = [
+  { id: "tour", ruta: "../modules/tour.js", sector: "todos", flag: "pedirDemo" },
   { id: "carta", ruta: "../modules/carta.js", sector: "restaurante", siempre: true },
   { id: "pedidos", ruta: "../modules/pedidos.js", sector: "restaurante", flag: "pedidosDomicilio" },
   { id: "reservas", ruta: "../modules/reservas.js", sector: "restaurante", flag: "reservas" },
@@ -50,6 +51,7 @@ async function arrancar() {
     almacen: crearAlmacen(config),
     mesa: (parametros.get("mesa") || "").replace(/\D/g, "") || null,
     abrirModulo: (id) => modulos.get(id)?.abrir?.(),
+    modulos,          // el tour necesita alcanzar a demo.compartir()
     refrescar,
   };
 
@@ -66,6 +68,8 @@ async function arrancar() {
   if (location.hash === "#pedido") modulos.get("pedidos")?.abrir?.();
   if (location.hash === "#demo") modulos.get("demo")?.abrir?.();
   if (location.hash === "#reserva") modulos.get("reservas")?.abrir?.();
+  if (location.hash === "#como-funciona") modulos.get("tour")?.abrir?.();
+  if (location.hash === "#compartir") modulos.get("demo")?.compartir?.();
   console.info(`[escaparate3d-pro] configuración: ${origen} · sector ${config.sector} · datos en modo ${ctx.almacen.modo}`);
 }
 

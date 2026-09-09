@@ -66,6 +66,11 @@ check("sin WhatsApp configurado el dato queda vacío (los botones se ocultarán)
   restaurante.contacto.whatsapp === "");
 check("el WhatsApp real se queda solo con las cifras", inmo.contacto.whatsapp === "34672775721");
 
+const comercial = normalizar({}).comercial;
+check("el precio de la aplicación real vive en el CONFIG", comercial.precio === 180);
+check("un precio absurdo no se cuela", normalizar({ comercial: { precio: -5 } }).comercial.precio === 0);
+check("la demo se regala y eso está declarado", comercial.demoGratis === true);
+check("hay una lista de lo que incluye, para no venderlo de palabra", comercial.incluye.length >= 4);
 check("el esquema admite TripAdvisor, que en hostelería es media venta",
   "tripadvisor" in normalizar({}).redes);
 check("un enlace javascript: en redes se descarta",
@@ -327,6 +332,33 @@ if (chromium) {
     (await pagina.locator(".tarjeta-qr").count()) === 14);
   check("el QR es un SVG dibujado, no una imagen de un servicio externo",
     (await pagina.locator(".tarjeta-qr svg").count()) === 14);
+  await pagina.locator("#modal-cerrar").click();
+
+  // --- El tour: lo que hace que una demo MANDADA se explique sola ---
+  await pagina.goto(BASE_URL + `index.html?negocio=la-vina&t=${Date.now()}#como-funciona`, { waitUntil: "networkidle" });
+  await pagina.waitForSelector("#modal-titulo:has-text('Cómo funciona')");
+  check("el tour arranca por el principio", (await pagina.textContent("#modal-cuerpo")).includes("Paso 1 de"));
+  const totalPasos = Number((await pagina.textContent("#modal-cuerpo")).match(/Paso 1 de (\d+)/)?.[1] || 0);
+  check("el tour tiene pasos suficientes para explicar el producto", totalPasos >= 6, String(totalPasos));
+  for (let i = 1; i < totalPasos; i++) await pagina.locator('#modal-cuerpo button:has-text("Siguiente")').click();
+  const ultimo = await pagina.textContent("#modal-cuerpo");
+  check("el tour termina en el precio, no en el aire", ultimo.includes("180"), ultimo.slice(0, 120));
+  check("y deja claro que la demo es gratis", ultimo.includes("gratis"));
+  await pagina.locator("#modal-cerrar").click();
+
+  // --- Mandar la demo ---
+  await pagina.goto(BASE_URL + `index.html?negocio=la-vina&mesa=3&t=${Date.now()}#compartir`, { waitUntil: "networkidle" });
+  await pagina.waitForSelector("#modal-titulo:has-text('Mandar esta demo')");
+  const enlace = await pagina.locator("#modal-cuerpo input").inputValue();
+  check("el enlace que se manda apunta a esta demo", enlace.includes("negocio=la-vina"), enlace);
+  check("y va limpio de la mesa por la que entró quien lo comparte", !enlace.includes("mesa="), enlace);
+  check("hay un QR para abrirla en el móvil del otro", (await pagina.locator("#modal-cuerpo .tarjeta-qr svg").count()) === 1);
+  await pagina.locator("#modal-cuerpo details summary").click();
+  const mensajeCompartir = await pagina.textContent("#modal-cuerpo .mensaje");
+  check("el mensaje explica qué es sin que tú estés delante",
+    mensajeCompartir.includes("no es un vídeo") || mensajeCompartir.includes("funcionando"), mensajeCompartir.slice(0, 100));
+  check("el mensaje lleva el enlace y el precio",
+    mensajeCompartir.includes("negocio=la-vina") && mensajeCompartir.includes("180"));
   await pagina.locator("#modal-cerrar").click();
 
   // Entrada por QR de mesa: con el carrito vacío el pedido no se abre a lo tonto,

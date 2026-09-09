@@ -69,6 +69,19 @@ export const POR_DEFECTO = {
     titulo: "¿Te gusta? Esto mismo, con tu negocio dentro",
     texto: "Lo que estás viendo es una demo real, no un vídeo: se puede montar con tus datos, tus fotos, tus colores y tu teléfono. Dime qué negocio tienes y te preparo la tuya.",
     plazo: "Demo lista en pocos días con lo que ya tengas publicado.",
+    // La demo se regala; lo que se cobra es la aplicación real del negocio.
+    demoGratis: true,
+    precio: 180,
+    moneda: "€",
+    incluye: [
+      "Tu web en 3D con tus colores, tu logo y tus fotos",
+      "Tus productos de verdad: la carta o la cartera completa",
+      "Todo funcionando: pedidos, reservas, QR o solicitudes de visita",
+      "Panel para que la cambies tú sin llamar a nadie",
+      "Publicada en internet, lista para poner en tus redes y en Google",
+    ],
+    // Enlace base para mandar la demo. Vacío = la dirección desde la que se abre.
+    enlaceDemo: "",
   },
 };
 
@@ -129,6 +142,9 @@ export function normalizar(bruto) {
   cfg.logoUrl = /^(https?:|\.\/|\/|data:image\/)/.test(String(cfg.logoUrl || "")) ? cfg.logoUrl : "";
   cfg.comercial.whatsapp = String(cfg.comercial.whatsapp || "").replace(/\D/g, "");
   cfg.comercial.web = enlaceSeguro(cfg.comercial.web);
+  cfg.comercial.enlaceDemo = enlaceSeguro(cfg.comercial.enlaceDemo);
+  const precio = Number(cfg.comercial.precio);
+  cfg.comercial.precio = Number.isFinite(precio) && precio > 0 ? precio : 0;
   // Un módulo de otro sector no se enciende aunque venga a true en el JSON.
   if (cfg.sector === "restaurante") {
     cfg.modulos.catalogoInmuebles = false;
