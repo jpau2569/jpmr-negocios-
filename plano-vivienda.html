@@ -1,0 +1,1230 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Plano de vivienda a escala uniforme, con vista 3D interactiva y estancias clicables. Las medidas se editan y todo se recalcula.">
+<meta name="theme-color" content="#12304F">
+<link rel="icon" href='data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" rx="18" fill="%2312304F"/%3E%3Ctext x="50" y="70" font-size="54" text-anchor="middle"%3E%F0%9F%8F%A0%3C/text%3E%3C/svg%3E'>
+<title>Plano de vivienda · Inmo Castresana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;500;600&display=swap">
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.169.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.169.0/examples/jsm/"}}
+</script>
+<style>
+  :root{
+    --papel:#F4F6F2; --hoja:#FFFFFF; --panel:#FBFCFA;
+    --tinta:#12304F; --tinta-2:#3D5670; --apunte:#6B7670;
+    --agua:#2E8FA8; --agua-suave:#E2F0F3;
+    --aviso:#9A6B1E; --aviso-fondo:#FBF3E3;
+    --linea:#DCE0D8; --linea-2:#C3CABE;
+    --sombra:0 1px 2px rgba(18,48,79,.05), 0 8px 24px rgba(18,48,79,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --papel:#101619; --hoja:#18201F; --panel:#141B1E;
+      --tinta:#E3EDEA; --tinta-2:#A9B8B5; --apunte:#8A9793;
+      --agua:#5CBCD3; --agua-suave:#173038;
+      --aviso:#E8C182; --aviso-fondo:#241D10;
+      --linea:#28322F; --linea-2:#3A4643;
+      --sombra:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.28);
+    }
+  }
+  :root[data-theme="dark"]{
+    --papel:#101619; --hoja:#18201F; --panel:#141B1E;
+    --tinta:#E3EDEA; --tinta-2:#A9B8B5; --apunte:#8A9793;
+    --agua:#5CBCD3; --agua-suave:#173038;
+    --aviso:#E8C182; --aviso-fondo:#241D10;
+    --linea:#28322F; --linea-2:#3A4643;
+    --sombra:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.28);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--papel); color:var(--tinta);
+    font-family:'Source Sans 3', system-ui, -apple-system, sans-serif;
+    font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  .marco{max-width:1400px; margin:0 auto; padding:26px 18px 64px}
+
+  .cabecera{border-bottom:1.5px solid var(--linea-2); padding-bottom:16px; margin-bottom:18px}
+  .sello{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; font-weight:500;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--apunte);
+    display:flex; gap:10px; align-items:baseline; flex-wrap:wrap;
+  }
+  .sello b{color:var(--agua); font-weight:600}
+  h1{
+    font-family:'Archivo', system-ui, sans-serif; font-weight:800;
+    font-size:clamp(26px, 4vw, 38px); line-height:1.06; letter-spacing:-.022em;
+    margin:10px 0 6px; text-wrap:balance;
+  }
+  .entradilla{color:var(--tinta-2); max-width:70ch; margin:0}
+
+  .aviso{
+    background:var(--aviso-fondo); border:1px solid var(--linea-2); border-left:4px solid var(--aviso);
+    color:var(--tinta); border-radius:8px; padding:12px 16px; margin:18px 0 22px;
+    font-size:14.5px;
+  }
+  .aviso b{color:var(--aviso)}
+
+  .tablero{display:grid; grid-template-columns:320px minmax(0,1fr); gap:22px; align-items:start}
+  @media (max-width: 980px){ .tablero{grid-template-columns:1fr} }
+
+  .panel{
+    background:var(--panel); border:1px solid var(--linea); border-radius:12px;
+    padding:16px 16px 20px; box-shadow:var(--sombra); position:sticky; top:16px;
+    max-height:calc(100vh - 32px); overflow:auto;
+  }
+  @media (max-width: 980px){ .panel{position:static; max-height:none} }
+
+  .grupo{margin:0 0 16px}
+  .grupo h3{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; font-weight:600;
+    letter-spacing:.13em; text-transform:uppercase; color:var(--apunte);
+    margin:0 0 8px; padding-bottom:6px; border-bottom:1px solid var(--linea);
+  }
+  .campo{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 0 7px}
+  .campo label{font-size:13.5px; color:var(--tinta-2); flex:1}
+  .campo input{
+    width:88px; flex:none; padding:6px 8px; text-align:right;
+    font-family:'IBM Plex Mono', monospace; font-size:13.5px;
+    color:var(--tinta); background:var(--hoja);
+    border:1px solid var(--linea-2); border-radius:6px;
+  }
+  .campo input:focus{outline:2px solid var(--agua); outline-offset:1px}
+  .campo .u{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--apunte); width:14px}
+
+  .botonera{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px}
+  button{
+    font-family:'Archivo', system-ui, sans-serif; font-weight:600; font-size:13.5px;
+    padding:9px 14px; border-radius:8px; border:1px solid var(--linea-2);
+    background:var(--hoja); color:var(--tinta); cursor:pointer;
+  }
+  button:hover{border-color:var(--agua); color:var(--agua)}
+  button.principal{background:var(--tinta); color:var(--papel); border-color:var(--tinta)}
+  button.principal:hover{background:var(--agua); border-color:var(--agua); color:#fff}
+  button.activa{background:var(--agua); border-color:var(--agua); color:#fff}
+
+  .lienzos{background:var(--hoja); border:1px solid var(--linea); border-radius:12px; box-shadow:var(--sombra); overflow:hidden}
+  .pestanas{display:flex; gap:6px; padding:10px 12px; border-bottom:1px solid var(--linea); flex-wrap:wrap; align-items:center}
+  .pestanas .sep{flex:1}
+  .vista{display:none}
+  .vista.viva{display:block}
+  #lienzo{display:block; width:100%; height:auto; background:#fff}
+  #escena{width:100%; aspect-ratio:16/10; min-height:320px; background:linear-gradient(#EAF0F4,#D9E3E8); position:relative}
+  #escena canvas{display:block; width:100%; height:100%}
+  #aviso3d{
+    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    text-align:center; padding:24px; color:#3D5670; font-size:15px;
+  }
+  .pista{padding:8px 14px 12px; font-size:13px; color:var(--apunte)}
+
+  .ficha{
+    margin-top:16px; background:var(--panel); border:1px solid var(--linea);
+    border-radius:12px; padding:16px; box-shadow:var(--sombra);
+    display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:18px;
+  }
+  @media (max-width: 720px){ .ficha{grid-template-columns:1fr} }
+  .ficha h2{font-family:'Archivo', sans-serif; font-size:20px; margin:0 0 4px}
+  .ficha .dato{font-family:'IBM Plex Mono', monospace; font-size:13.5px; color:var(--tinta-2); margin:2px 0}
+  .ficha .dato b{color:var(--tinta)}
+  .ficha input[type=text]{
+    width:100%; padding:7px 9px; margin-top:8px; font-size:14px;
+    color:var(--tinta); background:var(--hoja);
+    border:1px solid var(--linea-2); border-radius:6px;
+  }
+  .totales{border-left:1px solid var(--linea); padding-left:18px}
+  @media (max-width: 720px){ .totales{border-left:0; border-top:1px solid var(--linea); padding-left:0; padding-top:14px} }
+  .totales .fila{display:flex; justify-content:space-between; gap:12px; font-size:14px; padding:3px 0}
+  .totales .fila span:last-child{font-family:'IBM Plex Mono', monospace; font-weight:600}
+  .estado{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--apunte); margin-top:10px; min-height:16px}
+  footer{margin-top:34px; padding-top:14px; border-top:1px solid var(--linea); color:var(--apunte); font-size:13px}
+</style>
+</head>
+<body>
+<div class="marco">
+  <header class="cabecera">
+    <div class="sello"><b>Inmo Castresana</b> <span>·</span> <span>Plano de vivienda</span> <span>·</span> <span>escala uniforme en metros</span></div>
+    <h1>El croquis a mano, pasado a plano a escala y a 3D clicable</h1>
+    <p class="entradilla">Misma distribución del croquis: bloque de cocina y salón, patio central, bloque de tres habitaciones con baño, terraza a la calle y las dos puertas (principal y de servicio). Cambia una medida y se recalculan a la vez el plano, las superficies y la maqueta 3D.</p>
+  </header>
+
+  <div class="aviso">
+    <b>Medidas orientativas.</b> El croquis no trae cotas legibles, así que estas cifras respetan las proporciones del dibujo pero <b>no son las reales</b>. Escribe las medidas buenas en el panel de la izquierda y el plano pasa a estar a escala de verdad.
+  </div>
+
+  <div class="tablero">
+    <aside class="panel">
+      <div id="campos"></div>
+      <div class="botonera">
+        <button id="btnReset">Restablecer</button>
+        <button id="btnCopiar">Copiar medidas</button>
+      </div>
+      <div class="botonera">
+        <button id="btnPng" class="principal">Descargar plano PNG</button>
+        <button id="btnPng3d">Foto del 3D</button>
+      </div>
+      <div class="estado" id="estado"></div>
+    </aside>
+
+    <main>
+      <div class="lienzos">
+        <div class="pestanas">
+          <button id="tab2d" class="activa">Plano a escala</button>
+          <button id="tab3d">3D interactivo</button>
+          <span class="sep"></span>
+          <button id="btnTejado">Con tejado</button>
+          <button id="btnCenital">Vista cenital</button>
+          <button id="btnTresCuartos">Vista 3/4</button>
+          <button id="btnCalle">Desde la calle</button>
+        </div>
+        <div class="vista viva" id="vista2d"><canvas id="lienzo" width="1500" height="1000"></canvas></div>
+        <div class="vista" id="vista3d">
+          <div id="escena"><div id="aviso3d">Este navegador no puede pintar el 3D (WebGL). El plano a escala sigue funcionando en la otra pestaña.</div></div>
+        </div>
+        <p class="pista" id="pista">Toca cualquier estancia para ver su superficie y sus medidas. En el 3D: arrastra para girar, dos dedos o rueda para acercar.</p>
+      </div>
+
+      <section class="ficha">
+        <div>
+          <h2 id="fichaTitulo">Ninguna estancia seleccionada</h2>
+          <div class="dato" id="fichaTipo">Toca una estancia en el plano o en el 3D.</div>
+          <div class="dato" id="fichaArea"></div>
+          <div class="dato" id="fichaMedidas"></div>
+          <input type="text" id="fichaNombre" placeholder="Cambiar el nombre de la estancia" hidden>
+        </div>
+        <div class="totales" id="totales"></div>
+      </section>
+    </main>
+  </div>
+
+  <footer>Plano orientativo elaborado a partir del croquis a mano · Inmo Castresana · Las superficies son útiles aproximadas, medidas por dentro de muros. No sustituye a un plano visado ni a la nota simple.</footer>
+</div>
+
+<script type="module">
+/* ============================================================
+   Plano de vivienda a escala + 3D clicable
+   Todo parte de MEDIDAS (metros). Cambia un número y se
+   reconstruyen modelo, muros, plano 2D, superficies y 3D.
+   ============================================================ */
+
+const $ = id => document.getElementById(id);
+const fmt = n => (Math.round(n * 100) / 100).toString().replace('.', ',');
+const m2 = n => fmt(Math.round(n * 10) / 10) + ' m²';
+
+/* ---------- medidas por defecto (orientativas, del croquis) ---------- */
+
+const BASE = {
+  fondo: 9,
+  izqAncho: 8, cocinaAncho: 4.2, cocinaFondo: 3.4,
+  servAncho: 2.1, despensaFondo: 1.9, aseoFondo: 1.9,
+  patioAncho: 3.4,
+  derAncho: 6.4, derCol1: 3.2, habFondo: 3.6, banoFondo: 2.4,
+  terrazaAncho: 1.8, terrazaFondo: 3.6,
+  muro: 0.2, altura: 2.7
+};
+
+const CAMPOS = [
+  ['Conjunto', [['fondo','Fondo de la casa'], ['muro','Grosor de muro'], ['altura','Altura libre']]],
+  ['Bloque izquierdo · cocina y salón', [
+    ['izqAncho','Ancho del bloque'], ['cocinaAncho','Ancho de la cocina'], ['cocinaFondo','Fondo de la cocina'],
+    ['servAncho','Ancho franja despensa/aseo'], ['despensaFondo','Fondo de la despensa'], ['aseoFondo','Fondo del aseo']]],
+  ['Patio central', [['patioAncho','Ancho del patio']]],
+  ['Bloque derecho · habitaciones', [
+    ['derAncho','Ancho del bloque'], ['derCol1','Ancho de la columna izquierda'],
+    ['habFondo','Fondo de las habitaciones de arriba'], ['banoFondo','Fondo del baño']]],
+  ['Terraza a la calle', [['terrazaAncho','Ancho de la terraza'], ['terrazaFondo','Fondo de la terraza']]]
+];
+
+const CLAVE = 'plano-vivienda-castresana';
+let MED = { ...BASE };
+let nombres = {};
+let seleccion = null;
+
+/* ---------- el modelo: estancias como uniones de rectángulos ---------- */
+
+function construir(m){
+  const RX = m.izqAncho + m.patioAncho;                 // arranque del bloque derecho
+  const yDesp = m.cocinaFondo;
+  const yAseo = yDesp + m.despensaFondo;
+  const yEnt  = yAseo + m.aseoFondo;
+  const col2  = m.derAncho - m.derCol1;                 // columna derecha del bloque derecho
+  const yPas  = m.habFondo + m.banoFondo;
+
+  const estancias = [];
+  const add = (id, nombre, tipo, rects) => {
+    const r = rects.filter(([, , an, fo]) => an > .05 && fo > .05)
+                   .map(([x, y, an, fo]) => ({ x, y, an, fo }));
+    if (r.length) estancias.push({ id, nombre: nombres[id] || nombre, tipo, rects: r });
+  };
+
+  add('cocina', 'Cocina', 'seco', [[0, 0, m.cocinaAncho, m.cocinaFondo]]);
+  // El salón es la ele que rodea a cocina, despensa y aseo, igual que en el croquis.
+  add('salon', 'Salón', 'seco', [
+    [m.cocinaAncho, 0, m.izqAncho - m.cocinaAncho, m.cocinaFondo],
+    [m.servAncho, m.cocinaFondo, m.izqAncho - m.servAncho, m.fondo - m.cocinaFondo]
+  ]);
+  add('despensa', 'Despensa', 'servicio', [[0, yDesp, m.servAncho, m.despensaFondo]]);
+  add('aseo', 'Aseo', 'humedo', [[0, yAseo, m.servAncho, m.aseoFondo]]);
+  add('entrada', 'Entrada', 'servicio', [[0, yEnt, m.servAncho, m.fondo - yEnt]]);
+
+  add('hab1', 'Habitación 1', 'seco', [[RX, 0, m.derCol1, m.habFondo]]);
+  add('hab2', 'Habitación 2', 'seco', [[RX + m.derCol1, 0, col2, m.habFondo]]);
+  add('bano', 'Baño', 'humedo', [[RX, m.habFondo, m.derCol1, m.banoFondo]]);
+  add('hab3', 'Habitación 3', 'seco', [[RX + m.derCol1, m.habFondo, col2, m.fondo - m.habFondo]]);
+  add('pasillo', 'Pasillo', 'servicio', [[RX, yPas, m.derCol1, m.fondo - yPas]]);
+
+  const exteriores = [
+    { id:'patio', nombre: nombres.patio || 'Patio central', tipo:'patio', muro: Math.min(2.2, m.altura),
+      rects:[{ x:m.izqAncho, y:0, an:m.patioAncho, fo:m.fondo }] },
+    { id:'terraza', nombre: nombres.terraza || 'Terraza', tipo:'terraza', muro:0.95,
+      rects:[{ x:RX + m.derAncho, y:0, an:m.terrazaAncho, fo:m.terrazaFondo }] }
+  ].filter(e => e.rects.every(r => r.an > .05 && r.fo > .05));
+
+  // Huecos: puertas y ventanas colocadas donde las marca el croquis.
+  const H = [];
+  const hueco = (tipo, x1, y1, x2, y2) => H.push({ tipo, x1, y1, x2, y2 });
+  hueco('ventana', 0, .9, 0, 2.3);                                        // cocina al patio de la izquierda
+  hueco('puerta', .55, m.fondo, 1.55, m.fondo);                           // PUERTA DE SERVICIO
+  hueco('puerta', m.izqAncho + .9, m.fondo, m.izqAncho + 2.3, m.fondo);   // PUERTA PRINCIPAL, al patio
+  hueco('ventana', m.izqAncho, m.cocinaFondo + 1, m.izqAncho, m.cocinaFondo + 2.4); // salón al patio
+  hueco('ventana', RX, .9, RX, 2.3);                                      // habitación 1 al patio
+  hueco('ventana', RX + m.derAncho, .8, RX + m.derAncho, 2.2);            // habitación 2 a la terraza
+  hueco('ventana', RX + m.derAncho, m.habFondo + 1, RX + m.derAncho, m.habFondo + 2.4); // habitación 3 a la calle
+  hueco('ventana', RX, m.habFondo + .5, RX, m.habFondo + 1.3);            // baño al patio
+  // Puertas interiores
+  hueco('puerta', m.cocinaAncho, 1, m.cocinaAncho, 1.9);                  // cocina ↔ salón
+  hueco('puerta', m.servAncho, yDesp + .4, m.servAncho, yDesp + 1.2);     // despensa ↔ salón
+  hueco('puerta', m.servAncho, yAseo + .4, m.servAncho, yAseo + 1.2);     // aseo ↔ salón
+  hueco('puerta', m.servAncho, yEnt + .4, m.servAncho, yEnt + 1.2);       // entrada ↔ salón
+  hueco('puerta', RX, yPas + .5, RX, yPas + 1.4);                         // pasillo ↔ patio
+  hueco('puerta', RX + .4, m.habFondo, RX + 1.3, m.habFondo);             // habitación 1 ↔ baño
+  hueco('puerta', RX + .4, yPas, RX + 1.3, yPas);                         // baño ↔ pasillo
+  hueco('puerta', RX + m.derCol1, yPas + .5, RX + m.derCol1, yPas + 1.4); // pasillo ↔ habitación 3
+
+  const anchoTotal = RX + m.derAncho + m.terrazaAncho;
+  return { estancias, exteriores, huecos:H, RX, col2, yDesp, yAseo, yEnt, yPas,
+           anchoTotal, anchoCasa: RX + m.derAncho, fondo: m.fondo, m };
+}
+
+/* ---------- muros: unión de los bordes, menos los huecos ---------- */
+
+const EPS = 1e-6;
+
+function unir(lista){
+  const s = lista.slice().sort((a, b) => a[0] - b[0]);
+  const out = [];
+  for (const [a, b] of s){
+    const u = out[out.length - 1];
+    if (u && a <= u[1] + 1e-4) u[1] = Math.max(u[1], b);
+    else out.push([a, b]);
+  }
+  return out;
+}
+
+function restar(lista, cortes){
+  let out = lista.map(x => x.slice());
+  for (const [ca, cb] of cortes){
+    const sig = [];
+    for (const [a, b] of out){
+      if (cb <= a + EPS || ca >= b - EPS){ sig.push([a, b]); continue; }
+      if (ca > a + EPS) sig.push([a, ca]);
+      if (cb < b - EPS) sig.push([cb, b]);
+    }
+    out = sig;
+  }
+  return out.filter(([a, b]) => b - a > .02);
+}
+
+function bordes(rects){
+  // Devuelve dos mapas: horizontales por y, verticales por x.
+  const h = new Map(), v = new Map();
+  const mete = (mapa, c, a, b) => {
+    const k = c.toFixed(3);
+    if (!mapa.has(k)) mapa.set(k, { c, segs: [] });
+    mapa.get(k).segs.push([a, b]);
+  };
+  for (const r of rects){
+    mete(h, r.y, r.x, r.x + r.an);
+    mete(h, r.y + r.fo, r.x, r.x + r.an);
+    mete(v, r.x, r.y, r.y + r.fo);
+    mete(v, r.x + r.an, r.y, r.y + r.fo);
+  }
+  return { h, v };
+}
+
+function calcularMuros(modelo){
+  // Grupos por altura: primero la casa, después patio y terraza; lo que ya
+  // tiene muro de casa no se repite con menos altura.
+  const grupos = [
+    { rects: modelo.estancias.flatMap(e => e.rects), alt: modelo.m.altura },
+    ...modelo.exteriores.map(e => ({ rects: e.rects, alt: e.muro }))
+  ];
+  const cortesH = new Map(), cortesV = new Map();
+  for (const q of modelo.huecos){
+    const mapa = (Math.abs(q.x1 - q.x2) < EPS) ? cortesV : cortesH;
+    const c = (mapa === cortesV) ? q.x1 : q.y1;
+    const a = (mapa === cortesV) ? Math.min(q.y1, q.y2) : Math.min(q.x1, q.x2);
+    const b = (mapa === cortesV) ? Math.max(q.y1, q.y2) : Math.max(q.x1, q.x2);
+    const k = c.toFixed(3);
+    if (!mapa.has(k)) mapa.set(k, []);
+    mapa.get(k).push([a, b]);
+  }
+
+  // Dos rectángulos de la MISMA estancia (el salón en ele) no llevan muro entre ellos.
+  const meter = (mapa, c, a, b) => {
+    const k = c.toFixed(3);
+    if (!mapa.has(k)) mapa.set(k, []);
+    mapa.get(k).push([a, b]);
+  };
+  for (const e of [...modelo.estancias, ...modelo.exteriores]){
+    for (let i = 0; i < e.rects.length; i++){
+      for (let j = i + 1; j < e.rects.length; j++){
+        for (const [P, Q] of [[e.rects[i], e.rects[j]], [e.rects[j], e.rects[i]]]){
+          if (Math.abs(P.y + P.fo - Q.y) < 1e-4){
+            const a = Math.max(P.x, Q.x), b = Math.min(P.x + P.an, Q.x + Q.an);
+            if (b - a > .02) meter(cortesH, P.y + P.fo, a, b);
+          }
+          if (Math.abs(P.x + P.an - Q.x) < 1e-4){
+            const a = Math.max(P.y, Q.y), b = Math.min(P.y + P.fo, Q.y + Q.fo);
+            if (b - a > .02) meter(cortesV, P.x + P.an, a, b);
+          }
+        }
+      }
+    }
+  }
+
+  const usados = { h: new Map(), v: new Map() };
+  const muros = [];
+
+  for (const g of grupos){
+    const b = bordes(g.rects);
+    for (const [orient, mapa, cortes] of [['h', b.h, cortesH], ['v', b.v, cortesV]]){
+      for (const [k, { c, segs }] of mapa){
+        let tramos = unir(segs);
+        const ya = usados[orient].get(k) || [];
+        if (ya.length) tramos = restar(tramos, ya);
+        tramos = restar(tramos, cortes.get(k) || []);
+        for (const [a, bb] of tramos) muros.push({ orient, c, a, b: bb, alt: g.alt });
+        usados[orient].set(k, unir([...(usados[orient].get(k) || []), ...unir(segs)]));
+      }
+    }
+  }
+  return muros;
+}
+
+/* ---------- superficies ---------- */
+
+const areaDe = e => e.rects.reduce((s, r) => s + r.an * r.fo, 0);
+const mayorRect = e => e.rects.reduce((a, r) => (r.an * r.fo > a.an * a.fo ? r : a), e.rects[0]);
+
+/* ---------- colores del plano ---------- */
+
+const C = {
+  seco:'#F3EFE6', humedo:'#E1EEF2', servicio:'#ECEAE1',
+  patio:'#E6EFDE', terraza:'#F0E7D6',
+  muro:'#12304F', muroBajo:'#7F8D9B',
+  tinta:'#12304F', suave:'#6B7670', cota:'#3D5670',
+  sel:'#2E8FA8', selFondo:'rgba(46,143,168,.22)',
+  hueco:'#FFFFFF', vidrio:'#2E8FA8'
+};
+const F_TIT = "'Archivo', system-ui, sans-serif";
+const F_COTA = "'IBM Plex Mono', monospace";
+const F_TXT = "'Source Sans 3', system-ui, sans-serif";
+
+/* ---------- dibujo del plano 2D, a escala uniforme ---------- */
+
+let vista = { x0:0, y0:0, e:1 };   // transformación metros → píxeles del último dibujo
+
+function flecha(c, x, y, dx, dy, t){
+  c.beginPath();
+  c.moveTo(x, y);
+  c.lineTo(x + dx * t - dy * t * .45, y + dy * t - dx * t * .45);
+  c.lineTo(x + dx * t + dy * t * .45, y + dy * t + dx * t * .45);
+  c.closePath(); c.fill();
+}
+
+function cotaH(c, x1, x2, y, texto, tam){
+  if (x2 - x1 < 6) return;
+  c.save();
+  c.strokeStyle = C.cota; c.fillStyle = C.cota; c.lineWidth = 1.4;
+  c.beginPath(); c.moveTo(x1, y); c.lineTo(x2, y); c.stroke();
+  c.beginPath(); c.moveTo(x1, y - 8); c.lineTo(x1, y + 8);
+  c.moveTo(x2, y - 8); c.lineTo(x2, y + 8); c.stroke();
+  flecha(c, x1, y, 1, 0, 8); flecha(c, x2, y, -1, 0, 8);
+  c.font = `600 ${tam}px ${F_COTA}`;
+  const w = c.measureText(texto).width;
+  if (w + 14 < x2 - x1){
+    c.fillStyle = '#fff'; c.fillRect((x1 + x2) / 2 - w / 2 - 7, y - tam * .8, w + 14, tam * 1.6);
+    c.fillStyle = C.tinta; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(texto, (x1 + x2) / 2, y + 1);
+  } else {
+    c.fillStyle = C.tinta; c.textAlign = 'center'; c.textBaseline = 'bottom';
+    c.fillText(texto, (x1 + x2) / 2, y - 9);
+  }
+  c.restore();
+}
+
+function cotaV(c, y1, y2, x, texto, tam){
+  if (y2 - y1 < 6) return;
+  c.save();
+  c.strokeStyle = C.cota; c.fillStyle = C.cota; c.lineWidth = 1.4;
+  c.beginPath(); c.moveTo(x, y1); c.lineTo(x, y2); c.stroke();
+  c.beginPath(); c.moveTo(x - 8, y1); c.lineTo(x + 8, y1);
+  c.moveTo(x - 8, y2); c.lineTo(x + 8, y2); c.stroke();
+  flecha(c, x, y1, 0, 1, 8); flecha(c, x, y2, 0, -1, 8);
+  c.font = `600 ${tam}px ${F_COTA}`;
+  const w = c.measureText(texto).width;
+  c.fillStyle = '#fff'; c.fillRect(x - w / 2 - 7, (y1 + y2) / 2 - tam * .8, w + 14, tam * 1.6);
+  c.fillStyle = C.tinta; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(texto, x, (y1 + y2) / 2 + 1);
+  c.restore();
+}
+
+function rotuloEstancia(c, e, e0, x0, y0){
+  const r = mayorRect(e);
+  const cx = x0 + (r.x + r.an / 2) * e0, cy = y0 + (r.y + r.fo / 2) * e0;
+  const anPx = r.an * e0, foPx = r.fo * e0;
+  let tam = Math.max(11, Math.min(21, Math.min(anPx / 6.2, foPx / 3.2)));
+  const nombre = e.nombre.toUpperCase(), area = m2(areaDe(e));
+
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = `700 ${tam}px ${F_TIT}`;
+  let w = c.measureText(nombre).width;
+  while (w > anPx - 10 && tam > 9){ tam -= 1; c.font = `700 ${tam}px ${F_TIT}`; w = c.measureText(nombre).width; }
+  const cabe = w <= anPx - 8 && foPx > tam * 2.6;
+
+  if (cabe){
+    c.fillStyle = C.tinta;
+    c.font = `700 ${tam}px ${F_TIT}`;
+    c.fillText(nombre, cx, cy - tam * .62);
+    c.fillStyle = C.suave;
+    c.font = `500 ${tam * .88}px ${F_COTA}`;
+    c.fillText(area, cx, cy + tam * .72);
+  } else {
+    // No cabe dentro: rótulo fuera con línea guía, como en el croquis a mano.
+    const t = 13;
+    c.font = `700 ${t}px ${F_TIT}`;
+    const ancho = Math.max(c.measureText(nombre).width, c.measureText(area).width);
+    const rx = x0 - 16 - ancho, ry = cy;
+    c.strokeStyle = C.suave; c.lineWidth = 1.1;
+    c.beginPath(); c.moveTo(x0 + r.x * e0, ry); c.lineTo(rx + ancho + 6, ry); c.stroke();
+    c.textAlign = 'right';
+    c.fillStyle = C.tinta; c.fillText(nombre, rx + ancho, ry - t * .62);
+    c.fillStyle = C.suave; c.font = `500 ${t * .9}px ${F_COTA}`;
+    c.fillText(area, rx + ancho, ry + t * .72);
+  }
+}
+
+function dibujarHuecos(c, modelo, x0, y0, e0){
+  const g = Math.max(3, modelo.m.muro * e0);
+  for (const q of modelo.huecos){
+    const vert = Math.abs(q.x1 - q.x2) < EPS;
+    const ax = x0 + q.x1 * e0, ay = y0 + q.y1 * e0;
+    const bx = x0 + q.x2 * e0, by = y0 + q.y2 * e0;
+    const largo = Math.hypot(bx - ax, by - ay);
+    if (largo < 3) continue;
+
+    // el hueco ya está descontado del muro: aquí sólo va el símbolo
+    if (q.tipo === 'ventana'){
+      c.strokeStyle = C.muro; c.lineWidth = 1.2;
+      c.strokeRect(vert ? ax - g / 2 : ax, vert ? ay : ay - g / 2,
+                   vert ? g : bx - ax, vert ? by - ay : g);
+      c.strokeStyle = C.vidrio; c.lineWidth = 2;
+      c.beginPath();
+      if (vert){ c.moveTo(ax, ay); c.lineTo(ax, by); } else { c.moveTo(ax, ay); c.lineTo(bx, ay); }
+      c.stroke();
+    } else {
+      c.strokeStyle = C.muro; c.lineWidth = 2.2;
+      c.beginPath();
+      if (vert){
+        c.moveTo(ax, ay); c.lineTo(ax + largo * .82, ay);      // hoja de la puerta
+        c.stroke();
+        c.strokeStyle = 'rgba(18,48,79,.42)'; c.lineWidth = 1.2;
+        c.beginPath(); c.arc(ax, ay, largo * .82, 0, Math.PI / 2); c.stroke();
+      } else {
+        c.moveTo(ax, ay); c.lineTo(ax, ay + largo * .82);
+        c.stroke();
+        c.strokeStyle = 'rgba(18,48,79,.42)'; c.lineWidth = 1.2;
+        c.beginPath(); c.arc(ax, ay, largo * .82, 0, Math.PI / 2); c.stroke();
+      }
+    }
+  }
+}
+
+function dibujarPlano(c, modelo, muros, pw, ph, opts){
+  const o = opts || {};
+  const m = modelo.m;
+  c.fillStyle = '#fff'; c.fillRect(0, 0, pw, ph);
+
+  const mIzq = 128, mDer = 132, mSup = o.titulo ? 132 : 104, mInf = 128;
+  const dispW = pw - mIzq - mDer, dispH = ph - mSup - mInf;
+  const e0 = Math.min(dispW / modelo.anchoTotal, dispH / modelo.fondo);
+  const W = modelo.anchoTotal * e0, H = modelo.fondo * e0;
+  const x0 = mIzq + (dispW - W) / 2, y0 = mSup + (dispH - H) / 2;
+  vista = { x0, y0, e: e0 };
+
+  if (o.titulo){
+    c.fillStyle = C.tinta; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+    c.font = `800 34px ${F_TIT}`;
+    c.fillText(o.titulo, mIzq - 60, 56);
+    c.fillStyle = C.suave; c.font = `500 17px ${F_COTA}`;
+    c.fillText(o.subtitulo || '', mIzq - 60, 84);
+  }
+
+  // suelos
+  const pintar = (est, color) => {
+    for (const r of est.rects){
+      c.fillStyle = color;
+      c.fillRect(x0 + r.x * e0, y0 + r.y * e0, r.an * e0, r.fo * e0);
+    }
+  };
+  for (const e of modelo.exteriores) pintar(e, C[e.tipo] || C.patio);
+  for (const e of modelo.estancias) pintar(e, C[e.tipo] || C.seco);
+
+  // baldosa fina en las zonas exteriores, para que se lean como patio/terraza
+  c.save();
+  c.strokeStyle = 'rgba(18,48,79,.10)'; c.lineWidth = 1;
+  for (const ex of modelo.exteriores){
+    for (const r of ex.rects){
+      for (let x = r.x + 1; x < r.x + r.an - .05; x += 1){
+        c.beginPath(); c.moveTo(x0 + x * e0, y0 + r.y * e0); c.lineTo(x0 + x * e0, y0 + (r.y + r.fo) * e0); c.stroke();
+      }
+      for (let y = r.y + 1; y < r.y + r.fo - .05; y += 1){
+        c.beginPath(); c.moveTo(x0 + r.x * e0, y0 + y * e0); c.lineTo(x0 + (r.x + r.an) * e0, y0 + y * e0); c.stroke();
+      }
+    }
+  }
+  c.restore();
+
+  // estancia seleccionada
+  const sel = [...modelo.estancias, ...modelo.exteriores].find(e => e.id === o.sel);
+  if (sel){
+    for (const r of sel.rects){
+      c.fillStyle = C.selFondo;
+      c.fillRect(x0 + r.x * e0, y0 + r.y * e0, r.an * e0, r.fo * e0);
+    }
+    c.strokeStyle = C.sel; c.lineWidth = 3;
+    for (const r of sel.rects) c.strokeRect(x0 + r.x * e0, y0 + r.y * e0, r.an * e0, r.fo * e0);
+  }
+
+  // muros
+  const g = Math.max(3, m.muro * e0);
+  for (const w of muros){
+    c.fillStyle = (w.alt < m.altura - .3) ? C.muroBajo : C.muro;
+    if (w.orient === 'h') c.fillRect(x0 + w.a * e0, y0 + w.c * e0 - g / 2, (w.b - w.a) * e0, g);
+    else c.fillRect(x0 + w.c * e0 - g / 2, y0 + w.a * e0, g, (w.b - w.a) * e0);
+  }
+
+  dibujarHuecos(c, modelo, x0, y0, e0);
+
+  for (const e of modelo.estancias) rotuloEstancia(c, e, e0, x0, y0);
+  for (const e of modelo.exteriores){
+    const r = mayorRect(e);
+    const cx = x0 + (r.x + r.an / 2) * e0, cy = y0 + (r.y + r.fo / 2) * e0;
+    const tam = Math.max(11, Math.min(20, Math.min(r.an * e0 / 5.4, r.fo * e0 / 3.4)));
+    c.save();
+    c.translate(cx, cy);
+    if (r.fo * e0 > r.an * e0 * 1.6) c.rotate(-Math.PI / 2);
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = C.tinta; c.font = `700 ${tam}px ${F_TIT}`;
+    c.fillText(e.nombre.toUpperCase(), 0, -tam * .62);
+    c.fillStyle = C.suave; c.font = `500 ${tam * .88}px ${F_COTA}`;
+    c.fillText(m2(areaDe(e)), 0, tam * .72);
+    c.restore();
+  }
+
+  // rótulos de entorno: calle, patio y las dos puertas
+  c.save();
+  c.fillStyle = C.suave; c.font = `600 16px ${F_COTA}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.translate(x0 + W + 58, y0 + H / 2); c.rotate(Math.PI / 2);
+  c.fillText('C A L L E', 0, 0);
+  c.restore();
+  c.save();
+  c.fillStyle = C.suave; c.font = `600 16px ${F_COTA}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.translate(x0 - 62, y0 + H / 2); c.rotate(-Math.PI / 2);
+  c.fillText('P A T I O', 0, 0);
+  c.restore();
+
+  const puertas = [
+    { x: 1.05, txt: 'Puerta de servicio' },
+    { x: m.izqAncho + 1.6, txt: 'Puerta principal' }
+  ];
+  c.fillStyle = C.tinta; c.font = `600 14px ${F_TXT}`; c.textAlign = 'center'; c.textBaseline = 'top';
+  for (const p of puertas){
+    const px = x0 + p.x * e0;
+    c.strokeStyle = C.suave; c.lineWidth = 1.1;
+    c.beginPath(); c.moveTo(px, y0 + H + 4); c.lineTo(px, y0 + H + 30); c.stroke();
+    c.fillText(p.txt, px, y0 + H + 34);
+  }
+
+  // cotas
+  const RX = modelo.RX;
+  cotaH(c, x0, x0 + W, y0 - 62, `${fmt(modelo.anchoTotal)} m`, 19);
+  cotaH(c, x0, x0 + m.izqAncho * e0, y0 - 26, `${fmt(m.izqAncho)}`, 16);
+  cotaH(c, x0 + m.izqAncho * e0, x0 + RX * e0, y0 - 26, `${fmt(m.patioAncho)}`, 16);
+  cotaH(c, x0 + RX * e0, x0 + (RX + m.derAncho) * e0, y0 - 26, `${fmt(m.derAncho)}`, 16);
+  cotaH(c, x0 + (RX + m.derAncho) * e0, x0 + W, y0 - 26, `${fmt(m.terrazaAncho)}`, 16);
+  cotaV(c, y0, y0 + H, x0 - 34, `${fmt(m.fondo)} m`, 19);
+  cotaV(c, y0, y0 + m.cocinaFondo * e0, x0 + W + 30, `${fmt(m.cocinaFondo)}`, 15);
+  cotaV(c, y0, y0 + m.habFondo * e0, x0 + W + 88, `${fmt(m.habFondo)}`, 15);
+
+  // escala gráfica y pie
+  const bx = mIzq - 60, by = ph - 62, largo = 5 * e0;
+  c.strokeStyle = C.tinta; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(bx, by); c.lineTo(bx + largo, by); c.stroke();
+  for (let i = 0; i <= 5; i++){
+    const x = bx + (largo / 5) * i;
+    c.beginPath(); c.moveTo(x, by - 6); c.lineTo(x, by + 6); c.stroke();
+    if (i % 5 === 0){
+      c.fillStyle = C.suave; c.font = `500 13px ${F_COTA}`;
+      c.textAlign = 'center'; c.textBaseline = 'top';
+      c.fillText(i + ' m', x, by + 9);
+    }
+  }
+  c.fillStyle = C.suave; c.font = `500 13px ${F_COTA}`; c.textAlign = 'left'; c.textBaseline = 'middle';
+  c.fillText('escala gráfica · 1 m entre marcas', bx + largo + 16, by);
+
+  // leyenda: qué es cada trazo del plano
+  let lx = Math.max(bx + largo + 250, pw * .46), ly = by;
+  const item = (dibuja, texto) => {
+    dibuja(lx, ly);
+    c.fillStyle = C.suave; c.font = `500 13px ${F_TXT}`;
+    c.textAlign = 'left'; c.textBaseline = 'middle';
+    c.fillText(texto, lx + 34, ly);
+    lx += 34 + c.measureText(texto).width + 26;
+  };
+  item((x, y) => { c.fillStyle = C.muro; c.fillRect(x, y - 4, 26, 8); }, 'muro');
+  item((x, y) => { c.fillStyle = C.muroBajo; c.fillRect(x, y - 4, 26, 8); }, 'cerramiento bajo');
+  item((x, y) => { c.strokeStyle = C.muro; c.lineWidth = 1.2; c.strokeRect(x, y - 4, 26, 8);
+                   c.strokeStyle = C.vidrio; c.lineWidth = 2;
+                   c.beginPath(); c.moveTo(x, y); c.lineTo(x + 26, y); c.stroke(); }, 'ventana');
+  item((x, y) => { c.strokeStyle = C.muro; c.lineWidth = 2.2;
+                   c.beginPath(); c.moveTo(x, y + 9); c.lineTo(x, y - 9); c.stroke();
+                   c.strokeStyle = 'rgba(18,48,79,.42)'; c.lineWidth = 1.2;
+                   c.beginPath(); c.arc(x, y + 9, 18, -Math.PI / 2, 0); c.stroke(); }, 'puerta');
+
+  if (o.pie){
+    c.fillStyle = C.suave; c.font = `400 14px ${F_TXT}`; c.textAlign = 'right'; c.textBaseline = 'middle';
+    c.fillText(o.pie, pw - 40, ph - 34);
+  }
+}
+
+/* ---------- qué estancia hay en un punto ---------- */
+
+function estanciaEn(modelo, xm, ym){
+  for (const e of [...modelo.estancias, ...modelo.exteriores]){
+    for (const r of e.rects){
+      if (xm >= r.x && xm <= r.x + r.an && ym >= r.y && ym <= r.y + r.fo) return e;
+    }
+  }
+  return null;
+}
+
+/* ============================================================
+   Vista 3D: la misma geometría, levantada en Three.js.
+   Si el navegador no puede con WebGL, el plano 2D sigue vivo.
+   ============================================================ */
+
+const tres = { listo:false, fallo:false, THREE:null, escena:null, camara:null, render:null,
+               controles:null, grupo:null, suelos:[], tejado:null, conTejado:false, pedirRender:null };
+
+async function iniciar3D(){
+  if (tres.listo || tres.fallo) return;
+  try {
+    const THREE = await import('three');
+    const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+    const caja = $('escena');
+
+    const render = new THREE.WebGLRenderer({ antialias:true, alpha:false, preserveDrawingBuffer:true });
+    render.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    render.setSize(caja.clientWidth, caja.clientHeight || 420, false);
+    render.domElement.style.touchAction = 'none';
+    caja.appendChild(render.domElement);
+
+    const escena = new THREE.Scene();
+    escena.background = new THREE.Color(0xE8EEF2);
+
+    const camara = new THREE.PerspectiveCamera(42, (caja.clientWidth || 800) / (caja.clientHeight || 500), .1, 500);
+    const controles = new OrbitControls(camara, render.domElement);
+    controles.enableDamping = false;
+    controles.maxPolarAngle = Math.PI / 2.05;
+    controles.minDistance = 4;
+    controles.maxDistance = 120;
+
+    escena.add(new THREE.HemisphereLight(0xffffff, 0x9aa39c, 2.1));
+    const sol = new THREE.DirectionalLight(0xfff3e0, 1.5);
+    sol.position.set(14, 22, 10);
+    escena.add(sol);
+
+    const grupo = new THREE.Group();
+    escena.add(grupo);
+
+    let pendiente = false;
+    const pedirRender = () => {
+      if (pendiente) return;
+      pendiente = true;
+      requestAnimationFrame(() => { pendiente = false; render.render(escena, camara); });
+    };
+    controles.addEventListener('change', pedirRender);
+
+    Object.assign(tres, { listo:true, THREE, escena, camara, render, controles, grupo, pedirRender });
+
+    new ResizeObserver(() => {
+      const w = caja.clientWidth, h = caja.clientHeight || 420;
+      if (!w || !h) return;
+      render.setSize(w, h, false);
+      camara.aspect = w / h; camara.updateProjectionMatrix();
+      pedirRender();
+    }).observe(caja);
+
+    // clic sobre una estancia
+    const rayo = new THREE.Raycaster(), punt = new THREE.Vector2();
+    let inicio = null;
+    render.domElement.addEventListener('pointerdown', ev => { inicio = { x:ev.clientX, y:ev.clientY }; });
+    render.domElement.addEventListener('pointerup', ev => {
+      if (!inicio || Math.hypot(ev.clientX - inicio.x, ev.clientY - inicio.y) > 6) return;
+      const r = render.domElement.getBoundingClientRect();
+      punt.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+      punt.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+      rayo.setFromCamera(punt, camara);
+      const golpes = rayo.intersectObjects(tres.suelos, false);
+      seleccionar(golpes.length ? golpes[0].object.userData.id : null);
+    });
+
+    construir3D();
+    vista3('tres');
+  } catch (err){
+    tres.fallo = true;
+    $('aviso3d').style.display = 'flex';
+    console.warn('3D no disponible:', err);
+  }
+}
+
+function limpiarGrupo(){
+  const { THREE, grupo } = tres;
+  grupo.traverse(o => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material){
+      if (o.material.map) o.material.map.dispose();
+      o.material.dispose();
+    }
+  });
+  grupo.clear();
+  tres.suelos = [];
+  tres.tejado = null;
+  void THREE;
+}
+
+function rotulo3D(THREE, texto, sub){
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 160;
+  const x = c.getContext('2d');
+  x.clearRect(0, 0, c.width, c.height);
+  x.fillStyle = 'rgba(255,255,255,.86)';
+  x.strokeStyle = 'rgba(18,48,79,.25)'; x.lineWidth = 3;
+  const rr = (a, b, w, h, r) => {
+    x.beginPath();
+    x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r);
+    x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath();
+  };
+  rr(8, 20, 496, 120, 18); x.fill(); x.stroke();
+  x.fillStyle = '#12304F'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = `700 46px ${F_TIT}`;
+  x.fillText(texto.toUpperCase(), 256, 64);
+  x.fillStyle = '#5C6A72'; x.font = `500 36px ${F_COTA}`;
+  x.fillText(sub, 256, 110);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  const mat = new THREE.SpriteMaterial({ map:tex, transparent:true, depthTest:false, depthWrite:false });
+  const sp = new THREE.Sprite(mat);
+  sp.scale.set(3.1, .97, 1);
+  sp.renderOrder = 10;
+  return sp;
+}
+
+function construir3D(){
+  if (!tres.listo) return;
+  const { THREE, grupo } = tres;
+  limpiarGrupo();
+
+  const modelo = MODELO, muros = MUROS, m = modelo.m;
+  const dx = -modelo.anchoTotal / 2, dz = -modelo.fondo / 2;   // centrar la casa en el origen
+  const P = (x, z) => [x + dx, z + dz];
+
+  const matSuelo = {
+    seco: new THREE.MeshLambertMaterial({ color:0xEDE4D4 }),
+    humedo: new THREE.MeshLambertMaterial({ color:0xCFE2E8 }),
+    servicio: new THREE.MeshLambertMaterial({ color:0xE2DED2 }),
+    patio: new THREE.MeshLambertMaterial({ color:0xCBD9BE }),
+    terraza: new THREE.MeshLambertMaterial({ color:0xE0D2B6 })
+  };
+  const matMuro = new THREE.MeshLambertMaterial({ color:0xF3F0E8 });
+  const matMuroBajo = new THREE.MeshLambertMaterial({ color:0xD9D3C4 });
+  const matVidrio = new THREE.MeshLambertMaterial({ color:0x9CD3E2, transparent:true, opacity:.42 });
+
+  // terreno / calle
+  const suelo = new THREE.Mesh(
+    new THREE.PlaneGeometry(modelo.anchoTotal + 26, modelo.fondo + 26),
+    new THREE.MeshLambertMaterial({ color:0xC9CEC6 })
+  );
+  suelo.rotation.x = -Math.PI / 2;
+  suelo.position.y = -.16;
+  grupo.add(suelo);
+
+  // suelos de cada estancia (son los que se pueden clicar)
+  for (const e of [...modelo.estancias, ...modelo.exteriores]){
+    for (const r of e.rects){
+      const g = new THREE.BoxGeometry(r.an, .12, r.fo);
+      const mesh = new THREE.Mesh(g, matSuelo[e.tipo] ? matSuelo[e.tipo].clone() : matSuelo.seco.clone());
+      const [px, pz] = P(r.x + r.an / 2, r.y + r.fo / 2);
+      mesh.position.set(px, -.06, pz);
+      mesh.userData.id = e.id;
+      grupo.add(mesh);
+      tres.suelos.push(mesh);
+    }
+    const r = mayorRect(e);
+    const [lx, lz] = P(r.x + r.an / 2, r.y + r.fo / 2);
+    const sp = rotulo3D(THREE, e.nombre, m2(areaDe(e)));
+    sp.position.set(lx, .55, lz);
+    sp.userData.rotulo = true;
+    grupo.add(sp);
+  }
+
+  // muros
+  const gr = m.muro;
+  for (const w of muros){
+    const largo = w.b - w.a;
+    if (largo < .02) continue;
+    const geo = (w.orient === 'h') ? new THREE.BoxGeometry(largo, w.alt, gr)
+                                   : new THREE.BoxGeometry(gr, w.alt, largo);
+    const mesh = new THREE.Mesh(geo, w.alt < m.altura - .3 ? matMuroBajo : matMuro);
+    const [px, pz] = (w.orient === 'h') ? P(w.a + largo / 2, w.c) : P(w.c, w.a + largo / 2);
+    mesh.position.set(px, w.alt / 2, pz);
+    grupo.add(mesh);
+  }
+
+  // dinteles, antepechos y vidrios de los huecos
+  for (const q of modelo.huecos){
+    const vert = Math.abs(q.x1 - q.x2) < EPS;
+    const largo = vert ? Math.abs(q.y2 - q.y1) : Math.abs(q.x2 - q.x1);
+    if (largo < .05) continue;
+    const cx = (q.x1 + q.x2) / 2, cz = (q.y1 + q.y2) / 2;
+    const [px, pz] = P(cx, cz);
+    const caja = (alto, y, mat) => {
+      if (alto <= .02) return;
+      const geo = vert ? new THREE.BoxGeometry(gr, alto, largo) : new THREE.BoxGeometry(largo, alto, gr);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(px, y + alto / 2, pz);
+      grupo.add(mesh);
+    };
+    if (q.tipo === 'puerta'){
+      const h = Math.min(2.05, m.altura);
+      caja(m.altura - h, h, matMuro);                 // dintel
+    } else {
+      const bajo = .9, alto = Math.min(2.2, m.altura);
+      caja(bajo, 0, matMuro);                          // antepecho
+      caja(m.altura - alto, alto, matMuro);            // dintel
+      caja(alto - bajo, bajo, matVidrio);              // vidrio
+    }
+  }
+
+  // tejado (dos aguas planas, una por bloque), apagado por defecto
+  const tejado = new THREE.Group();
+  const matTejado = new THREE.MeshLambertMaterial({ color:0xB4614A, transparent:true, opacity:.94 });
+  const bloques = [
+    { x:0, an:m.izqAncho }, { x:modelo.RX, an:m.derAncho }
+  ];
+  for (const b of bloques){
+    const geo = new THREE.BoxGeometry(b.an + .5, .22, modelo.fondo + .5);
+    const t = new THREE.Mesh(geo, matTejado);
+    const [px, pz] = P(b.x + b.an / 2, modelo.fondo / 2);
+    t.position.set(px, m.altura + .11, pz);
+    tejado.add(t);
+  }
+  tejado.visible = tres.conTejado;
+  grupo.add(tejado);
+  tres.tejado = tejado;
+
+  pintarSeleccion3D();
+  tres.pedirRender();
+}
+
+function pintarSeleccion3D(){
+  if (!tres.listo) return;
+  for (const s of tres.suelos){
+    const activo = s.userData.id === seleccion;
+    s.material.color.set(activo ? 0x2E8FA8 : colorSuelo(s.userData.id));
+    s.material.needsUpdate = true;
+  }
+  tres.pedirRender();
+}
+
+function colorSuelo(id){
+  const e = [...MODELO.estancias, ...MODELO.exteriores].find(x => x.id === id);
+  const tabla = { seco:0xEDE4D4, humedo:0xCFE2E8, servicio:0xE2DED2, patio:0xCBD9BE, terraza:0xE0D2B6 };
+  return tabla[e ? e.tipo : 'seco'] || 0xEDE4D4;
+}
+
+function vista3(modo){
+  if (!tres.listo) return;
+  const { camara, controles } = tres;
+  const d = Math.max(MODELO.anchoTotal, MODELO.fondo);
+  controles.target.set(0, 1, 0);
+  if (modo === 'cenital') camara.position.set(0, d * 1.25, .001);
+  else if (modo === 'calle') camara.position.set(d * .9, d * .28, MODELO.fondo * .1);
+  else camara.position.set(-d * .55, d * .72, d * .85);
+  camara.updateProjectionMatrix();
+  controles.update();
+  tres.pedirRender();
+}
+
+/* ============================================================
+   Estado, formulario y conexión entre las dos vistas
+   ============================================================ */
+
+let MODELO = construir(MED);
+let MUROS = calcularMuros(MODELO);
+
+const decir = t => { $('estado').textContent = t; };
+
+/* ---------- memoria en el dispositivo ---------- */
+
+function cargarGuardado(){
+  try {
+    const crudo = localStorage.getItem(CLAVE);
+    if (!crudo) return;
+    const d = JSON.parse(crudo);
+    if (d && d.medidas) for (const k of Object.keys(BASE)){
+      const v = parseFloat(d.medidas[k]);
+      if (Number.isFinite(v) && v > 0) MED[k] = v;
+    }
+    if (d && d.nombres) nombres = d.nombres;
+  } catch (e){ /* sin memoria, se sigue con las de fábrica */ }
+}
+
+function guardarEstado(){
+  try { localStorage.setItem(CLAVE, JSON.stringify({ medidas:MED, nombres })); }
+  catch (e){ /* modo privado: no pasa nada */ }
+}
+
+/* ---------- formulario ---------- */
+
+function pintarFormulario(){
+  const cont = $('campos');
+  cont.innerHTML = '';
+  for (const [titulo, items] of CAMPOS){
+    const g = document.createElement('div');
+    g.className = 'grupo';
+    g.innerHTML = `<h3>${titulo}</h3>`;
+    for (const [clave, etiqueta] of items){
+      const fila = document.createElement('div');
+      fila.className = 'campo';
+      fila.innerHTML = `<label for="c_${clave}">${etiqueta}</label>
+        <input id="c_${clave}" type="number" min="0.2" step="0.1" value="${MED[clave]}"><span class="u">m</span>`;
+      g.appendChild(fila);
+    }
+    cont.appendChild(g);
+  }
+  for (const k of Object.keys(BASE)){
+    const el = $('c_' + k);
+    if (el) el.addEventListener('input', () => {
+      const v = parseFloat(el.value);
+      if (Number.isFinite(v) && v > 0.05) { MED[k] = v; recalcular(); }
+    });
+  }
+}
+
+function refrescarFormulario(){
+  for (const k of Object.keys(BASE)){
+    const el = $('c_' + k);
+    if (el) el.value = MED[k];
+  }
+}
+
+/* ---------- ficha y totales ---------- */
+
+function seleccionar(id){
+  seleccion = id;
+  dibujar2D();
+  pintarSeleccion3D();
+  actualizarFicha();
+}
+
+function actualizarFicha(){
+  const e = [...MODELO.estancias, ...MODELO.exteriores].find(x => x.id === seleccion);
+  const campo = $('fichaNombre');
+  if (!e){
+    $('fichaTitulo').textContent = 'Ninguna estancia seleccionada';
+    $('fichaTipo').textContent = 'Toca una estancia en el plano o en el 3D.';
+    $('fichaArea').textContent = '';
+    $('fichaMedidas').textContent = '';
+    campo.hidden = true;
+    return;
+  }
+  const tipos = { seco:'Estancia interior', humedo:'Zona húmeda', servicio:'Servicio y paso',
+                  patio:'Exterior · patio', terraza:'Exterior · terraza' };
+  $('fichaTitulo').textContent = e.nombre;
+  $('fichaTipo').textContent = tipos[e.tipo] || 'Estancia';
+  $('fichaArea').innerHTML = `Superficie útil <b>${m2(areaDe(e))}</b>`;
+  $('fichaMedidas').innerHTML = 'Medidas ' + e.rects
+    .map(r => `<b>${fmt(r.an)} × ${fmt(r.fo)} m</b>`).join(' + ');
+  campo.hidden = false;
+  campo.value = e.nombre;
+}
+
+function pintarTotales(){
+  const util = MODELO.estancias.reduce((s, e) => s + areaDe(e), 0);
+  const patio = MODELO.exteriores.filter(e => e.id === 'patio').reduce((s, e) => s + areaDe(e), 0);
+  const terraza = MODELO.exteriores.filter(e => e.id === 'terraza').reduce((s, e) => s + areaDe(e), 0);
+  const habs = MODELO.estancias.filter(e => e.id.startsWith('hab')).length;
+  const huella = MODELO.anchoCasa * MODELO.fondo;
+  const filas = [
+    ['Superficie útil interior', m2(util)],
+    ['Habitaciones', String(habs)],
+    ['Patio central', m2(patio)],
+    ['Terraza', m2(terraza)],
+    ['Huella del conjunto', m2(huella)],
+    ['Frente total', fmt(MODELO.anchoTotal) + ' m'],
+    ['Fondo', fmt(MODELO.fondo) + ' m']
+  ];
+  $('totales').innerHTML = '<div class="fila" style="font-weight:700"><span>Resumen</span><span></span></div>' +
+    filas.map(([a, b]) => `<div class="fila"><span>${a}</span><span>${b}</span></div>`).join('') +
+    '<div class="fila" style="margin-top:8px; font-size:12.5px; color:var(--apunte)"><span>Superficies útiles, medidas por dentro de muros.</span><span></span></div>';
+}
+
+/* ---------- dibujo 2D en pantalla ---------- */
+
+const lienzo = $('lienzo');
+const ctx = lienzo.getContext('2d');
+
+function dibujar2D(){
+  dibujarPlano(ctx, MODELO, MUROS, lienzo.width, lienzo.height, { sel: seleccion });
+}
+
+function recalcular(){
+  MODELO = construir(MED);
+  MUROS = calcularMuros(MODELO);
+  dibujar2D();
+  if (tres.listo) construir3D();
+  actualizarFicha();
+  pintarTotales();
+  guardarEstado();
+}
+
+lienzo.addEventListener('click', ev => {
+  const r = lienzo.getBoundingClientRect();
+  const px = (ev.clientX - r.left) * (lienzo.width / r.width);
+  const py = (ev.clientY - r.top) * (lienzo.height / r.height);
+  const xm = (px - vista.x0) / vista.e, ym = (py - vista.y0) / vista.e;
+  const e = estanciaEn(MODELO, xm, ym);
+  seleccionar(e ? e.id : null);
+});
+
+$('fichaNombre').addEventListener('input', ev => {
+  if (!seleccion) return;
+  const v = ev.target.value.trim();
+  if (v) nombres[seleccion] = v; else delete nombres[seleccion];
+  MODELO = construir(MED);
+  dibujar2D();
+  if (tres.listo) construir3D();
+  $('fichaTitulo').textContent = v || seleccion;
+  guardarEstado();
+});
+
+/* ---------- pestañas y botones ---------- */
+
+$('tab2d').addEventListener('click', () => {
+  $('vista2d').classList.add('viva'); $('vista3d').classList.remove('viva');
+  $('tab2d').classList.add('activa'); $('tab3d').classList.remove('activa');
+  $('pista').textContent = 'Toca cualquier estancia para ver su superficie y sus medidas.';
+});
+
+$('tab3d').addEventListener('click', async () => {
+  $('vista3d').classList.add('viva'); $('vista2d').classList.remove('viva');
+  $('tab3d').classList.add('activa'); $('tab2d').classList.remove('activa');
+  $('pista').textContent = 'Arrastra para girar, rueda o dos dedos para acercar, y toca una estancia para seleccionarla.';
+  decir('Cargando la maqueta 3D…');
+  await iniciar3D();
+  if (tres.listo){ construir3D(); tres.pedirRender(); decir('Maqueta 3D lista.'); }
+  else decir('Este navegador no puede pintar el 3D.');
+});
+
+$('btnTejado').addEventListener('click', () => {
+  tres.conTejado = !tres.conTejado;
+  $('btnTejado').textContent = tres.conTejado ? 'Sin tejado' : 'Con tejado';
+  $('btnTejado').classList.toggle('activa', tres.conTejado);
+  if (tres.tejado){ tres.tejado.visible = tres.conTejado; tres.pedirRender(); }
+});
+
+$('btnCenital').addEventListener('click', async () => { await iniciar3D(); vista3('cenital'); });
+$('btnTresCuartos').addEventListener('click', async () => { await iniciar3D(); vista3('tres'); });
+$('btnCalle').addEventListener('click', async () => { await iniciar3D(); vista3('calle'); });
+
+$('btnReset').addEventListener('click', () => {
+  MED = { ...BASE }; nombres = {}; seleccion = null;
+  refrescarFormulario(); recalcular(); actualizarFicha();
+  decir('Medidas de fábrica restablecidas.');
+});
+
+$('btnCopiar').addEventListener('click', async () => {
+  const texto = JSON.stringify({ medidas:MED, nombres }, null, 2);
+  try { await navigator.clipboard.writeText(texto); decir('Medidas copiadas al portapapeles.'); }
+  catch (e){ decir('No se ha podido copiar; las medidas están en el panel.'); }
+});
+
+/* ---------- descargas ---------- */
+
+function descargar(canvas, nombre){
+  canvas.toBlob(blob => {
+    if (!blob) return decir('No se ha podido generar el PNG.');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = nombre;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    decir('Descargado · ' + nombre);
+  }, 'image/png');
+}
+
+$('btnPng').addEventListener('click', () => {
+  const c = document.createElement('canvas');
+  c.width = 2200; c.height = 1500;
+  const x = c.getContext('2d');
+  const guardada = vista;                       // el PNG no debe cambiar el mapa de clics de pantalla
+  dibujarPlano(x, MODELO, MUROS, c.width, c.height, {
+    sel: null,
+    titulo: 'Plano orientativo de la vivienda',
+    subtitulo: `Inmo Castresana · escala uniforme · frente ${fmt(MODELO.anchoTotal)} m × fondo ${fmt(MODELO.fondo)} m`,
+    pie: 'Medidas orientativas tomadas del croquis a mano · pendientes de comprobar en la vivienda'
+  });
+  vista = guardada;
+  dibujar2D();
+  descargar(c, 'plano-vivienda-castresana.png');
+});
+
+$('btnPng3d').addEventListener('click', async () => {
+  await iniciar3D();
+  if (!tres.listo) return decir('El 3D no está disponible en este navegador.');
+  tres.render.render(tres.escena, tres.camara);
+  descargar(tres.render.domElement, 'plano-vivienda-3d.png');
+});
+
+/* ---------- arranque ---------- */
+
+cargarGuardado();
+pintarFormulario();
+recalcular();
+pintarTotales();
+
+const caras = ['800 34px Archivo', '700 21px Archivo', '600 19px "IBM Plex Mono"', '400 14px "Source Sans 3"'];
+if (document.fonts){
+  Promise.all(caras.map(f => document.fonts.load(f).catch(() => {}))).then(() => dibujar2D());
+}
+decir('Plano listo. Escribe tus medidas y se recalcula todo.');
+</script>
+</body>
+</html>
