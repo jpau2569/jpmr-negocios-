@@ -1,8 +1,9 @@
 # Escaparate 3D Pro — estado y cómo seguir
 
 > Nota para Pau (y para Clara/Claude cuando retomemos, desde el PC).
-> Sesión del **9 de septiembre de 2026**. Rama: `claude/escaparate-3d-white-label-kohg1a`.
-> Commit: `2a5a1cb`. **Todo está subido a GitHub: no se ha perdido nada.**
+> Sesión del **9 de septiembre de 2026**. Ya **fusionado en `main`** (`f4c83a7`).
+> Rama de trabajo: `claude/escaparate-3d-white-label-kohg1a`.
+> **Todo está subido a GitHub: no se ha perdido nada.** `npm test`: 382 en verde.
 
 ---
 
@@ -29,8 +30,10 @@ Es un mismo código que sirve a restaurantes e inmobiliarias cambiando solo
 - **`demos.html`** (hub comercial), **`admin/`** (panel del dueño) y
   **`admin/construir-total.html`** (de demo a app real: semáforo de 9 requisitos
   + descarga del paquete `.zip` del cliente).
-- **Tests**: `test/escaparate3d-pro.test.mjs`, 103 comprobaciones en verde.
-  `npm test` completo: 371 comprobaciones, 0 fallos.
+- **Backend propio** (`api/` + `lib/` dentro de la carpeta, copia exacta del
+  monorepo vigilada por un test): la carpeta se despliega suelta por cliente.
+- **Tests**: `test/escaparate3d-pro.test.mjs`, 113 comprobaciones en verde.
+  `npm test` completo: 382 comprobaciones, 0 fallos.
 
 ---
 
@@ -46,9 +49,21 @@ Es un mismo código que sirve a restaurantes e inmobiliarias cambiando solo
    Se arregla en 5 minutos desde `admin/` o desde `admin/construir-total.html`.
 2. **Redes de Castresana**: faltan Instagram, Facebook y ficha de Google. Están
    vacíos a propósito, y por eso esos botones no se pintan.
-3. **Desplegar y verlo en vivo.** Desde este entorno el proxy bloquea
-   `asesoriacastresana.com` (403), así que la cartera real no se pudo descargar
-   aquí; en Vercel sí funciona porque la lee `/api/escaparate`.
+3. **Desplegar y verlo en vivo — LO TIENE QUE HACER PAU.** Claude no puede:
+   la conexión con Vercel lee la cuenta pero **no tiene permiso para crear
+   proyectos** (403 forbidden). Y desde este entorno el proxy bloquea
+   `asesoriacastresana.com`, así que la cartera real solo se puede comprobar ya
+   desplegado. Pasos, 2 minutos y **sin ninguna clave**:
+
+   1. Abrir `https://vercel.com/new/import?s=https://github.com/jpau2569/jpmr-negocios-`
+   2. En **Root Directory** pulsar *Edit* y elegir **`escaparate3d-pro`**
+      (importante: así se publica solo el producto, no el monorepo entero).
+   3. Framework Preset: **Other**. Sin variables de entorno.
+   4. **Deploy**. Quedan vivos `/demos.html`, `/index.html?negocio=castresana`,
+      `/admin/` y `/api/escaparate`.
+
+   Lo primero que hay que mirar al abrirlo: que la demo de Castresana enseñe
+   **pisos de verdad** y no el respaldo de 7 inmuebles del JSON.
 4. **Opcional**: enlazar `escaparate3d-pro/demos.html` desde el `index.html` de
    la web, para tenerlo a mano en las visitas comerciales.
 
