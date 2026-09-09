@@ -16,7 +16,8 @@
       "Dirección: Ctra. de Cenera, 1 · 33615 Cenera, Mieres (Asturias)",
       "Teléfono: 985 42 66 90",
       "Página de Facebook",
-      "Especialidades citadas: lechazo al horno, lacón con cachelos, cordero a la estaca, callos caseros, casadielles"
+      "Especialidades citadas: lechazo al horno, lacón con cachelos, cordero a la estaca, callos caseros, casadielles",
+      "Instagram: @restaurantelavinacenera (facilitado por Pau)"
     ],
     "pendiente": [
       "Carta completa y precios reales (aquí van precios de muestra).",
@@ -45,7 +46,7 @@
   },
   "redes": {
     "web": "",
-    "instagram": "",
+    "instagram": "https://www.instagram.com/restaurantelavinacenera/",
     "facebook": "https://www.facebook.com/p/Restaurante-La-Vi%C3%B1a-Cenera-100076182274701/",
     "tiktok": "",
     "googleBusiness": ""
@@ -60,7 +61,11 @@
   },
   "datos": {
     "modo": "local",
-    "api": { "lead": "/api/lead", "pedido": "", "reserva": "" },
+    "api": {
+      "lead": "/api/lead",
+      "pedido": "",
+      "reserva": ""
+    },
     "firebase": {
       "apiKey": "",
       "authDomain": "",
@@ -79,26 +84,107 @@
         "id": "casa",
         "nombre": "Especialidades de la casa",
         "platos": [
-          { "id": "c1", "nombre": "Lechazo al horno", "descripcion": "Asado lento, la especialidad más citada de la casa.", "precio": 24, "foto": "", "destacado": true, "confirmado": true, "alergenos": [] },
-          { "id": "c2", "nombre": "Cordero a la estaca", "descripcion": "A la brasa, servido a la mesa.", "precio": 26, "foto": "", "destacado": true, "confirmado": true, "alergenos": [] },
-          { "id": "c3", "nombre": "Lacón con cachelos", "descripcion": "Con patata cocida y pimentón.", "precio": 16, "foto": "", "destacado": true, "confirmado": true, "alergenos": [] },
-          { "id": "c4", "nombre": "Callos caseros", "descripcion": "Guisados en casa, del día.", "precio": 14, "foto": "", "destacado": true, "confirmado": true, "alergenos": ["gluten"] }
+          {
+            "id": "c1",
+            "nombre": "Lechazo al horno",
+            "descripcion": "Asado lento, la especialidad más citada de la casa.",
+            "precio": 24,
+            "foto": "",
+            "destacado": true,
+            "confirmado": true,
+            "alergenos": []
+          },
+          {
+            "id": "c2",
+            "nombre": "Cordero a la estaca",
+            "descripcion": "A la brasa, servido a la mesa.",
+            "precio": 26,
+            "foto": "",
+            "destacado": true,
+            "confirmado": true,
+            "alergenos": []
+          },
+          {
+            "id": "c3",
+            "nombre": "Lacón con cachelos",
+            "descripcion": "Con patata cocida y pimentón.",
+            "precio": 16,
+            "foto": "",
+            "destacado": true,
+            "confirmado": true,
+            "alergenos": []
+          },
+          {
+            "id": "c4",
+            "nombre": "Callos caseros",
+            "descripcion": "Guisados en casa, del día.",
+            "precio": 14,
+            "foto": "",
+            "destacado": true,
+            "confirmado": true,
+            "alergenos": [
+              "gluten"
+            ]
+          }
         ]
       },
       {
         "id": "picar",
         "nombre": "Para picar",
         "platos": [
-          { "id": "p1", "nombre": "Tabla de quesos asturianos", "descripcion": "Plato de muestra: lo confirma el restaurante.", "precio": 12, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["lácteos"] },
-          { "id": "p2", "nombre": "Chorizo a la sidra", "descripcion": "Plato de muestra: lo confirma el restaurante.", "precio": 9, "foto": "", "destacado": false, "confirmado": false, "alergenos": [] }
+          {
+            "id": "p1",
+            "nombre": "Tabla de quesos asturianos",
+            "descripcion": "Plato de muestra: lo confirma el restaurante.",
+            "precio": 12,
+            "foto": "",
+            "destacado": false,
+            "confirmado": false,
+            "alergenos": [
+              "lácteos"
+            ]
+          },
+          {
+            "id": "p2",
+            "nombre": "Chorizo a la sidra",
+            "descripcion": "Plato de muestra: lo confirma el restaurante.",
+            "precio": 9,
+            "foto": "",
+            "destacado": false,
+            "confirmado": false,
+            "alergenos": []
+          }
         ]
       },
       {
         "id": "postres",
         "nombre": "Postres",
         "platos": [
-          { "id": "d1", "nombre": "Casadielles", "descripcion": "Postre asturiano citado en la carta de la casa.", "precio": 5, "foto": "", "destacado": true, "confirmado": true, "alergenos": ["gluten", "frutos secos"] },
-          { "id": "d2", "nombre": "Arroz con leche", "descripcion": "Postre de muestra: lo confirma el restaurante.", "precio": 5, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["lácteos"] }
+          {
+            "id": "d1",
+            "nombre": "Casadielles",
+            "descripcion": "Postre asturiano citado en la carta de la casa.",
+            "precio": 5,
+            "foto": "",
+            "destacado": true,
+            "confirmado": true,
+            "alergenos": [
+              "gluten",
+              "frutos secos"
+            ]
+          },
+          {
+            "id": "d2",
+            "nombre": "Arroz con leche",
+            "descripcion": "Postre de muestra: lo confirma el restaurante.",
+            "precio": 5,
+            "foto": "",
+            "destacado": false,
+            "confirmado": false,
+            "alergenos": [
+              "lácteos"
+            ]
+          }
         ]
       }
     ]
@@ -107,17 +193,37 @@
     "recogidaEnLocal": true,
     "pedidoMinimo": 20,
     "zonasReparto": [
-      { "nombre": "Cenera", "coste": 0, "minimo": 20 },
-      { "nombre": "Mieres casco urbano", "coste": 3, "minimo": 30 }
+      {
+        "nombre": "Cenera",
+        "coste": 0,
+        "minimo": 20
+      },
+      {
+        "nombre": "Mieres casco urbano",
+        "coste": 3,
+        "minimo": 30
+      }
     ],
-    "formasPago": ["Efectivo al recoger", "Tarjeta en el local"],
+    "formasPago": [
+      "Efectivo al recoger",
+      "Tarjeta en el local"
+    ],
     "avisoLegal": "Zonas, costes y mínimos de muestra: los fija el restaurante. El pedido se confirma por teléfono antes de entrar en cocina."
   },
   "reservas": {
     "maxComensales": 20,
     "antelacionDias": 30,
     "diasCerrado": [],
-    "turnos": ["13:00", "13:30", "14:00", "14:30", "15:00", "20:30", "21:00", "21:30"],
+    "turnos": [
+      "13:00",
+      "13:30",
+      "14:00",
+      "14:30",
+      "15:00",
+      "20:30",
+      "21:00",
+      "21:30"
+    ],
     "aviso": "Turnos de muestra. Para grupos grandes o celebraciones, mejor llamar al 985 42 66 90."
   },
   "qr": {
