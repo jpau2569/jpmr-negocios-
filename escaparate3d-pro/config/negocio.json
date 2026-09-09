@@ -1,0 +1,166 @@
+{
+  "version": 1,
+  "id": "castresana",
+  "sector": "inmobiliaria",
+  "nombre": "Asesoría Castresana",
+  "eslogan": "Inmobiliaria en Oviedo · compra, venta y alquiler en el centro de Asturias",
+  "logoUrl": "",
+  "demo": {
+    "activa": false,
+    "aviso": ""
+  },
+  "verificacion": {
+    "verificado": true,
+    "fuente": "Datos de contacto y cartera del propio negocio (www.asesoriacastresana.com), ya en uso en escaparate3d/ y api/escaparate.js.",
+    "pendiente": [
+      "Perfiles de Instagram / Facebook / Google Business, si se quieren mostrar como botones."
+    ]
+  },
+  "colores": {
+    "fondo": "#0b0f14",
+    "acento": "#c9a227",
+    "acento2": "#2f6bff",
+    "texto": "#e8eef6"
+  },
+  "contacto": {
+    "telefono": "+34985210468",
+    "telefonoTexto": "985 21 04 68",
+    "whatsapp": "34672775721",
+    "email": "asesoriacastresana@gmail.com",
+    "direccion": "C/ Cabo Noval, 8 Bajo 2 · 33007 Oviedo",
+    "horario": "L-V 10:00-13:30 y 16:30-19:30",
+    "mapaLat": null,
+    "mapaLng": null
+  },
+  "redes": {
+    "web": "https://www.asesoriacastresana.com",
+    "instagram": "",
+    "facebook": "",
+    "tiktok": "",
+    "googleBusiness": ""
+  },
+  "modulos": {
+    "pedidosDomicilio": false,
+    "reservas": false,
+    "qrMesas": false,
+    "catalogoInmuebles": true,
+    "valoracionGratis": true,
+    "pedirDemo": true
+  },
+  "datos": {
+    "modo": "api",
+    "api": {
+      "lead": "/api/lead",
+      "pedido": "",
+      "reserva": ""
+    },
+    "firebase": {
+      "apiKey": "",
+      "authDomain": "",
+      "projectId": "",
+      "coleccionPedidos": "pedidos",
+      "coleccionReservas": "reservas",
+      "coleccionConfig": "negocios"
+    }
+  },
+  "inmuebles": {
+    "origenes": [
+      "/escaparate3d/pisos.json",
+      "/api/escaparate"
+    ],
+    "maxTarjetas3D": 24,
+    "maxEnMensaje": 12,
+    "respaldo": [
+      {
+        "referencia": "PIS0160",
+        "titulo": "Piso 4º exterior en El Fontán, junto al casco antiguo",
+        "operacion": "venta",
+        "zona": "Oviedo",
+        "precio": 330000,
+        "superficieConstruida": 99,
+        "habitaciones": 3,
+        "banos": 2,
+        "foto": "",
+        "url": ""
+      },
+      {
+        "referencia": null,
+        "titulo": "Piso súper céntrico en Plaza de América",
+        "operacion": "venta",
+        "zona": "Oviedo",
+        "precio": 270000,
+        "superficieConstruida": 80,
+        "habitaciones": null,
+        "banos": null,
+        "foto": "",
+        "url": ""
+      },
+      {
+        "referencia": null,
+        "titulo": "Ático con ascensor en Calle Rosal · zona Parque San Francisco",
+        "operacion": "venta",
+        "zona": "Oviedo",
+        "precio": 145000,
+        "superficieConstruida": 51,
+        "habitaciones": 1,
+        "banos": 1,
+        "foto": "",
+        "url": ""
+      },
+      {
+        "referencia": "es1616045",
+        "titulo": "Piso a reformar con ascensor en Calle Rosal, centro de Oviedo",
+        "operacion": "venta",
+        "zona": "Oviedo",
+        "precio": null,
+        "superficieConstruida": 70,
+        "habitaciones": null,
+        "banos": null,
+        "foto": "",
+        "url": ""
+      },
+      {
+        "referencia": null,
+        "titulo": "Piso 2º en zona Ayuntamiento con cocina independiente",
+        "operacion": "venta",
+        "zona": "Oviedo",
+        "precio": null,
+        "superficieConstruida": 50,
+        "habitaciones": 1,
+        "banos": 1,
+        "foto": "",
+        "url": ""
+      },
+      {
+        "referencia": null,
+        "titulo": "Piso de 3 habitaciones en San Pedro – Siana, Mieres",
+        "operacion": "venta",
+        "zona": "Mieres",
+        "precio": 120000,
+        "superficieConstruida": 90,
+        "habitaciones": 3,
+        "banos": 1,
+        "foto": "",
+        "url": ""
+      },
+      {
+        "referencia": null,
+        "titulo": "Piso con 2 baños en pleno centro, Calle Avilés, Mieres",
+        "operacion": "venta",
+        "zona": "Mieres",
+        "precio": null,
+        "superficieConstruida": 85,
+        "habitaciones": 2,
+        "banos": 2,
+        "foto": "",
+        "url": ""
+      }
+    ],
+    "proxyFotos": "/api/foto?u="
+  },
+  "valoracion": {
+    "titulo": "¿Cuánto vale tu piso hoy?",
+    "texto": "Te damos un rango orientativo con lo que se está vendiendo de verdad en tu zona y, si quieres, una valoración firmada tras visitarlo. Sin compromiso y sin exclusiva de entrada.",
+    "preguntarDireccion": true
+  }
+}
