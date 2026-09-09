@@ -38,7 +38,7 @@ let config = null, escena = null, paleta = null, ctx = null;
 /* --- Arranque -------------------------------------------------------------- */
 
 async function arrancar() {
-  const { config: cfg, origen } = await fetchConfig({ parametros });
+  const { config: cfg, origen, noEncontrado } = await fetchConfig({ parametros });
   config = cfg;
   paleta = aplicarTema(config);
   document.title = `${config.nombre}${config.eslogan ? " · " + config.eslogan : ""}`;
@@ -63,6 +63,11 @@ async function arrancar() {
   montarSecciones();
   atajos();
 
+  if (noEncontrado) {
+    aviso(`No encuentro la demo «${noEncontrado}». Estás viendo ${config.nombre}. `
+      + "Si acabas de publicarla, recarga forzando (Ctrl+F5) o vuelve a entrar en un minuto.",
+      { error: true, ms: 12000 });
+  }
   if (ctx.mesa) aviso(`Estás en la ${config.qr?.prefijoMesa || "Mesa"} ${ctx.mesa}.`);
   // Enlaces directos: #pedido desde el QR, #demo desde el hub comercial.
   if (location.hash === "#pedido") modulos.get("pedidos")?.abrir?.();

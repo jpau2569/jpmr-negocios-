@@ -74,7 +74,10 @@ const vina = normalizar(CONFIGS.laVina);
 check("La Viña cierra los martes", vina.reservas.diasCerrado[0] === 2);
 check("La Viña ya tiene su correo real", vina.contacto.email.includes("@"));
 check("y su horario deja de ser «pendiente»", !vina.contacto.horario.toLowerCase().includes("pendiente"));
-check("un id inventado no resuelve a ningún archivo", archivoDeNegocio("no-existe") === "");
+check("un id nuevo resuelve por convenio a config/ejemplos/<id>.json",
+  archivoDeNegocio("bar-nuevo") === "config/ejemplos/bar-nuevo.json");
+check("un id con caracteres raros se rechaza",
+  archivoDeNegocio("../secreto") === "" && archivoDeNegocio("a b") === "");
 
 const restaurante = normalizar(CONFIGS.laVina);
 check("un restaurante no enciende módulos de inmobiliaria",
