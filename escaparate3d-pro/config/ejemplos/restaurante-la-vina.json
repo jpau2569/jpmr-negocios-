@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "id": "la-vina",
+  "sector": "restaurante",
+  "nombre": "Restaurante La Viña",
+  "eslogan": "Cocina asturiana de siempre en Cenera, Mieres",
+  "logoUrl": "",
+  "demo": {
+    "activa": true,
+    "aviso": "Demo comercial. El contacto y las especialidades salen de fichas públicas del restaurante; la carta completa, los precios, las zonas de reparto y los turnos son de muestra y los confirma el restaurante antes de publicar."
+  },
+  "verificacion": {
+    "verificado": false,
+    "fuente": "Fichas públicas del negocio (Facebook, cylex, qdq, listae) consultadas el 2026-09-09.",
+    "confirmado": [
+      "Dirección: Ctra. de Cenera, 1 · 33615 Cenera, Mieres (Asturias)",
+      "Teléfono: 985 42 66 90",
+      "Página de Facebook",
+      "Especialidades citadas: lechazo al horno, lacón con cachelos, cordero a la estaca, callos caseros, casadielles"
+    ],
+    "pendiente": [
+      "Carta completa y precios reales (aquí van precios de muestra).",
+      "Horario exacto de cocina y día de cierre.",
+      "Correo y WhatsApp del restaurante (mientras estén vacíos, la web ofrece llamar por teléfono).",
+      "Zonas y costes de reparto, si hacen comida para llevar o a domicilio.",
+      "Turnos y aforo reales para las reservas.",
+      "Fotos propias de los platos y del comedor."
+    ]
+  },
+  "colores": {
+    "fondo": "#140e0b",
+    "acento": "#d98324",
+    "acento2": "#8fbf6a",
+    "texto": "#f7f0e8"
+  },
+  "contacto": {
+    "telefono": "+34985426690",
+    "telefonoTexto": "985 42 66 90",
+    "whatsapp": "",
+    "email": "",
+    "direccion": "Ctra. de Cenera, 1 · 33615 Cenera, Mieres (Asturias)",
+    "horario": "Horario pendiente de confirmar con el restaurante",
+    "mapaLat": null,
+    "mapaLng": null
+  },
+  "redes": {
+    "web": "",
+    "instagram": "",
+    "facebook": "https://www.facebook.com/p/Restaurante-La-Vi%C3%B1a-Cenera-100076182274701/",
+    "tiktok": "",
+    "googleBusiness": ""
+  },
+  "modulos": {
+    "pedidosDomicilio": true,
+    "reservas": true,
+    "qrMesas": true,
+    "catalogoInmuebles": false,
+    "valoracionGratis": false,
+    "pedirDemo": true
+  },
+  "datos": {
+    "modo": "local",
+    "api": { "lead": "/api/lead", "pedido": "", "reserva": "" },
+    "firebase": {
+      "apiKey": "",
+      "authDomain": "",
+      "projectId": "",
+      "coleccionPedidos": "pedidos",
+      "coleccionReservas": "reservas",
+      "coleccionConfig": "negocios"
+    }
+  },
+  "carta": {
+    "preciosEjemplo": true,
+    "moneda": "€",
+    "aviso": "Precios de muestra. La carta y los precios reales los pone el restaurante desde el panel.",
+    "categorias": [
+      {
+        "id": "casa",
+        "nombre": "Especialidades de la casa",
+        "platos": [
+          { "id": "c1", "nombre": "Lechazo al horno", "descripcion": "Asado lento, la especialidad más citada de la casa.", "precio": 24, "foto": "", "destacado": true, "confirmado": true, "alergenos": [] },
+          { "id": "c2", "nombre": "Cordero a la estaca", "descripcion": "A la brasa, servido a la mesa.", "precio": 26, "foto": "", "destacado": true, "confirmado": true, "alergenos": [] },
+          { "id": "c3", "nombre": "Lacón con cachelos", "descripcion": "Con patata cocida y pimentón.", "precio": 16, "foto": "", "destacado": true, "confirmado": true, "alergenos": [] },
+          { "id": "c4", "nombre": "Callos caseros", "descripcion": "Guisados en casa, del día.", "precio": 14, "foto": "", "destacado": true, "confirmado": true, "alergenos": ["gluten"] }
+        ]
+      },
+      {
+        "id": "picar",
+        "nombre": "Para picar",
+        "platos": [
+          { "id": "p1", "nombre": "Tabla de quesos asturianos", "descripcion": "Plato de muestra: lo confirma el restaurante.", "precio": 12, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["lácteos"] },
+          { "id": "p2", "nombre": "Chorizo a la sidra", "descripcion": "Plato de muestra: lo confirma el restaurante.", "precio": 9, "foto": "", "destacado": false, "confirmado": false, "alergenos": [] }
+        ]
+      },
+      {
+        "id": "postres",
+        "nombre": "Postres",
+        "platos": [
+          { "id": "d1", "nombre": "Casadielles", "descripcion": "Postre asturiano citado en la carta de la casa.", "precio": 5, "foto": "", "destacado": true, "confirmado": true, "alergenos": ["gluten", "frutos secos"] },
+          { "id": "d2", "nombre": "Arroz con leche", "descripcion": "Postre de muestra: lo confirma el restaurante.", "precio": 5, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["lácteos"] }
+        ]
+      }
+    ]
+  },
+  "pedidos": {
+    "recogidaEnLocal": true,
+    "pedidoMinimo": 20,
+    "zonasReparto": [
+      { "nombre": "Cenera", "coste": 0, "minimo": 20 },
+      { "nombre": "Mieres casco urbano", "coste": 3, "minimo": 30 }
+    ],
+    "formasPago": ["Efectivo al recoger", "Tarjeta en el local"],
+    "avisoLegal": "Zonas, costes y mínimos de muestra: los fija el restaurante. El pedido se confirma por teléfono antes de entrar en cocina."
+  },
+  "reservas": {
+    "maxComensales": 20,
+    "antelacionDias": 30,
+    "diasCerrado": [],
+    "turnos": ["13:00", "13:30", "14:00", "14:30", "15:00", "20:30", "21:00", "21:30"],
+    "aviso": "Turnos de muestra. Para grupos grandes o celebraciones, mejor llamar al 985 42 66 90."
+  },
+  "qr": {
+    "mesas": 14,
+    "prefijoMesa": "Mesa",
+    "destino": "carta"
+  }
+}

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b0f14">
+<title>Escaparate 3D · demos reales</title>
+<meta name="description" content="Demos reales del Escaparate 3D: un restaurante y una inmobiliaria, con pedidos, reservas, QR y solicitudes de visita funcionando.">
+<link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+
+<header id="cabecera">
+  <div id="marca">
+    <div id="marca-texto">
+      <div id="marca-nombre">Escaparate 3D</div>
+      <div id="marca-eslogan">Un mismo código, la marca de cada negocio</div>
+    </div>
+  </div>
+  <div class="botonera">
+    <a class="boton chico" href="admin/">Panel del negocio</a>
+    <a class="boton chico principal" href="admin/construir-total.html">Construir Total</a>
+  </div>
+</header>
+
+<main>
+  <section class="bloque">
+    <div class="contenedor">
+      <h1>Dos demos reales, no un vídeo de ventas</h1>
+      <p class="tenue" style="max-width:60ch">
+        Las dos páginas de abajo son el mismo programa. Lo único distinto entre ellas es un
+        archivo de configuración: colores, logo, contacto, redes y catálogo. Ábrelas en el móvil
+        del cliente durante la visita: se tocan, se piden platos, se reserva mesa y se piden visitas.
+      </p>
+
+      <div class="rejilla" style="margin-top:1.5rem">
+        <article class="tarjeta">
+          <span class="etiqueta acento">Restaurante</span>
+          <div class="titulo">Restaurante La Viña · Cenera (Mieres)</div>
+          <p class="pequeno tenue">
+            Carta en 3D, pedido para recoger o a domicilio, reserva de mesa con turnos y QR para
+            pegar en cada mesa. Contacto y especialidades tomados de sus fichas públicas; la carta,
+            los precios y los horarios los confirma el restaurante antes de publicar.
+          </p>
+          <div class="botonera">
+            <a class="boton principal" href="index.html?negocio=la-vina">Abrir la demo</a>
+            <a class="boton" href="index.html?negocio=la-vina&amp;mesa=7#carta">Como si fuera la mesa 7</a>
+          </div>
+        </article>
+
+        <article class="tarjeta">
+          <span class="etiqueta acento">Inmobiliaria</span>
+          <div class="titulo">Asesoría Castresana · Oviedo</div>
+          <p class="pequeno tenue">
+            La cartera real en 3D (se lee en vivo de la web oficial), filtros por operación y zona,
+            marcado de favoritos, solicitud de visita solo con los marcados y valoración gratis
+            para propietarios.
+          </p>
+          <div class="botonera">
+            <a class="boton principal" href="index.html?negocio=castresana">Abrir la demo</a>
+            <a class="boton" href="index.html?negocio=castresana&amp;auto=1">Modo tele del escaparate</a>
+          </div>
+        </article>
+      </div>
+
+      <p class="pequeno tenue" style="margin-top:1rem">
+        También hay dos configuraciones de ejemplo con datos inventados, para enseñar el producto
+        sin usar el nombre de nadie:
+        <a href="index.html?negocio=restaurante-ejemplo">Casa Ejemplo</a> ·
+        <a href="index.html?negocio=inmobiliaria-ejemplo">Fincas Ejemplo</a>.
+      </p>
+    </div>
+  </section>
+
+  <section class="bloque">
+    <div class="contenedor">
+      <h2>¿Te gusta? La misma, con tu negocio dentro</h2>
+      <p class="tenue" style="max-width:60ch">
+        Si el cliente dice "esto lo quiero", no hace falta empezar de cero: se coge su web o su
+        Instagram, se rellena su configuración y en poco tiempo tiene su propia demo, con sus
+        fotos, sus precios y su teléfono. Desde ahí se decide qué se contrata de verdad.
+      </p>
+      <div class="botonera">
+        <a class="boton principal" href="index.html?negocio=la-vina#demo">Pedir mi demo (restaurante)</a>
+        <a class="boton" href="index.html?negocio=castresana#demo">Pedir mi demo (inmobiliaria)</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="bloque">
+    <div class="contenedor">
+      <h2>Construir Total</h2>
+      <p class="tenue" style="max-width:60ch">
+        El paso siguiente a la demo: dejar de enseñar y montar la aplicación real del negocio, con
+        sus datos, sus módulos, su destino de pedidos y reservas, y su despliegue propio. Ahí se
+        define todo el cliente y se descarga su paquete listo para subir.
+      </p>
+      <div class="botonera">
+        <a class="boton principal" href="admin/construir-total.html">Abrir Construir Total</a>
+        <a class="boton plano" href="admin/">Panel para el dueño del negocio</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer id="pie">
+  <div class="contenedor">
+    <p class="pequeno tenue">
+      Escaparate 3D · producto white-label. Cada cliente se despliega por separado con su propio
+      <code>config/negocio.json</code>.
+    </p>
+  </div>
+</footer>
+</body>
+</html>
