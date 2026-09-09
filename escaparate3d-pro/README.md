@@ -57,7 +57,8 @@ escaparate3d-pro/
     qr.js               QR imprimible por mesa
     inmuebles.js        cartera en cascada, filtros, favoritos y visita
     valoracion.js       valoración gratis para propietarios
-    demo.js             apartado "quiero esto para mi negocio"
+    tour.js             "¿cómo funciona?": explica la demo sin ti delante
+    demo.js             apartado comercial: precio, "quiero la mía" y compartir
   admin/
     index.html          panel del dueño (colores, contacto, redes, carta)
     construir-total.html  panel de quien vende: demo → aplicación real
@@ -95,7 +96,25 @@ otro sector no se enciende aunque venga a `true` en el JSON.
 | `qrMesas` | restaurante | Un QR por mesa, imprimible, generado en local (sin servicios externos) |
 | `catalogoInmuebles` | inmobiliaria | Cartera en cascada, filtros, favoritos y solicitud de visita **solo con los marcados** |
 | `valoracionGratis` | inmobiliaria | Captación de propietarios; solo da horquilla de precio si la agencia ha cargado sus € /m² |
-| `pedirDemo` | los dos | "Quiero esto para mi negocio" → va al contacto **comercial**, no al del negocio de la demo |
+| `pedirDemo` | los dos | Modo comercial: el tour "¿cómo funciona?", el precio, "quiero la mía" y **mandar la demo** (enlace + QR + mensaje que se explica solo). Va al contacto **comercial**, no al del negocio de la demo |
+
+## Mandar la demo (y que se explique sola)
+
+Una demo enseñada en persona la explicas tú. Una demo **mandada por WhatsApp**
+la abre alguien que no sabe qué está viendo — y ahí se pierde la venta. Por eso
+el modo comercial trae dos cosas:
+
+- **El tour** (`modules/tour.js`): 6-7 pasos en el idioma del negocio, no del
+  software ("te piden sin llamarte", no "módulo de pedidos"). Solo explica lo
+  que ese negocio tiene encendido, y cada paso se puede probar de verdad en el
+  momento. Termina en el precio.
+- **Mandar esta demo** (`modules/demo.js` → `compartir()`): enlace limpio de la
+  demo, QR para abrirla en otro móvil y un mensaje ya redactado que explica qué
+  es, qué se puede tocar y cuánto cuesta la de verdad.
+
+El precio vive en `comercial.precio` (180 € por defecto) junto con
+`comercial.incluye`, la lista de lo que entra. Se ve en el tour y en el bloque
+comercial de la página: nada de venderlo de palabra.
 
 ## De demo a aplicación real: Construir Total
 
@@ -140,7 +159,7 @@ npm test                       # incluye test/escaparate3d-pro.test.mjs
 node test/escaparate3d-pro.test.mjs
 ```
 
-116 comprobaciones: lógica pura en Node (configuración, tema, contraste, QR,
+129 comprobaciones: lógica pura en Node (configuración, tema, contraste, QR,
 ZIP, requisitos de producción) y las dos demos abiertas en un Chromium real,
 haciendo un pedido, una reserva, una visita y descargando el paquete. La escena
 3D se comprueba de verdad sirviendo Three.js desde `node_modules`, y también se

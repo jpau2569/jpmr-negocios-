@@ -32,7 +32,10 @@ Es un mismo código que sirve a restaurantes e inmobiliarias cambiando solo
   + descarga del paquete `.zip` del cliente).
 - **Backend propio** (`api/` + `lib/` dentro de la carpeta, copia exacta del
   monorepo vigilada por un test): la carpeta se despliega suelta por cliente.
-- **Tests**: `test/escaparate3d-pro.test.mjs`, 116 comprobaciones en verde.
+- **Modo comercial**: tour "¿cómo funciona?" para que una demo mandada por
+  WhatsApp se explique sola, precio (180 €) con lo que incluye, y "mandar esta
+  demo" con enlace limpio, QR y mensaje ya redactado.
+- **Tests**: `test/escaparate3d-pro.test.mjs`, 129 comprobaciones en verde.
   `npm test` completo: 382 comprobaciones, 0 fallos.
 
 ---
