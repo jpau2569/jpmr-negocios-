@@ -755,7 +755,7 @@ async function iniciar3D(){
     controles.minDistance = 4;
     controles.maxDistance = 120;
 
-    escena.add(new THREE.HemisphereLight(0xffffff, 0x9aa39c, 2.1));
+    escena.add(new THREE.HemisphereLight(0xffffff, 0xE4E2D8, 2.5));
     const sol = new THREE.DirectionalLight(0xfff3e0, 1.5);
     sol.position.set(14, 22, 10);
     escena.add(sol);
@@ -976,7 +976,7 @@ function vista3(modo){
   controles.target.set(0, 1, 0);
   if (modo === 'cenital') camara.position.set(0, d * 1.25, .001);
   else if (modo === 'calle') camara.position.set(d * .9, d * .28, MODELO.fondo * .1);
-  else camara.position.set(-d * .55, d * .72, d * .85);
+  else camara.position.set(-d * .46, d * .60, d * .72);
   camara.updateProjectionMatrix();
   controles.update();
   tres.pedirRender();
