@@ -12,7 +12,7 @@ JSON con cuatro claves ya funciona.
 | `logoUrl` | URL o `data:image/...` | El panel lo guarda reducido a 256 px dentro del propio JSON |
 | `colores` | `{fondo, acento, acento2, texto}` | Hex. Tiñen el CSS y la escena 3D |
 | `contacto` | `{telefono, telefonoTexto, whatsapp, email, direccion, horario, mapaLat, mapaLng}` | `whatsapp` solo cifras con prefijo (34…). Vacío = sin botones de WhatsApp |
-| `redes` | `{web, instagram, facebook, tiktok, googleBusiness}` | Cada URL rellenada es un botón; solo se admite http(s) |
+| `redes` | `{web, instagram, facebook, tiktok, googleBusiness, tripadvisor}` | Cada URL rellenada es un botón; solo se admite http(s). En hostelería, Google y TripAdvisor son las que más confianza dan |
 | `modulos` | booleanos | `pedidosDomicilio`, `reservas`, `qrMesas`, `catalogoInmuebles`, `valoracionGratis`, `pedirDemo` |
 | `datos` | `{modo, api:{lead,pedido,reserva}, firebase:{...}}` | `local` \| `api` \| `firebase` |
 | `demo` | `{activa, aviso}` | Con `activa: true` la web enseña que es una demo |

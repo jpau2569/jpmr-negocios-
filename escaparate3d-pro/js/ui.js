@@ -97,6 +97,7 @@ const ICONOS = {
   facebook: '<path d="M14.5 8.5h2.2V5.4h-2.4c-2.4 0-3.8 1.5-3.8 3.9v1.6H8.3v3.1h2.2V21h3.3v-7h2.3l.4-3.1h-2.7V9.6c0-.8.3-1.1 1-1.1z"/>',
   tiktok: '<path d="M15 4c.6 2.2 2 3.4 4 3.6v3c-1.5.1-2.9-.3-4-1.1v5.9c0 3.1-2.4 5.6-5.4 5.6S4.2 18.5 4.2 15.4 6.6 9.8 9.6 9.8c.3 0 .6 0 .9.1v3.2a2.5 2.5 0 1 0 1.7 2.3V4z"/>',
   googleBusiness: '<path d="M21 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.1c-.2 1.2-.9 2.2-1.9 2.9v2.4h3c1.8-1.6 2.8-4 2.8-7z"/><path d="M12 21c2.5 0 4.6-.8 6.2-2.3l-3-2.4c-.8.6-1.9.9-3.2.9-2.5 0-4.6-1.6-5.3-3.9H3.5v2.4A9 9 0 0 0 12 21z"/><path d="M6.7 13.3a5.4 5.4 0 0 1 0-3.4V7.5H3.5a9 9 0 0 0 0 8.1z"/><path d="M12 6.6c1.4 0 2.6.5 3.6 1.4l2.7-2.7A9 9 0 0 0 3.5 7.5l3.2 2.4C7.4 8.2 9.5 6.6 12 6.6z"/>',
+  tripadvisor: '<circle cx="12" cy="12" r="9"/><path d="m12 7.5 1.4 2.9 3.1.5-2.3 2.2.6 3.1-2.8-1.5-2.8 1.5.6-3.1-2.3-2.2 3.1-.5z"/>',
   telefono: '<path d="M6 3h3l2 5-2.2 1.4a12 12 0 0 0 5.8 5.8L16 13l5 2v3a2 2 0 0 1-2.2 2A16.8 16.8 0 0 1 4 6.2 2 2 0 0 1 6 4z"/>',
   whatsapp: '<path d="M20 11.6a8 8 0 0 1-11.9 7L4 20l1.5-4A8 8 0 1 1 20 11.6z"/><path d="M9 9.2c.3-.7.6-.7.9-.7h.6c.2 0 .5 0 .7.5l.7 1.7c.1.3 0 .5-.1.7l-.4.5c-.1.2-.3.3-.1.6a6 6 0 0 0 2.8 2.4c.3.1.5.1.7-.1l.6-.7c.2-.2.4-.2.6-.1l1.6.8c.3.1.4.3.4.5v.7c0 .4-.4.9-1 1a7 7 0 0 1-3.6-.8 9.4 9.4 0 0 1-4.2-4.3c-.5-1-.5-2 .1-2.7z"/>',
   mapa: '<path d="M12 21s7-5.7 7-11a7 7 0 1 0-14 0c0 5.3 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/>',
@@ -110,7 +111,7 @@ export function icono(nombre, tam = 20) {
 
 const NOMBRE_RED = {
   web: "Web oficial", instagram: "Instagram", facebook: "Facebook",
-  tiktok: "TikTok", googleBusiness: "Google",
+  tiktok: "TikTok", googleBusiness: "Google", tripadvisor: "TripAdvisor",
 };
 
 // Botones REALES de redes: si el cliente no tiene un perfil, el botón no existe.

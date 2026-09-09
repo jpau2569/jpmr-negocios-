@@ -31,6 +31,7 @@ const CAMPOS_REDES = [
   ["facebook", "Facebook"],
   ["tiktok", "TikTok"],
   ["googleBusiness", "Ficha de Google"],
+  ["tripadvisor", "TripAdvisor"],
 ];
 
 const MODULOS = [

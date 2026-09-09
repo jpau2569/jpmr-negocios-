@@ -41,7 +41,7 @@ export const POR_DEFECTO = {
     telefono: "", telefonoTexto: "", whatsapp: "", email: "",
     direccion: "", horario: "", mapaLat: null, mapaLng: null,
   },
-  redes: { web: "", instagram: "", facebook: "", tiktok: "", googleBusiness: "" },
+  redes: { web: "", instagram: "", facebook: "", tiktok: "", googleBusiness: "", tripadvisor: "" },
   modulos: {
     pedidosDomicilio: false, reservas: false, qrMesas: false,
     catalogoInmuebles: false, valoracionGratis: false, pedirDemo: true,
