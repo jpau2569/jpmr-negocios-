@@ -1,5 +1,8 @@
 # Escaparate 3D Pro — producto white-label
 
+> **¿Retomando el trabajo?** El estado de la última sesión y lo que queda
+> pendiente están en [`ESTADO.md`](ESTADO.md).
+
 Un mismo código, un negocio distinto por despliegue. El cliente (restaurante o
 inmobiliaria) solo toca `config/negocio.json` y tiene su propio escaparate 3D
 con **pedidos, reservas, QR de mesas y solicitudes de visita funcionando de
