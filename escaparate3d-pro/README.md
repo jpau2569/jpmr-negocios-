@@ -21,7 +21,8 @@ python3 -m http.server 8080      # desde la raíz del repositorio
 
 | Dirección | Qué enseña |
 |---|---|
-| `/escaparate3d-pro/demos.html` | El hub comercial con las dos demos |
+| `/escaparate3d-pro/demos.html` | El hub comercial con las demos |
+| `/escaparate3d-pro/la-taberna.html` | **Enlace corto** de una demo (uno por negocio) |
 | `/escaparate3d-pro/index.html?negocio=la-vina` | Demo de restaurante (La Viña, Cenera) |
 | `/escaparate3d-pro/index.html?negocio=castresana` | Demo de inmobiliaria (cartera real) |
 | `…?negocio=la-vina&mesa=7#pedido` | Lo que ve un cliente al escanear el QR de la mesa 7 |
@@ -98,6 +99,26 @@ otro sector no se enciende aunque venga a `true` en el JSON.
 | `valoracionGratis` | inmobiliaria | Captación de propietarios; solo da horquilla de precio si la agencia ha cargado sus € /m² |
 | `pedirDemo` | los dos | Modo comercial: el tour "¿cómo funciona?", el precio, "quiero la mía" y **mandar la demo** (enlace + QR + mensaje que se explica solo). Va al contacto **comercial**, no al del negocio de la demo |
 
+## Un enlace corto por demo
+
+`index.html?negocio=<id>` obliga al navegador a tener el `js/config.js` al día
+para saber que ese negocio existe. Con la caché de GitHub Pages (10 minutos)
+eso falla justo cuando estás delante de un cliente: **abre otro negocio**.
+
+Por eso cada demo tiene además su propia página — `la-taberna.html`,
+`la-vina.html`, `castresana.html` — que es una dirección **nueva**, imposible de
+tener cacheada, y lleva la ruta del JSON escrita dentro. Funciona con cualquier
+versión del código que el móvil tenga guardada, y de paso el enlace queda corto
+y presentable para WhatsApp.
+
+Se regeneran con:
+
+```bash
+node escaparate3d-pro/herramientas/generar-enlaces.mjs
+```
+
+Léelas como generadas: si tocas un `config/ejemplos/*.json`, vuelve a lanzarlo.
+
 ## Mandar la demo (y que se explique sola)
 
 Una demo enseñada en persona la explicas tú. Una demo **mandada por WhatsApp**
@@ -164,7 +185,7 @@ npm test                       # incluye test/escaparate3d-pro.test.mjs
 node test/escaparate3d-pro.test.mjs
 ```
 
-139 comprobaciones: lógica pura en Node (configuración, tema, contraste, QR,
+148 comprobaciones: lógica pura en Node (configuración, tema, contraste, QR,
 ZIP, requisitos de producción) y las dos demos abiertas en un Chromium real,
 haciendo un pedido, una reserva, una visita y descargando el paquete. La escena
 3D se comprueba de verdad sirviendo Three.js desde `node_modules`, y también se

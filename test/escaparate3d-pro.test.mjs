@@ -113,6 +113,30 @@ check("desdeFirestore reconstruye el objeto",
   desdeFirestore(aFirestore({ nombre: "X", activo: true, n: 3 }).mapValue).n === 3);
 
 /* ========================================================================== */
+console.log("\n🔗 Enlaces cortos por demo");
+
+//  Cada demo tiene su propia pagina: una direccion NUEVA no puede estar
+//  cacheada, y lleva la ruta del JSON escrita dentro, asi que abre el negocio
+//  correcto aunque el movil tenga guardado un js/config.js viejo.
+const { paginaDeEnlace } = await import("../escaparate3d-pro/herramientas/generar-enlaces.mjs");
+for (const [id, archivo] of [
+  ["la-taberna", "restaurante-la-taberna.json"],
+  ["la-vina", "restaurante-la-vina.json"],
+  ["castresana", "inmobiliaria-castresana.json"],
+]) {
+  const html = await readFile(join(RAIZ, `escaparate3d-pro/${id}.html`), "utf8");
+  check(`${id}.html existe y apunta a su configuración`, html.includes(`config=config/ejemplos/${archivo}`));
+  check(`${id}.html redirige solo y también con un enlace a mano`,
+    html.includes("http-equiv=\"refresh\"") && html.includes("location.replace"));
+}
+check("el generador escapa el HTML del nombre del negocio",
+  paginaDeEnlace({ id: "x", nombre: '<script>alert(1)</script>', archivo: "x.json" }).includes("&lt;script&gt;"));
+
+const hub = await readFile(join(RAIZ, "escaparate3d-pro/demos.html"), "utf8");
+check("el hub comercial manda por los enlaces cortos",
+  hub.includes('href="la-taberna.html"') && hub.includes('href="la-vina.html"') && hub.includes('href="castresana.html"'));
+
+/* ========================================================================== */
 console.log("\n🔌 Backend que se lleva cada cliente");
 
 //  escaparate3d-pro/ tiene su propio api/ y lib/ porque cada cliente se lleva
