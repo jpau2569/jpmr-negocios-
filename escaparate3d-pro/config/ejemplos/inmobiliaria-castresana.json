@@ -11,10 +11,8 @@
   },
   "verificacion": {
     "verificado": true,
-    "fuente": "Datos de contacto y cartera del propio negocio (www.asesoriacastresana.com), ya en uso en escaparate3d/ y api/escaparate.js.",
-    "pendiente": [
-      "Perfiles de Instagram / Facebook / Google Business, si se quieren mostrar como botones."
-    ]
+    "fuente": "Datos de contacto y cartera del propio negocio (www.asesoriacastresana.com), ya en uso en escaparate3d/ y api/escaparate.js. Pau confirma que su presencia online es la web oficial: sin perfiles de Instagram, Facebook ni Google que enlazar, así que esos botones no se pintan.",
+    "pendiente": []
   },
   "colores": {
     "fondo": "#0b0f14",
