@@ -83,7 +83,7 @@ const resumen = () => pagina.evaluate(() => document.getElementById("totales").i
 const totales = await resumen();
 check("el resumen cuenta las tres habitaciones del croquis", /Habitaciones\s+3/.test(totales), totales);
 check("el resumen da la superficie útil", /Superficie útil interior\s+\d/.test(totales), totales);
-check("el resumen da frente y fondo", /Frente total\s+19,6 m/.test(totales) && /Fondo\s+9 m/.test(totales), totales);
+check("el resumen da frente y fondo", /Frente total\s+20,1 m/.test(totales) && /Fondo\s+8,6 m/.test(totales), totales);
 
 const clic = async (fx, fy) => {
   // El botón de restablecer mueve el scroll: hay que recolocar el lienzo antes de tocarlo.
@@ -110,7 +110,7 @@ await pagina.waitForTimeout(200);
 check("cambiar el fondo recalcula el resumen", /Fondo\s+12 m/.test(await resumen()));
 await pagina.click("#btnReset");
 await pagina.waitForTimeout(200);
-check("restablecer devuelve las medidas de fábrica", /Fondo\s+9 m/.test(await resumen()));
+check("restablecer devuelve las medidas de fábrica", /Fondo\s+8,6 m/.test(await resumen()));
 
 await clic(0.72, 0.25);
 await pagina.fill("#fichaNombre", "Dormitorio principal");

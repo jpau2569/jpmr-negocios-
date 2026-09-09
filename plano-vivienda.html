@@ -153,7 +153,7 @@
   </header>
 
   <div class="aviso">
-    <b>Medidas orientativas.</b> El croquis no trae cotas legibles, así que estas cifras respetan las proporciones del dibujo pero <b>no son las reales</b>. Escribe las medidas buenas en el panel de la izquierda y el plano pasa a estar a escala de verdad.
+    <b>Medidas estimadas del croquis.</b> El dibujo no trae cotas legibles, así que estas cifras salen de medir las proporciones del croquis y anclarlas en una cocina de 3,3 m de fondo: son una lectura razonable, <b>no cotas tomadas en la vivienda</b>. Sirven para enseñar la distribución; en cuanto paséis con el metro, escribe las buenas en el panel y todo se recalcula.
   </div>
 
   <div class="tablero">
@@ -217,13 +217,17 @@ const m2 = n => fmt(Math.round(n * 10) / 10) + ' m²';
 
 /* ---------- medidas por defecto (orientativas, del croquis) ---------- */
 
+/*  Sacadas del croquis midiendo el dibujo y llevando las proporciones a metros:
+ *  el fondo del bloque de la cocina se ancla en 3,3 m (una cocina normal) y todo
+ *  lo demás sale de ahí con la misma regla. Son una lectura del dibujo, no cotas
+ *  tomadas en la vivienda: quedan pendientes de comprobar con el metro.        */
 const BASE = {
-  fondo: 9,
-  izqAncho: 8, cocinaAncho: 4.2, cocinaFondo: 3.4,
-  servAncho: 2.1, despensaFondo: 1.9, aseoFondo: 1.9,
-  patioAncho: 3.4,
-  derAncho: 6.4, derCol1: 3.2, habFondo: 3.6, banoFondo: 2.4,
-  terrazaAncho: 1.8, terrazaFondo: 3.6,
+  fondo: 8.6,
+  izqAncho: 8.6, cocinaAncho: 4.5, cocinaFondo: 3.3,
+  servAncho: 2.4, despensaFondo: 2, aseoFondo: 2,
+  patioAncho: 3.6,
+  derAncho: 6.1, derCol1: 2.6, habFondo: 4, banoFondo: 2.3,
+  terrazaAncho: 1.8, terrazaFondo: 3.4,
   muro: 0.2, altura: 2.7
 };
 
@@ -560,7 +564,7 @@ function dibujarPlano(c, modelo, muros, pw, ph, opts){
   const m = modelo.m;
   c.fillStyle = '#fff'; c.fillRect(0, 0, pw, ph);
 
-  const mIzq = 128, mDer = 132, mSup = o.titulo ? 132 : 104, mInf = 128;
+  const mIzq = 150, mDer = 132, mSup = o.titulo ? 132 : 104, mInf = 128;
   const dispW = pw - mIzq - mDer, dispH = ph - mSup - mInf;
   const e0 = Math.min(dispW / modelo.anchoTotal, dispH / modelo.fondo);
   const W = modelo.anchoTotal * e0, H = modelo.fondo * e0;
@@ -645,7 +649,7 @@ function dibujarPlano(c, modelo, muros, pw, ph, opts){
   c.restore();
   c.save();
   c.fillStyle = C.suave; c.font = `600 16px ${F_COTA}`; c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.translate(x0 - 62, y0 + H / 2); c.rotate(-Math.PI / 2);
+  c.translate(x0 - 96, y0 + H / 2); c.rotate(-Math.PI / 2);
   c.fillText('P A T I O', 0, 0);
   c.restore();
 
@@ -1199,7 +1203,7 @@ $('btnPng').addEventListener('click', () => {
     sel: null,
     titulo: 'Plano orientativo de la vivienda',
     subtitulo: `Inmo Castresana · escala uniforme · frente ${fmt(MODELO.anchoTotal)} m × fondo ${fmt(MODELO.fondo)} m`,
-    pie: 'Medidas orientativas tomadas del croquis a mano · pendientes de comprobar en la vivienda'
+    pie: 'Medidas estimadas de las proporciones del croquis a mano · pendientes de comprobar con el metro en la vivienda'
   });
   vista = guardada;
   dibujar2D();
