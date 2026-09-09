@@ -114,6 +114,7 @@ function pintarFormulario() {
         campo({ id: "web", etiqueta: "Web", tipo: "url", value: config.redes.web }),
         campo({ id: "instagram", etiqueta: "Instagram", tipo: "url", value: config.redes.instagram }),
         campo({ id: "facebook", etiqueta: "Facebook", tipo: "url", value: config.redes.facebook }),
+        campo({ id: "tripadvisor", etiqueta: "TripAdvisor", tipo: "url", value: config.redes.tripadvisor }),
       ]),
       crear("div", { clase: "fila" }, [
         colorCampo("fondo", "Fondo"), colorCampo("acento", "Principal"),
@@ -217,7 +218,7 @@ function recoger() {
     telefono: v("telefono"), telefonoTexto: v("telefonoTexto"), whatsapp: v("whatsapp"),
     email: v("email"), direccion: v("direccion"), horario: v("horario"),
   });
-  Object.assign(config.redes, { web: v("web"), instagram: v("instagram"), facebook: v("facebook") });
+  Object.assign(config.redes, { web: v("web"), instagram: v("instagram"), facebook: v("facebook"), tripadvisor: v("tripadvisor") });
   for (const clave of Object.keys(NOMBRE_MODULO)) {
     const caja = $("modulo-" + clave);
     if (caja) config.modulos[clave] = caja.checked;

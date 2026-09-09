@@ -140,7 +140,7 @@ npm test                       # incluye test/escaparate3d-pro.test.mjs
 node test/escaparate3d-pro.test.mjs
 ```
 
-113 comprobaciones: lógica pura en Node (configuración, tema, contraste, QR,
+116 comprobaciones: lógica pura en Node (configuración, tema, contraste, QR,
 ZIP, requisitos de producción) y las dos demos abiertas en un Chromium real,
 haciendo un pedido, una reserva, una visita y descargando el paquete. La escena
 3D se comprueba de verdad sirviendo Three.js desde `node_modules`, y también se

@@ -66,6 +66,8 @@ check("sin WhatsApp configurado el dato queda vacío (los botones se ocultarán)
   restaurante.contacto.whatsapp === "");
 check("el WhatsApp real se queda solo con las cifras", inmo.contacto.whatsapp === "34672775721");
 
+check("el esquema admite TripAdvisor, que en hostelería es media venta",
+  "tripadvisor" in normalizar({}).redes);
 check("un enlace javascript: en redes se descarta",
   normalizar({ redes: { web: "javascript:alert(1)" } }).redes.web === "");
 check("un enlace https en redes se conserva",
@@ -274,6 +276,11 @@ if (chromium) {
     (await pagina.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--color-acento").trim())) === "#d98324");
   check("sin 3D disponible se explica y no se deja la pantalla en blanco",
     await pagina.locator("#sin-3d").isVisible());
+  const redesVina = await pagina.locator("#pie-columnas .boton-red").allTextContents();
+  check("las redes que el restaurante SÍ tiene salen como botones reales",
+    redesVina.includes("Instagram") && redesVina.includes("Facebook") && redesVina.includes("TripAdvisor"), redesVina.join("|"));
+  check("las que no tiene (web, TikTok, Google) no pintan botón",
+    !redesVina.includes("Web oficial") && !redesVina.includes("TikTok") && !redesVina.includes("Google"), redesVina.join("|"));
   check("el aviso de demo con los datos pendientes es visible",
     (await pagina.textContent("#aviso-demo")).includes("Carta completa y precios reales"));
   check("la carta real aparece en la página",
