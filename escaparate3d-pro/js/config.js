@@ -197,9 +197,14 @@ export function rutaConfigSegura(valor) {
   return /^config\/[\w./-]+\.json$/.test(texto) ? texto : "";
 }
 
+// Por convenio, un negocio nuevo es config/ejemplos/<id>.json aunque no esté
+// en el catálogo de arriba. Así una demo recién subida funciona aunque el
+// navegador del cliente tenga cacheado un config.js viejo.
 export function archivoDeNegocio(id) {
-  const ficha = CATALOGO.find((n) => n.id === String(id || "").trim());
-  return ficha ? `config/ejemplos/${ficha.archivo}` : "";
+  const limpio = String(id || "").trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(limpio)) return "";
+  const ficha = CATALOGO.find((n) => n.id === limpio);
+  return `config/ejemplos/${ficha ? ficha.archivo : limpio + ".json"}`;
 }
 
 export async function fetchConfig({ parametros = new URLSearchParams(location.search), base = "" } = {}) {
@@ -222,16 +227,26 @@ export async function fetchConfig({ parametros = new URLSearchParams(location.se
 
   candidatas.push(base + "config/negocio.json");
 
+  const pedido = String(parametros.get("negocio") || "").trim();
   const avisos = [];
   for (const url of candidatas) {
     try {
       const cfg = normalizar(await leerJson(url));
-      return { config: await conFirebase(cfg), origen: url, avisos };
+      // Si se pidió un negocio concreto y acabamos cayendo en la configuración
+      // del despliegue, hay que DECIRLO: si no, el cliente cree que está viendo
+      // una demo y está viendo otra.
+      const cayoAlPorDefecto = Boolean(pedido) && url.endsWith("config/negocio.json");
+      return {
+        config: await conFirebase(cfg),
+        origen: url,
+        avisos,
+        noEncontrado: cayoAlPorDefecto ? pedido : null,
+      };
     } catch (e) {
       avisos.push(String(e.message || e));
     }
   }
-  return { config: normalizar({}), origen: "valores por defecto", avisos };
+  return { config: normalizar({}), origen: "valores por defecto", avisos, noEncontrado: pedido || null };
 }
 
 // Si el cliente ya está en Firebase, el documento remoto manda sobre el JSON.
