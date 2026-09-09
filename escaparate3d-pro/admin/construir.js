@@ -28,6 +28,11 @@ const ARCHIVOS_PRODUCTO = [
   "modules/carta.js", "modules/pedidos.js", "modules/reservas.js", "modules/qr.js",
   "modules/inmuebles.js", "modules/valoracion.js", "modules/demo.js",
   "admin/index.html", "admin/admin.js", "admin/construir-total.html", "admin/construir.js",
+  // El backend viaja con el cliente: sin esto, un despliegue en modo "api" se
+  // quedaria sin /api/lead y la cartera no podria leerse.
+  "api/escaparate.js", "api/foto.js", "api/lead.js", "api/health.js",
+  "lib/cartera.js", "lib/memoria.js",
+  "package.json", "vercel.json",
 ];
 
 const NOMBRE_MODULO = {

@@ -61,6 +61,9 @@ escaparate3d-pro/
   admin/
     index.html          panel del dueño (colores, contacto, redes, carta)
     construir-total.html  panel de quien vende: demo → aplicación real
+  api/ + lib/           el backend que se lleva cada cliente (ver api/LEEME.md):
+                        cartera, proxy de fotos y alta de leads. Son copia
+                        exacta del monorepo y un test lo vigila.
 ```
 
 ## Las reglas que no se rompen
@@ -137,7 +140,7 @@ npm test                       # incluye test/escaparate3d-pro.test.mjs
 node test/escaparate3d-pro.test.mjs
 ```
 
-103 comprobaciones: lógica pura en Node (configuración, tema, contraste, QR,
+113 comprobaciones: lógica pura en Node (configuración, tema, contraste, QR,
 ZIP, requisitos de producción) y las dos demos abiertas en un Chromium real,
 haciendo un pedido, una reserva, una visita y descargando el paquete. La escena
 3D se comprueba de verdad sirviendo Three.js desde `node_modules`, y también se

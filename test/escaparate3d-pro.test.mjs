@@ -82,6 +82,30 @@ check("desdeFirestore reconstruye el objeto",
   desdeFirestore(aFirestore({ nombre: "X", activo: true, n: 3 }).mapValue).n === 3);
 
 /* ========================================================================== */
+console.log("\n🔌 Backend que se lleva cada cliente");
+
+//  escaparate3d-pro/ tiene su propio api/ y lib/ porque cada cliente se lleva
+//  la carpeta entera a su despliegue. Son copias EXACTAS del monorepo: si
+//  alguien toca un original y olvida la copia, esto lo caza.
+for (const [original, copia] of [
+  ["api/escaparate.js", "escaparate3d-pro/api/escaparate.js"],
+  ["api/foto.js", "escaparate3d-pro/api/foto.js"],
+  ["api/lead.js", "escaparate3d-pro/api/lead.js"],
+  ["api/health.js", "escaparate3d-pro/api/health.js"],
+  ["lib/cartera.js", "escaparate3d-pro/lib/cartera.js"],
+  ["lib/memoria.js", "escaparate3d-pro/lib/memoria.js"],
+]) {
+  const a = await readFile(join(RAIZ, original), "utf8");
+  const b = await readFile(join(RAIZ, copia), "utf8");
+  check(`${copia} sigue siendo copia exacta de ${original}`, a === b);
+}
+
+const construir = await readFile(join(RAIZ, "escaparate3d-pro/admin/construir.js"), "utf8");
+for (const archivo of ["api/lead.js", "lib/cartera.js", "package.json", "vercel.json"]) {
+  check(`el paquete del cliente incluye ${archivo}`, construir.includes(`"${archivo}"`));
+}
+
+/* ========================================================================== */
 console.log("\n🎨 Tema derivado de los colores del CONFIG");
 
 const p = paleta(CONFIGS.castresana.colores);
