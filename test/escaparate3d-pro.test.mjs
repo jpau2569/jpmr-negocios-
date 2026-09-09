@@ -43,6 +43,7 @@ const CONFIGS = {
   activa: await leerConfig("negocio.json"),
   castresana: await leerConfig("ejemplos/inmobiliaria-castresana.json"),
   laVina: await leerConfig("ejemplos/restaurante-la-vina.json"),
+  laTaberna: await leerConfig("ejemplos/restaurante-la-taberna.json"),
   restauranteEjemplo: await leerConfig("ejemplos/restaurante-ejemplo.json"),
   inmobiliariaEjemplo: await leerConfig("ejemplos/inmobiliaria-ejemplo.json"),
 };
@@ -52,7 +53,27 @@ for (const [nombre, cfg] of Object.entries(CONFIGS)) {
 }
 
 check("cada ejemplo del catálogo existe como archivo",
-  ["castresana", "la-vina", "inmobiliaria-ejemplo", "restaurante-ejemplo"].every((id) => archivoDeNegocio(id)));
+  ["castresana", "la-vina", "la-taberna", "inmobiliaria-ejemplo", "restaurante-ejemplo"].every((id) => archivoDeNegocio(id)));
+
+// La Taberna trae carta real: los precios NO son de muestra, pero los platos
+// que salen de la carta antigua o de una foto ilegible van marcados uno a uno.
+const taberna = normalizar(CONFIGS.laTaberna);
+const platosTaberna = taberna.carta.categorias.flatMap((c) => c.platos);
+check("La Taberna lleva la carta entera cargada", platosTaberna.length >= 40, String(platosTaberna.length));
+check("sus precios NO están marcados como de muestra", taberna.carta.preciosEjemplo === false);
+check("pero cada plato sin confirmar va marcado individualmente",
+  platosTaberna.some((p) => p.confirmado === false) && platosTaberna.some((p) => p.confirmado === true));
+check("el conflicto entre las dos cartas queda anotado como pendiente",
+  taberna.verificacion.pendiente.some((x) => x.includes("DOS VERSIONES")));
+check("cierra los miércoles, no los martes", taberna.reservas.diasCerrado[0] === 3);
+check("no promete reparto propio: lo suyo es Glovo",
+  taberna.pedidos.zonasReparto.length === 0 && taberna.pedidos.avisoLegal.includes("Glovo"));
+
+// La Viña, ya con sus datos reales.
+const vina = normalizar(CONFIGS.laVina);
+check("La Viña cierra los martes", vina.reservas.diasCerrado[0] === 2);
+check("La Viña ya tiene su correo real", vina.contacto.email.includes("@"));
+check("y su horario deja de ser «pendiente»", !vina.contacto.horario.toLowerCase().includes("pendiente"));
 check("un id inventado no resuelve a ningún archivo", archivoDeNegocio("no-existe") === "");
 
 const restaurante = normalizar(CONFIGS.laVina);

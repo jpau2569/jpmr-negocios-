@@ -26,7 +26,8 @@ Es un mismo código que sirve a restaurantes e inmobiliarias cambiando solo
   comercial "quiero esto para mi negocio".
 - **Capa de datos intercambiable**: `local` | `api` (`/api/lead`) | `firebase`
   (Firestore por REST, sin SDK). Siempre queda copia local + salida por WhatsApp.
-- **Dos demos reales**: Asesoría Castresana y Restaurante La Viña (Cenera).
+- **Tres demos reales**: Asesoría Castresana, Restaurante La Viña (Cenera) y
+  La Taberna · The White Bar (Mieres), esta última con su carta real y precios.
 - **`demos.html`** (hub comercial), **`admin/`** (panel del dueño) y
   **`admin/construir-total.html`** (de demo a app real: semáforo de 9 requisitos
   + descarga del paquete `.zip` del cliente).
@@ -35,7 +36,7 @@ Es un mismo código que sirve a restaurantes e inmobiliarias cambiando solo
 - **Modo comercial**: tour "¿cómo funciona?" para que una demo mandada por
   WhatsApp se explique sola, precio (180 €) con lo que incluye, y "mandar esta
   demo" con enlace limpio, QR y mensaje ya redactado.
-- **Tests**: `test/escaparate3d-pro.test.mjs`, 129 comprobaciones en verde.
+- **Tests**: `test/escaparate3d-pro.test.mjs`, 139 comprobaciones en verde.
   `npm test` completo: 382 comprobaciones, 0 fallos.
 
 ---

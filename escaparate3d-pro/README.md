@@ -140,17 +140,22 @@ contacto incompleto, catálogo de muestra o pedidos que no salen del navegador.
 Pase lo que pase, siempre queda copia local del pedido, la reserva o el lead, y
 la pantalla ofrece mandarlo por WhatsApp o llamar.
 
-## Las dos demos
+## Las tres demos
 
 - **Asesoría Castresana** (`castresana`): datos de contacto y cartera reales.
   Los inmuebles vienen en cascada `/escaparate3d/pisos.json` → `/api/escaparate`
   (que lee la web oficial) → respaldo del JSON. Las fotos pasan por
   `/api/foto?u=` porque WebGL no puede pintar imágenes de otro dominio.
 - **Restaurante La Viña, Cenera (Mieres)** (`la-vina`): dirección, teléfono,
-  Facebook y las especialidades salen de sus fichas públicas. La carta completa,
-  los precios, el horario, las zonas de reparto y los turnos son **de muestra**;
-  están marcados como pendientes en el JSON y se ven marcados en la propia web.
-  Antes de enseñarla como algo cerrado, hay que confirmarlos con el restaurante.
+  correo, horario (martes cerrado), Instagram, Facebook, TripAdvisor y las
+  especialidades, todo confirmado. Solo queda de muestra la carta con sus
+  precios, marcada como pendiente en el JSON y visible en la propia web.
+- **La Taberna · The White Bar, Mieres** (`la-taberna`): su carta real con
+  precios (45 platos en 7 categorías, del menú del día a los cachopos), horario,
+  teléfono y el dato de que el reparto lo hacen por Glovo. Hay **dos versiones
+  de su carta con precios distintos**: se han puesto los de la impresa más
+  reciente y cada plato que viene de la otra va marcado `confirmado: false`, lo
+  que la web enseña como «plato de muestra».
 
 ## Tests
 
@@ -159,7 +164,7 @@ npm test                       # incluye test/escaparate3d-pro.test.mjs
 node test/escaparate3d-pro.test.mjs
 ```
 
-129 comprobaciones: lógica pura en Node (configuración, tema, contraste, QR,
+139 comprobaciones: lógica pura en Node (configuración, tema, contraste, QR,
 ZIP, requisitos de producción) y las dos demos abiertas en un Chromium real,
 haciendo un pedido, una reserva, una visita y descargando el paquete. La escena
 3D se comprueba de verdad sirviendo Three.js desde `node_modules`, y también se

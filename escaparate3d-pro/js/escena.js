@@ -12,7 +12,8 @@
 
 import * as THREE from "three";
 
-const RADIO = 6.2;          // radio del carrusel
+const RADIO_MIN = 6.2;      // radio mínimo del carrusel (pocas tarjetas)
+const SEPARACION = 1.28;    // hueco entre tarjetas, en anchos de tarjeta
 const ANCHO_TARJETA = 3.0;
 const ALTO_TARJETA = 4.0;
 const RESOLUCION = 512;     // píxeles del lado corto de la textura
@@ -147,11 +148,18 @@ export function crearEscena({ lienzo, paleta, alPulsar = () => {}, alCambiar = (
 
   const escena = new THREE.Scene();
   escena.background = new THREE.Color(paleta.fondo);
-  escena.fog = new THREE.Fog(paleta.fondoNiebla, 9, 26);
+  escena.fog = new THREE.Fog(paleta.fondoNiebla, 9, 26);   // se reajusta en montar()
+
+  //  El radio CRECE con el número de tarjetas. Si no, una carta de 40 platos
+  //  las apila en una empalizada ilegible: hay que repartirlas por un círculo
+  //  más grande y alejar la cámara lo mismo, para que la de delante se vea
+  //  siempre igual de grande tenga el negocio 6 platos o 40.
+  let radio = RADIO_MIN;
+  const radioPara = (n) => Math.max(RADIO_MIN, (ANCHO_TARJETA * SEPARACION * Math.max(1, n)) / (2 * Math.PI));
 
   const camara = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-  camara.position.set(0, 1.2, 14);
-  camara.lookAt(0, -0.35, 0);
+  camara.position.set(0, 1, radio + 7.8);
+  camara.lookAt(0, -0.7, radio);
 
   escena.add(new THREE.AmbientLight(0xffffff, 0.75));
   const focal = new THREE.DirectionalLight(0xffffff, 0.85);
@@ -171,7 +179,7 @@ export function crearEscena({ lienzo, paleta, alPulsar = () => {}, alCambiar = (
   escena.add(suelo);
 
   const halo = new THREE.Mesh(
-    new THREE.RingGeometry(RADIO - 0.5, RADIO + 0.5, 96),
+    new THREE.RingGeometry(radio - 0.5, radio + 0.5, 96),
     new THREE.MeshBasicMaterial({ color: new THREE.Color(paleta.acento), transparent: true, opacity: 0.22, side: THREE.DoubleSide })
   );
   halo.rotation.x = -Math.PI / 2;
@@ -230,12 +238,18 @@ export function crearEscena({ lienzo, paleta, alPulsar = () => {}, alCambiar = (
     limpiar();
     estado.elementos = elementos.slice(0, 40);
     const total = estado.elementos.length || 1;
+    radio = radioPara(total);
+    halo.geometry.dispose();
+    halo.geometry = new THREE.RingGeometry(radio - 0.5, radio + 0.5, 96);
+    escena.fog.near = radio + 2;
+    escena.fog.far = radio * 2 + 14;
+    medir();
     const geometria = new THREE.PlaneGeometry(ANCHO_TARJETA, ALTO_TARJETA, 1, 1);
     estado.elementos.forEach((elemento, i) => {
       const material = new THREE.MeshBasicMaterial({ map: texturaDe(elemento), transparent: true });
       const malla = new THREE.Mesh(geometria.clone(), material);
       const a = (i / total) * Math.PI * 2;
-      malla.position.set(Math.sin(a) * RADIO, 0, Math.cos(a) * RADIO);
+      malla.position.set(Math.sin(a) * radio, 0, Math.cos(a) * radio);
       malla.rotation.y = a;
       malla.userData = { indice: i, elemento };
       grupo.add(malla);
@@ -288,7 +302,9 @@ export function crearEscena({ lienzo, paleta, alPulsar = () => {}, alCambiar = (
     if (!pulsado) return;
     const delta = ev.clientX - inicioX;
     movido = Math.max(movido, Math.abs(delta));
-    estado.anguloObjetivo = inicioAngulo + delta * 0.006;
+    // Un dedo recorre siempre las mismas tarjetas, haya 6 o 40.
+    const porTarjeta = (Math.PI * 2) / Math.max(1, estado.elementos.length);
+    estado.anguloObjetivo = inicioAngulo + delta * porTarjeta * 0.012;
   }
 
   function alSoltar(ev) {
@@ -335,9 +351,14 @@ export function crearEscena({ lienzo, paleta, alPulsar = () => {}, alCambiar = (
     // datos, que va flotando abajo: por eso la cámara se echa atrás y mira un
     // poco alto. En vertical (móvil y la tele del local) hace falta más aire.
     const vertical = alto > ancho;
-    camara.position.set(0, vertical ? 1.4 : 1.2, vertical ? 17 : 14);
-    camara.fov = vertical ? 50 : 42;
-    camara.lookAt(0, vertical ? -0.15 : -0.35, 0);
+    // La cámara se separa lo mismo que crezca el círculo: la tarjeta de delante
+    // queda siempre a la misma distancia y se ve igual de grande, tenga el
+    // negocio 6 platos o 45. Y mira a la PROPIA TARJETA, no a un punto fijo del
+    // suelo: si no, al agrandarse el círculo las tarjetas se hunden en la
+    // pantalla. El desvío hacia abajo es el hueco que deja para la ficha.
+    camara.position.set(0, vertical ? 1.1 : 1, radio + (vertical ? 7.6 : 7.8));
+    camara.fov = vertical ? 46 : 42;
+    camara.lookAt(0, -0.7, radio);
     camara.updateProjectionMatrix();
   }
 
@@ -361,7 +382,7 @@ export function crearEscena({ lienzo, paleta, alPulsar = () => {}, alCambiar = (
     for (const tarjeta of estado.tarjetas) {
       const mundo = new THREE.Vector3();
       tarjeta.getWorldPosition(mundo);
-      const cerca = THREE.MathUtils.clamp((mundo.z + RADIO) / (RADIO * 2), 0, 1);
+      const cerca = THREE.MathUtils.clamp((mundo.z + radio) / (radio * 2), 0, 1);
       const escala = 0.8 + cerca * 0.22;
       tarjeta.scale.setScalar(escala);
       tarjeta.material.opacity = 0.35 + cerca * 0.65;

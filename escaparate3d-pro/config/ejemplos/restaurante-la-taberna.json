@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "id": "la-taberna",
+  "sector": "restaurante",
+  "nombre": "La Taberna · The White Bar",
+  "eslogan": "Cocina de siempre y buen producto en el centro de Mieres",
+  "logoUrl": "",
+  "demo": {
+    "activa": true,
+    "aviso": "Demo comercial. El contacto, el horario y la carta salen de sus fichas públicas y de las fotos de su propia carta; hay platos marcados como «de muestra» porque la foto no se lee bien o porque hay dos versiones de la carta con precios distintos. Lo confirma el restaurante antes de publicar."
+  },
+  "verificacion": {
+    "verificado": false,
+    "fuente": "Fichas públicas del negocio y fotos de su carta y de su pizarra del menú del día, facilitadas por Pau el 2026-09-09.",
+    "confirmado": [
+      "Dirección: Calle Jerónimo Ibrán, 11 · 33600 Mieres (Asturias)",
+      "Teléfono: 684 65 05 16",
+      "Teléfono de reservas de la pizarra: 984 25 33 52",
+      "Horario: lunes, martes y jueves 11:00-23:00 · viernes y sábado 11:00-01:00 · domingo 11:00-17:00 · miércoles cerrado",
+      "Reparto a domicilio: lo hacen por Glovo (lo anuncia su propia pizarra)",
+      "Carta de «Entrantes para compartir» con precios, tomada de la foto de su carta impresa",
+      "Menú del día a 15,50 €, incluye pan, agua o vino y postre"
+    ],
+    "pendiente": [
+      "HAY DOS VERSIONES DE LA CARTA con precios distintos para los mismos platos (pastel de cabracho 16,00 y 15,00; croquetas de jamón 11,50 y 10,00; chorizo criollo 8,90 y 5,00). Aquí se han puesto los de la carta impresa más reciente. Confirmar cuál está vigente.",
+      "Los platos marcados como «de muestra» salen de la foto de la carta antigua o de una foto que no se lee bien: confirmar nombre y precio uno a uno.",
+      "El menú del día cambia a diario. El que aparece aquí es el de la foto de la pizarra.",
+      "Correo y WhatsApp del restaurante.",
+      "Web oficial y redes, si las tienen.",
+      "Fotos propias de los platos: sin ellas, las tarjetas 3D salen con degradado."
+    ]
+  },
+  "colores": {
+    "fondo": "#171012",
+    "acento": "#d99a3f",
+    "acento2": "#8c2f39",
+    "texto": "#f7efe6"
+  },
+  "contacto": {
+    "telefono": "+34684650516",
+    "telefonoTexto": "684 65 05 16",
+    "whatsapp": "",
+    "email": "",
+    "direccion": "Calle Jerónimo Ibrán, 11 · 33600 Mieres (Asturias)",
+    "horario": "Lun, Mar y Jue 11:00-23:00 · Vie y Sáb 11:00-01:00 · Dom 11:00-17:00 · Miércoles cerrado",
+    "mapaLat": null,
+    "mapaLng": null
+  },
+  "redes": {
+    "web": "",
+    "instagram": "",
+    "facebook": "",
+    "tiktok": "",
+    "googleBusiness": "",
+    "tripadvisor": ""
+  },
+  "modulos": {
+    "pedidosDomicilio": true,
+    "reservas": true,
+    "qrMesas": true,
+    "catalogoInmuebles": false,
+    "valoracionGratis": false,
+    "pedirDemo": true
+  },
+  "datos": {
+    "modo": "local",
+    "api": { "lead": "/api/lead", "pedido": "", "reserva": "" },
+    "firebase": {
+      "apiKey": "",
+      "authDomain": "",
+      "projectId": "",
+      "coleccionPedidos": "pedidos",
+      "coleccionReservas": "reservas",
+      "coleccionConfig": "negocios"
+    }
+  },
+  "carta": {
+    "preciosEjemplo": false,
+    "moneda": "€",
+    "aviso": "Precios tomados de su carta impresa. Servicio de pan: 1,00 €. Los platos marcados con «de muestra» están pendientes de confirmar con el restaurante.",
+    "categorias": [
+      {
+        "id": "menu-dia",
+        "nombre": "Menú del día · 15,50 €",
+        "platos": [
+          { "id": "m1", "nombre": "Menú del día completo", "descripcion": "Primero, segundo y postre. Incluye pan, agua o vino. Cambia cada día: el de la foto llevaba pote asturiano, arroz con pulpo, tosta de setas con cebolla caramelizada o ensalada César de primero; y fritos de merluza, manitas de cerdo, hamburguesa al cabrales o escalopines al cabrales de segundo.", "precio": 15.5, "foto": "", "destacado": true, "confirmado": true, "alergenos": [] }
+        ]
+      },
+      {
+        "id": "entrantes",
+        "nombre": "Entrantes para compartir",
+        "platos": [
+          { "id": "e1", "nombre": "Patatas tres salsas", "descripcion": "Alioli, cabrales y brava.", "precio": 9.9, "foto": "", "destacado": false, "confirmado": true, "alergenos": ["huevo", "leche"] },
+          { "id": "e2", "nombre": "Pimientos del Padrón", "descripcion": "", "precio": 8.5, "foto": "", "destacado": false, "confirmado": true, "alergenos": [] },
+          { "id": "e3", "nombre": "Jamón ibérico (100 g)", "descripcion": "Con pan tostado y tomate.", "precio": 19.9, "foto": "", "destacado": true, "confirmado": true, "alergenos": ["gluten"] },
+          { "id": "e4", "nombre": "Tabla de embutidos y queso manchego", "descripcion": "Chorizo, salchichón y queso manchego.", "precio": 9.9, "foto": "", "destacado": false, "confirmado": true, "alergenos": ["leche"] },
+          { "id": "e5", "nombre": "Tortilla de patata tradicional", "descripcion": "Con o sin cebolla.", "precio": 14.9, "foto": "", "destacado": false, "confirmado": true, "alergenos": ["huevo"] },
+          { "id": "e6", "nombre": "Tortilla de patata con cebolla caramelizada y queso de cabra", "descripcion": "", "precio": 17.5, "foto": "", "destacado": false, "confirmado": true, "alergenos": ["leche", "huevo"] },
+          { "id": "e7", "nombre": "Croquetas de jamón ibérico", "descripcion": "8 unidades.", "precio": 11.5, "foto": "", "destacado": true, "confirmado": true, "alergenos": ["gluten", "leche", "huevo"] },
+          { "id": "e8", "nombre": "Croquetas de langostinos", "descripcion": "8 unidades.", "precio": 15.5, "foto": "", "destacado": false, "confirmado": true, "alergenos": ["gluten", "leche", "crustáceos", "huevo"] },
+          { "id": "e9", "nombre": "Pastel de cabracho", "descripcion": "Con salsa rosa, mayonesa y biscotes.", "precio": 16, "foto": "", "destacado": false, "confirmado": true, "alergenos": ["pescado", "huevo", "gluten"] },
+          { "id": "e10", "nombre": "Gyozas de langostinos", "descripcion": "6 unidades.", "precio": 15.5, "foto": "", "destacado": false, "confirmado": true, "alergenos": ["gluten", "crustáceos", "soja", "huevo"] },
+          { "id": "e11", "nombre": "Chorizo criollo a la brasa con chimichurri", "descripcion": "Precio por unidad.", "precio": 8.9, "foto": "", "destacado": false, "confirmado": true, "alergenos": [] },
+          { "id": "e12", "nombre": "Revuelto de setas y gambas", "descripcion": "", "precio": 17.5, "foto": "", "destacado": false, "confirmado": true, "alergenos": ["huevo", "crustáceos"] },
+          { "id": "e13", "nombre": "Pan brioche de carrilleras de ternera", "descripcion": "Mínimo 2 unidades. Precio por unidad.", "precio": 7.5, "foto": "", "destacado": true, "confirmado": true, "alergenos": ["gluten", "huevo", "leche"] },
+          { "id": "e14", "nombre": "Tacos «La Taberna»", "descripcion": "Pulled pork, pico de gallo y salsas caseras en tortitas de trigo. Mínimo 2 unidades. Precio por unidad.", "precio": 6.9, "foto": "", "destacado": true, "confirmado": true, "alergenos": ["gluten"] },
+          { "id": "e15", "nombre": "Croquetas de lacón y grelos", "descripcion": "8 unidades.", "precio": 15, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["gluten", "leche"] },
+          { "id": "e16", "nombre": "Gyozas de pollo", "descripcion": "8 unidades.", "precio": 14, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["gluten", "soja"] },
+          { "id": "e17", "nombre": "Crujiente de langostino", "descripcion": "Con alioli de lima, mostaza y miel. 6 unidades.", "precio": 16.5, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["gluten", "crustáceos", "huevo"] }
+        ]
+      },
+      {
+        "id": "sartenes",
+        "nombre": "Sartenes",
+        "platos": [
+          { "id": "s1", "nombre": "Huevos rotos con picadillo", "descripcion": "", "precio": 12.5, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["huevo"] },
+          { "id": "s2", "nombre": "Huevos rotos con jamón", "descripcion": "", "precio": 13.5, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["huevo"] },
+          { "id": "s3", "nombre": "Huevos rotos con langostinos", "descripcion": "", "precio": 17.5, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["huevo", "crustáceos"] }
+        ]
+      },
+      {
+        "id": "ensaladas",
+        "nombre": "Ensaladas",
+        "platos": [
+          { "id": "n1", "nombre": "Ensalada LTC", "descripcion": "Lechuga, tomate y cebolla.", "precio": 9, "foto": "", "destacado": false, "confirmado": false, "alergenos": [] },
+          { "id": "n2", "nombre": "Ensalada mixta", "descripcion": "Lechuga, tomate, cebolla, maíz y huevo.", "precio": 11, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["huevo"] },
+          { "id": "n3", "nombre": "Ensalada de cecina y queso de cabra con mermelada", "descripcion": "", "precio": 15, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["leche"] }
+        ]
+      },
+      {
+        "id": "carnes",
+        "nombre": "Carnes",
+        "platos": [
+          { "id": "c1", "nombre": "Cachopo especial «Taberna»", "descripcion": "Ternera, jamón, queso de cabra, cebolla caramelizada y jalapeños.", "precio": 28, "foto": "", "destacado": true, "confirmado": false, "alergenos": ["gluten", "leche", "huevo"] },
+          { "id": "c2", "nombre": "Cachopo de ternera tradicional", "descripcion": "", "precio": 24.5, "foto": "", "destacado": true, "confirmado": false, "alergenos": ["gluten", "leche", "huevo"] },
+          { "id": "c3", "nombre": "Picaña de ternera asturiana a la piedra", "descripcion": "500 g.", "precio": 23.5, "foto": "", "destacado": true, "confirmado": false, "alergenos": [] },
+          { "id": "c4", "nombre": "Entrecot de ternera", "descripcion": "400 g.", "precio": 22, "foto": "", "destacado": false, "confirmado": false, "alergenos": [] },
+          { "id": "c5", "nombre": "Escalopines al cabrales", "descripcion": "", "precio": 16, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["leche", "gluten"] },
+          { "id": "c6", "nombre": "Costillas al ajillo con pimientos y patatas fritas", "descripcion": "", "precio": 14, "foto": "", "destacado": false, "confirmado": false, "alergenos": [] },
+          { "id": "c7", "nombre": "Lacón a la gallega", "descripcion": "", "precio": 14, "foto": "", "destacado": false, "confirmado": false, "alergenos": [] },
+          { "id": "c8", "nombre": "Pollo al ajillo con patatas fritas", "descripcion": "", "precio": 12, "foto": "", "destacado": false, "confirmado": false, "alergenos": [] },
+          { "id": "c9", "nombre": "Callos caseros", "descripcion": "En temporada. Media ración, 10,00 €.", "precio": 16, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["gluten"] }
+        ]
+      },
+      {
+        "id": "pescados",
+        "nombre": "Pescados",
+        "platos": [
+          { "id": "p1", "nombre": "Calamares fritos de potera", "descripcion": "", "precio": 21.5, "foto": "", "destacado": true, "confirmado": false, "alergenos": ["moluscos", "gluten"] },
+          { "id": "p2", "nombre": "Migas de bacalao al estilo «Taberna»", "descripcion": "", "precio": 23.5, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["pescado"] },
+          { "id": "p3", "nombre": "Fritos de bacalao", "descripcion": "", "precio": 22, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["pescado", "gluten"] },
+          { "id": "p4", "nombre": "Chipirones fritos con alioli", "descripcion": "", "precio": 18, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["moluscos", "huevo", "gluten"] },
+          { "id": "p5", "nombre": "Chipirones a la sidra", "descripcion": "", "precio": 17, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["moluscos"] },
+          { "id": "p6", "nombre": "Fritos de merluza", "descripcion": "", "precio": 16, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["pescado", "gluten"] },
+          { "id": "p7", "nombre": "Mejillones marineros a la vinagreta", "descripcion": "", "precio": 9, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["moluscos"] }
+        ]
+      },
+      {
+        "id": "postres",
+        "nombre": "Postres caseros",
+        "platos": [
+          { "id": "d1", "nombre": "Torrija de Baileys con helado", "descripcion": "", "precio": 6.5, "foto": "", "destacado": true, "confirmado": false, "alergenos": ["gluten", "leche", "huevo"] },
+          { "id": "d2", "nombre": "Leche frita con helado", "descripcion": "", "precio": 6.5, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["leche", "huevo", "gluten"] },
+          { "id": "d3", "nombre": "Tarta de queso con helado de frutos rojos", "descripcion": "", "precio": 6, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["leche", "huevo", "gluten"] },
+          { "id": "d4", "nombre": "Tarta de la abuela", "descripcion": "", "precio": 6, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["leche", "gluten"] },
+          { "id": "d5", "nombre": "Tarta de turrón", "descripcion": "", "precio": 6, "foto": "", "destacado": false, "confirmado": false, "alergenos": ["leche", "frutos secos"] }
+        ]
+      }
+    ]
+  },
+  "pedidos": {
+    "recogidaEnLocal": true,
+    "pedidoMinimo": 0,
+    "zonasReparto": [],
+    "formasPago": ["Efectivo al recoger", "Tarjeta en el local"],
+    "avisoLegal": "El reparto a domicilio lo hacen por Glovo, según anuncia su propia pizarra. Aquí el pedido se prepara para recoger en el local y se confirma por teléfono antes de entrar en cocina."
+  },
+  "reservas": {
+    "maxComensales": 20,
+    "antelacionDias": 30,
+    "diasCerrado": [3],
+    "turnos": ["13:00", "13:30", "14:00", "14:30", "15:00", "20:30", "21:00", "21:30", "22:00"],
+    "aviso": "Los miércoles cierran. Los turnos son orientativos: para reservar al momento, el teléfono de la pizarra es el 984 25 33 52."
+  },
+  "qr": {
+    "mesas": 16,
+    "prefijoMesa": "Mesa",
+    "destino": "carta"
+  }
+}
