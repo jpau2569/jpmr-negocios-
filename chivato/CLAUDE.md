@@ -75,7 +75,17 @@ reenvío `api/chivato.js`.
 | `datos/testigos.json` | El catálogo revisado |
 | `herramientas/generar-iconos.mjs` | Iconos de la PWA desde la marca, sin dependencias |
 | `herramientas/calibrar.mjs` | Banco de calibración: pasa fotos reales y mide cobertura y precisión |
+| `herramientas/generar-enlace.mjs` | Enlace corto, QR y cartel; pone las URL absolutas de canonical y Open Graph |
+| `herramientas/qr.mjs` | Generador de QR, copia literal de `fotos-faciles/nucleo/qr.mjs` |
+| `DOMINIO.md` | Pasos para poner la app en su propio dominio |
 | `../chivato.html` | Ficha pública para enseñar y compartir la app |
+
+## Al tocar el QR
+
+`herramientas/qr.mjs` es una **copia literal** de `fotos-faciles/nucleo/qr.mjs`,
+no un import: `chivato/` tiene que poder desplegarse sola. Si arreglas algo en
+una de las dos, llévalo a la otra — el test comprueba que las dos generan el
+mismo QR para las mismas direcciones.
 
 ## Antes de tocar el prompt de visión
 

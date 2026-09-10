@@ -232,6 +232,34 @@ console.log("\n📱 PWA e integración");
   check("las fotos de calibración quedan fuera de git",
     leer(".gitignore").includes("chivato/fotos-calibracion/"));
 
+  // La copia y el original tienen que generar el MISMO QR: comparar bytes
+  // fallaría solo por la cabecera, y comparar comportamiento es lo que importa.
+  const { matriz: matrizChivato } = await import("../chivato/herramientas/qr.mjs");
+  const { matriz: matrizFotos } = await import("../fotos-faciles/nucleo/qr.mjs");
+  check("el generador de QR copiado da el mismo resultado que el original",
+    ["https://chivato.ai", "https://jpmr-negocios.vercel.app/chivato", "https://chivato.ai/?utm=cartel"]
+      .every((texto) => {
+        const a = matrizChivato(texto), b = matrizFotos(texto);
+        return a.tamano === b.tamano &&
+          JSON.stringify(a.modulos) === JSON.stringify(b.modulos);
+      }));
+
+  const cartel = leer("chivato/comparte.html");
+  check("el cartel lleva el QR dibujado, no una imagen de fuera",
+    cartel.includes("<svg") && !/<img[^>]+src="http/.test(cartel));
+  check("el cartel se puede imprimir sin los botones",
+    cartel.includes("@media print") && cartel.includes(".botones"));
+  check("el QR vectorial existe y es un SVG",
+    leer("chivato/qr.svg").trim().startsWith("<svg"));
+  check("la app declara canonical y Open Graph con dirección absoluta", (() => {
+    const app = leer("chivato/index.html");
+    const og = app.match(/<meta property="og:image" content="([^"]+)"/)?.[1] || "";
+    return /<link rel="canonical" href="https?:\/\//.test(app) && og.startsWith("http");
+  })());
+  check("hay guía para poner la app en su propio dominio",
+    leer("chivato/DOMINIO.md").includes("Root Directory") &&
+    leer("chivato/DOMINIO.md").includes("generar-enlace.mjs"));
+
   const reenvio = leer("api/chivato.js");
   check("la ruta /api/chivato del monorepo apunta a la app",
     reenvio.includes("../chivato/api/chivato.js"));

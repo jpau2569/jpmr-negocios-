@@ -90,6 +90,8 @@ chivato/
 ├── icono-*.png           → iconos generados de la PWA
 └── herramientas/
     ├── generar-iconos.mjs → iconos de la PWA desde la marca
+    ├── generar-enlace.mjs → enlace corto, QR y cartel para compartir
+    ├── qr.mjs             → generador de QR (copia de fotos-faciles)
     └── calibrar.mjs       → banco de calibración con fotos reales
 ```
 
@@ -180,6 +182,29 @@ Variable de entorno necesaria (Vercel → Settings → Environment Variables):
 
 La clave **nunca** viaja al navegador: la llamada al modelo se hace desde la
 función serverless.
+
+## Enlace, QR y cartel para compartir
+
+```bash
+node chivato/herramientas/generar-enlace.mjs --dominio chivato.ai
+```
+
+Genera `qr.svg` (vectorial, sirve igual para una pegatina que para un cartel
+A3) y `comparte.html`: un cartel con el QR, el enlace, botón de WhatsApp y
+botón de imprimir, con hoja de estilo de impresión aparte para colgarlo en el
+local. Además deja `canonical`, `og:url` y `og:image` con la dirección
+**absoluta** del dominio, que es lo que hace que al pegar el enlace en WhatsApp
+salga la tarjeta con el logo en vez de un enlace pelado.
+
+Con `--solo-qr` regenera el QR y el cartel sin tocar los HTML.
+
+El generador de QR (`herramientas/qr.mjs`) es una copia literal del de Fotos
+Fáciles: implementación propia, sin dependencias, verificada módulo a módulo
+contra la librería `qrcode`. Está copiado y no importado para que `chivato/`
+se pueda desplegar sola; el test comprueba que las dos generan exactamente el
+mismo QR.
+
+Los pasos para poner la app en su propio dominio están en `DOMINIO.md`.
 
 ## Regenerar los iconos
 
