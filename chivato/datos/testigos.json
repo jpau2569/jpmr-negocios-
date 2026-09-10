@@ -1,0 +1,2372 @@
+{
+  "version": "1.0.0",
+  "actualizado": "2026-09-10",
+  "fuente": "Norma ISO 2575 (símbolos del salpicadero) y manuales de las marcas. Redactado para Chivato AI.",
+  "aviso": "Información orientativa. Los símbolos y su significado exacto varían entre marcas y modelos: el manual del vehículo manda.",
+  "categorias": {
+    "motor": "Motor y propulsión",
+    "frenos": "Frenos y estabilidad",
+    "ruedas": "Ruedas y neumáticos",
+    "luces": "Luces e iluminación",
+    "electrico": "Sistema eléctrico y alta tensión",
+    "asistentes": "Asistentes a la conducción",
+    "seguridad": "Seguridad pasiva",
+    "escape": "Escape y emisiones",
+    "combustible": "Combustible",
+    "transmision": "Transmisión",
+    "direccion": "Dirección",
+    "suspension": "Suspensión",
+    "carroceria": "Carrocería y aperturas",
+    "confort": "Confort y visibilidad",
+    "mantenimiento": "Mantenimiento",
+    "general": "Avisos generales"
+  },
+  "testigos": [
+    {
+      "id": "freno-sistema",
+      "nombre": "Sistema de frenos / líquido de frenos",
+      "otros_nombres": [
+        "signo de admiración dentro de un círculo",
+        "BRAKE",
+        "círculo con paréntesis",
+        "testigo rojo del freno"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "frenos",
+      "icono": "freno-circulo",
+      "forma": "Círculo con un signo de admiración dentro, entre dos paréntesis (a veces la palabra BRAKE).",
+      "significado": "Es el aviso más serio del sistema de frenado. Si se enciende en marcha y no es el freno de mano, significa que el coche ha detectado poco líquido de frenos o un fallo en el circuito. Puedes quedarte sin frenos.",
+      "causas": [
+        "Nivel de líquido de frenos por debajo del mínimo",
+        "Fuga en un latiguillo o en el cilindro principal",
+        "Pastillas muy desgastadas que han bajado el nivel",
+        "Sensor de nivel o interruptor del freno de mano averiado"
+      ],
+      "que_hacer": "Para en un sitio seguro en cuanto puedas, con suavidad y dejando distancia. Comprueba que el freno de mano está quitado del todo. Si sigue encendido, no continúes: llama a la grúa. Un pedal esponjoso o que se hunde confirma la fuga.",
+      "conducir": "no",
+      "coste": "30-900 €"
+    },
+    {
+      "id": "freno-mano",
+      "nombre": "Freno de estacionamiento puesto",
+      "otros_nombres": [
+        "freno de mano",
+        "P entre paréntesis",
+        "BRAKE",
+        "freno de aparcamiento"
+      ],
+      "color": "rojo",
+      "gravedad": "informativo",
+      "categoria": "frenos",
+      "icono": "freno-mano",
+      "forma": "Una P (o la palabra BRAKE) dentro de un círculo con paréntesis a los lados.",
+      "significado": "Simplemente te avisa de que el freno de mano sigue puesto. En coches con freno eléctrico aparece al accionarlo. Si se apaga al soltarlo, todo está en orden.",
+      "causas": [
+        "Freno de mano echado o no bajado del todo",
+        "Palanca a medio recorrido",
+        "Interruptor del freno de mano sucio o gastado"
+      ],
+      "que_hacer": "Suelta el freno de mano por completo. Si el testigo no se apaga, trátalo como el aviso rojo del sistema de frenos y revísalo antes de seguir.",
+      "conducir": "si",
+      "coste": "0-120 €"
+    },
+    {
+      "id": "freno-electrico-fallo",
+      "nombre": "Fallo del freno de estacionamiento eléctrico",
+      "otros_nombres": [
+        "EPB",
+        "freno eléctrico",
+        "P con llave",
+        "parking brake fault"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "frenos",
+      "icono": "freno-electrico",
+      "forma": "P dentro de un círculo con un signo de admiración o una llave inglesa al lado.",
+      "significado": "El freno de mano eléctrico no ha podido accionarse o soltarse correctamente. El coche puede quedarse frenado o, peor, sin freno de estacionamiento al aparcar.",
+      "causas": [
+        "Actuador del freno eléctrico averiado",
+        "Batería baja o tensión insuficiente",
+        "Fallo del módulo de control o del cableado",
+        "Pastillas traseras muy gastadas"
+      ],
+      "que_hacer": "Si el coche se mueve con normalidad, ve al taller sin demora. Al aparcar, deja una marcha metida (o P) y gira las ruedas hacia el bordillo si hay pendiente, porque el freno puede no sujetar.",
+      "conducir": "taller",
+      "coste": "150-800 €"
+    },
+    {
+      "id": "aceite-presion",
+      "nombre": "Presión de aceite del motor",
+      "otros_nombres": [
+        "aceitera",
+        "lata de aceite",
+        "presión de aceite baja",
+        "oil pressure"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "motor",
+      "icono": "aceitera",
+      "forma": "Una aceitera antigua con una gota cayendo.",
+      "significado": "El motor se ha quedado sin presión de aceite: las piezas internas están rozando sin lubricar. Es el testigo que más motores destroza cuando se ignora, y puede gripar el motor en menos de un minuto.",
+      "causas": [
+        "Nivel de aceite muy bajo o fuga",
+        "Bomba de aceite averiada",
+        "Sensor o interruptor de presión defectuoso",
+        "Aceite muy degradado o filtro obstruido"
+      ],
+      "que_hacer": "Para AHORA mismo en un lugar seguro y apaga el motor. No sigas ni un kilómetro más. Comprueba el nivel con la varilla; si está bajo, rellena y arranca: si el testigo sigue encendido, apaga y llama a la grúa.",
+      "conducir": "no",
+      "coste": "20-3.000 €"
+    },
+    {
+      "id": "aceite-nivel",
+      "nombre": "Nivel de aceite bajo",
+      "otros_nombres": [
+        "aceitera con nivel",
+        "oil level",
+        "min aceite"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "motor",
+      "icono": "aceitera-nivel",
+      "forma": "Aceitera con una línea ondulada debajo (o las letras MIN).",
+      "significado": "El coche detecta que queda poco aceite, aunque todavía haya presión. Es un aviso previo al testigo rojo: conviene rellenar pronto para no llegar al problema grave.",
+      "causas": [
+        "Consumo normal de aceite entre revisiones",
+        "Fuga por retenes o junta de la tapa de balancines",
+        "Segmentos o turbo que consumen aceite",
+        "Sensor de nivel sucio"
+      ],
+      "que_hacer": "Aparca en llano, espera unos minutos con el motor frío y comprueba la varilla. Rellena con el aceite que indica el manual hasta la marca superior, sin pasarte. Si tienes que rellenar a menudo, busca la fuga.",
+      "conducir": "taller",
+      "coste": "15-400 €"
+    },
+    {
+      "id": "temperatura-refrigerante",
+      "nombre": "Temperatura del refrigerante alta",
+      "otros_nombres": [
+        "termómetro en olas",
+        "motor caliente",
+        "sobrecalentamiento",
+        "temp"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "motor",
+      "icono": "termometro",
+      "forma": "Un termómetro sobre dos líneas onduladas que representan el líquido (rojo si es alarma, azul si el motor aún está frío).",
+      "significado": "El motor se está calentando por encima de lo admisible. Seguir conduciendo puede deformar la culata o fundir la junta, una de las averías más caras que existen.",
+      "causas": [
+        "Falta de refrigerante por una fuga",
+        "Termostato bloqueado cerrado",
+        "Ventilador del radiador averiado",
+        "Bomba de agua o radiador obstruidos",
+        "Junta de culata dañada"
+      ],
+      "que_hacer": "Para en un lugar seguro, apaga el aire acondicionado y pon la calefacción al máximo para sacar calor mientras te detienes. Apaga el motor y espera al menos 30 minutos. NUNCA abras el tapón del radiador en caliente.",
+      "conducir": "no",
+      "coste": "60-2.500 €"
+    },
+    {
+      "id": "temperatura-motor-frio",
+      "nombre": "Refrigerante frío (motor aún no caliente)",
+      "otros_nombres": [
+        "termómetro azul",
+        "testigo azul de temperatura"
+      ],
+      "color": "azul",
+      "gravedad": "informativo",
+      "categoria": "motor",
+      "icono": "termometro-frio",
+      "forma": "El mismo termómetro sobre líneas onduladas, en color azul.",
+      "significado": "Solo indica que el motor todavía está frío. No es una avería: se apaga solo a los pocos kilómetros cuando alcanza la temperatura de trabajo.",
+      "causas": [
+        "Arranque en frío normal",
+        "Temperaturas exteriores muy bajas",
+        "Termostato abierto permanentemente si nunca se apaga"
+      ],
+      "que_hacer": "Conduce con suavidad y sin exigir revoluciones altas hasta que se apague. Si no se apaga nunca, el termostato puede estar abierto y conviene revisarlo.",
+      "conducir": "si",
+      "coste": "0-200 €"
+    },
+    {
+      "id": "bateria-carga",
+      "nombre": "Carga de la batería / alternador",
+      "otros_nombres": [
+        "batería",
+        "pila",
+        "alternador",
+        "testigo rojo de la batería"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "electrico",
+      "icono": "bateria",
+      "forma": "Una batería rectangular con los símbolos + y − en la parte de arriba.",
+      "significado": "El sistema eléctrico ha dejado de cargar: el coche está funcionando con lo que queda en la batería. Casi siempre es el alternador o su correa. Cuando la batería se agote, el coche se para y no vuelve a arrancar.",
+      "causas": [
+        "Alternador averiado",
+        "Correa de accesorios rota o floja",
+        "Bornes sucios o cable de masa flojo",
+        "Batería al final de su vida",
+        "Regulador de tensión defectuoso"
+      ],
+      "que_hacer": "Apaga todo lo que consuma (aire, radio, luneta térmica, cargadores) y dirígete al taller más cercano o a casa sin apagar el motor. Si la correa está rota también dejarás de tener dirección asistida y refrigeración: para y llama a la grúa.",
+      "conducir": "taller",
+      "coste": "120-700 €"
+    },
+    {
+      "id": "airbag",
+      "nombre": "Airbag / sistema SRS",
+      "otros_nombres": [
+        "SRS",
+        "muñeco con globo",
+        "airbag desactivado",
+        "bolsa de aire"
+      ],
+      "color": "rojo",
+      "gravedad": "atencion",
+      "categoria": "seguridad",
+      "icono": "airbag",
+      "forma": "Una persona sentada con un círculo grande delante (la bolsa hinchada) y el cinturón cruzado.",
+      "significado": "Hay un fallo en el sistema de airbags o pretensores. El coche seguirá funcionando igual, pero en caso de accidente el airbag puede no dispararse — o dispararse cuando no debe.",
+      "causas": [
+        "Conector bajo los asientos suelto (causa muy habitual)",
+        "Sensor de impacto o de ocupación averiado",
+        "Muelle de reloj del volante roto",
+        "Batería desconectada o descargada recientemente",
+        "Airbag ya disparado sin reemplazar"
+      ],
+      "que_hacer": "Puedes conducir, pero ve al taller cuanto antes y conduce con extra prudencia: durante ese tiempo no tienes airbag. No es algo que deba esperar a la próxima revisión.",
+      "conducir": "taller",
+      "coste": "60-1.200 €"
+    },
+    {
+      "id": "airbag-acompanante-off",
+      "nombre": "Airbag del acompañante desactivado",
+      "otros_nombres": [
+        "PASSENGER AIRBAG OFF",
+        "airbag OFF",
+        "desactivación del airbag"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "seguridad",
+      "icono": "airbag-off",
+      "forma": "El texto AIRBAG OFF, o la silueta del airbag con una cruz o tachada.",
+      "significado": "El airbag del pasajero está desconectado a propósito, normalmente con la llave del salpicadero o del lateral. Es lo correcto cuando llevas una sillita infantil de espaldas a la marcha.",
+      "causas": [
+        "Llave de desactivación puesta en OFF",
+        "Sillita infantil detectada por el sensor de ocupación",
+        "Sensor del asiento averiado"
+      ],
+      "que_hacer": "Si llevas una sillita a contramarcha delante, debe estar así. Si va un adulto en ese asiento, vuelve a activarlo con la llave: sin airbag no está protegido.",
+      "conducir": "si",
+      "coste": "0-300 €"
+    },
+    {
+      "id": "cinturon",
+      "nombre": "Cinturón de seguridad sin abrochar",
+      "otros_nombres": [
+        "cinturón",
+        "seat belt",
+        "aviso de cinturón"
+      ],
+      "color": "rojo",
+      "gravedad": "atencion",
+      "categoria": "seguridad",
+      "icono": "cinturon",
+      "forma": "Una persona sentada con la banda del cinturón cruzada sobre el pecho.",
+      "significado": "Alguien viaja sin cinturón abrochado. Suele ir con un pitido que aumenta con la velocidad. Es también una infracción de tráfico con 4 puntos.",
+      "causas": [
+        "Cinturón sin abrochar del conductor o de algún pasajero",
+        "Objeto pesado sobre un asiento que activa el sensor",
+        "Hebilla o sensor de la hebilla averiado"
+      ],
+      "que_hacer": "Abrocha todos los cinturones. Si el aviso sigue con el coche vacío, quita el peso del asiento; si persiste, el sensor de la hebilla necesita revisión.",
+      "conducir": "si",
+      "coste": "0-250 €"
+    },
+    {
+      "id": "direccion-asistida",
+      "nombre": "Fallo de la dirección asistida",
+      "otros_nombres": [
+        "EPS",
+        "volante con admiración",
+        "power steering",
+        "dirección dura"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "direccion",
+      "icono": "volante",
+      "forma": "Un volante, a veces con un signo de admiración al lado (rojo si es grave, ámbar si es parcial).",
+      "significado": "La dirección asistida ha fallado o trabaja a medias. El coche sigue girando, pero el volante se pone MUY duro, sobre todo a poca velocidad y al aparcar.",
+      "causas": [
+        "Fallo del motor eléctrico de asistencia (dirección eléctrica)",
+        "Nivel bajo o fuga de líquido (dirección hidráulica)",
+        "Correa de la bomba rota o floja",
+        "Sensor de par o de ángulo de volante averiado",
+        "Tensión de batería insuficiente"
+      ],
+      "que_hacer": "Sujeta el volante con las dos manos y ve despacio hasta un lugar seguro: a velocidad de autopista se nota poco, pero al frenar y maniobrar cuesta mucho girar. Si está en rojo, no sigas viaje: al taller o grúa.",
+      "conducir": "no",
+      "coste": "150-1.200 €"
+    },
+    {
+      "id": "puerta-abierta",
+      "nombre": "Puerta abierta o mal cerrada",
+      "otros_nombres": [
+        "puertas",
+        "door ajar",
+        "coche con puertas abiertas"
+      ],
+      "color": "rojo",
+      "gravedad": "atencion",
+      "categoria": "carroceria",
+      "icono": "puerta",
+      "forma": "Vista cenital del coche con una o varias puertas abiertas.",
+      "significado": "Una puerta no está cerrada del todo. Con el coche en marcha es peligroso, y a veces solo está enganchada en el primer punto del cierre.",
+      "causas": [
+        "Puerta apoyada pero sin cerrar",
+        "Cinturón o alfombrilla pillados en el marco",
+        "Interruptor de la cerradura sucio o averiado"
+      ],
+      "que_hacer": "Para y cierra bien la puerta con firmeza. Si el aviso sigue con todas cerradas, limpia y engrasa el pestillo o cambia el interruptor de la cerradura.",
+      "conducir": "no",
+      "coste": "0-180 €"
+    },
+    {
+      "id": "capo-abierto",
+      "nombre": "Capó abierto",
+      "otros_nombres": [
+        "capó",
+        "bonnet",
+        "hood open"
+      ],
+      "color": "rojo",
+      "gravedad": "atencion",
+      "categoria": "carroceria",
+      "icono": "capo",
+      "forma": "Vista lateral del coche con el capó delantero levantado.",
+      "significado": "El capó no está enganchado. A velocidad puede abrirse de golpe y taparte por completo la visión: es de los avisos que nunca hay que ignorar.",
+      "causas": [
+        "Capó cerrado sin fuerza suficiente",
+        "Pestillo de seguridad sucio o desajustado",
+        "Interruptor del capó averiado"
+      ],
+      "que_hacer": "Para en un sitio seguro y ciérralo dejándolo caer desde unos 30 cm, sin aplastarlo con las manos. Comprueba que queda enrasado con las aletas.",
+      "conducir": "no",
+      "coste": "0-150 €"
+    },
+    {
+      "id": "maletero-abierto",
+      "nombre": "Maletero o portón abierto",
+      "otros_nombres": [
+        "portón",
+        "trunk",
+        "maletero"
+      ],
+      "color": "rojo",
+      "gravedad": "atencion",
+      "categoria": "carroceria",
+      "icono": "maletero",
+      "forma": "Vista lateral o cenital del coche con el portón trasero levantado.",
+      "significado": "El maletero no está bien cerrado. Además del riesgo de perder carga, con el portón entreabierto pueden entrar gases de escape al habitáculo.",
+      "causas": [
+        "Portón mal cerrado",
+        "Objeto que impide el cierre",
+        "Cerradura o interruptor averiado"
+      ],
+      "que_hacer": "Para y ciérralo bien. Si el aviso sigue, revisa la cerradura. No conduzcas largos trayectos con el portón entreabierto por el riesgo de monóxido.",
+      "conducir": "no",
+      "coste": "0-200 €"
+    },
+    {
+      "id": "stop-general",
+      "nombre": "STOP / avería grave",
+      "otros_nombres": [
+        "STOP",
+        "triángulo rojo",
+        "testigo rojo general",
+        "fallo grave"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "general",
+      "icono": "stop",
+      "forma": "La palabra STOP en rojo, o un triángulo rojo con un signo de admiración.",
+      "significado": "El coche ha detectado un fallo que considera grave y te pide que te detengas. Suele venir acompañado de un mensaje en la pantalla que explica cuál es.",
+      "causas": [
+        "Sobrecalentamiento del motor",
+        "Presión de aceite o de frenos insuficiente",
+        "Fallo eléctrico o de un módulo de control",
+        "Avería del sistema de frenado o de la transmisión"
+      ],
+      "que_hacer": "Para en un lugar seguro y apaga el motor. Lee el mensaje que aparece en el cuadro: es la clave para saber qué falla. No reanudes la marcha sin saber qué era.",
+      "conducir": "no",
+      "coste": "según la avería"
+    },
+    {
+      "id": "motor-fallo-grave",
+      "nombre": "Fallo grave del motor (testigo rojo)",
+      "otros_nombres": [
+        "motor rojo",
+        "engine fault",
+        "fallo de motor"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "motor",
+      "icono": "motor",
+      "forma": "La silueta del motor en color rojo (en muchos coches el mismo dibujo que el check engine, pero en rojo).",
+      "significado": "El mismo dibujo del motor, pero en rojo, significa avería inminente: el coche puede entrar en modo de emergencia o pararse. No es lo mismo que el testigo ámbar del motor.",
+      "causas": [
+        "Fallo de encendido severo en varios cilindros",
+        "Presión de aceite o refrigeración comprometidas",
+        "Avería del sistema de inyección o del turbo",
+        "Fallo del acelerador electrónico"
+      ],
+      "que_hacer": "Reduce la marcha y para en cuanto sea seguro. Apaga el motor y no lo fuerces. Llama a la grúa: seguir puede convertir una reparación media en un motor nuevo.",
+      "conducir": "no",
+      "coste": "200-4.000 €"
+    },
+    {
+      "id": "transmision-temperatura",
+      "nombre": "Temperatura o fallo de la caja de cambios",
+      "otros_nombres": [
+        "caja automática",
+        "transmisión",
+        "AT oil temp",
+        "engranaje con admiración"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "transmision",
+      "icono": "transmision",
+      "forma": "Un engranaje con un signo de admiración dentro, o un engranaje con un termómetro.",
+      "significado": "La caja de cambios automática ha fallado o se ha sobrecalentado. Puede quedarse en una marcha fija (modo de emergencia) o dejar de transmitir potencia.",
+      "causas": [
+        "Aceite de la caja bajo, viejo o sobrecalentado",
+        "Remolcar o arrastrar cargas por encima del límite",
+        "Embrague del convertidor o mecatrónica averiados",
+        "Sensores de la caja defectuosos"
+      ],
+      "que_hacer": "Si es por temperatura, para y deja enfriar 30 minutos en punto muerto. Si es un fallo, ve al taller a poca velocidad o llama a la grúa: seguir puede arruinar la caja.",
+      "conducir": "no",
+      "coste": "150-3.500 €"
+    },
+    {
+      "id": "llave-inmovilizador",
+      "nombre": "Inmovilizador / llave no reconocida",
+      "otros_nombres": [
+        "llave",
+        "inmovilizador",
+        "key",
+        "llave tachada"
+      ],
+      "color": "rojo",
+      "gravedad": "atencion",
+      "categoria": "electrico",
+      "icono": "llave",
+      "forma": "La silueta de una llave de coche, a veces dentro de un candado o con una cruz.",
+      "significado": "El coche no reconoce la llave o el sistema antirrobo ha bloqueado el arranque. Es una protección: sin llave válida el motor no arranca.",
+      "causas": [
+        "Pila de la llave agotada",
+        "Chip transpondedor dañado",
+        "Antena del inmovilizador o lector averiado",
+        "Llave de repuesto sin programar",
+        "Interferencia con otras llaves o el móvil"
+      ],
+      "que_hacer": "Prueba con la llave de repuesto. Si es llave sin contacto, acércala al lector (suele estar en la columna de dirección o en un hueco marcado). Cambia la pila: es la causa más frecuente y cuesta 3 €.",
+      "conducir": "taller",
+      "coste": "5-350 €"
+    },
+    {
+      "id": "colision-inminente",
+      "nombre": "Aviso de colisión / frenada de emergencia",
+      "otros_nombres": [
+        "AEB",
+        "pre-crash",
+        "aviso de colisión",
+        "dos coches en rojo"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "asistentes",
+      "icono": "colision",
+      "forma": "Un coche visto de frente con ondas o líneas rojas delante, a veces con otro coche detrás.",
+      "significado": "El coche cree que vas a chocar. Suele ir con un pitido fuerte y, si no reaccionas, con una frenada automática. Si se queda fijo, el sistema está averiado.",
+      "causas": [
+        "Vehículo u obstáculo muy cerca por delante",
+        "Frenada brusca del coche de delante",
+        "Radar o cámara sucios, tapados o desalineados",
+        "Fallo del sistema tras un golpe o cambio de parabrisas"
+      ],
+      "que_hacer": "Si suena en marcha, frena y aumenta la distancia de inmediato. Si se queda encendido sin motivo, limpia la zona del radar (parrilla) y la cámara del parabrisas; si sigue, hay que recalibrarlo en el taller.",
+      "conducir": "taller",
+      "coste": "0-900 €"
+    },
+    {
+      "id": "motor-mil",
+      "nombre": "Avería del motor (check engine)",
+      "otros_nombres": [
+        "check engine",
+        "MIL",
+        "luz del motor",
+        "motor amarillo",
+        "emisiones"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "motor",
+      "icono": "motor",
+      "forma": "La silueta de un motor visto de lado, con sus escalones característicos.",
+      "significado": "El ordenador ha detectado algo fuera de rango en el motor o en las emisiones. Si está fijo puedes ir al taller; si PARPADEA hay un fallo de encendido que está destrozando el catalizador y hay que parar.",
+      "causas": [
+        "Sonda lambda o caudalímetro sucio o averiado",
+        "Bobinas o bujías en mal estado",
+        "Tapón del depósito mal cerrado o válvula EVAP",
+        "Catalizador con bajo rendimiento",
+        "Fuga de aire en la admisión"
+      ],
+      "que_hacer": "Si está fijo: conduce con suavidad y pasa por el taller en pocos días para leer el código de avería (una lectura OBD cuesta poco y a veces es gratis). Si parpadea: reduce velocidad, evita acelerar y para cuanto antes.",
+      "conducir": "taller",
+      "coste": "20-1.200 €"
+    },
+    {
+      "id": "epc",
+      "nombre": "EPC — control electrónico de potencia",
+      "otros_nombres": [
+        "EPC",
+        "electronic power control",
+        "Volkswagen EPC",
+        "Seat EPC"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "motor",
+      "icono": "epc",
+      "forma": "Las letras EPC en un recuadro (grupo Volkswagen: VW, Seat, Škoda, Audi).",
+      "significado": "El acelerador electrónico o la gestión del motor tienen un fallo. El coche suele limitar la potencia para protegerse: notarás que no tira.",
+      "causas": [
+        "Cuerpo de mariposa sucio o averiado",
+        "Pedal del acelerador o su sensor defectuoso",
+        "Sensor de cigüeñal o de árbol de levas",
+        "Bobinas o inyectores con fallo",
+        "Problema del freno o del interruptor de la luz de freno"
+      ],
+      "que_hacer": "Puedes moverte con cuidado, pero cuenta con que el coche tenga poca fuerza. Ve al taller a que lean el error: EPC suele venir acompañado de otro código que dice exactamente qué es.",
+      "conducir": "taller",
+      "coste": "60-800 €"
+    },
+    {
+      "id": "potencia-reducida",
+      "nombre": "Potencia reducida / modo de emergencia",
+      "otros_nombres": [
+        "limp mode",
+        "modo cojera",
+        "tortuga",
+        "reduced power",
+        "potencia limitada"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "motor",
+      "icono": "tortuga",
+      "forma": "Una tortuga (en algunas marcas), un coche con una flecha hacia abajo o el mensaje 'potencia reducida'.",
+      "significado": "El coche se ha puesto en modo de emergencia: limita revoluciones y potencia para llegar al taller sin romperse. Notarás que apenas acelera.",
+      "causas": [
+        "Fallo del turbo o de su válvula de descarga",
+        "Sobrecalentamiento del motor o de la batería (eléctricos)",
+        "Fallo de un sensor importante",
+        "Filtro de partículas muy saturado",
+        "Nivel de AdBlue agotado"
+      ],
+      "que_hacer": "No fuerces el motor. Ve al taller directamente, por vías secundarias si puedes, evitando autopistas donde ir despacio es peligroso. A veces apagar y arrancar de nuevo lo resetea temporalmente, pero el fallo sigue ahí.",
+      "conducir": "taller",
+      "coste": "80-1.500 €"
+    },
+    {
+      "id": "precalentamiento",
+      "nombre": "Precalentamiento diésel (bujías de incandescencia)",
+      "otros_nombres": [
+        "muelle",
+        "espiral",
+        "bujías de precalentamiento",
+        "glow plug",
+        "testigo del diésel"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "motor",
+      "icono": "precalentamiento",
+      "forma": "Un muelle o espiral horizontal (como un alambre enrollado).",
+      "significado": "En un diésel es normal al dar el contacto: las bujías de incandescencia están calentando la cámara. Espera a que se apague antes de arrancar. Si se enciende en marcha o parpadea, hay un fallo del motor.",
+      "causas": [
+        "Arranque en frío normal",
+        "Bujías de incandescencia fundidas",
+        "Relé o módulo de precalentamiento averiado",
+        "Fallo de la gestión del motor si parpadea en marcha"
+      ],
+      "que_hacer": "Al arrancar en frío, gira la llave y espera a que se apague (2-5 segundos). Si parpadea en marcha, es un aviso de avería: al taller. Con bujías gastadas el coche arranca mal en frío y humea.",
+      "conducir": "si",
+      "coste": "60-450 €"
+    },
+    {
+      "id": "dpf",
+      "nombre": "Filtro de partículas (DPF / FAP) saturado",
+      "otros_nombres": [
+        "FAP",
+        "DPF",
+        "filtro antipartículas",
+        "escape con puntos"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "escape",
+      "icono": "dpf",
+      "forma": "Un silenciador de escape con puntitos o burbujas saliendo.",
+      "significado": "El filtro que retiene el hollín del diésel está lleno y no ha podido limpiarse solo. Pasa mucho en coches de ciudad que nunca cogen carretera.",
+      "causas": [
+        "Muchos trayectos cortos sin llegar a temperatura",
+        "Regeneraciones interrumpidas al apagar el motor",
+        "Sensor de presión diferencial averiado",
+        "Aceite inadecuado o consumo excesivo",
+        "Fallo de inyectores o EGR"
+      ],
+      "que_hacer": "Haz una regeneración en marcha: 20-30 minutos por carretera o autovía a más de 2.000 rpm en una marcha larga, sin parar. Si el testigo no se apaga o aparece otro, al taller antes de que el filtro se bloquee del todo (cambiarlo cuesta más de 1.000 €).",
+      "conducir": "taller",
+      "coste": "0-1.800 €"
+    },
+    {
+      "id": "gpf",
+      "nombre": "Filtro de partículas de gasolina (GPF / OPF)",
+      "otros_nombres": [
+        "GPF",
+        "OPF",
+        "filtro de partículas gasolina"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "escape",
+      "icono": "dpf",
+      "forma": "El mismo silenciador con puntitos, en coches de gasolina modernos.",
+      "significado": "Los gasolina de inyección directa también llevan filtro de partículas desde la norma Euro 6d. Se satura menos que el del diésel, pero puede avisar igual.",
+      "causas": [
+        "Trayectos cortos repetidos",
+        "Consumo de aceite del motor",
+        "Sensor de presión del filtro averiado",
+        "Fallo de combustión que genera exceso de hollín"
+      ],
+      "que_hacer": "Igual que con el DPF: un trayecto sostenido por carretera suele resolverlo. Si vuelve a aparecer con frecuencia, revisa el consumo de aceite y la combustión.",
+      "conducir": "taller",
+      "coste": "0-1.500 €"
+    },
+    {
+      "id": "adblue",
+      "nombre": "AdBlue / sistema SCR",
+      "otros_nombres": [
+        "AdBlue",
+        "urea",
+        "SCR",
+        "depósito con gotas"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "escape",
+      "icono": "adblue",
+      "forma": "Un surtidor con gotas, o las letras AdBlue, a veces con un signo de admiración.",
+      "significado": "Se está acabando el AdBlue, el aditivo que reduce los óxidos de nitrógeno en los diésel modernos. Es importante: cuando llega a cero, la ley obliga a que el coche NO vuelva a arrancar.",
+      "causas": [
+        "Depósito de AdBlue casi vacío",
+        "Cristalización en el inyector de urea",
+        "Sensor de calidad o de nivel averiado",
+        "Bomba del sistema SCR defectuosa"
+      ],
+      "que_hacer": "Rellena AdBlue cuanto antes: se vende en gasolineras y grandes superficies por 10-20 € la garrafa, y lo puedes echar tú por el tapón azul. Fíjate en el aviso de kilómetros restantes: al llegar a cero, el coche no arrancará.",
+      "conducir": "taller",
+      "coste": "15-1.200 €"
+    },
+    {
+      "id": "adblue-critico",
+      "nombre": "AdBlue agotado — no volverá a arrancar",
+      "otros_nombres": [
+        "AdBlue rojo",
+        "no arranque",
+        "urea agotada"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "escape",
+      "icono": "adblue",
+      "forma": "El mismo símbolo del AdBlue en rojo o parpadeando, normalmente con una cuenta atrás de kilómetros.",
+      "significado": "Estás en la cuenta atrás final. Cuando llegue a cero kilómetros, la centralita bloqueará el arranque por normativa de emisiones y necesitarás grúa aunque el motor esté perfecto.",
+      "causas": [
+        "Depósito de AdBlue vacío",
+        "Sistema SCR averiado que no reconoce el líquido",
+        "Manipulación o emulador retirado"
+      ],
+      "que_hacer": "Rellena AdBlue AHORA, antes de apagar el motor si es posible. Tras rellenar, deja el contacto puesto unos minutos para que el sistema reconozca el nivel. Si ya no arranca, hará falta diagnóstico en el taller.",
+      "conducir": "no",
+      "coste": "20-1.500 €"
+    },
+    {
+      "id": "egr",
+      "nombre": "Fallo del sistema EGR",
+      "otros_nombres": [
+        "EGR",
+        "recirculación de gases",
+        "válvula EGR"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "escape",
+      "icono": "motor",
+      "forma": "Suele avisar a través del testigo del motor o con un mensaje específico de EGR.",
+      "significado": "La válvula que recircula gases de escape para reducir emisiones está atascada o averiada. Provoca tirones, humo y pérdida de potencia.",
+      "causas": [
+        "Válvula EGR carbonizada (muy común en diésel de ciudad)",
+        "Refrigerador de EGR obstruido o con fuga",
+        "Sensor de posición de la válvula averiado"
+      ],
+      "que_hacer": "Al taller: limpiar o sustituir la EGR. Conducir con la EGR atascada ensucia el filtro de partículas y termina saliendo más caro.",
+      "conducir": "taller",
+      "coste": "120-900 €"
+    },
+    {
+      "id": "catalizador",
+      "nombre": "Catalizador sobrecalentado",
+      "otros_nombres": [
+        "catalizador",
+        "cat",
+        "CAT",
+        "escape con llamas"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "escape",
+      "icono": "catalizador",
+      "forma": "Un catalizador (bloque del escape) con líneas de calor o llamas debajo.",
+      "significado": "El catalizador está trabajando a temperatura excesiva, normalmente porque llega combustible sin quemar. Puede llegar a fundirse por dentro y obstruir el escape.",
+      "causas": [
+        "Fallo de encendido en algún cilindro",
+        "Inyector con fuga",
+        "Sonda lambda averiada",
+        "Mezcla demasiado rica"
+      ],
+      "que_hacer": "No aparques sobre hierba seca o material inflamable: el catalizador puede estar al rojo. Reduce la marcha y ve al taller. Si el testigo del motor parpadea a la vez, para cuanto antes.",
+      "conducir": "taller",
+      "coste": "150-1.500 €"
+    },
+    {
+      "id": "agua-combustible",
+      "nombre": "Agua en el filtro de combustible",
+      "otros_nombres": [
+        "agua en el gasoil",
+        "water in fuel",
+        "filtro de gasoil"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "combustible",
+      "icono": "agua-combustible",
+      "forma": "Un surtidor o filtro con gotas de agua dentro (a veces con la palabra WATER).",
+      "significado": "Se ha acumulado agua en el filtro del gasoil. Si llega al sistema de inyección puede dañar la bomba y los inyectores, que son las piezas más caras del diésel.",
+      "causas": [
+        "Condensación por dejar el depósito casi vacío",
+        "Gasoil de mala calidad o depósito contaminado",
+        "Purga del filtro no realizada en las revisiones",
+        "Sensor de agua averiado"
+      ],
+      "que_hacer": "Purga el filtro (algunos tienen un tornillo en la parte de abajo) o ve al taller para que lo hagan. No lo dejes correr: reparar un sistema common rail contaminado cuesta miles de euros.",
+      "conducir": "taller",
+      "coste": "20-2.500 €"
+    },
+    {
+      "id": "combustible-reserva",
+      "nombre": "Reserva de combustible",
+      "otros_nombres": [
+        "surtidor",
+        "gasolina",
+        "reserva",
+        "fuel",
+        "poca gasolina"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "combustible",
+      "icono": "surtidor",
+      "forma": "Un surtidor de gasolina; la flecha o el triángulo del lado indica de qué lado está el tapón.",
+      "significado": "Queda poco combustible, normalmente entre 5 y 10 litros (50-100 km). En diésel y en gasolina modernos, apurar hasta el fondo hace trabajar en seco la bomba y aspira la suciedad del fondo del depósito.",
+      "causas": [
+        "Depósito en reserva",
+        "Aforador o boya averiada si marca mal",
+        "Consumo mayor de lo previsto"
+      ],
+      "que_hacer": "Reposta en la próxima estación. Si te quedas sin gasoil, un diésel puede necesitar purga del circuito para volver a arrancar. Nunca hagas los últimos kilómetros a fondo: la bomba se refrigera con el propio combustible.",
+      "conducir": "si",
+      "coste": "0-450 €"
+    },
+    {
+      "id": "glp-gnc",
+      "nombre": "Sistema de gas GLP / GNC",
+      "otros_nombres": [
+        "GLP",
+        "autogas",
+        "GNC",
+        "gas",
+        "LPG"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "combustible",
+      "icono": "gas",
+      "forma": "Un surtidor con las letras GLP/LPG/CNG, o un depósito cilíndrico. Verde cuando funciona con gas.",
+      "significado": "El coche está usando el depósito de gas (autogas o gas natural). Al agotarse, cambia solo a gasolina. Si parpadea en ámbar, hay un fallo del equipo de gas.",
+      "causas": [
+        "Funcionamiento normal con gas",
+        "Depósito de gas agotado",
+        "Electroválvula o reductor averiados",
+        "Sensor de nivel de gas defectuoso"
+      ],
+      "que_hacer": "En uso normal no hay nada que hacer. Si parpadea o cambia solo a gasolina, lleva el equipo a un taller especializado en gas: son instalaciones que requieren revisión periódica obligatoria.",
+      "conducir": "si",
+      "coste": "0-700 €"
+    },
+    {
+      "id": "turbo",
+      "nombre": "Presión de sobrealimentación / turbo",
+      "otros_nombres": [
+        "turbo",
+        "boost",
+        "sobrealimentación"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "motor",
+      "icono": "turbo",
+      "forma": "En la mayoría de coches avisa por el testigo del motor; algunos muestran un turbo o el mensaje 'boost'.",
+      "significado": "El turbo no está dando la presión esperada. El coche entra en modo de potencia reducida para que no revientes nada.",
+      "causas": [
+        "Geometría variable del turbo atascada",
+        "Fuga en un manguito de aire (intercooler)",
+        "Válvula de descarga o actuador averiados",
+        "Sensor de presión del colector sucio"
+      ],
+      "que_hacer": "Evita acelerar a fondo y ve al taller. Un manguito suelto se arregla por poco dinero; un turbo nuevo puede pasar de 1.000 €, y suele avisar antes con silbidos o humo azul.",
+      "conducir": "taller",
+      "coste": "50-2.000 €"
+    },
+    {
+      "id": "nivel-refrigerante",
+      "nombre": "Nivel de refrigerante bajo",
+      "otros_nombres": [
+        "anticongelante",
+        "refrigerante",
+        "coolant level"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "motor",
+      "icono": "refrigerante",
+      "forma": "Un depósito con líneas onduladas dentro y una tapa arriba (a veces con MIN).",
+      "significado": "Falta líquido refrigerante en el vaso de expansión. Es el aviso previo al sobrecalentamiento: si no lo rellenas, acabará encendiéndose el testigo rojo de temperatura.",
+      "causas": [
+        "Fuga en un manguito, en el radiador o en la bomba",
+        "Tapón del vaso de expansión que no sella",
+        "Junta de culata que consume refrigerante",
+        "Sensor de nivel sucio"
+      ],
+      "que_hacer": "Con el motor FRÍO, rellena con el anticongelante del mismo color/norma hasta la marca. Vigila si vuelve a bajar: si desaparece rápido y no ves mancha en el suelo, sospecha de la junta de culata.",
+      "conducir": "taller",
+      "coste": "10-1.800 €"
+    },
+    {
+      "id": "abs",
+      "nombre": "ABS — antibloqueo de frenos",
+      "otros_nombres": [
+        "ABS",
+        "círculo con ABS",
+        "antibloqueo"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "frenos",
+      "icono": "abs",
+      "forma": "Las letras ABS dentro de un círculo rodeado de paréntesis.",
+      "significado": "El antibloqueo está desactivado por una avería. Los frenos siguen funcionando, pero en una frenada fuerte las ruedas pueden bloquearse y perderás la capacidad de esquivar mientras frenas.",
+      "causas": [
+        "Sensor de velocidad de una rueda sucio o roto (la causa más común)",
+        "Anillo fónico del buje dañado",
+        "Bomba o módulo de ABS averiado",
+        "Fusible o cableado del sensor",
+        "Batería con poca tensión"
+      ],
+      "que_hacer": "Puedes conducir, pero deja más distancia y frena con progresión, sobre todo si llueve. Ve al taller pronto: un sensor de rueda es una reparación barata, y sin ABS el coche no pasa la ITV.",
+      "conducir": "taller",
+      "coste": "60-900 €"
+    },
+    {
+      "id": "esp",
+      "nombre": "Control de estabilidad (ESP / ESC / VSA / DSC)",
+      "otros_nombres": [
+        "ESP",
+        "ESC",
+        "VSA",
+        "DSC",
+        "ASR",
+        "control de tracción",
+        "coche con curvas"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "frenos",
+      "icono": "esp",
+      "forma": "Un coche visto desde arriba con dos curvas de derrape debajo.",
+      "significado": "Si PARPADEA, el sistema está actuando ahora mismo porque las ruedas patinan: es bueno, significa que te está salvando. Si se queda FIJO, el control de estabilidad está averiado y desconectado.",
+      "causas": [
+        "Parpadeo: pérdida de adherencia (lluvia, hielo, gravilla, acelerón)",
+        "Fijo: sensor de ángulo de volante descalibrado",
+        "Sensor de velocidad de rueda averiado",
+        "Sensor de guiñada o de presión del freno",
+        "Avería del ABS (comparten módulo)"
+      ],
+      "que_hacer": "Si parpadea, levanta el pie y suaviza: estás patinando. Si está fijo, conduce con más margen — sin ESP el coche puede irse en una curva mojada — y llévalo al taller a leer el fallo.",
+      "conducir": "taller",
+      "coste": "60-900 €"
+    },
+    {
+      "id": "esp-off",
+      "nombre": "Control de estabilidad desconectado",
+      "otros_nombres": [
+        "ESP OFF",
+        "ASR OFF",
+        "traction control off"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "frenos",
+      "icono": "esp-off",
+      "forma": "El mismo coche con curvas de derrape, con la palabra OFF o tachado.",
+      "significado": "Alguien ha desconectado el control de estabilidad con el botón. Solo tiene sentido para salir de nieve, barro o arena, donde el patinaje ayuda.",
+      "causas": [
+        "Botón ESP OFF pulsado (a veces sin querer)",
+        "Modo todoterreno o sport activado",
+        "Desconexión automática en algunos modos de conducción"
+      ],
+      "que_hacer": "Pulsa otra vez el botón ESP/ASR para volver a activarlo. En carretera abierta el ESP debe ir siempre conectado: es el sistema de seguridad que más accidentes evita después del cinturón.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "tpms",
+      "nombre": "Presión de neumáticos (TPMS)",
+      "otros_nombres": [
+        "TPMS",
+        "herradura",
+        "presión de ruedas",
+        "neumático con admiración"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "ruedas",
+      "icono": "tpms",
+      "forma": "Una sección de neumático vista de frente (como una herradura o un paréntesis con dibujo abajo) con un signo de admiración dentro.",
+      "significado": "Al menos una rueda tiene menos presión de la debida. Una rueda baja alarga la frenada, calienta el flanco y puede reventar en autopista, además de gastar más combustible.",
+      "causas": [
+        "Pérdida lenta por un clavo o tornillo",
+        "Bajada de presión por el frío (0,1 bar por cada 10 ºC)",
+        "Válvula o sensor TPMS con la pila agotada",
+        "Sistema sin recalibrar tras cambiar ruedas"
+      ],
+      "que_hacer": "Para en la primera gasolinera y comprueba las cuatro (la presión correcta está en el marco de la puerta del conductor o en la tapa del depósito). Ajusta en frío. Si una vuelve a bajar, tiene un pinchazo lento: al taller.",
+      "conducir": "taller",
+      "coste": "0-90 € por rueda"
+    },
+    {
+      "id": "tpms-fallo",
+      "nombre": "Fallo del sistema TPMS",
+      "otros_nombres": [
+        "TPMS parpadeando",
+        "sensor de presión averiado"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "ruedas",
+      "icono": "tpms-fallo",
+      "forma": "El mismo símbolo del neumático parpadeando durante un minuto y quedándose fijo, o el texto TPMS.",
+      "significado": "El sistema no puede leer la presión: no es que la rueda esté baja, es que el sensor no responde. Te quedas sin ese aviso de seguridad.",
+      "causas": [
+        "Pila del sensor agotada (duran 5-8 años)",
+        "Sensor roto al montar un neumático",
+        "Rueda de repuesto o llantas sin sensor",
+        "Sistema sin reinicializar tras el cambio"
+      ],
+      "que_hacer": "Comprueba las presiones a mano mientras tanto. En el taller pueden reprogramar o sustituir el sensor afectado; si has montado llantas nuevas, hay que emparejarlas con el coche.",
+      "conducir": "taller",
+      "coste": "40-90 € por sensor"
+    },
+    {
+      "id": "pastillas-freno",
+      "nombre": "Pastillas de freno desgastadas",
+      "otros_nombres": [
+        "pastillas",
+        "brake pad",
+        "desgaste de frenos",
+        "círculo con líneas discontinuas"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "frenos",
+      "icono": "pastillas",
+      "forma": "Un círculo con líneas discontinuas a los lados (el disco entre dos pastillas).",
+      "significado": "El testigo de desgaste de las pastillas ha saltado: queda poco material. Si sigues, las pastillas rozarán metal contra metal y estropearás también los discos.",
+      "causas": [
+        "Pastillas al final de su vida",
+        "Sensor de desgaste cortado",
+        "Pinza agarrotada que come una pastilla antes que la otra"
+      ],
+      "que_hacer": "Pide cita en el taller esta semana. Cambiar pastillas cuesta unos 100-200 € por eje; si dejas que se coman el disco, se va al doble. Un chirrido metálico agudo al frenar confirma que ya están al límite.",
+      "conducir": "taller",
+      "coste": "90-400 €"
+    },
+    {
+      "id": "auto-hold",
+      "nombre": "Freno automático de retención (AUTO HOLD)",
+      "otros_nombres": [
+        "AUTO HOLD",
+        "hold",
+        "retención automática"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "frenos",
+      "icono": "auto-hold",
+      "forma": "La palabra HOLD o AUTO HOLD, normalmente en verde cuando está activa.",
+      "significado": "El coche mantiene el freno cuando te paras en un semáforo, para que puedas soltar el pedal. Al acelerar, lo suelta solo.",
+      "causas": [
+        "Función activada por el conductor",
+        "Se desactiva sola si abres la puerta o quitas el cinturón"
+      ],
+      "que_hacer": "Es normal. Si se pone en ámbar o parpadea, la función tiene un fallo: no confíes en que sujete el coche en cuesta.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "suspension-neumatica",
+      "nombre": "Fallo de suspensión neumática o adaptativa",
+      "otros_nombres": [
+        "suspensión",
+        "air suspension",
+        "amortiguación adaptativa"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "suspension",
+      "icono": "suspension",
+      "forma": "Un coche con flechas verticales debajo o entre muelles, a veces con un signo de admiración.",
+      "significado": "La suspensión regulable no puede mantener la altura o la dureza. El coche puede quedarse hundido de un lado o subir a modo de emergencia.",
+      "causas": [
+        "Fuga en un fuelle neumático",
+        "Compresor agotado (avería típica por encima de 150.000 km)",
+        "Sensor de altura averiado",
+        "Válvula del bloque distribuidor pegada"
+      ],
+      "que_hacer": "Conduce despacio y evita baches: con un fuelle vacío el coche apoya en el tope y puede dañar el chasis. Al taller sin demora; un fuelle nuevo ronda los 300-600 €.",
+      "conducir": "taller",
+      "coste": "200-2.000 €"
+    },
+    {
+      "id": "4x4",
+      "nombre": "Tracción total conectada (4WD / AWD)",
+      "otros_nombres": [
+        "4x4",
+        "4WD",
+        "AWD",
+        "tracción total"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "transmision",
+      "icono": "cuatro-por-cuatro",
+      "forma": "Un coche visto desde arriba con las cuatro ruedas marcadas, o las letras 4WD/AWD.",
+      "significado": "La tracción total está conectada. En verde es informativo; en ámbar indica un fallo del sistema de reparto de par.",
+      "causas": [
+        "Modo 4x4 seleccionado por el conductor",
+        "Conexión automática por pérdida de agarre",
+        "Fallo del acoplamiento Haldex o de la caja de transferencia si está en ámbar"
+      ],
+      "que_hacer": "En verde no hay nada que hacer. Recuerda no llevar la tracción total bloqueada en asfalto seco en los coches con reductora: fuerza la transmisión.",
+      "conducir": "si",
+      "coste": "0-1.500 €"
+    },
+    {
+      "id": "bloqueo-diferencial",
+      "nombre": "Bloqueo del diferencial",
+      "otros_nombres": [
+        "diff lock",
+        "bloqueo de diferencial",
+        "diferencial"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "transmision",
+      "icono": "diferencial",
+      "forma": "Un eje con dos ruedas unidas por una X o una línea gruesa.",
+      "significado": "El diferencial está bloqueado: las dos ruedas de un eje giran obligadas a la misma velocidad. Sirve para salir del barro o la nieve.",
+      "causas": [
+        "Bloqueo activado por el conductor",
+        "Bloqueo automático en modo todoterreno"
+      ],
+      "que_hacer": "Desbloquéalo en cuanto vuelvas al asfalto: con el diferencial bloqueado el coche no gira bien y castiga los palieres y los neumáticos.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "descenso-pendientes",
+      "nombre": "Control de descenso de pendientes (HDC)",
+      "otros_nombres": [
+        "HDC",
+        "hill descent",
+        "descenso de pendiente"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "asistentes",
+      "icono": "descenso",
+      "forma": "Un coche bajando una pendiente con una flecha hacia abajo.",
+      "significado": "El coche frena solo para bajar una cuesta pronunciada a velocidad constante sin que toques el pedal. Es normal oír los frenos actuar.",
+      "causas": [
+        "Función activada por el conductor",
+        "Se desactiva por encima de cierta velocidad"
+      ],
+      "que_hacer": "Deja que trabaje y no pises el freno. Si está en ámbar, la función no está disponible (frenos calientes o velocidad excesiva).",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "arranque-pendiente",
+      "nombre": "Asistente de arranque en pendiente",
+      "otros_nombres": [
+        "hill assist",
+        "HHC",
+        "arranque en cuesta"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "asistentes",
+      "icono": "cuesta",
+      "forma": "Un coche en una rampa, a veces con una flecha o una barrera detrás.",
+      "significado": "El coche retiene el freno un par de segundos al arrancar en cuesta para que no te vayas hacia atrás.",
+      "causas": [
+        "Función activa en pendiente",
+        "En ámbar: fallo del sistema, relacionado con el ESP"
+      ],
+      "que_hacer": "En verde, normal. Si aparece en ámbar junto al ESP, el problema está en el control de estabilidad y hay que diagnosticarlo.",
+      "conducir": "si",
+      "coste": "0-600 €"
+    },
+    {
+      "id": "remolque",
+      "nombre": "Remolque enganchado",
+      "otros_nombres": [
+        "trailer",
+        "remolque",
+        "enganche"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "carroceria",
+      "icono": "remolque",
+      "forma": "Un coche con un remolque enganchado detrás.",
+      "significado": "El coche ha detectado un remolque conectado eléctricamente. Ajusta el ESP y las luces en consecuencia.",
+      "causas": [
+        "Remolque o portabicis conectado al enchufe",
+        "Fallo de una luz del remolque si parpadea",
+        "Conector sucio u oxidado"
+      ],
+      "que_hacer": "Comprueba que las luces del remolque responden. Si el testigo parpadea, revisa el conector y las bombillas del remolque: circular sin luces traseras es infracción grave.",
+      "conducir": "si",
+      "coste": "0-150 €"
+    },
+    {
+      "id": "luces-posicion",
+      "nombre": "Luces de posición",
+      "otros_nombres": [
+        "posición",
+        "luces de gálibo",
+        "parking lights"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "luces",
+      "icono": "posicion",
+      "forma": "Dos faros enfrentados con rayas rectas saliendo hacia los lados.",
+      "significado": "Están encendidas las luces de posición. Solo sirven para que te vean parado o en un túnel corto: no alumbran la carretera.",
+      "causas": [
+        "Mando de luces en la primera posición",
+        "Luces automáticas al anochecer"
+      ],
+      "que_hacer": "De noche o con poca visibilidad, pasa a las de cruce: circular solo con posición está sancionado y es peligroso.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "luces-cruce",
+      "nombre": "Luces de cruce (cortas)",
+      "otros_nombres": [
+        "cortas",
+        "luces de cruce",
+        "low beam",
+        "luces normales"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "luces",
+      "icono": "cruce",
+      "forma": "Un faro con rayas inclinadas hacia abajo.",
+      "significado": "Las luces de cruce están encendidas. Son las que se usan de noche en ciudad y carretera, y de día en túneles y con lluvia intensa.",
+      "causas": [
+        "Mando en posición de cruce",
+        "Encendido automático por el sensor de luz"
+      ],
+      "que_hacer": "Todo correcto. Recuerda que en España son obligatorias en túneles, y muy recomendables con niebla o lluvia fuerte.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "luces-largas",
+      "nombre": "Luces de carretera (largas)",
+      "otros_nombres": [
+        "largas",
+        "luces de carretera",
+        "high beam",
+        "azul"
+      ],
+      "color": "azul",
+      "gravedad": "informativo",
+      "categoria": "luces",
+      "icono": "largas",
+      "forma": "Un faro con rayas rectas horizontales hacia delante, en AZUL (el único testigo azul junto al de motor frío).",
+      "significado": "Tienes las luces largas puestas. Alumbran mucho más lejos, pero deslumbran a quien viene de frente y a quien va delante.",
+      "causas": [
+        "Mando empujado hacia delante",
+        "Luces largas automáticas activadas"
+      ],
+      "que_hacer": "Cambia a cruce en cuanto veas un coche de frente o te acerques a uno por detrás. Deslumbrar está sancionado y es una causa habitual de accidente nocturno.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "largas-automaticas",
+      "nombre": "Luces largas automáticas",
+      "otros_nombres": [
+        "auto high beam",
+        "largas automáticas",
+        "asistente de luces"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "luces",
+      "icono": "largas-auto",
+      "forma": "El símbolo de las luces largas con una letra A dentro (verde o azul).",
+      "significado": "La cámara del parabrisas pone y quita las largas sola según el tráfico que detecta.",
+      "causas": [
+        "Función activada por el conductor",
+        "La cámara detecta carretera oscura y sin tráfico"
+      ],
+      "que_hacer": "Comprueba de vez en cuando que reacciona: si el parabrisas está sucio o hay niebla, el sistema falla y puedes deslumbrar sin darte cuenta.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "antiniebla-delantera",
+      "nombre": "Luces antiniebla delanteras",
+      "otros_nombres": [
+        "antiniebla delantera",
+        "fog light",
+        "niebla delantera"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "luces",
+      "icono": "antiniebla-del",
+      "forma": "Un faro con rayas rectas hacia la izquierda atravesadas por una línea ondulada vertical.",
+      "significado": "Las antiniebla delanteras están encendidas. Alumbran ancho y bajo para ver el borde de la carretera con niebla, lluvia fuerte o nieve.",
+      "causas": [
+        "Interruptor de antiniebla activado"
+      ],
+      "que_hacer": "Apágalas cuando mejore la visibilidad: molestan al resto y en algunos casos el uso indebido está sancionado.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "antiniebla-trasera",
+      "nombre": "Luz antiniebla trasera",
+      "otros_nombres": [
+        "antiniebla trasera",
+        "rear fog",
+        "niebla trasera"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "luces",
+      "icono": "antiniebla-tras",
+      "forma": "Un faro con rayas rectas hacia la DERECHA atravesadas por una línea ondulada (en ámbar, a diferencia de la delantera).",
+      "significado": "La antiniebla trasera está encendida. Es una luz muy potente, pensada solo para que te vean con niebla densa o lluvia muy fuerte.",
+      "causas": [
+        "Interruptor de antiniebla trasera activado (a veces sin querer al encender las luces)"
+      ],
+      "que_hacer": "Apágala en cuanto la visibilidad mejore: deslumbra mucho al de detrás, se confunde con la luz de freno y su uso indebido puede ser sancionado.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "intermitente-izq",
+      "nombre": "Intermitente izquierdo",
+      "otros_nombres": [
+        "intermitente",
+        "flecha izquierda",
+        "blinker",
+        "turn signal"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "luces",
+      "icono": "intermitente-izq",
+      "forma": "Una flecha verde parpadeando hacia la izquierda.",
+      "significado": "El intermitente izquierdo está activo. Si parpadea al doble de velocidad, una bombilla de ese lado está fundida.",
+      "causas": [
+        "Palanca accionada",
+        "Bombilla fundida si va muy rápido",
+        "LED averiado o relé/módulo defectuoso"
+      ],
+      "que_hacer": "Si parpadea a doble velocidad, revisa las bombillas de ese lado (delante, detrás y repetidor lateral). Es la forma que tiene el coche de decirte que una está fundida.",
+      "conducir": "si",
+      "coste": "0-120 €"
+    },
+    {
+      "id": "intermitente-der",
+      "nombre": "Intermitente derecho",
+      "otros_nombres": [
+        "intermitente",
+        "flecha derecha",
+        "blinker"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "luces",
+      "icono": "intermitente-der",
+      "forma": "Una flecha verde parpadeando hacia la derecha.",
+      "significado": "El intermitente derecho está activo. El parpadeo acelerado indica bombilla fundida en ese lado.",
+      "causas": [
+        "Palanca accionada",
+        "Bombilla fundida si va muy rápido",
+        "Fallo del relé o del módulo de luces"
+      ],
+      "que_hacer": "Igual que el izquierdo: si va rápido, hay una lámpara fundida. Cambiarla suele costar poco y evita una multa.",
+      "conducir": "si",
+      "coste": "0-120 €"
+    },
+    {
+      "id": "emergencia",
+      "nombre": "Luces de emergencia (warning)",
+      "otros_nombres": [
+        "warning",
+        "emergencia",
+        "cuatro intermitentes",
+        "triángulo rojo parpadeante"
+      ],
+      "color": "rojo",
+      "gravedad": "informativo",
+      "categoria": "luces",
+      "icono": "warning",
+      "forma": "Un triángulo rojo, con las dos flechas de intermitente parpadeando a la vez.",
+      "significado": "Están puestas las luces de emergencia. Avisan de que estás detenido o de un peligro repentino.",
+      "causas": [
+        "Botón del triángulo pulsado",
+        "Activación automática tras una frenada de emergencia o un accidente"
+      ],
+      "que_hacer": "Úsalas al parar en un lugar peligroso, en una retención repentina en autovía o si vas muy despacio por avería. Recuerda: desde 2026, en caso de avería en vía interurbana hay que usar la baliza V-16 conectada en lugar de los triángulos.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "drl",
+      "nombre": "Luces de circulación diurna (DRL)",
+      "otros_nombres": [
+        "diurnas",
+        "DRL",
+        "daytime running lights"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "luces",
+      "icono": "drl",
+      "forma": "Un faro con rayas cortas y rectas, a veces con la palabra DRL.",
+      "significado": "Las luces diurnas están activas. Sirven para que te vean de día, pero NO alumbran la carretera y en muchos coches no encienden las luces traseras.",
+      "causas": [
+        "Encendido automático al arrancar"
+      ],
+      "que_hacer": "En túnel, de noche o con mal tiempo, enciende las de cruce: con solo las diurnas puedes circular sin luces traseras y ser invisible por detrás.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "luces-auto",
+      "nombre": "Luces automáticas (AUTO)",
+      "otros_nombres": [
+        "AUTO",
+        "luces automáticas",
+        "auto light"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "luces",
+      "icono": "luces-auto",
+      "forma": "La palabra AUTO junto al símbolo de un faro.",
+      "significado": "El sensor de luz decide cuándo encender las luces. Funciona bien de noche, pero muchos sensores no reaccionan con niebla o lluvia de día.",
+      "causas": [
+        "Mando de luces en posición AUTO"
+      ],
+      "que_hacer": "Con niebla, lluvia intensa o al atardecer, pasa a manual y enciende las de cruce: el sensor mide luz, no visibilidad.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "luz-fundida",
+      "nombre": "Fallo de una luz exterior",
+      "otros_nombres": [
+        "bombilla fundida",
+        "lámpara",
+        "luz averiada",
+        "bulb failure"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "luces",
+      "icono": "bombilla",
+      "forma": "Un faro con un signo de admiración dentro, o una bombilla con rayos.",
+      "significado": "Una lámpara exterior no funciona. El coche no siempre dice cuál: suele ser una de posición, cruce, freno o matrícula.",
+      "causas": [
+        "Bombilla fundida",
+        "Portalámparas oxidado o mal encajado",
+        "Fusible fundido",
+        "Módulo LED averiado",
+        "Resistencia incorrecta al montar LED en un coche pensado para halógeno"
+      ],
+      "que_hacer": "Con el coche parado y alguien mirando desde fuera, prueba todas las luces (incluidas freno y matrícula). Una bombilla cuesta pocos euros; circular con luces fundidas es motivo de sanción y de rechazo en la ITV.",
+      "conducir": "taller",
+      "coste": "5-300 €"
+    },
+    {
+      "id": "luz-freno-fallo",
+      "nombre": "Fallo de la luz de freno",
+      "otros_nombres": [
+        "brake light",
+        "luz de freno fundida",
+        "tercera luz de freno"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "luces",
+      "icono": "luz-freno",
+      "forma": "Un faro trasero con un símbolo de admiración, o el aviso 'luz de freno' en la pantalla.",
+      "significado": "Una luz de freno no responde. Es especialmente peligroso: el de detrás no sabrá que estás frenando.",
+      "causas": [
+        "Bombilla o LED fundido",
+        "Interruptor del pedal de freno averiado (también impide quitar la P en automáticos)",
+        "Fusible o cableado"
+      ],
+      "que_hacer": "Arréglalo de inmediato. Si además el coche no sale de P o no funciona el crucero, el culpable es casi seguro el interruptor del pedal, una pieza barata.",
+      "conducir": "taller",
+      "coste": "5-150 €"
+    },
+    {
+      "id": "afs",
+      "nombre": "Fallo de los faros adaptativos (AFS)",
+      "otros_nombres": [
+        "AFS",
+        "faros direccionales",
+        "adaptive lights"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "luces",
+      "icono": "afs",
+      "forma": "Un faro con una flecha curva o con la sigla AFS junto a un signo de admiración.",
+      "significado": "Los faros que giran con el volante o que ajustan el haz han fallado. Alumbrarán en posición fija.",
+      "causas": [
+        "Motor de reglaje del faro averiado",
+        "Sensor de altura de la suspensión",
+        "Módulo de luces o cableado",
+        "Bombilla de xenón agotada"
+      ],
+      "que_hacer": "Puedes conducir, pero de noche notarás menos luz en curva. Ve al taller: si el reglaje se ha quedado alto, además estarás deslumbrando a los demás.",
+      "conducir": "taller",
+      "coste": "80-1.000 €"
+    },
+    {
+      "id": "nivel-faros",
+      "nombre": "Reglaje de altura de faros",
+      "otros_nombres": [
+        "nivelación de faros",
+        "headlight leveling"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "luces",
+      "icono": "nivel-faros",
+      "forma": "Un faro con una flecha vertical y una escala numerada.",
+      "significado": "Indica el ajuste manual de altura de los faros según la carga que lleves.",
+      "causas": [
+        "Rueda de reglaje movida",
+        "Fallo del sistema automático de nivelación"
+      ],
+      "que_hacer": "Con el maletero cargado o gente atrás, baja el haz (posición 1-3) para no deslumbrar; en vacío, vuelve a 0.",
+      "conducir": "si",
+      "coste": "0-200 €"
+    },
+    {
+      "id": "crucero",
+      "nombre": "Control de crucero activo",
+      "otros_nombres": [
+        "cruise control",
+        "crucero",
+        "velocidad de crucero"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "asistentes",
+      "icono": "crucero",
+      "forma": "Un velocímetro con una aguja y una flecha, o el dibujo de un coche con un cuentakilómetros.",
+      "significado": "El control de velocidad está activo o en espera. En verde suele significar que está regulando; en blanco o gris, que está listo pero sin memorizar velocidad.",
+      "causas": [
+        "Sistema activado con el mando del volante",
+        "Se desconecta al frenar o pisar el embrague"
+      ],
+      "que_hacer": "Recuerda que el crucero clásico no frena por ti: en tráfico denso, lluvia o hielo, desconéctalo.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "crucero-adaptativo",
+      "nombre": "Control de crucero adaptativo (ACC)",
+      "otros_nombres": [
+        "ACC",
+        "crucero adaptativo",
+        "radar",
+        "distancia de seguridad"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "asistentes",
+      "icono": "acc",
+      "forma": "Un coche con ondas o barras delante y otro coche por delante, con una escala de distancia.",
+      "significado": "El crucero mantiene la velocidad y también la distancia con el coche de delante, frenando y acelerando solo. En ámbar significa que no está disponible.",
+      "causas": [
+        "Sistema activado",
+        "Radar tapado por nieve, barro o un adhesivo",
+        "Curva cerrada o mal tiempo que lo desactivan temporalmente"
+      ],
+      "que_hacer": "Sigue siendo tu responsabilidad: mantén las manos en el volante y la vista al frente. Si aparece en ámbar, limpia la parrilla delantera donde está el radar.",
+      "conducir": "si",
+      "coste": "0-900 €"
+    },
+    {
+      "id": "limitador",
+      "nombre": "Limitador de velocidad",
+      "otros_nombres": [
+        "speed limiter",
+        "limitador",
+        "velocidad máxima"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "asistentes",
+      "icono": "limitador",
+      "forma": "Un círculo con una cifra dentro (como una señal de límite) o un velocímetro tachado.",
+      "significado": "Has fijado una velocidad máxima que el coche no superará aunque pises. Se puede anular pisando el acelerador a fondo (kick-down).",
+      "causas": [
+        "Limitador ajustado por el conductor",
+        "Limitador inteligente que lee las señales de tráfico"
+      ],
+      "que_hacer": "Muy útil en travesías y radares de tramo. Comprueba la cifra fijada antes de confiarte.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "carril",
+      "nombre": "Aviso de cambio de carril (LDW / LKA)",
+      "otros_nombres": [
+        "LDW",
+        "LKA",
+        "lane assist",
+        "asistente de carril",
+        "líneas del carril"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "asistentes",
+      "icono": "carril",
+      "forma": "Un coche entre dos líneas de carril; una de ellas se pone en rojo o ámbar si te sales.",
+      "significado": "El asistente vigila las líneas del carril. En verde está listo; cuando te sales sin intermitente, avisa con vibración o corrige el volante. En ámbar, no está disponible.",
+      "causas": [
+        "Sistema activado",
+        "Líneas borradas, nieve o lluvia que impiden verlas",
+        "Cámara del parabrisas sucia o mal calibrada",
+        "Velocidad por debajo del mínimo de funcionamiento"
+      ],
+      "que_hacer": "Si vibra el volante, comprueba que no te estás saliendo. Si está en ámbar, limpia la zona de la cámara detrás del retrovisor interior. Tras cambiar el parabrisas, la cámara necesita recalibrarse.",
+      "conducir": "si",
+      "coste": "0-600 €"
+    },
+    {
+      "id": "angulo-muerto",
+      "nombre": "Detección de ángulo muerto (BSD)",
+      "otros_nombres": [
+        "BSD",
+        "ángulo muerto",
+        "blind spot",
+        "punto ciego"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "asistentes",
+      "icono": "angulo-muerto",
+      "forma": "Dos coches en paralelo con ondas entre ellos, o la silueta de un retrovisor con ondas.",
+      "significado": "Hay un vehículo en tu ángulo muerto. El aviso también suele aparecer en el propio retrovisor exterior. Si se queda fijo con un signo de admiración, el sistema falla.",
+      "causas": [
+        "Vehículo circulando a tu lado",
+        "Radares traseros sucios, con barro o nieve",
+        "Golpe en el paragolpes que ha desalineado el sensor",
+        "Portabicis o remolque que confunde al sistema"
+      ],
+      "que_hacer": "No cambies de carril mientras esté encendido. Si el aviso es permanente sin nadie al lado, limpia las esquinas del paragolpes trasero, que es donde van los radares.",
+      "conducir": "si",
+      "coste": "0-700 €"
+    },
+    {
+      "id": "trafico-cruzado",
+      "nombre": "Alerta de tráfico cruzado trasero (RCTA)",
+      "otros_nombres": [
+        "RCTA",
+        "tráfico cruzado",
+        "cross traffic"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "asistentes",
+      "icono": "trafico-cruzado",
+      "forma": "Un coche visto desde arriba marcha atrás con flechas cruzándose por detrás.",
+      "significado": "Al dar marcha atrás, detecta coches o peatones que se acercan por los lados, algo que no ves entre dos coches aparcados.",
+      "causas": [
+        "Vehículo aproximándose por detrás al salir de un aparcamiento",
+        "Sensores traseros sucios"
+      ],
+      "que_hacer": "Para y mira. El sistema ve antes que tú, pero no detecta todo: sigue girándote y usando los retrovisores.",
+      "conducir": "si",
+      "coste": "0-700 €"
+    },
+    {
+      "id": "sensores-aparcamiento",
+      "nombre": "Sensores de aparcamiento",
+      "otros_nombres": [
+        "PDC",
+        "sensores",
+        "aparcamiento",
+        "park assist"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "asistentes",
+      "icono": "aparcamiento",
+      "forma": "Un coche visto desde arriba con ondas delante y detrás, o la letra P con ondas.",
+      "significado": "Los sensores de aparcamiento están activos o han fallado. Si es un fallo, dejarán de pitar al acercarte a un obstáculo.",
+      "causas": [
+        "Sistema activado al meter marcha atrás",
+        "Sensor tapado por barro, nieve o hielo",
+        "Sensor roto tras un golpe de aparcamiento",
+        "Bola de remolque que confunde a los sensores traseros"
+      ],
+      "que_hacer": "Limpia los sensores del paragolpes con agua. Si uno está roto, se cambia por unos 60-150 €. Mientras tanto, aparca mirando: el sistema puede estar dando falsos silencios.",
+      "conducir": "si",
+      "coste": "0-250 €"
+    },
+    {
+      "id": "camara-parabrisas",
+      "nombre": "Cámara o sensor tapado",
+      "otros_nombres": [
+        "cámara del parabrisas",
+        "sensor sucio",
+        "camera blocked",
+        "radar tapado"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "asistentes",
+      "icono": "camara",
+      "forma": "Una cámara o unas ondas tachadas, con el aviso de que los asistentes no están disponibles.",
+      "significado": "La cámara o el radar no ven. Se desactivan de golpe todos los asistentes que dependen de ellos: frenada automática, carril, crucero adaptativo y señales.",
+      "causas": [
+        "Parabrisas sucio, con hielo o empañado justo delante de la cámara",
+        "Nieve, barro o insectos en la parrilla del radar",
+        "Adhesivo o soporte de móvil que tapa la cámara",
+        "Descalibración tras cambiar el parabrisas"
+      ],
+      "que_hacer": "Limpia el parabrisas por dentro y por fuera en la zona del retrovisor interior, y la parrilla delantera. Si el aviso sigue con todo limpio, hay que recalibrar en el taller (obligatorio tras un cambio de luna).",
+      "conducir": "taller",
+      "coste": "0-400 €"
+    },
+    {
+      "id": "senales-trafico",
+      "nombre": "Reconocimiento de señales de tráfico",
+      "otros_nombres": [
+        "TSR",
+        "señales",
+        "límite de velocidad",
+        "reconocimiento de señales"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "asistentes",
+      "icono": "senal",
+      "forma": "Una señal circular de límite de velocidad, a veces con una cifra dentro.",
+      "significado": "La cámara lee las señales y te muestra el límite vigente. Puede equivocarse con señales de obras, de salidas o de camiones.",
+      "causas": [
+        "Funcionamiento normal",
+        "Cámara sucia o deslumbrada",
+        "Cartografía del navegador desactualizada"
+      ],
+      "que_hacer": "No te fíes al 100 %: la responsabilidad del límite es tuya, y el sistema falla en travesías y desvíos.",
+      "conducir": "si",
+      "coste": "0-400 €"
+    },
+    {
+      "id": "fatiga",
+      "nombre": "Aviso de fatiga del conductor",
+      "otros_nombres": [
+        "taza de café",
+        "descanso",
+        "driver alert",
+        "atención del conductor"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "asistentes",
+      "icono": "cafe",
+      "forma": "Una taza de café humeante.",
+      "significado": "El coche ha detectado un patrón de conducción propio del cansancio: correcciones bruscas de volante, deriva en el carril, muchas horas seguidas.",
+      "causas": [
+        "Más de 2 horas al volante sin parar",
+        "Micro-correcciones de volante propias del sueño",
+        "Conducción nocturna o monótona"
+      ],
+      "que_hacer": "Hazle caso: para en el próximo área, camina 5 minutos y, si hace falta, duerme 20. La somnolencia está detrás de un accidente mortal de cada cinco en carretera.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "mantenimiento",
+      "nombre": "Aviso de mantenimiento / revisión",
+      "otros_nombres": [
+        "llave inglesa",
+        "service",
+        "revisión",
+        "mantenimiento",
+        "INSP"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "mantenimiento",
+      "icono": "llave-inglesa",
+      "forma": "Una llave inglesa, o las palabras SERVICE / INSP / un coche con una llave.",
+      "significado": "Toca revisión por kilómetros o por tiempo. No es una avería: es el recordatorio del plan de mantenimiento.",
+      "causas": [
+        "Intervalo de servicio cumplido",
+        "Contador no reiniciado tras la última revisión"
+      ],
+      "que_hacer": "Pide cita para la revisión. Si acabas de hacerla, en el taller (o desde el propio menú del coche) se reinicia el contador en un minuto.",
+      "conducir": "si",
+      "coste": "90-450 €"
+    },
+    {
+      "id": "cambio-aceite",
+      "nombre": "Cambio de aceite",
+      "otros_nombres": [
+        "oil change",
+        "aceite y filtro",
+        "service aceite"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "mantenimiento",
+      "icono": "aceitera-llave",
+      "forma": "Una aceitera con una llave inglesa, o el mensaje 'cambio de aceite'.",
+      "significado": "El coche calcula que el aceite ha llegado al final de su vida útil según kilómetros y forma de conducir. No confundir con el testigo ROJO de presión de aceite.",
+      "causas": [
+        "Intervalo de cambio cumplido",
+        "Muchos trayectos cortos que degradan antes el aceite",
+        "Contador sin reiniciar tras el último cambio"
+      ],
+      "que_hacer": "Programa el cambio de aceite y filtro. Es el mantenimiento más barato que existe y el que más vida da al motor.",
+      "conducir": "si",
+      "coste": "70-200 €"
+    },
+    {
+      "id": "limpiaparabrisas",
+      "nombre": "Nivel del líquido limpiaparabrisas",
+      "otros_nombres": [
+        "líquido lavaparabrisas",
+        "washer fluid",
+        "agua del limpia"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "confort",
+      "icono": "limpia",
+      "forma": "Un parabrisas con un chorro de líquido en abanico y una línea ondulada.",
+      "significado": "Queda poco líquido en el depósito del limpiaparabrisas. Parece una tontería hasta que un camión te tira barro en la autovía.",
+      "causas": [
+        "Depósito casi vacío",
+        "Sensor de nivel averiado",
+        "Fuga en el depósito o en un tubo"
+      ],
+      "que_hacer": "Rellena con líquido limpiaparabrisas (mejor con anticongelante en invierno: el agua sola se congela y revienta la bomba). Cuesta menos de 5 €.",
+      "conducir": "si",
+      "coste": "3-120 €"
+    },
+    {
+      "id": "hielo",
+      "nombre": "Aviso de temperatura exterior baja / hielo",
+      "otros_nombres": [
+        "copo de nieve",
+        "hielo",
+        "ice warning",
+        "placa de hielo"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "confort",
+      "icono": "copo",
+      "forma": "Un copo de nieve o un cristal de hielo, normalmente con la temperatura exterior.",
+      "significado": "La temperatura exterior ha bajado de unos 4 ºC: puede haber placas de hielo, sobre todo en puentes, zonas de sombra y salidas de túnel.",
+      "causas": [
+        "Temperatura exterior baja",
+        "Sensor situado en el paragolpes que lee el frío del suelo"
+      ],
+      "que_hacer": "Reduce la velocidad, aumenta la distancia y evita frenar o girar bruscamente. En Asturias, ojo en los puertos y en las curvas de umbría a primera hora.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "start-stop",
+      "nombre": "Sistema Start & Stop",
+      "otros_nombres": [
+        "start stop",
+        "A en círculo",
+        "auto stop",
+        "parada y arranque"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "motor",
+      "icono": "start-stop",
+      "forma": "Una letra A dentro de un círculo con una flecha (verde cuando actúa, ámbar cuando no está disponible).",
+      "significado": "El motor se apaga solo al detenerte para ahorrar combustible, y arranca al soltar el freno o pisar el embrague. En ámbar o tachado, el sistema no puede funcionar ahora.",
+      "causas": [
+        "Funcionamiento normal en parada",
+        "Batería con poca carga (causa más frecuente del ámbar)",
+        "Motor aún frío o clima exigiendo el aire acondicionado",
+        "Batería AGM/EFB al final de su vida",
+        "Sensor de batería averiado"
+      ],
+      "que_hacer": "Si nunca funciona, casi siempre es la batería: hay que sustituirla por una del mismo tipo (AGM o EFB) y registrarla con la máquina de diagnosis, no vale poner una cualquiera.",
+      "conducir": "si",
+      "coste": "0-350 €"
+    },
+    {
+      "id": "modo-eco",
+      "nombre": "Modo ECO",
+      "otros_nombres": [
+        "ECO",
+        "modo eco",
+        "eficiencia"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "motor",
+      "icono": "eco",
+      "forma": "La palabra ECO o una hoja verde.",
+      "significado": "El coche está en modo de ahorro: respuesta más suave del acelerador y climatización moderada.",
+      "causas": [
+        "Modo ECO seleccionado",
+        "Activación automática en algunos híbridos"
+      ],
+      "que_hacer": "Nada que hacer. Si necesitas más respuesta para adelantar, cambia a modo normal o sport.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "modo-sport",
+      "nombre": "Modo Sport",
+      "otros_nombres": [
+        "SPORT",
+        "modo deportivo",
+        "S"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "motor",
+      "icono": "sport",
+      "forma": "La palabra SPORT o una letra S.",
+      "significado": "El coche está en modo deportivo: acelerador más directo, cambio que estira más las marchas y a veces dirección más dura.",
+      "causas": [
+        "Modo seleccionado con el mando de conducción"
+      ],
+      "que_hacer": "Solo consume más. Vuelve a modo normal o ECO para el uso diario.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "aire-acondicionado",
+      "nombre": "Aire acondicionado (A/C)",
+      "otros_nombres": [
+        "A/C",
+        "aire acondicionado",
+        "clima"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "confort",
+      "icono": "aire",
+      "forma": "Las letras A/C, a veces con un copo de nieve.",
+      "significado": "El compresor del aire acondicionado está conectado. Es normal que el consumo suba un poco.",
+      "causas": [
+        "A/C encendido",
+        "Desconexión automática si el motor lo necesita"
+      ],
+      "que_hacer": "Usa el A/C también en invierno unos minutos al mes: seca el aire, desempaña antes y mantiene lubricado el compresor.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "recirculacion",
+      "nombre": "Recirculación de aire",
+      "otros_nombres": [
+        "recirculación",
+        "aire interior",
+        "recirc"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "confort",
+      "icono": "recirculacion",
+      "forma": "Un coche visto de lado con una flecha curva dentro del habitáculo.",
+      "significado": "El coche recircula el aire de dentro en lugar de tomarlo de fuera. Enfría antes y evita olores y humos de otros coches.",
+      "causas": [
+        "Función activada manual o automáticamente",
+        "Activación automática al detectar contaminación"
+      ],
+      "que_hacer": "Desactívala cada cierto tiempo: con recirculación continua el cristal se empaña y el aire se vicia.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "luneta-termica",
+      "nombre": "Luneta térmica / desempañado",
+      "otros_nombres": [
+        "luneta térmica",
+        "desempañado",
+        "desescarche",
+        "rear defrost"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "confort",
+      "icono": "luneta",
+      "forma": "Un rectángulo curvo (la luna) con tres flechas onduladas hacia arriba.",
+      "significado": "El desempañado eléctrico de la luna trasera (o del parabrisas) está funcionando. Consume bastante y se apaga solo a los pocos minutos.",
+      "causas": [
+        "Función activada",
+        "Apagado automático por tiempo"
+      ],
+      "que_hacer": "Si una parte de la luna no se desempaña, un hilo del entramado está cortado: se repara con pintura conductora.",
+      "conducir": "si",
+      "coste": "0-150 €"
+    },
+    {
+      "id": "ready",
+      "nombre": "Sistema listo (READY)",
+      "otros_nombres": [
+        "READY",
+        "listo",
+        "híbrido listo",
+        "EV encendido"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "electrico",
+      "icono": "ready",
+      "forma": "La palabra READY o LISTO en verde.",
+      "significado": "El coche eléctrico o híbrido está encendido y listo para moverse, aunque no oigas nada. Es el equivalente al motor en marcha.",
+      "causas": [
+        "Contacto dado y sistema operativo"
+      ],
+      "que_hacer": "Antes de bajarte, comprueba que READY está apagado: en un eléctrico es fácil dejarlo encendido sin darte cuenta.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "modo-ev",
+      "nombre": "Modo eléctrico (EV)",
+      "otros_nombres": [
+        "EV",
+        "modo eléctrico",
+        "cero emisiones"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "electrico",
+      "icono": "ev",
+      "forma": "Las letras EV, a veces con un enchufe o una hoja.",
+      "significado": "El coche circula solo con el motor eléctrico. En un híbrido se activa y desactiva solo según la carga y la demanda.",
+      "causas": [
+        "Batería con carga suficiente",
+        "Velocidad y aceleración dentro del rango eléctrico"
+      ],
+      "que_hacer": "Nada que hacer. Si el modo EV nunca se activa en un híbrido, revisa el estado de la batería de alta tensión.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "bateria-alta-tension",
+      "nombre": "Fallo de la batería de alta tensión",
+      "otros_nombres": [
+        "batería híbrida",
+        "alta tensión",
+        "HV battery",
+        "batería de tracción"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "electrico",
+      "icono": "bateria-hv",
+      "forma": "Una batería con un rayo dentro, o un coche con un rayo y un signo de admiración (roja si es grave).",
+      "significado": "El sistema de alta tensión ha detectado un fallo. Puede afectar a la propulsión y, en casos graves, hay riesgo eléctrico o térmico.",
+      "causas": [
+        "Módulo de celdas degradado",
+        "Refrigeración de la batería insuficiente",
+        "Fallo de aislamiento o del cableado naranja",
+        "Inversor o cargador averiado"
+      ],
+      "que_hacer": "Para en un lugar seguro y ventilado, lejos de otros vehículos, y apaga el sistema. NO manipules nada bajo el capó: los cables naranjas llevan cientos de voltios. Llama a asistencia indicando que es un vehículo eléctrico o híbrido.",
+      "conducir": "no",
+      "coste": "300-15.000 €"
+    },
+    {
+      "id": "bateria-ev-baja",
+      "nombre": "Batería de tracción baja",
+      "otros_nombres": [
+        "autonomía baja",
+        "batería EV baja",
+        "low charge"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "electrico",
+      "icono": "bateria-baja",
+      "forma": "Una batería con pocas barras o casi vacía, a veces con un surtidor eléctrico.",
+      "significado": "Queda poca carga en la batería principal. Por debajo de cierto nivel el coche limita potencia y climatización para estirar los últimos kilómetros.",
+      "causas": [
+        "Carga baja",
+        "Frío intenso que reduce la autonomía real",
+        "Conducción a alta velocidad o con mucha carga"
+      ],
+      "que_hacer": "Busca un punto de recarga y baja la velocidad: a 90 km/h la autonomía se estira mucho más que a 120. Apaga la climatización y usa los asientos calefactados, que gastan menos.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "carga-en-curso",
+      "nombre": "Carga en curso / cable conectado",
+      "otros_nombres": [
+        "cargando",
+        "enchufe",
+        "cable conectado",
+        "charging"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "electrico",
+      "icono": "enchufe",
+      "forma": "Un enchufe o un cable conectado a un coche, a veces con una batería llenándose.",
+      "significado": "El coche está enchufado o cargando. Mientras aparezca, no podrás moverlo: la tracción queda bloqueada por seguridad.",
+      "causas": [
+        "Cable conectado",
+        "Carga programada en marcha o en espera"
+      ],
+      "que_hacer": "Desconecta el cable antes de intentar arrancar. Si la carga no empieza, revisa el enchufe, el diferencial de la instalación y la programación horaria del coche.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "fallo-sistema-hibrido",
+      "nombre": "Fallo del sistema híbrido",
+      "otros_nombres": [
+        "hybrid system",
+        "fallo híbrido",
+        "check hybrid system"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "electrico",
+      "icono": "hibrido",
+      "forma": "Un coche con una flecha circular y un rayo, o el mensaje 'revisar sistema híbrido'.",
+      "significado": "El conjunto híbrido (motor eléctrico, inversor, batería o su gestión) tiene un fallo. El coche puede seguir con el motor térmico o entrar en modo limitado.",
+      "causas": [
+        "Batería de alta tensión degradada",
+        "Inversor o su refrigeración con problemas",
+        "Ventilador de la batería obstruido por polvo",
+        "Sensor de temperatura o de aislamiento"
+      ],
+      "que_hacer": "Ve al taller cuanto antes, mejor a uno con formación en alta tensión. Un fallo pequeño (el ventilador de la batería, por ejemplo) sale barato si se coge a tiempo.",
+      "conducir": "taller",
+      "coste": "150-6.000 €"
+    },
+    {
+      "id": "regeneracion",
+      "nombre": "Freno regenerativo",
+      "otros_nombres": [
+        "regeneración",
+        "B mode",
+        "recuperación de energía"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "electrico",
+      "icono": "regeneracion",
+      "forma": "Una flecha circular hacia una batería, o una aguja marcando CHARGE.",
+      "significado": "El coche está recuperando energía al levantar el pie o frenar y devolviéndola a la batería.",
+      "causas": [
+        "Deceleración o frenada suave",
+        "Modo B o nivel de regeneración alto seleccionado"
+      ],
+      "que_hacer": "Aprovecha: anticipar y levantar el pie pronto recupera más energía y alarga la vida de los frenos.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "avas",
+      "nombre": "Sonido de aviso de peatones (AVAS)",
+      "otros_nombres": [
+        "AVAS",
+        "sonido para peatones",
+        "altavoz"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "electrico",
+      "icono": "avas",
+      "forma": "Un altavoz con ondas y un peatón, o el mensaje 'sistema de aviso acústico'.",
+      "significado": "El generador de sonido obligatorio en coches eléctricos a baja velocidad ha fallado. Los peatones no te oirán llegar.",
+      "causas": [
+        "Altavoz exterior averiado o con agua",
+        "Fusible o módulo del sistema",
+        "Aviso silenciado indebidamente"
+      ],
+      "que_hacer": "Extrema la precaución en zonas peatonales, aparcamientos y colegios. Es un elemento de seguridad obligatorio: llévalo al taller.",
+      "conducir": "taller",
+      "coste": "80-500 €"
+    },
+    {
+      "id": "escobillas",
+      "nombre": "Limpiaparabrisas automático / sensor de lluvia",
+      "otros_nombres": [
+        "sensor de lluvia",
+        "AUTO limpia",
+        "rain sensor"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "confort",
+      "icono": "escobillas",
+      "forma": "Un parabrisas con gotas y la letra A, o una escobilla con gotas.",
+      "significado": "El sensor de lluvia acciona el limpiaparabrisas solo. Si falla, tendrás que usarlo en manual.",
+      "causas": [
+        "Función activada",
+        "Sensor sucio o despegado del cristal",
+        "Parabrisas cambiado sin recolocar bien el sensor"
+      ],
+      "que_hacer": "Si se activa sin lluvia o no reacciona, limpia la zona del sensor (detrás del retrovisor interior). Si sigue, revisa que el gel del sensor esté bien adherido al cristal.",
+      "conducir": "si",
+      "coste": "0-200 €"
+    },
+    {
+      "id": "nivel-agua-limpia",
+      "nombre": "Escobillas gastadas o limpiaparabrisas bloqueado",
+      "otros_nombres": [
+        "escobillas",
+        "wiper fault",
+        "limpia bloqueado"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "confort",
+      "icono": "limpia-fallo",
+      "forma": "Una escobilla con un signo de admiración, o el aviso 'fallo del limpiaparabrisas'.",
+      "significado": "El motor del limpiaparabrisas se ha bloqueado o forzado, normalmente por hielo o nieve acumulada.",
+      "causas": [
+        "Escobillas pegadas al cristal por el hielo",
+        "Nieve acumulada en la base del parabrisas",
+        "Motor o varillaje del limpia averiado",
+        "Fusible fundido"
+      ],
+      "que_hacer": "No fuerces el mando: despega las escobillas a mano y quita la nieve. Si el motor no responde con el cristal libre, hay que revisar fusible y motor.",
+      "conducir": "taller",
+      "coste": "10-350 €"
+    },
+    {
+      "id": "filtro-aire",
+      "nombre": "Filtro de aire o de habitáculo",
+      "otros_nombres": [
+        "filtro de aire",
+        "filtro de polen",
+        "cabin filter"
+      ],
+      "color": "ambar",
+      "gravedad": "informativo",
+      "categoria": "mantenimiento",
+      "icono": "filtro",
+      "forma": "Un filtro plisado, a veces con un ventilador (más habitual como mensaje que como testigo).",
+      "significado": "El coche recuerda que toca cambiar el filtro. El de habitáculo afecta al olor y al empañamiento; el de aire, al consumo y a la potencia.",
+      "causas": [
+        "Intervalo de mantenimiento cumplido",
+        "Filtro muy sucio detectado por el caudalímetro"
+      ],
+      "que_hacer": "Es de los cambios más baratos y que más se notan: un filtro de habitáculo cuesta 15-30 € y se cambia en 10 minutos detrás de la guantera.",
+      "conducir": "si",
+      "coste": "15-90 €"
+    },
+    {
+      "id": "nivel-liquido-frenos",
+      "nombre": "Nivel de líquido de frenos bajo",
+      "otros_nombres": [
+        "líquido de frenos",
+        "brake fluid",
+        "nivel de frenos"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "frenos",
+      "icono": "liquido-frenos",
+      "forma": "Un depósito con líneas onduladas y el símbolo del freno (círculo con paréntesis), o la palabra BRAKE FLUID.",
+      "significado": "Falta líquido de frenos. O hay una fuga en el circuito, o las pastillas están tan gastadas que los pistones han salido mucho y han absorbido el líquido.",
+      "causas": [
+        "Pastillas de freno muy desgastadas",
+        "Fuga en un latiguillo, pinza o bomba",
+        "Tapón del depósito mal cerrado",
+        "Sensor de nivel averiado"
+      ],
+      "que_hacer": "No conduzcas hasta comprobarlo. Mira el depósito (junto al servofreno) y el suelo bajo las ruedas. Rellenar sin arreglar la fuga es peligroso: el líquido de frenos no se consume, si baja es que se va a algún sitio.",
+      "conducir": "no",
+      "coste": "20-800 €"
+    },
+    {
+      "id": "catalizador-scr-fallo",
+      "nombre": "Fallo del sistema de emisiones",
+      "otros_nombres": [
+        "emisiones",
+        "exhaust",
+        "fallo de escape",
+        "sistema antipolución"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "escape",
+      "icono": "emisiones",
+      "forma": "Un coche con humo saliendo del escape, o el mensaje 'fallo del sistema antipolución'.",
+      "significado": "El coche ha detectado que las emisiones se han salido de lo permitido. Es el aviso típico de los diésel modernos, y en muchos casos limita la potencia.",
+      "causas": [
+        "Sonda lambda o NOx averiada",
+        "EGR o filtro de partículas con problemas",
+        "AdBlue de mala calidad o sistema SCR averiado",
+        "Fuga en el colector de escape"
+      ],
+      "que_hacer": "Ve al taller con la diagnosis: sin el código exacto es imposible acertar. Con este aviso encendido, además, no pasarás la ITV.",
+      "conducir": "taller",
+      "coste": "100-2.000 €"
+    },
+    {
+      "id": "desempanado-parabrisas",
+      "nombre": "Desempañado del parabrisas",
+      "otros_nombres": [
+        "desescarche delantero",
+        "desempañado",
+        "defrost"
+      ],
+      "color": "verde",
+      "gravedad": "informativo",
+      "categoria": "confort",
+      "icono": "desempanado",
+      "forma": "Un parabrisas curvo con flechas onduladas hacia arriba.",
+      "significado": "El aire caliente se dirige al parabrisas para desempañarlo o quitar el hielo.",
+      "causas": [
+        "Función activada",
+        "Activación automática al detectar humedad"
+      ],
+      "que_hacer": "Para desempañar rápido: aire al parabrisas, temperatura alta, A/C encendido y recirculación apagada.",
+      "conducir": "si",
+      "coste": "0 €"
+    },
+    {
+      "id": "nivel-adblue-ok",
+      "nombre": "Cuenta atrás de arranques (AdBlue)",
+      "otros_nombres": [
+        "arranques restantes",
+        "no restart",
+        "cuenta atrás"
+      ],
+      "color": "rojo",
+      "gravedad": "critico",
+      "categoria": "escape",
+      "icono": "cuenta-atras",
+      "forma": "Un mensaje con un número de arranques o kilómetros restantes antes de que el coche no vuelva a arrancar.",
+      "significado": "Es el último aviso legal antes del bloqueo: cada vez que apagues el motor, gastas un arranque de los que quedan.",
+      "causas": [
+        "AdBlue agotado o sistema SCR averiado y sin reparar"
+      ],
+      "que_hacer": "No apagues el motor más veces de las necesarias. Ve directo a rellenar AdBlue o al taller. Cuando llegue a cero, hará falta grúa y diagnosis para desbloquearlo.",
+      "conducir": "no",
+      "coste": "20-1.500 €"
+    },
+    {
+      "id": "desconocido",
+      "nombre": "Testigo no identificado",
+      "otros_nombres": [
+        "símbolo desconocido",
+        "testigo raro",
+        "no sé qué es"
+      ],
+      "color": "ambar",
+      "gravedad": "atencion",
+      "categoria": "general",
+      "icono": "interrogacion",
+      "forma": "Cualquier símbolo que no aparezca en esta lista: cada marca añade los suyos.",
+      "significado": "Hay marcas con testigos propios que no siguen la norma ISO 2575. Si un símbolo no te suena y no aparece aquí, el manual del coche es la fuente definitiva.",
+      "causas": [
+        "Testigo específico de la marca o del modelo",
+        "Equipamiento opcional (remolque, gas, preparación taxi, etc.)",
+        "Mensaje de la pantalla del cuadro"
+      ],
+      "que_hacer": "Mira el manual (suele estar en la guantera y también en PDF en la web de la marca). Como regla general: rojo = para y comprueba; ámbar = puedes seguir con cuidado y pasar por el taller; verde o azul = solo te informa de que algo está activo.",
+      "conducir": "taller",
+      "coste": "0-?"
+    }
+  ]
+}
