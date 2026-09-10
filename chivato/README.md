@@ -88,8 +88,13 @@ chivato/
 ├── api/chivato.js        → función serverless (proxy a Claude)
 ├── marca/logo-1024.png   → imagen maestra de la marca
 ├── icono-*.png           → iconos generados de la PWA
-└── herramientas/generar-iconos.mjs
+└── herramientas/
+    ├── generar-iconos.mjs → iconos de la PWA desde la marca
+    └── calibrar.mjs       → banco de calibración con fotos reales
 ```
+
+La ficha pública (para enseñarla y compartirla) vive en la raíz del monorepo,
+en `chivato.html`.
 
 Módulos ES nativos, sin empaquetador y sin dependencias en el navegador.
 
@@ -110,6 +115,53 @@ monorepo con `ANTHROPIC_API_KEY` en `.env`).
 
 Tests: `node test/chivato.test.mjs` desde la raíz del repositorio (también
 entran en `npm test`). No salen a Internet: se intercepta `fetch`.
+
+## Calibrar con fotos reales
+
+El catálogo está revisado, pero **lo que hay que afinar con fotos de verdad es
+la vista**: si la IA ve todos los testigos encendidos y no se inventa ninguno.
+Para eso está el banco de calibración.
+
+```bash
+# 1. Deja tus fotos de salpicadero en una carpeta (no se suben a git)
+mkdir -p chivato/fotos-calibracion
+
+# 2. Primera pasada: genera la plantilla de respuestas correctas
+node chivato/herramientas/calibrar.mjs chivato/fotos-calibracion \
+  --url https://tu-app.vercel.app/api/chivato --plantilla
+
+# 3. Corrige a mano `esperado.json` (quita lo que no estuviera encendido,
+#    añade lo que la IA no vio) y vuelve a lanzarlo sin --plantilla
+node chivato/herramientas/calibrar.mjs chivato/fotos-calibracion \
+  --url https://tu-app.vercel.app/api/chivato
+```
+
+Escribe `informe-calibracion.md` en la misma carpeta con:
+
+| Métrica | Qué mide | Objetivo razonable |
+|---|---|---|
+| **Cobertura** | De los testigos encendidos, cuántos vio | > 90 %, y **100 % en los rojos** |
+| **Precisión** | De los que dijo ver, cuántos estaban de verdad | > 90 % |
+| **Fotos clavadas** | Sin un olvido ni un sobrante | cuantas más, mejor |
+
+Además lista qué testigos se le escapan y cuáles confunde, que es justo lo que
+hay que tocar. Si tienes Playwright instalado (`npm install` en la raíz), las
+fotos se reducen a 1.280 px igual que hace la app, para calibrar sobre lo mismo
+que ve en producción.
+
+Qué tocar según lo que falle:
+
+- **Se le escapan testigos** → mira primero la columna de calidad de la foto.
+  Si las fotos son buenas, endurece el punto 1 de `INSTRUCCIONES` en
+  `api/chivato.js`.
+- **Confunde dos símbolos parecidos** → afina el campo `forma` de esos testigos
+  en `datos/testigos.json`: es lo único que el modelo tiene para distinguirlos.
+- **Se inventa testigos** → refuerza el punto 7 del prompt.
+- Cambia **una cosa cada vez** y repite sobre las mismas fotos.
+
+Un buen banco son 15-20 fotos: tu coche, el de casa, los del local, con distinta
+luz (día, noche, garaje) y algún caso difícil a propósito (reflejo, foto de
+lejos, cuadro apagado).
 
 ## Desplegar
 

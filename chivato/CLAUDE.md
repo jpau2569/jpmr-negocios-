@@ -74,6 +74,15 @@ reenvío `api/chivato.js`.
 | `api/chivato.js` | Proxy a Claude: análisis y preguntas de seguimiento |
 | `datos/testigos.json` | El catálogo revisado |
 | `herramientas/generar-iconos.mjs` | Iconos de la PWA desde la marca, sin dependencias |
+| `herramientas/calibrar.mjs` | Banco de calibración: pasa fotos reales y mide cobertura y precisión |
+| `../chivato.html` | Ficha pública para enseñar y compartir la app |
+
+## Antes de tocar el prompt de visión
+
+No lo cambies a ojo. Pasa el banco de calibración (`herramientas/calibrar.mjs`)
+sobre las mismas fotos antes y después: si la cobertura o la precisión bajan, el
+cambio no vale, por bien que suene. Un rojo que se escapa es peor que diez
+falsas alarmas.
 
 ## Tests
 

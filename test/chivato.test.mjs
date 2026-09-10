@@ -219,6 +219,19 @@ console.log("\n📱 PWA e integración");
   check("la app está enlazada al manifiesto y al icono de iOS",
     html.includes('rel="manifest"') && html.includes("apple-touch-icon"));
 
+  const ficha = leer("chivato.html");
+  check("la ficha pública explica la regla de la app y enlaza a la PWA",
+    ficha.includes("la IA solo dice qué símbolo ve") && ficha.includes('href="chivato/"'));
+  check("la ficha pública lleva el aviso legal y el logo de marca",
+    ficha.includes("no sustituye") && ficha.includes("chivato/icono-512.png"));
+  check("la portada del monorepo enlaza la ficha", leer("index.html").includes('href="chivato.html"'));
+
+  const calibrar = leer("chivato/herramientas/calibrar.mjs");
+  check("el banco de calibración mide cobertura y precisión",
+    calibrar.includes("Cobertura") && calibrar.includes("Precisión") && calibrar.includes("--plantilla"));
+  check("las fotos de calibración quedan fuera de git",
+    leer(".gitignore").includes("chivato/fotos-calibracion/"));
+
   const reenvio = leer("api/chivato.js");
   check("la ruta /api/chivato del monorepo apunta a la app",
     reenvio.includes("../chivato/api/chivato.js"));
