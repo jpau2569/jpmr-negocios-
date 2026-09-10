@@ -34,7 +34,8 @@ Environment Variables → añádelas → Deployments → ⋯ → **Redeploy**.
 
 ## 3. Probar que todo funciona
 
-Con la URL que te da Vercel (algo como `jpmr-negocios.vercel.app`):
+Con la URL que te da Vercel (**la que salga en el panel al terminar el deploy**;
+`jpmr-negocios.vercel.app` es solo un ejemplo, no una dirección real):
 
 - `/clara.html` → habla con Clara y pídele algo actual ("¿euríbor hoy?") → debe citar fuentes de Google.
 - `/castebot.html` → haz de cliente con Juanjo (zona + presupuesto + "quiero visitar ya") → debe llegarte el 🔥 a Telegram.

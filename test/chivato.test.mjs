@@ -251,10 +251,19 @@ console.log("\n📱 PWA e integración");
     cartel.includes("@media print") && cartel.includes(".botones"));
   check("el QR vectorial existe y es un SVG",
     leer("chivato/qr.svg").trim().startsWith("<svg"));
-  check("la app declara canonical y Open Graph con dirección absoluta", (() => {
-    const app = leer("chivato/index.html");
-    const og = app.match(/<meta property="og:image" content="([^"]+)"/)?.[1] || "";
-    return /<link rel="canonical" href="https?:\/\//.test(app) && og.startsWith("http");
+  // Una canonical apuntando a un dominio que todavía no existe es peor que no
+  // tener ninguna: manda a Google a una página muerta. Las absolutas las pone
+  // `generar-enlace.mjs` el día que haya dirección de verdad.
+  check("no hay direcciones absolutas inventadas en las etiquetas", (() => {
+    const paginas = ["chivato/index.html", "chivato.html"].map(leer);
+    const absolutas = paginas.flatMap((p) =>
+      [...p.matchAll(/(?:rel="canonical" href|property="og:(?:url|image)" content)="(https?:[^"]+)"/g)]
+        .map((m) => m[1]));
+    return absolutas.length === 0;
+  })());
+  check("el generador de enlace es el que pone canonical y Open Graph", (() => {
+    const t = leer("chivato/herramientas/generar-enlace.mjs");
+    return t.includes('rel="canonical"') && t.includes('property="og:url"') && t.includes('property="og:image"');
   })());
   check("hay guía para poner la app en su propio dominio",
     leer("chivato/DOMINIO.md").includes("Root Directory") &&
