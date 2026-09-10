@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chivato AI — ¿qué significa esa luz del coche?</title>
+<meta name="description" content="Haz una foto al cuadro de mandos y Chivato AI te dice qué testigo se ha encendido, qué significa, su gravedad y qué debes hacer. Catálogo de 99 testigos que funciona sin conexión.">
+<link rel="canonical" href="https://jpmr-negocios.vercel.app/chivato/" />
+<meta name="theme-color" content="#070d18">
+<meta name="color-scheme" content="dark">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icono-32.png" sizes="32x32">
+<link rel="icon" href="icono-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icono-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chivato AI">
+<meta property="og:url" content="https://jpmr-negocios.vercel.app/chivato/" />
+<meta property="og:title" content="Chivato AI — ¿qué significa esa luz del coche?">
+<meta property="og:description" content="Foto al cuadro de mandos y respuesta clara: qué testigo es, si puedes seguir conduciendo y cuánto puede costar.">
+<meta property="og:image" content="https://jpmr-negocios.vercel.app/chivato/icono-512.png" />
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="cabecera">
+  <img src="icono-192.png" alt="" width="44" height="44">
+  <div>
+    <div class="marca">CHIVATO <span>AI</span></div>
+    <div class="lema">¿Qué significa esa luz del coche?</div>
+  </div>
+  <span class="estado" id="estado-red">Listo</span>
+</header>
+
+<main class="contenedor">
+
+  <!-- ═══════════ INICIO ═══════════ -->
+  <section class="vista activa" id="vista-inicio">
+    <div class="captura">
+      <h2>Haz una foto a tu cuadro de mandos</h2>
+      <p class="sub">Con el contacto puesto y los testigos encendidos. En segundos sabrás qué es,
+        si puedes seguir conduciendo y cuánto suele costar.</p>
+
+      <div id="error-inicio" class="error oculto" role="alert"></div>
+
+      <label class="boton-foto" for="archivo-camara">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        Haz la foto
+        <small>Se abre la cámara trasera</small>
+      </label>
+      <input type="file" id="archivo-camara" accept="image/*" capture="environment" class="sr-solo">
+
+      <label class="boton-secundario" for="archivo-galeria">Subir desde la galería</label>
+      <input type="file" id="archivo-galeria" accept="image/*" class="sr-solo">
+
+      <button class="boton-secundario oculto" id="instalar" type="button">📲 Instalar Chivato AI en el móvil</button>
+
+      <div id="muestra-simbolos" style="display:flex;gap:9px;justify-content:center;margin:22px 0 4px" aria-hidden="true"></div>
+      <p style="color:var(--texto-tenue);font-size:.84rem">99 testigos en el catálogo, disponibles también sin conexión.</p>
+    </div>
+
+    <div class="aviso-legal">
+      <span aria-hidden="true">⚠️</span>
+      <span><strong>Chivato AI es una herramienta informativa</strong> y no sustituye el diagnóstico de un
+        profesional. Ante testigos rojos críticos, detén el vehículo en un lugar seguro.</span>
+    </div>
+
+    <div class="tarjeta">
+      <h3>Cómo sacar una foto que se entienda</h3>
+      <ul style="margin:8px 0 0;padding-left:20px;color:var(--texto-suave)">
+        <li>Con el <b>contacto puesto</b>: si el coche está apagado, los testigos no se ven.</li>
+        <li>De frente al cuadro y <b>cerca</b>, que ocupe casi toda la foto.</li>
+        <li>Sin reflejos: baja un poco la cabeza o tapa la luz que rebota en el cristal.</li>
+        <li>Si un testigo parpadea, mejor <b>varias fotos</b> hasta pillarlo encendido.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═══════════ RESULTADO ═══════════ -->
+  <section class="vista" id="vista-resultado">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <h2 style="font-size:1.3rem;flex:1">Resultado</h2>
+      <button id="compartir" type="button"
+        style="background:var(--tarjeta);border:1px solid var(--borde);color:var(--texto);border-radius:99px;padding:9px 15px;font-weight:700;cursor:pointer">
+        Compartir</button>
+    </div>
+    <div id="resultado-contenido"></div>
+  </section>
+
+  <!-- ═══════════ CATÁLOGO ═══════════ -->
+  <section class="vista" id="vista-catalogo">
+    <h2 style="font-size:1.3rem;margin-bottom:4px">Catálogo de testigos</h2>
+    <p style="color:var(--texto-suave);font-size:.92rem">Busca por nombre, por color o por lo que ves dibujado
+      («termómetro», «herradura», «llave inglesa»). Funciona sin conexión.</p>
+
+    <div class="buscador">
+      <input id="buscar" type="search" placeholder="Buscar testigo…" aria-label="Buscar testigo" autocomplete="off">
+      <button id="limpiar-busqueda" type="button" aria-label="Limpiar búsqueda">✕</button>
+    </div>
+    <div class="filtros" id="filtros" role="group" aria-label="Filtrar por sistema"></div>
+    <p id="cuenta-catalogo" style="color:var(--texto-tenue);font-size:.8rem;margin-bottom:10px"></p>
+    <div class="lista-catalogo" id="lista-catalogo"></div>
+  </section>
+
+  <!-- ═══════════ FICHA ═══════════ -->
+  <section class="vista" id="vista-ficha">
+    <div id="ficha-contenido"></div>
+  </section>
+
+  <!-- ═══════════ HISTORIAL ═══════════ -->
+  <section class="vista" id="vista-historial">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <h2 style="font-size:1.3rem;flex:1">Historial</h2>
+      <button id="vaciar-historial" class="oculto" type="button"
+        style="background:none;border:1px solid var(--borde);color:var(--texto-suave);border-radius:99px;padding:8px 14px;cursor:pointer">
+        Vaciar</button>
+    </div>
+    <p style="color:var(--texto-suave);font-size:.9rem">Se guarda solo en este móvil. Sin cuentas y sin subir nada a ningún sitio.</p>
+    <div id="lista-historial"></div>
+
+    <div class="tarjeta" style="margin-top:20px">
+      <h3>Tu coche (opcional)</h3>
+      <p style="color:var(--texto-suave);font-size:.9rem">Si lo rellenas, el análisis puede afinar más:
+        hay testigos que solo existen en diésel, en híbridos o en marcas concretas.</p>
+      <form id="form-coche">
+        <div class="campo"><label for="coche-marca">Marca</label>
+          <input id="coche-marca" placeholder="Renault" autocomplete="off"></div>
+        <div class="campo"><label for="coche-modelo">Modelo</label>
+          <input id="coche-modelo" placeholder="Mégane" autocomplete="off"></div>
+        <div class="campo"><label for="coche-ano">Año</label>
+          <input id="coche-ano" inputmode="numeric" placeholder="2018" autocomplete="off"></div>
+        <div class="campo"><label for="coche-combustible">Combustible</label>
+          <select id="coche-combustible">
+            <option value="">Sin especificar</option>
+            <option>Gasolina</option><option>Diésel</option><option>Híbrido</option>
+            <option>Híbrido enchufable</option><option>Eléctrico</option><option>GLP o gas natural</option>
+          </select></div>
+        <button class="boton-secundario" type="submit" style="margin-top:4px">Guardar</button>
+        <p id="guardado-coche" class="oculto" style="color:var(--verde);font-size:.88rem;margin:10px 0 0">Guardado en este dispositivo.</p>
+      </form>
+    </div>
+
+    <div class="tarjeta">
+      <h3>Sobre Chivato AI</h3>
+      <p style="color:var(--texto-suave);font-size:.9rem;margin-bottom:8px">
+        La foto se comprime en tu móvil y se envía solo para el análisis: no se guarda en ningún servidor.
+        El historial y los datos del coche viven únicamente en este dispositivo.</p>
+      <p style="color:var(--texto-tenue);font-size:.82rem;margin:0">
+        Los símbolos siguen la norma ISO 2575, pero cada marca dibuja los suyos con variaciones:
+        el manual de tu coche siempre manda.</p>
+    </div>
+  </section>
+</main>
+
+<!-- ═══════════ BARRA INFERIOR ═══════════ -->
+<nav class="barra" aria-label="Secciones">
+  <button data-vista="inicio" class="activo" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    Foto</button>
+  <button data-vista="catalogo" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    Símbolos</button>
+  <button data-vista="resultado" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 3L2 20h20z"/><path d="M12 10v4"/><circle cx="12" cy="17.5" r="1" fill="currentColor"/></svg>
+    Resultado</button>
+  <button data-vista="historial" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+    Historial</button>
+</nav>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

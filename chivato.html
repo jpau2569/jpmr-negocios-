@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chivato AI — ¿qué significa esa luz del coche?</title>
+<meta name="description" content="Haz una foto al cuadro de mandos y Chivato AI te dice qué testigo se ha encendido, qué significa, si puedes seguir conduciendo y cuánto suele costar. 99 testigos, gratis y sin registro." />
+<link rel="canonical" href="https://jpmr-negocios.vercel.app/chivato.html" />
+<meta name="theme-color" content="#070d18" />
+<link rel="icon" href="chivato/icono-32.png" sizes="32x32" />
+<link rel="apple-touch-icon" href="chivato/icono-180.png" />
+<meta property="og:title" content="Chivato AI — ¿qué significa esa luz del coche?" />
+<meta property="og:description" content="Foto al salpicadero y respuesta clara: qué testigo es, si puedes seguir conduciendo y cuánto puede costar." />
+<meta property="og:image" content="https://jpmr-negocios.vercel.app/chivato/icono-512.png" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<style>
+  :root { --fondo:#070d18; --tarjeta:#101c30; --tarjeta2:#16243c; --borde:#1e304c;
+          --texto:#eef3fb; --suave:#9db0cc; --tenue:#6c809f;
+          --ambar:#ff9d2e; --ambar2:#ffc46b; --rojo:#ff5a52; --verde:#4ade80; }
+  * { box-sizing:border-box }
+  body { margin:0; color:var(--texto); line-height:1.6; font-size:16px;
+         font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+         background:radial-gradient(1100px 620px at 18% -8%, #163358 0%, transparent 62%),
+                    radial-gradient(760px 460px at 108% 6%, #3a2408 0%, transparent 58%), var(--fondo) }
+  .wrap { max-width:880px; margin:0 auto; padding:34px 20px 70px }
+  a { color:var(--ambar2) }
+  header { text-align:center; margin-bottom:32px }
+  header img { width:104px; height:104px; border-radius:26px; box-shadow:0 14px 40px rgba(0,0,0,.5) }
+  h1 { margin:16px 0 6px; font-size:34px; letter-spacing:-.03em }
+  h1 span { color:var(--ambar) }
+  .lema { color:var(--suave); max-width:640px; margin:0 auto; font-size:18px }
+  .volver { display:inline-block; margin-top:12px; color:var(--tenue); text-decoration:none; font-size:14px }
+  .cta { display:inline-flex; flex-direction:column; align-items:center; gap:3px; margin-top:22px;
+         padding:15px 34px; max-width:100%;
+         background:linear-gradient(150deg,var(--ambar2),var(--ambar) 45%,#c96f00); color:#26140a;
+         border-radius:99px; font-weight:800; font-size:19px; text-decoration:none; line-height:1.25;
+         box-shadow:0 12px 30px rgba(255,157,46,.28) }
+  .cta small { font-weight:600; font-size:12.5px; opacity:.78; letter-spacing:0 }
+  .tarjeta { background:var(--tarjeta); border:1px solid var(--borde); border-radius:18px; padding:22px; margin-bottom:16px }
+  .tarjeta h2 { margin:0 0 12px; font-size:20px; letter-spacing:-.02em }
+  .pasos { display:grid; grid-template-columns:repeat(2,1fr); gap:14px }
+  .paso { background:#0b1424; border:1px solid var(--borde); border-radius:14px; padding:16px }
+  .paso .n { display:grid; place-items:center; width:30px; height:30px; border-radius:50%;
+             background:var(--ambar); color:#26140a; font-weight:800; margin-bottom:9px }
+  .paso h3 { margin:0 0 5px; font-size:16px }
+  .paso p { margin:0; color:var(--suave); font-size:14px }
+  .gravedad { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin-top:4px }
+  .nivel { border-radius:14px; padding:14px 16px; border:1px solid }
+  .nivel b { display:block; font-size:15px; margin-bottom:3px }
+  .nivel p { margin:0; font-size:14px; color:var(--suave) }
+  .n-rojo { border-color:rgba(255,90,82,.45); background:#2a1013 } .n-rojo b { color:var(--rojo) }
+  .n-ambar{ border-color:rgba(255,157,46,.4); background:#2b1c0c } .n-ambar b { color:var(--ambar) }
+  .n-verde{ border-color:rgba(74,222,128,.3); background:#0d2419 } .n-verde b { color:var(--verde) }
+  table { width:100%; border-collapse:collapse; font-size:14.5px }
+  th,td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--borde); vertical-align:top }
+  th { color:var(--tenue); font-size:12.5px; text-transform:uppercase; letter-spacing:.05em; font-weight:700 }
+  td:first-child { white-space:nowrap; font-weight:600 }
+  .aviso { border-left:3px solid var(--ambar); background:rgba(255,157,46,.08);
+           padding:13px 17px; border-radius:0 12px 12px 0; font-size:15px; color:var(--suave) }
+  .aviso strong { color:var(--ambar2) }
+  ul { padding-left:20px; color:var(--suave) } ul li { margin-bottom:6px }
+  ul li b { color:var(--texto) }
+  footer { text-align:center; color:var(--tenue); font-size:13px; margin-top:34px }
+  @media (max-width:560px){ h1{font-size:27px} .lema{font-size:16px} .pasos{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <img src="chivato/icono-512.png" alt="Logo de Chivato AI" width="104" height="104" />
+    <h1>CHIVATO <span>AI</span></h1>
+    <p class="lema">Se te enciende una luz en el salpicadero y no sabes si puedes seguir o tienes que parar.
+      Haz una foto y te lo digo en segundos, en cristiano.</p>
+    <a class="cta" href="chivato/"><span>Abrir Chivato AI</span>
+      <small>Gratis · sin registro · se instala en el móvil</small></a><br>
+    <a class="volver" href="/">← Volver a JPMR Negocios</a>
+  </header>
+
+  <div class="tarjeta">
+    <h2>Cómo funciona</h2>
+    <div class="pasos">
+      <div class="paso"><div class="n">1</div><h3>Haz la foto</h3>
+        <p>Con el contacto puesto, de frente al cuadro y cerca. Se abre la cámara trasera del móvil.</p></div>
+      <div class="paso"><div class="n">2</div><h3>Chivato mira</h3>
+        <p>Identifica qué testigos están encendidos y los compara con un catálogo de 99 símbolos.</p></div>
+      <div class="paso"><div class="n">3</div><h3>Decides</h3>
+        <p>Qué significa, si puedes seguir conduciendo, causas más probables y coste orientativo.</p></div>
+      <div class="paso"><div class="n">4</div><h3>Preguntas lo que quieras</h3>
+        <p>«¿Llego a casa?», «¿es urgente?», «¿qué le digo al mecánico?». Responde en lenguaje normal.</p></div>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>La regla que hace que te puedas fiar</h2>
+    <p style="color:var(--suave);margin:0 0 14px">Muchas apps de este tipo le piden a la IA que se invente
+      la explicación y el precio. Chivato AI no: <b style="color:var(--texto)">la IA solo dice qué símbolo ve</b>.
+      El significado, las causas, el qué hacer y el coste salen de un catálogo escrito y revisado a mano.</p>
+    <ul style="margin:0">
+      <li><b>Ningún presupuesto inventado.</b> Nadie asustado en el arcén se merece una cifra alucinada.</li>
+      <li><b>La misma respuesta siempre</b> para el mismo testigo, hoy y dentro de un año.</li>
+      <li><b>Funciona sin cobertura.</b> El catálogo vive en tu móvil: sirve en un parking o en un puerto.</li>
+      <li><b>Si ve algo que no conoce, lo dice</b> y te manda al manual del coche, en vez de inventárselo.</li>
+    </ul>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Los tres colores del salpicadero</h2>
+    <div class="gravedad">
+      <div class="nivel n-rojo"><b>🔴 Rojo — para el coche</b>
+        <p>Frenos, presión de aceite, temperatura, airbag, dirección. Detente en un lugar seguro.</p></div>
+      <div class="nivel n-ambar"><b>🟠 Ámbar — al taller</b>
+        <p>Motor, ABS, ESP, ruedas, filtro de partículas, AdBlue. Puedes moverte, pero no lo dejes correr.</p></div>
+      <div class="nivel n-verde"><b>🟢 Verde o azul — informativo</b>
+        <p>Luces, crucero, modo ECO, Start&amp;Stop. Solo te dicen que algo está activo.</p></div>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Qué testigos reconoce</h2>
+    <table>
+      <tr><th>Sistema</th><th>Ejemplos</th></tr>
+      <tr><td>Motor</td><td>Check engine, presión y nivel de aceite, temperatura, EPC, turbo, potencia reducida, Start&amp;Stop</td></tr>
+      <tr><td>Frenos</td><td>Sistema de frenos, líquido, freno de mano y freno eléctrico, ABS, ESP/ESC, ESP OFF, pastillas, AUTO HOLD</td></tr>
+      <tr><td>Ruedas</td><td>Presión de neumáticos (TPMS) y fallo del sensor</td></tr>
+      <tr><td>Luces</td><td>Posición, cruce, largas, antiniebla delantera y trasera, diurnas, AUTO, intermitentes, emergencia, bombilla fundida, AFS</td></tr>
+      <tr><td>Seguridad</td><td>Airbag, airbag del acompañante desactivado, cinturón</td></tr>
+      <tr><td>Emisiones</td><td>Filtro de partículas (FAP/DPF y GPF), AdBlue y su cuenta atrás, EGR, catalizador</td></tr>
+      <tr><td>Eléctricos e híbridos</td><td>READY, modo EV, batería de alta tensión, carga en curso, sistema híbrido, regeneración, AVAS</td></tr>
+      <tr><td>Asistentes</td><td>Crucero y crucero adaptativo, carril, ángulo muerto, tráfico cruzado, cámara tapada, señales, fatiga, colisión</td></tr>
+      <tr><td>Y además</td><td>Batería, inmovilizador, transmisión, 4x4, dirección asistida, suspensión, puertas y capó, revisión, limpiaparabrisas, hielo…</td></tr>
+    </table>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Tus fotos no salen de tu móvil (más que para esto)</h2>
+    <ul style="margin:0">
+      <li>La foto se <b>comprime en el propio teléfono</b> y se envía solo para el análisis. No se guarda en ningún servidor.</li>
+      <li>El <b>historial</b> y los datos de tu coche viven únicamente en tu dispositivo.</li>
+      <li><b>Sin cuentas, sin registro y sin cookies de seguimiento.</b></li>
+    </ul>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Instálalo en el móvil</h2>
+    <p style="color:var(--suave);margin:0 0 10px">No hace falta pasar por ninguna tienda de apps:</p>
+    <ul style="margin:0">
+      <li><b>Android (Chrome):</b> abre Chivato AI, menú ⋮ → <i>Instalar aplicación</i>.</li>
+      <li><b>iPhone (Safari):</b> abre Chivato AI, botón compartir → <i>Añadir a pantalla de inicio</i>.</li>
+    </ul>
+  </div>
+
+  <p class="aviso"><strong>Aviso importante.</strong> Chivato AI es una herramienta informativa y no sustituye
+    el diagnóstico de un profesional. Ante un testigo rojo —frenos, temperatura, presión de aceite, airbag o
+    dirección— detén el vehículo en un lugar seguro y no sigas conduciendo.</p>
+
+  <footer>
+    Chivato AI · un proyecto de <a href="/">JPMR Negocios</a> · Asturias<br>
+    Los símbolos siguen la norma ISO 2575, pero cada marca dibuja los suyos con variaciones:
+    el manual de tu coche siempre manda.
+  </footer>
+</div>
+</body>
+</html>
