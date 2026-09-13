@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   PULSO LOCAL AI — sistema de color
+   ----------------------------------------------------------------------------
+   Dos capas de tokens:
+
+   1. La paleta del producto (azul noche, dorado discreto, grises). Vive aquí y
+      es la que ve el visitante de la landing corporativa.
+   2. La paleta del negocio. Cada landing pública inyecta `--marca` y `--acento`
+      en línea desde `businesses.theme`, así que cambiar los colores de un
+      cliente es una fila de base de datos, no un despliegue.
+
+   Contraste: los pares texto/fondo de esta paleta se eligieron por encima de
+   4.5:1 (AA). Si un negocio configura un acento claro, `contrasteTexto()` en
+   `src/lib/tema.ts` elige automáticamente texto oscuro o claro encima.
+============================================================================ */
+
+:root {
+  color-scheme: light;
+
+  --marca: #0e2a3f;          /* azul noche */
+  --marca-suave: #1b4965;    /* azul petróleo */
+  --marca-contraste: #ffffff;
+  --acento: #c2a06a;         /* dorado discreto */
+  --acento-contraste: #1a1205;
+
+  --fondo: #f6f7f9;
+  --superficie: #ffffff;
+  --superficie-2: #f0f2f5;
+  --borde: #dde1e7;
+  --texto: #101828;
+  --texto-suave: #4d5866;
+  --exito: #14663f;
+  --aviso: #8a5a00;
+  --peligro: #9b1c1c;
+  --radio: 0.875rem;
+}
+
+.oscuro {
+  color-scheme: dark;
+  --marca: #6fa8cd;
+  --marca-suave: #93c0dd;
+  --marca-contraste: #04121d;
+  --acento: #d8bd8d;
+  --acento-contraste: #1a1205;
+
+  --fondo: #0b1620;
+  --superficie: #12212e;
+  --superficie-2: #17293a;
+  --borde: #27404f;
+  --texto: #eef3f7;
+  --texto-suave: #a8bccb;
+  --exito: #6ee7b7;
+  --aviso: #fbbf6e;
+  --peligro: #fca5a5;
+}
+
+@theme inline {
+  --color-marca: var(--marca);
+  --color-marca-suave: var(--marca-suave);
+  --color-marca-contraste: var(--marca-contraste);
+  --color-acento: var(--acento);
+  --color-acento-contraste: var(--acento-contraste);
+  --color-fondo: var(--fondo);
+  --color-superficie: var(--superficie);
+  --color-superficie-2: var(--superficie-2);
+  --color-borde: var(--borde);
+  --color-texto: var(--texto);
+  --color-texto-suave: var(--texto-suave);
+  --color-exito: var(--exito);
+  --color-aviso: var(--aviso);
+  --color-peligro: var(--peligro);
+  --radius-marca: var(--radio);
+  --font-sans: var(--fuente-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  border-color: var(--borde);
+}
+
+body {
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Foco siempre visible: es requisito de accesibilidad y además ayuda a quien
+   navega con teclado en el panel. */
+:focus-visible {
+  outline: 2px solid var(--marca);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* Animaciones suaves y baratas. Quien haya pedido menos movimiento en su
+   sistema operativo no ve ninguna. */
+@keyframes aparecer {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.animar-entrada {
+  animation: aparecer 0.35s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animar-entrada { animation: none; }
+  * { transition-duration: 0.01ms !important; }
+}
+
+/* El CTA fijo del móvil no debe taparse con la barra del navegador. */
+.seguro-abajo {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+}

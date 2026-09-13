@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Pulso Local AI">
+  <rect width="64" height="64" rx="14" fill="#0E2A3F"/>
+  <g fill="none" stroke="#C2A06A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 34h8l4-10 6 20 5-12 3 6h10"/>
+  </g>
+  <rect x="14" y="14" width="8" height="8" rx="1.5" fill="#FFFFFF"/>
+  <rect x="42" y="14" width="8" height="8" rx="1.5" fill="#FFFFFF"/>
+  <rect x="14" y="44" width="8" height="8" rx="1.5" fill="#FFFFFF"/>
+</svg>
