@@ -30,6 +30,10 @@
     "api/chivato.js": {
       "maxDuration": 60,
       "includeFiles": "chivato/datos/**"
+    },
+    "api/luxury-motion.js": {
+      "maxDuration": 60,
+      "includeFiles": "agentes/**"
     }
   },
   "crons": [
