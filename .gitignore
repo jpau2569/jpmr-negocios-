@@ -17,3 +17,5 @@ pulso-local-ai/tsconfig.tsbuildinfo
 # que alguien compiló sin outDir. No debe commitearse nunca.
 pulso-local-ai/**/*.js.map
 pulso-local-ai/tsconfig.tsbuildinfo
+# Compilaciones temporales de los tests (dentro del proyecto para que resuelvan node_modules)
+pulso-local-ai/.test-build-*/

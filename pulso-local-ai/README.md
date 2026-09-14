@@ -35,6 +35,9 @@ montar la base de datos.
 | `/b/<slug>/carta` · `/menu-del-dia` · `/reservar` · `/grupos` · `/opinion` | Las secciones |
 | `/b/<slug>/expirada` | Demo caducada |
 | `/dashboard` | Resumen y métricas |
+| `/dashboard/menu-del-dia` | Cargar el menú de hoy pegándolo |
+| `/dashboard/reservas` | Reservas y grupos, con teléfono y WhatsApp |
+| `/dashboard/carta` | Confirmar precios y marcar agotados |
 | `/dashboard/qr` | Generador de QR y carteles |
 
 ## Estado
@@ -49,8 +52,11 @@ montar la base de datos.
 | Asistente «TheWhiteBar 24/7» | ✅ buscador sobre lo publicado, sin modelo |
 | Panel: resumen, métricas y generador de QR | ✅ |
 | Acceso al panel (middleware + sesión firmada) | ✅ |
+| Editor del menú del día (pegar y repartir) | ✅ |
+| Bandeja de reservas y grupos | ✅ |
+| Editor de carta (precios, confirmar, agotado) | ✅ |
 | Cuentas por persona y roles (Supabase Auth) | ⏳ hoy la clave da acceso completo |
-| Editores del panel (carta, menú, reservas) | ⏳ pendiente |
+| Editar contacto, horario y colores desde el panel | ⏳ pendiente |
 | Stripe, confirmaciones por WhatsApp, RAG | ⏳ roadmap |
 
 ### El acceso al panel
@@ -76,7 +82,7 @@ configuración. Hoy la clave da acceso completo, y es de Pau.
 
 ```bash
 npm run typecheck                 # TypeScript strict, sin errores
-npm test                          # 36 comprobaciones (lógica y acceso)
+npm test                          # 45 comprobaciones (lógica, acceso y panel)
 npm run test:sql                  # 36 comprobaciones de aislamiento contra PostgreSQL real
 npm run build                     # build de producción
 ```

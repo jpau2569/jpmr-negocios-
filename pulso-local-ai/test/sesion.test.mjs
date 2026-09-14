@@ -20,7 +20,7 @@ const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 let cache = null;
 async function cargar() {
   if (cache) return cache;
-  const salida = mkdtempSync(join(tmpdir(), "plai-sesion-"));
+  const salida = mkdtempSync(join(RAIZ, ".test-build-"));
   const config = join(salida, "tsconfig.json");
   writeFileSync(config, JSON.stringify({
     extends: resolve(RAIZ, "tsconfig.json"),
@@ -109,7 +109,7 @@ test("una cookie caducada NO se acepta", async () => {
 
 test("el middleware protege el panel y NO lo público", () => {
   const mw = readFileSync(resolve(RAIZ, "middleware.ts"), "utf8");
-  assert.match(mw, /matcher:\s*\["\/dashboard\/:path\*"\]/, "debe proteger /dashboard");
+  assert.match(mw, /"\/dashboard\/:path\*"/, "debe proteger /dashboard");
   assert.ok(!/\/b\/:path/.test(mw), "lo público NO debe pasar por el middleware");
 });
 
@@ -123,4 +123,28 @@ test("la cookie es httpOnly y no viaja entre sitios", () => {
 test("el destino tras entrar no puede ser un sitio externo", () => {
   const form = readFileSync(resolve(RAIZ, "components/dashboard/formulario-entrar.tsx"), "utf8");
   assert.match(form, /\^\\\/dashboard/, "el destino debe validarse contra /dashboard");
+});
+
+test("las rutas de ESCRITURA del panel también están protegidas", () => {
+  // Proteger las páginas y dejar /api/panel abierto sería una puerta con
+  // cerradura y la ventana abierta: esas rutas escriben con service_role.
+  const mw = readFileSync(resolve(RAIZ, "middleware.ts"), "utf8");
+  assert.match(mw, /\/api\/panel\/:path\*/, "/api/panel debe pasar por el middleware");
+});
+
+test("a una API se le responde 401, no se la redirige", () => {
+  // Un fetch() que sigue la redirección acabaría parseando HTML como JSON, y
+  // el error que ve el usuario no tendría nada que ver con lo que pasa.
+  const mw = readFileSync(resolve(RAIZ, "middleware.ts"), "utf8");
+  assert.match(mw, /pathname\.startsWith\("\/api\/"\)[\s\S]*?status:\s*401/);
+});
+
+test("las escrituras del panel filtran por business_id a mano", () => {
+  // service_role SALTA RLS: sin este filtro, un id de otro negocio se podría
+  // tocar desde aquí. Es el único sitio del proyecto donde la base no protege.
+  for (const ruta of ["reserva", "plato"]) {
+    const codigo = readFileSync(resolve(RAIZ, `app/api/panel/${ruta}/route.ts`), "utf8");
+    assert.match(codigo, /\.eq\("business_id", negocio\.id\)/,
+      `app/api/panel/${ruta} no filtra por business_id`);
+  }
 });

@@ -27,10 +27,31 @@ const RAIZ = resolve(AQUI, "..");
 /** Para probar lib/horarios.ts se COMPILA con el compilador de verdad, no se
  *  le quitan los tipos a mano con expresiones regulares. Así el test ejecuta
  *  exactamente el mismo código que la web, sin una copia que se desincronice. */
+let panelCache = null;
+/** Igual que cargarHorarios: se compila el TypeScript de verdad. */
+async function cargarPanel() {
+  if (panelCache) return panelCache;
+  const salida = mkdtempSync(join(RAIZ, ".test-build-"));
+  const config = join(salida, "tsconfig.json");
+  writeFileSync(config, JSON.stringify({
+    extends: resolve(RAIZ, "tsconfig.json"),
+    compilerOptions: {
+      noEmit: false, outDir: salida, rootDir: RAIZ,
+      module: "esnext", target: "es2022", incremental: false,
+    },
+    include: [],
+    files: [resolve(RAIZ, "lib/schemas/panel.ts")],
+  }));
+  execFileSync(process.platform === "win32" ? "npx.cmd" : "npx",
+    ["tsc", "--project", config], { cwd: RAIZ, stdio: "pipe" });
+  panelCache = await import(pathToFileURL(join(salida, "lib", "schemas", "panel.js")).href);
+  return panelCache;
+}
+
 let horariosCache = null;
 async function cargarHorarios() {
   if (horariosCache) return horariosCache;
-  const salida = mkdtempSync(join(tmpdir(), "plai-test-"));
+  const salida = mkdtempSync(join(RAIZ, ".test-build-"));
   // Un tsconfig propio: hereda los alias del proyecto (@/...) y compila solo
   // este archivo. Sin él, tsc no sabe resolver "@/types/negocio".
   const configTemporal = join(salida, "tsconfig.json");
@@ -355,4 +376,72 @@ test("no hay archivos compilados junto al código fuente", () => {
   };
   recorrer(RAIZ);
   assert.deepEqual(sobrantes, [], "hay salida de tsc commiteada junto al fuente");
+});
+
+test("el menú pegado se reparte solo en primeros, segundos y postres", async () => {
+  // El hostelero no rellena quince campos a las once de la mañana: pega lo que
+  // ya tiene escrito y el programa lo entiende.
+  const { interpretarMenuPegado } = await cargarPanel();
+
+  const pegado = [
+    "PRIMEROS", "- Fabada", "- Ensalada mixta",
+    "SEGUNDOS:", "1. Merluza a la plancha", "2. Entrecot con patatas",
+    "Postres", "• Arroz con leche",
+  ].join("\n");
+
+  const { platos } = interpretarMenuPegado(pegado);
+  assert.equal(platos.length, 5, "debe encontrar 5 platos");
+  assert.deepEqual(platos[0], { course: "primero", name: "Fabada" });
+  assert.deepEqual(platos[2], { course: "segundo", name: "Merluza a la plancha" });
+  assert.deepEqual(platos[4], { course: "postre", name: "Arroz con leche" });
+});
+
+test("un plato que empieza como un encabezado NO se confunde con uno", async () => {
+  const { interpretarMenuPegado } = await cargarPanel();
+  // "Primero de pasta" es un plato; "Primeros:" es una sección.
+  const { platos } = interpretarMenuPegado("Primeros:\nPrimero de pasta");
+  assert.equal(platos.length, 1);
+  assert.equal(platos[0].name, "Primero de pasta");
+  assert.equal(platos[0].course, "primero");
+});
+
+test("el precio se entiende como lo teclea una persona", async () => {
+  const { precioEuros } = await cargarPanel();
+  // Con coma, con punto, con espacios: todo vale. Vacío es "sin precio".
+  assert.equal(precioEuros.parse("12,50"), 1250);
+  assert.equal(precioEuros.parse("12.50"), 1250);
+  assert.equal(precioEuros.parse(" 14 "), 1400);
+  assert.equal(precioEuros.parse(""), null);
+  assert.equal(precioEuros.parse(null), null);
+  assert.equal(precioEuros.parse("gratis"), null);
+  assert.equal(precioEuros.parse("-5"), null, "un precio negativo no vale");
+});
+
+test("guardar el menú del día le quita la marca de muestra", () => {
+  const ruta = readFileSync(resolve(RAIZ, "app/api/panel/menu-dia/route.ts"), "utf8");
+  assert.match(ruta, /is_demo:\s*false/,
+    "lo que escribe el dueño ya no es una muestra");
+  assert.match(ruta, /revalidatePath/,
+    "hay que refrescar la web pública o el cambio tarda un minuto en verse");
+});
+
+test("la cabecera del menú da el precio y no se cuela como plato", async () => {
+  const { interpretarMenuPegado } = await cargarPanel();
+  const leido = interpretarMenuPegado([
+    "MENU DE HOY 14€ bebida incluida",
+    "PRIMEROS", "Fabada asturiana",
+    "SEGUNDOS", "Merluza rebozada",
+  ].join("\n"));
+
+  assert.equal(leido.platos.length, 2, "la cabecera no es un plato");
+  assert.equal(leido.platos[0].name, "Fabada asturiana");
+  assert.equal(leido.precioCents, 1400, "debe coger el precio de la cabecera");
+  assert.equal(leido.bebidaIncluida, true);
+});
+
+test("el precio de la cabecera se entiende con coma y con la palabra euros", async () => {
+  const { interpretarMenuPegado } = await cargarPanel();
+  assert.equal(interpretarMenuPegado("Menú del día - 12,50 euros\nFabada").precioCents, 1250);
+  assert.equal(interpretarMenuPegado("Menu 9€\nFabada").precioCents, 900);
+  assert.equal(interpretarMenuPegado("PRIMEROS\nFabada").precioCents, null, "sin cabecera, sin precio");
 });

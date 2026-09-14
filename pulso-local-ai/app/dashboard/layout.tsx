@@ -19,7 +19,10 @@ import { BotonSalir } from "@/components/dashboard/boton-salir";
 
 const SECCIONES = [
   { href: "/dashboard", texto: "Resumen" },
-  { href: "/dashboard/qr", texto: "QR y carteles" },
+  { href: "/dashboard/menu-del-dia", texto: "Menú del día" },
+  { href: "/dashboard/reservas", texto: "Reservas" },
+  { href: "/dashboard/carta", texto: "Carta" },
+  { href: "/dashboard/qr", texto: "QR" },
 ];
 
 export default function LayoutPanel({ children }: { children: React.ReactNode }) {
