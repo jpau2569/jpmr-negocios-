@@ -4,3 +4,6 @@ node_modules/
 fotos-faciles/build/
 fotos-faciles/dist/
 chivato/fotos-calibracion/
+
+# PostgreSQL desechable de las pruebas de Pulso Local AI
+/var/tmp/plai-pg
