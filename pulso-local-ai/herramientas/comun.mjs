@@ -1,0 +1,124 @@
+// ============================================================================
+//  Piezas compartidas por los generadores
+// ----------------------------------------------------------------------------
+//  El seed de Supabase y el respaldo JSON del front salen de LA MISMA fuente y
+//  con LOS MISMOS identificadores. Si no, la analítica guardaría un subject_id
+//  que no existe en la base en cuanto se pase de un modo a otro.
+// ============================================================================
+
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const AQUI = dirname(fileURLToPath(import.meta.url));
+export const RAIZ = resolve(AQUI, "../..");
+export const EJEMPLOS = resolve(RAIZ, "escaparate3d-pro/config/ejemplos");
+
+/** UUID v5 determinista: el seed es idempotente y los QR impresos siguen valiendo. */
+const NS = "pulsolocal.ai";
+export function uuid(...partes) {
+  const h = createHash("sha1").update(NS + "|" + partes.join("|")).digest();
+  const b = Buffer.from(h.subarray(0, 16));
+  b[6] = (b[6] & 0x0f) | 0x50;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const s = b.toString("hex");
+  return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`;
+}
+
+/* --- Alérgenos ---------------------------------------------------------------
+   Del texto libre al enum cerrado de los 14 oficiales. Lo que no se reconoce NO
+   se inventa: se avisa y se deja fuera. */
+const ALERGENOS = {
+  gluten: "gluten", trigo: "gluten",
+  crustaceos: "crustaceos", crustáceos: "crustaceos", marisco: "crustaceos",
+  huevo: "huevos", huevos: "huevos",
+  pescado: "pescado",
+  cacahuete: "cacahuetes", cacahuetes: "cacahuetes",
+  soja: "soja",
+  leche: "lacteos", lacteos: "lacteos", lácteos: "lacteos", lactosa: "lacteos",
+  "frutos secos": "frutos_de_cascara", "frutos de cascara": "frutos_de_cascara",
+  "frutos de cáscara": "frutos_de_cascara", nueces: "frutos_de_cascara",
+  apio: "apio", mostaza: "mostaza",
+  sesamo: "sesamo", sésamo: "sesamo",
+  sulfitos: "sulfitos", altramuces: "altramuces",
+  moluscos: "moluscos",
+};
+
+export const sinReconocer = new Set();
+
+export function alergeno(texto) {
+  const clave = String(texto || "").trim().toLowerCase();
+  const mapeado = ALERGENOS[clave];
+  if (!mapeado) sinReconocer.add(clave);
+  return mapeado || null;
+}
+
+export function alergenosDe(plato) {
+  return [...new Set((plato.alergenos || []).map(alergeno).filter(Boolean))];
+}
+
+export const leer = (archivo) => JSON.parse(readFileSync(resolve(EJEMPLOS, archivo), "utf8"));
+
+export const centimos = (precio) =>
+  Number.isFinite(Number(precio)) && precio !== null && precio !== "" && precio !== undefined
+    ? Math.round(Number(precio) * 100)
+    : null;
+
+/** Las plantillas de sector: qué módulos nacen encendidos en cada tipo de local. */
+export const PLANTILLAS = [
+  {
+    key: "taberna-urbana",
+    name: "Taberna urbana",
+    description: "Bar restaurante de ciudad: menú del día, carta y raciones para compartir.",
+    defaults: {
+      modules: {
+        menu: true, daily_menu: true, special_menus: true, reservations: true,
+        groups: false, events: true, promotions: true, feedback: true,
+        loyalty: true, assistant: true, qr: true,
+      },
+    },
+  },
+  {
+    key: "parrilla-grupos",
+    name: "Parrilla y grupos",
+    description: "Restaurante de valle con parrilla, celebraciones y grupos grandes.",
+    defaults: {
+      modules: {
+        menu: true, daily_menu: false, special_menus: true, reservations: true,
+        groups: true, events: true, promotions: true, feedback: true,
+        loyalty: true, assistant: true, qr: true,
+      },
+    },
+  },
+];
+
+/** Los QR que se crean de serie con cada negocio. */
+export const QRS = {
+  "thewhitebar-mieres": [
+    { token: "twb-mesa", label: "Mesas", target: "landing", location: "table" },
+    { token: "twb-barra", label: "Barra", target: "daily_menu", location: "bar" },
+    { token: "twb-ticket", label: "Ticket", target: "review", location: "ticket" },
+    { token: "twb-escap", label: "Escaparate", target: "menu", location: "window" },
+    { token: "twb-redes", label: "Redes sociales", target: "landing", location: "social" },
+  ],
+  "la-vina-cenera": [
+    { token: "lv-mesa", label: "Mesas", target: "landing", location: "table" },
+    { token: "lv-grupos", label: "Cartel de grupos", target: "group", location: "window" },
+    { token: "lv-ticket", label: "Ticket", target: "review", location: "ticket" },
+    { token: "lv-redes", label: "Redes sociales", target: "landing", location: "social" },
+  ],
+};
+
+/** Los dos negocios de las demos. */
+export const NEGOCIOS = [
+  { slug: "thewhitebar-mieres", archivo: "restaurante-la-taberna.json", plantilla: "taberna-urbana" },
+  { slug: "la-vina-cenera", archivo: "restaurante-la-vina.json", plantilla: "parrilla-grupos" },
+];
+
+export function avisarAlergenos() {
+  if (!sinReconocer.size) return;
+  console.log("\n⚠️  Alérgenos sin reconocer (NO se han inventado, se han dejado fuera):");
+  for (const a of sinReconocer) console.log(`   · "${a}"`);
+  console.log("   Añádelos al mapa ALERGENOS de herramientas/comun.mjs si son de los 14 oficiales.");
+}

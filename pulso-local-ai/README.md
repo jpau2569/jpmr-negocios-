@@ -6,92 +6,167 @@
 > fidelización en cada mesa, ticket o mostrador.»
 
 SaaS multi-tenant para negocios locales. Cada negocio tiene un espacio público
-al que se llega por QR (`/b/<slug>`) y un panel privado donde el dueño edita su
-contenido y ve qué pasa con él.
+al que se llega por QR (`/b/<slug>`) y un panel donde ve qué pasa con él.
 
-**La arquitectura completa está en [`ARQUITECTURA.md`](ARQUITECTURA.md)**:
-modelo de datos, rutas, permisos, flujos, seguridad y RGPD. Léelo antes de tocar
-código.
+La arquitectura completa —modelo de datos, rutas, permisos, flujos, seguridad y
+RGPD— está en **[`ARQUITECTURA.md`](ARQUITECTURA.md)**.
 
 ---
+
+## Arrancarlo
+
+```bash
+cd pulso-local-ai
+npm install
+cp .env.example .env.local     # funciona sin rellenar nada: modo demostración
+npm run dev                    # http://localhost:3000
+```
+
+Sin Supabase configurado, la aplicación **funciona igual**: lee el respaldo de
+`lib/datos-demo.json` y los formularios avisan de que no guardan nada. Es
+deliberado — así se puede enseñar una demo en el bar desde el móvil antes de
+montar la base de datos.
+
+| Dirección | Qué es |
+|---|---|
+| `/` | Hub comercial con las dos demos y sus QR |
+| `/b/thewhitebar-mieres` | La Taberna · The White Bar (Mieres) |
+| `/b/la-vina-cenera` | Restaurante La Viña (Cenera) |
+| `/b/<slug>/carta` · `/menu-del-dia` · `/reservar` · `/grupos` · `/opinion` | Las secciones |
+| `/b/<slug>/expirada` | Demo caducada |
+| `/dashboard` | Resumen y métricas |
+| `/dashboard/qr` | Generador de QR y carteles |
 
 ## Estado
 
 | Pieza | Estado |
 |---|---|
-| Arquitectura, modelo, rutas, flujos, seguridad | ✅ `ARQUITECTURA.md` |
-| Esquema de base de datos (28 tablas) | ✅ `sql/01_esquema.sql` |
-| Políticas RLS multi-tenant | ✅ `sql/02_rls.sql` |
-| Seed con datos reales de La Taberna y La Viña | ✅ `sql/03_seed.sql` |
-| Pruebas de aislamiento contra Postgres real | ✅ 30/30 |
-| Aplicación Next.js | ⏳ pendiente |
-| Panel | ⏳ pendiente |
-| Generador de QR y carteles | ⏳ pendiente (hay implementación propia reutilizable en `fotos-faciles/nucleo/qr.mjs`) |
+| Arquitectura, modelo, rutas, flujos, seguridad | ✅ |
+| Esquema de base de datos (28 tablas) + RLS + seed | ✅ verificado contra PostgreSQL real |
+| Carta, menú del día, WhatsApp, reservas, grupos, feedback, reseñas, QR | ✅ |
+| Fidelización, analítica, PWA, demo de 7 días | ✅ |
+| Asistente «TheWhiteBar 24/7» | ✅ buscador sobre lo publicado, sin modelo |
+| Panel: resumen, métricas y generador de QR | ✅ |
+| **Login del panel** | ⛔ **no conectado** (ver abajo) |
+| Editores del panel (carta, menú, reservas) | ⏳ pendiente |
+| Stripe, confirmaciones por WhatsApp, RAG | ⏳ roadmap |
+
+### ⛔ El panel no tiene login
+
+`/dashboard` **no está protegido**: no hay Supabase Auth conectado ni middleware.
+Ahora mismo cualquiera con la URL entraría. La propia página lo avisa en rojo.
+Antes de publicarlo con datos de clientes hay que conectar Auth, proteger las
+rutas en middleware y comprobar el rol contra `business_members`. RLS ya protege
+la base, pero la interfaz no debe ni enseñar lo que no toca.
 
 ## Probarlo
 
-No hace falta Supabase ni conexión: se levanta un PostgreSQL desechable, se
-aplica todo y se comprueba que el aislamiento funciona de verdad.
-
 ```bash
-bash pulso-local-ai/herramientas/probar-sql.sh
+npm run typecheck                 # TypeScript strict, sin errores
+npm test                          # 20 comprobaciones de la lógica
+npm run test:sql                  # 30 comprobaciones de aislamiento contra PostgreSQL real
+npm run build                     # build de producción
 ```
 
-Comprueba, entre otras cosas, que el público ve la carta publicada pero **no
-alcanza una sola reserva, feedback, contacto ni consentimiento**; que al caducar
-la demo de 7 días el negocio desaparece del público; y que el dueño de un
-negocio no ve absolutamente nada del otro.
+`test:sql` levanta un PostgreSQL desechable, aplica esquema + RLS + seed y
+comprueba que el público lee la carta pero **no alcanza una sola reserva,
+feedback, contacto ni consentimiento**; que al caducar la demo el negocio
+desaparece; y que el dueño de un negocio no ve nada del otro.
 
-## Regenerar el seed
+## Regenerar los datos
 
 La carta de La Taberna (46 platos) y la ficha de La Viña ya estaban verificadas
-en `escaparate3d-pro/config/ejemplos/`. El seed se genera de ahí, no se teclea:
+en `escaparate3d-pro/config/ejemplos/`. Todo se genera de ahí, no se teclea:
 
 ```bash
-node pulso-local-ai/herramientas/generar-seed.mjs
+node herramientas/generar-seed.mjs         # → sql/03_seed.sql      (Supabase)
+node herramientas/generar-datos-demo.mjs   # → lib/datos-demo.json  (respaldo del front)
 ```
 
-Conserva lo más importante: `confirmado: false` en el JSON se convierte en
-`is_demo = true` en la base, y la web lo pinta como dato sin confirmar.
+Los dos usan los **mismos identificadores**, así que la analítica sigue siendo
+válida al pasar del respaldo a la base. Y conservan lo importante:
+`confirmado: false` en el JSON → `is_demo = true` → **la web lo dice**.
 
-## Las dos demos
+## Desplegar en Vercel
 
-| Negocio | Ruta | Plantilla |
-|---|---|---|
-| La Taberna · The White Bar (Mieres) | `/b/thewhitebar-mieres` | Taberna urbana: menú del día y carta |
-| Restaurante La Viña (Cenera) | `/b/la-vina-cenera` | Parrilla y grupos: celebraciones |
+1. **Proyecto**: importa el repositorio y pon **Root Directory** =
+   `pulso-local-ai`. Framework: Next.js (se detecta solo).
+2. **Base de datos**: crea un proyecto en Supabase y lanza, en su editor SQL y
+   en este orden: `sql/01_esquema.sql`, `sql/02_rls.sql`, `sql/03_seed.sql`.
+3. **Variables de entorno** (Settings → Environment Variables):
 
-Datos de origen: fichas públicas y fotos de sus cartas, recogidos el 2026-09-09.
-De La Taberna hay 14 platos con precio confirmado y 30 sin confirmar.
+   | Variable | Dónde | Nota |
+   |---|---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API | Pública por diseño |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ídem | Pública: lo que protege es RLS |
+   | `SUPABASE_SERVICE_ROLE_KEY` | ídem | **Secreta.** Sin `NEXT_PUBLIC_`. Salta RLS |
+   | `NEXT_PUBLIC_SITE_URL` | tu dominio | Con esto se construyen los QR |
+   | `NEXT_PUBLIC_PULSO_WHATSAPP` | tu número | CTA de «reactivar mi espacio» |
 
-## Tres reglas que el código hace cumplir
+4. **Dominio**: `pulsolocal.ai` **hay que comprarlo** (no existe todavía) y
+   apuntarlo al proyecto. Mientras tanto, las demos viven en la URL que da
+   Vercel y funcionan igual para enseñarlas.
+5. **Importante**: cambia `NEXT_PUBLIC_SITE_URL` **antes** de imprimir cien
+   carteles. Un QR impreso con la URL vieja no se arregla.
+
+## Las reglas que el código hace cumplir
+
+No son buenas intenciones: hay tests que fallan si alguien las rompe.
 
 1. **No se inventa nada.** Ni un plato, ni un precio, ni un alérgeno, ni un
-   horario. Lo que el negocio no ha confirmado va marcado como DEMO y se ve
-   marcado en la página. Un alérgeno inventado es un problema sanitario.
-2. **Las reseñas no se manipulan.** El botón de Google se enseña con un 1 y con
-   un 5, y solo si el negocio ha dado su enlace oficial. Filtrar reseñas por
-   puntuación viola las políticas de Google y puede tumbar su ficha.
+   horario, ni un número de WhatsApp, ni una URL de reseñas. Lo que el negocio
+   no ha confirmado va marcado como muestra **y se ve marcado en la página**.
+   Un alérgeno inventado es un problema sanitario, no un bug de formato.
+2. **Las reseñas no se manipulan.** El botón de Google se enseña con un 1 igual
+   que con un 5, y solo si el negocio ha dado su enlace oficial. Filtrar reseñas
+   por puntuación incumple las políticas de Google y puede costarle al negocio
+   su ficha entera. Hay un test que vigila que nadie lo «optimice».
 3. **Nada se confirma solo.** Una reserva nace en `pending`. La web no promete
    una mesa que no puede prometer.
+4. **El asistente no sabe lo que no está publicado.** Responde con la carta, el
+   menú y el horario cargados; si no lo sabe, remite al local. En el MVP no
+   llama a ningún modelo de lenguaje: un modelo suelto respondiendo sobre
+   alérgenos es exactamente lo que no se debe hacer.
+5. **La analítica no identifica a nadie.** Sin cookies, sin IP en claro, sin
+   identificador de persona. Por eso esta web no necesita banner de consentimiento.
 
-## Antes de publicar con datos reales
+## Antes de enviar una demo a un cliente
 
-Ninguno de estos datos se puede inventar. Bloquean la publicación, no el
-desarrollo: se construye con DEMO y se sustituye.
+Ninguno de estos datos se puede inventar. No bloquean el desarrollo —se
+construye con muestra y se sustituye— pero **sí bloquean publicar**:
 
-- WhatsApp de cada negocio.
-- `review_url` oficial de Google de cada negocio.
-- Horario confirmado por el propio local.
-- Fotos de los platos.
-- Los 30 precios de La Taberna marcados `is_demo`, confirmados uno a uno.
-- Dominio `pulsolocal.ai` (**no existe todavía**: hay que comprarlo y apuntarlo
-  a Vercel; mientras tanto las demos viven en la URL de Vercel).
-- Proyecto de Supabase creado y sus claves puestas.
+- [ ] WhatsApp de cada negocio (sin número, no se pinta el botón)
+- [ ] Enlace oficial de Google Reviews de cada uno
+- [ ] Horario confirmado por el propio local
+- [ ] Fotos de los platos
+- [ ] Los 30 precios de La Taberna marcados como muestra, confirmados uno a uno
+- [ ] Teléfono principal de La Taberna: hay dos (`684 65 05 16` y el de reservas
+      de la pizarra, `984 25 33 52`); el botón «Llamar» solo apunta a uno
+- [ ] Escanear un QR impreso con el móvil antes de imprimir la tirada
+
+## Estructura
+
+```
+pulso-local-ai/
+  ARQUITECTURA.md          arquitectura, modelo, rutas, flujos, seguridad, RGPD
+  sql/                     01 esquema · 02 RLS · 03 seed · 99 pruebas
+  herramientas/            generadores del seed y del respaldo, pruebas de SQL
+  app/
+    page.tsx               hub comercial
+    b/[slug]/(vivo)/       espacio público (exige demo vigente)
+    b/[slug]/expirada/     demo caducada (fuera del layout que redirige)
+    api/public/            reserva, grupo, feedback, lead, analítica
+    api/ai/ask/            asistente
+    api/qr/[token]/        QR en PNG/SVG y carteles A5 y de mesa
+    dashboard/             resumen, métricas y generador de QR
+  components/              ui/, publico/, dashboard/, tema
+  lib/                     supabase, schemas, whatsapp, horarios, trial, qr, analítica
+  test/                    pruebas de la lógica
+```
 
 ## Relación con `escaparate3d-pro/`
 
-Son dos productos, no uno duplicado:
+Son dos productos distintos, no uno duplicado:
 
 - **`escaparate3d-pro/`** es la demo de 180 € que se manda por WhatsApp en frío.
   HTML plano, sin base de datos, lista hoy. Cubre restaurante, inmobiliaria y
@@ -99,4 +174,12 @@ Son dos productos, no uno duplicado:
 - **Pulso Local AI** es el producto de suscripción: panel, métricas,
   multi-tenant, fidelización y reputación.
 
-El contenido verificado se comparte: el seed sale de los JSON del primero.
+El contenido verificado se comparte: el seed y el respaldo salen de sus JSON.
+
+## Roadmap
+
+**Siguiente**: login del panel y editores de carta, menú del día y reservas.
+
+**Después**: Stripe, confirmación de reserva por WhatsApp, Google Calendar,
+pedido en mesa, pagos, TPV, RAG real para el asistente, campañas consentidas e
+integración con centrales de reservas.

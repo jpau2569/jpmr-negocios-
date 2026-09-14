@@ -1,0 +1,38 @@
+{
+  "name": "pulso-local-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "El QR que convierte visitas en clientes que vuelven. SaaS multi-tenant para negocios locales.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.mjs",
+    "seed": "node herramientas/generar-seed.mjs",
+    "test:sql": "bash herramientas/probar-sql.sh"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.45.4",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "next": "^15.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.53.2",
+    "@hookform/resolvers": "^3.9.1",
+    "recharts": "^2.13.3",
+    "tailwind-merge": "^2.5.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.6.3"
+  }
+}

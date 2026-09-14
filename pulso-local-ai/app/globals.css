@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   PULSO LOCAL AI — sistema de diseño
+   ----------------------------------------------------------------------------
+   Taberna urbana: pizarra, madera, neón suave. Negro grafito de fondo, blanco
+   roto para el texto, mostaza para lo que hay que pulsar y vino para el acento.
+
+   Los colores de CADA NEGOCIO llegan en business_settings.theme y se vuelcan
+   como custom properties desde <TemaNegocio>. Lo de aquí son los valores por
+   defecto: si un cliente no ha elegido marca, se ve así.
+   ========================================================================= */
+
+@theme {
+  /* Superficies: grafito, no negro puro. El negro puro sobre OLED corta las
+     sombras y hace que el contenido flote raro. */
+  --color-carbon: #0e0f11;
+  --color-pizarra: #17181b;
+  --color-pizarra-alta: #1f2125;
+  --color-borde: #2a2d33;
+
+  /* Tinta */
+  --color-hueso: #f3efe6;
+  --color-hueso-tenue: #a8a59d;
+
+  /* Marca por defecto */
+  --color-mostaza: #d4a03c;
+  --color-mostaza-viva: #e8b955;
+  --color-vino: #8e2a33;
+  --color-terracota: #b4523f;
+
+  --font-display: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+
+  --radius-tarjeta: 14px;
+
+  /* Animaciones cortas y sutiles: nada que haga esperar a alguien con hambre. */
+  --animate-subir: subir 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-aparecer: aparecer 0.2s ease-out both;
+}
+
+@keyframes subir {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes aparecer {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* --- Tokens del negocio ------------------------------------------------------
+   Los pinta <TemaNegocio> a partir del JSON. Aquí van los respaldos, para que
+   la página nunca se quede sin color aunque la configuración venga vacía. */
+:root {
+  --negocio-fondo: var(--color-carbon);
+  --negocio-superficie: var(--color-pizarra);
+  --negocio-acento: var(--color-mostaza);
+  --negocio-acento2: var(--color-vino);
+  --negocio-texto: var(--color-hueso);
+  /* Se calcula por contraste WCAG, no a ojo: hay marcas con acento claro donde
+     el texto blanco encima es ilegible. */
+  --negocio-sobre-acento: #17181b;
+}
+
+* { min-width: 0; }
+
+html {
+  scroll-behavior: smooth;
+  /* El ancla de una sección no debe quedar debajo de la barra pegajosa. */
+  scroll-padding-top: 5rem;
+  background: var(--negocio-fondo);
+}
+
+body {
+  background: var(--negocio-fondo);
+  color: var(--negocio-texto);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Foco visible siempre: es requisito de accesibilidad AA y, en un móvil con
+   teclado bluetooth o con navegación por voz, es lo único que orienta. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--negocio-acento);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Enlace de salto: el primer tabulador lleva al contenido, no al menú. */
+.salto-contenido {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  background: var(--negocio-acento);
+  color: var(--negocio-sobre-acento);
+  font-weight: 600;
+}
+.salto-contenido:focus { left: 0.5rem; top: 0.5rem; }
+
+/* Textura de pizarra, muy sutil: da calidez sin cargar una imagen. */
+.pizarra {
+  background-image:
+    radial-gradient(circle at 20% 10%, rgb(255 255 255 / 0.035), transparent 45%),
+    radial-gradient(circle at 85% 0%, rgb(255 255 255 / 0.025), transparent 40%);
+}
+
+/* Resplandor de neón suave tras el acento. Decorativo: nunca lleva información. */
+.neon {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--negocio-acento) 35%, transparent),
+              0 8px 30px -12px color-mix(in srgb, var(--negocio-acento) 45%, transparent);
+}
