@@ -1,21 +1,20 @@
 import Link from "next/link";
 import { hayBackend } from "@/lib/datos";
 import { Aviso } from "@/components/ui/basicos";
+import { BotonSalir } from "@/components/dashboard/boton-salir";
 
 // ============================================================================
 //  Panel del negocio — /dashboard
 // ----------------------------------------------------------------------------
-//  AVISO IMPORTANTE, y está aquí para que nadie lo pase por alto: la
-//  autenticación de Supabase todavía NO está conectada. Mientras
-//  SUPABASE_SERVICE_ROLE_KEY no exista, este panel enseña datos de muestra y
-//  no lee nada real. Antes de publicarlo con datos de clientes hay que:
+//  Estas rutas están protegidas por middleware.ts: nadie llega hasta aquí sin
+//  una sesión válida, porque la comprobación corre ANTES de renderizar.
 //
-//    1. Conectar Supabase Auth y proteger estas rutas en middleware.
-//    2. Comprobar el rol del usuario contra business_members (RLS ya lo hace
-//       en la base, pero la interfaz no debe ni enseñar lo que no toca).
+//  Es necesario porque el panel lee con service_role, que salta RLS: aquí la
+//  base ya no protege nada y el control tiene que ser de verdad.
 //
-//  Se deja escrito aquí, y no solo en el README, porque un panel sin login es
-//  exactamente el tipo de cosa que acaba desplegada por error.
+//  Pendiente para cuando haya Supabase Auth: una cuenta por persona y el rol
+//  sacado de business_members, para que un empleado vea las reservas pero no
+//  la configuración. Hoy la clave da acceso completo, y es de Pau.
 // ============================================================================
 
 const SECCIONES = [
@@ -36,22 +35,19 @@ export default function LayoutPanel({ children }: { children: React.ReactNode })
               </Link>
             ))}
           </nav>
+          <div className="ml-auto">
+            <BotonSalir />
+          </div>
         </div>
       </header>
 
       <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
         {!hayBackend() ? (
-          <Aviso tono="error" className="mb-6">
-            <strong>Panel sin conectar.</strong> No hay Supabase configurado ni autenticación, así
-            que lo que ves son datos de muestra. No publiques este panel hasta conectar el login y
-            proteger las rutas.
+          <Aviso className="mb-6">
+            <strong>Sin base de datos conectada.</strong> Lo que ves son datos de muestra para poder
+            enseñar el panel. Conecta Supabase para ver los números reales.
           </Aviso>
-        ) : (
-          <Aviso tono="error" className="mb-6">
-            <strong>Falta el login.</strong> Hay base de datos, pero la autenticación todavía no
-            está conectada: cualquiera con la URL entraría. Protege estas rutas antes de publicar.
-          </Aviso>
-        )}
+        ) : null}
         {children}
       </main>
     </div>
