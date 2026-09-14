@@ -289,6 +289,10 @@ haya `is_demo`, la página lo dice.
 
 ### 5.1 Seguridad
 
+- **El panel, tras middleware.** `/dashboard` no se renderiza sin sesión: la
+  comprobación corre antes. Es necesario porque el panel lee con `service_role`,
+  que salta RLS. La sesión es una cookie firmada con HMAC, httpOnly y de ocho
+  horas; sin configuración de acceso, el panel se cierra en vez de abrirse.
 - **RLS en todas las tablas**, sin excepción. El rol `anon` solo lee contenido
   publicado de negocios vigentes; nunca `reservations`, `leads`, `feedback`,
   `consent_records` ni `business_settings` privados.

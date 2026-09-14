@@ -48,23 +48,35 @@ montar la base de datos.
 | Fidelización, analítica, PWA, demo de 7 días | ✅ |
 | Asistente «TheWhiteBar 24/7» | ✅ buscador sobre lo publicado, sin modelo |
 | Panel: resumen, métricas y generador de QR | ✅ |
-| **Login del panel** | ⛔ **no conectado** (ver abajo) |
+| Acceso al panel (middleware + sesión firmada) | ✅ |
+| Cuentas por persona y roles (Supabase Auth) | ⏳ hoy la clave da acceso completo |
 | Editores del panel (carta, menú, reservas) | ⏳ pendiente |
 | Stripe, confirmaciones por WhatsApp, RAG | ⏳ roadmap |
 
-### ⛔ El panel no tiene login
+### El acceso al panel
 
-`/dashboard` **no está protegido**: no hay Supabase Auth conectado ni middleware.
-Ahora mismo cualquiera con la URL entraría. La propia página lo avisa en rojo.
-Antes de publicarlo con datos de clientes hay que conectar Auth, proteger las
-rutas en middleware y comprobar el rol contra `business_members`. RLS ya protege
-la base, pero la interfaz no debe ni enseñar lo que no toca.
+`/dashboard` está protegido por `middleware.ts`, que corre **antes** de
+renderizar: sin sesión no se llega. Hace falta porque el panel lee con
+`service_role`, que salta RLS — ahí la base ya no protege nada.
+
+Se entra con `PANEL_CLAVE`, y la sesión es una cookie firmada con HMAC
+(httpOnly, sameSite lax, ocho horas). Una cookie fabricada, copiada de otro
+despliegue o caducada no vale.
+
+**Y si no se configura nada, el panel se cierra.** Un despliegue al que se le
+olvidó poner la clave no deja los datos de los clientes abiertos: deja el panel
+inaccesible y explica qué falta. Una clave de menos de 12 caracteres también se
+rechaza.
+
+Queda pendiente Supabase Auth: una cuenta por persona y el rol sacado de
+`business_members`, para que un empleado vea las reservas pero no la
+configuración. Hoy la clave da acceso completo, y es de Pau.
 
 ## Probarlo
 
 ```bash
 npm run typecheck                 # TypeScript strict, sin errores
-npm test                          # 25 comprobaciones de la lógica
+npm test                          # 36 comprobaciones (lógica y acceso)
 npm run test:sql                  # 36 comprobaciones de aislamiento contra PostgreSQL real
 npm run build                     # build de producción
 ```
@@ -90,25 +102,10 @@ válida al pasar del respaldo a la base. Y conservan lo importante:
 
 ## Desplegar en Vercel
 
-1. **Proyecto**: importa el repositorio y pon **Root Directory** =
-   `pulso-local-ai`. Framework: Next.js (se detecta solo).
-2. **Base de datos**: crea un proyecto en Supabase y lanza, en su editor SQL y
-   en este orden: `sql/01_esquema.sql`, `sql/02_rls.sql`, `sql/03_seed.sql`.
-3. **Variables de entorno** (Settings → Environment Variables):
-
-   | Variable | Dónde | Nota |
-   |---|---|---|
-   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API | Pública por diseño |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ídem | Pública: lo que protege es RLS |
-   | `SUPABASE_SERVICE_ROLE_KEY` | ídem | **Secreta.** Sin `NEXT_PUBLIC_`. Salta RLS |
-   | `NEXT_PUBLIC_SITE_URL` | tu dominio | Con esto se construyen los QR |
-   | `NEXT_PUBLIC_PULSO_WHATSAPP` | tu número | CTA de «reactivar mi espacio» |
-
-4. **Dominio**: `pulsolocal.ai` **hay que comprarlo** (no existe todavía) y
-   apuntarlo al proyecto. Mientras tanto, las demos viven en la URL que da
-   Vercel y funcionan igual para enseñarlas.
-5. **Importante**: cambia `NEXT_PUBLIC_SITE_URL` **antes** de imprimir cien
-   carteles. Un QR impreso con la URL vieja no se arregla.
+Los pasos exactos están en **[`DESPLIEGUE.md`](DESPLIEGUE.md)**. En resumen:
+importar el repositorio con **Root Directory = `pulso-local-ai`**, poner
+`PANEL_CLAVE` y `PANEL_SECRETO`, desplegar, y comprobar que `/dashboard` pide
+la clave antes de enseñar nada.
 
 ## Las reglas que el código hace cumplir
 
