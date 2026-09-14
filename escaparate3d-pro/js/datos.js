@@ -124,6 +124,10 @@ export function crearAlmacen(config) {
     modo,
     guardarPedido: (pedido) => guardar("pedido", pedido, { prefijo: "PED", endpoint: api.pedido, coleccion: fb.coleccionPedidos || "pedidos" }),
     guardarReserva: (reserva) => guardar("reserva", reserva, { prefijo: "RES", endpoint: api.reserva, coleccion: fb.coleccionReservas || "reservas" }),
+    // Una cita comparte tubería con la reserva (mismo endpoint si el cliente
+    // solo tiene uno), pero con referencia propia: al negocio le vale más leer
+    // "CITA-..." en el WhatsApp que "RES-...".
+    guardarCita: (cita) => guardar("cita", cita, { prefijo: "CITA", endpoint: api.cita || api.reserva, coleccion: fb.coleccionCitas || "citas" }),
     // Los leads del propio monorepo van a /api/lead, que ya valida el correo.
     guardarLead: async (lead) => {
       const registro = { id: referencia("LEAD"), tipo: "lead", negocio, creado: new Date().toISOString(), ...lead };

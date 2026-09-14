@@ -1,0 +1,204 @@
+{
+  "version": 1,
+  "id": "peluqueria-ejemplo",
+  "sector": "servicios",
+  "nombre": "Peluquería Ejemplo",
+  "eslogan": "Pide tu cita sin llamar",
+  "logoUrl": "",
+  "demo": {
+    "activa": true,
+    "aviso": "Datos de ejemplo inventados para enseñar el producto. Ningún dato de este archivo corresponde a un negocio real."
+  },
+  "verificacion": {
+    "verificado": false,
+    "fuente": "",
+    "confirmado": [],
+    "pendiente": [
+      "Nombre, teléfono y dirección son inventados",
+      "Los precios y las duraciones son de muestra",
+      "Los nombres del equipo son inventados"
+    ]
+  },
+  "colores": {
+    "fondo": "#17121b",
+    "acento": "#c9a227",
+    "acento2": "#d98cb3",
+    "texto": "#f5eef7"
+  },
+  "contacto": {
+    "telefono": "+34000000000",
+    "telefonoTexto": "000 00 00 00",
+    "whatsapp": "",
+    "email": "hola@peluqueriaejemplo.example",
+    "direccion": "Calle de Ejemplo, 5 · 33000 Ciudad (Asturias)",
+    "horario": "M-V 09:30-20:00 · S 09:00-14:00 · domingo y lunes cerrado",
+    "mapaLat": null,
+    "mapaLng": null
+  },
+  "redes": {
+    "web": "",
+    "instagram": "https://instagram.com/peluqueriaejemplo",
+    "facebook": "",
+    "tiktok": "",
+    "googleBusiness": ""
+  },
+  "modulos": {
+    "catalogoServicios": true,
+    "citas": true,
+    "pedirDemo": true
+  },
+  "datos": {
+    "modo": "local",
+    "api": { "lead": "/api/lead", "cita": "" }
+  },
+  "servicios": {
+    "preciosEjemplo": true,
+    "moneda": "€",
+    "aviso": "Precios y duraciones de muestra: la peluquería los ajusta antes de publicar.",
+    "maxTarjetas3D": 24,
+    "vocabulario": {
+      "elemento": "servicio",
+      "elementos": "servicios",
+      "profesional": "estilista",
+      "accion": "Pedir cita",
+      "seccion": "Nuestros servicios"
+    },
+    "categorias": [
+      {
+        "id": "corte",
+        "nombre": "Corte y peinado",
+        "items": [
+          {
+            "id": "corte-mujer",
+            "nombre": "Corte mujer + secado",
+            "descripcion": "Lavado, corte y secado con acabado.",
+            "precio": 22,
+            "duracion": 45,
+            "destacado": true,
+            "confirmado": false
+          },
+          {
+            "id": "corte-hombre",
+            "nombre": "Corte caballero",
+            "descripcion": "Lavado, corte a máquina y tijera, y acabado.",
+            "precio": 14,
+            "duracion": 30,
+            "destacado": true,
+            "confirmado": false
+          },
+          {
+            "id": "corte-nino",
+            "nombre": "Corte infantil",
+            "descripcion": "Hasta 12 años.",
+            "precio": 11,
+            "duracion": 30,
+            "confirmado": false
+          },
+          {
+            "id": "peinado",
+            "nombre": "Peinado y ondas",
+            "descripcion": "Para un evento, una boda o una cena.",
+            "precio": 25,
+            "duracion": 45,
+            "confirmado": false
+          }
+        ]
+      },
+      {
+        "id": "color",
+        "nombre": "Color",
+        "descripcion": "El precio final depende del largo y del estado del pelo: por eso van marcados como «desde».",
+        "items": [
+          {
+            "id": "tinte",
+            "nombre": "Tinte raíz",
+            "descripcion": "Color completo en raíz con lavado y secado.",
+            "precio": 35,
+            "desde": true,
+            "duracion": 90,
+            "destacado": true,
+            "confirmado": false
+          },
+          {
+            "id": "mechas",
+            "nombre": "Mechas / balayage",
+            "descripcion": "Aclarado con matiz y secado.",
+            "precio": 60,
+            "desde": true,
+            "duracion": 150,
+            "confirmado": false,
+            "aviso": "Reserva la mañana o la tarde entera: es el servicio más largo."
+          }
+        ]
+      },
+      {
+        "id": "barberia",
+        "nombre": "Barbería",
+        "items": [
+          {
+            "id": "barba",
+            "nombre": "Arreglo de barba",
+            "descripcion": "Perfilado con navaja y toalla caliente.",
+            "precio": 10,
+            "duracion": 30,
+            "confirmado": false
+          },
+          {
+            "id": "corte-barba",
+            "nombre": "Corte + barba",
+            "descripcion": "Lo más pedido de la casa.",
+            "precio": 22,
+            "duracion": 60,
+            "destacado": true,
+            "confirmado": false
+          }
+        ]
+      },
+      {
+        "id": "tratamientos",
+        "nombre": "Tratamientos",
+        "items": [
+          {
+            "id": "hidratacion",
+            "nombre": "Tratamiento hidratante",
+            "descripcion": "Para pelo seco o tras el verano.",
+            "precio": 18,
+            "duracion": 45,
+            "confirmado": false
+          },
+          {
+            "id": "keratina",
+            "nombre": "Keratina / alisado",
+            "precio": 80,
+            "desde": true,
+            "duracion": 180,
+            "confirmado": false
+          }
+        ]
+      }
+    ]
+  },
+  "citas": {
+    "antelacionDias": 60,
+    "diasCerrado": [0, 1],
+    "horaApertura": "09:30",
+    "horaCierre": "20:00",
+    "descanso": { "inicio": "14:00", "fin": "16:00" },
+    "intervaloMinutos": 15,
+    "duracionPorDefecto": 30,
+    "antelacionHoras": 1,
+    "pedirProfesional": true,
+    "profesionales": [
+      { "id": "ana", "nombre": "Ana" },
+      { "id": "lucia", "nombre": "Lucía" },
+      { "id": "marcos", "nombre": "Marcos", "servicios": ["corte-hombre", "barba", "corte-barba", "corte-nino"] }
+    ],
+    "camposExtra": [],
+    "aviso": "Elige el servicio y te enseñamos solo las horas en las que cabe entero.",
+    "avisoDatos": "Usamos tu nombre y teléfono solo para gestionar esta cita."
+  },
+  "comercial": {
+    "titulo": "¿Te gusta? Esto mismo, con tu peluquería dentro",
+    "texto": "Tus servicios, tus precios, tu equipo y tus colores. Y las citas te llegan al WhatsApp sin descolgar el teléfono a media melena."
+  }
+}

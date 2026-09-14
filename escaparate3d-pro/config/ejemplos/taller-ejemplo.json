@@ -1,0 +1,194 @@
+{
+  "version": 1,
+  "id": "taller-ejemplo",
+  "sector": "servicios",
+  "nombre": "Taller Ejemplo",
+  "eslogan": "Pide cita y te decimos qué tiene tu coche",
+  "logoUrl": "",
+  "demo": {
+    "activa": true,
+    "aviso": "Datos de ejemplo inventados para enseñar el producto. Ningún dato de este archivo corresponde a un taller real."
+  },
+  "verificacion": {
+    "verificado": false,
+    "fuente": "",
+    "confirmado": [],
+    "pendiente": [
+      "Nombre, teléfono y dirección son inventados",
+      "Los precios y las duraciones son de muestra",
+      "Los nombres del equipo son inventados"
+    ]
+  },
+  "colores": {
+    "fondo": "#101214",
+    "acento": "#e8621d",
+    "acento2": "#4aa3df",
+    "texto": "#eef1f4"
+  },
+  "contacto": {
+    "telefono": "+34000000000",
+    "telefonoTexto": "000 00 00 00",
+    "whatsapp": "",
+    "email": "taller@tallerejemplo.example",
+    "direccion": "Polígono de Ejemplo, nave 3 · 33000 Ciudad (Asturias)",
+    "horario": "L-V 08:30-13:00 y 15:00-19:00 · sábados de 09:00 a 13:00",
+    "mapaLat": null,
+    "mapaLng": null
+  },
+  "redes": {
+    "web": "",
+    "instagram": "",
+    "facebook": "",
+    "tiktok": "",
+    "googleBusiness": ""
+  },
+  "modulos": {
+    "catalogoServicios": true,
+    "citas": true,
+    "pedirDemo": true
+  },
+  "datos": {
+    "modo": "local",
+    "api": { "lead": "/api/lead", "cita": "" }
+  },
+  "servicios": {
+    "preciosEjemplo": true,
+    "moneda": "€",
+    "aviso": "Precios de muestra para un turismo medio. En mecánica el precio final depende del vehículo y de lo que se encuentre al abrir: por eso casi todo va como «desde».",
+    "maxTarjetas3D": 24,
+    "vocabulario": {
+      "elemento": "servicio",
+      "elementos": "servicios",
+      "profesional": "mecánico",
+      "accion": "Pedir cita",
+      "seccion": "Lo que hacemos"
+    },
+    "categorias": [
+      {
+        "id": "mantenimiento",
+        "nombre": "Mantenimiento",
+        "items": [
+          {
+            "id": "revision",
+            "nombre": "Cambio de aceite y filtros",
+            "descripcion": "Aceite, filtro de aceite y de aire, y revisión de niveles.",
+            "precio": 90,
+            "desde": true,
+            "duracion": 60,
+            "destacado": true,
+            "confirmado": false,
+            "incluye": [
+              "Aceite y filtro de aceite",
+              "Filtro de aire",
+              "Revisión de niveles y presión de neumáticos"
+            ]
+          },
+          {
+            "id": "pre-itv",
+            "nombre": "Revisión pre-ITV",
+            "descripcion": "Repasamos lo que suele suspender antes de que te lo suspendan a ti.",
+            "precio": 35,
+            "duracion": 45,
+            "destacado": true,
+            "confirmado": false
+          },
+          {
+            "id": "aire",
+            "nombre": "Carga de aire acondicionado",
+            "precio": 60,
+            "desde": true,
+            "duracion": 60,
+            "confirmado": false
+          }
+        ]
+      },
+      {
+        "id": "diagnosis",
+        "nombre": "Diagnosis y averías",
+        "descripcion": "¿Se te ha encendido un testigo en el cuadro? Tráelo y lo leemos con la máquina.",
+        "items": [
+          {
+            "id": "diagnosis",
+            "nombre": "Diagnosis electrónica",
+            "descripcion": "Lectura de la centralita y borrado de averías. Se descuenta si haces aquí la reparación.",
+            "precio": 40,
+            "duracion": 45,
+            "destacado": true,
+            "confirmado": false,
+            "aviso": "Apunta en las notas qué testigo se ha encendido y desde cuándo: llegamos con medio trabajo hecho."
+          },
+          {
+            "id": "averia",
+            "nombre": "Buscar una avería",
+            "descripcion": "Ruidos, tirones, humo, falta de fuerza.",
+            "precioTexto": "Presupuesto",
+            "duracion": 60,
+            "confirmado": false
+          }
+        ]
+      },
+      {
+        "id": "seguridad",
+        "nombre": "Frenos, neumáticos y suspensión",
+        "items": [
+          {
+            "id": "frenos",
+            "nombre": "Pastillas de freno (eje)",
+            "descripcion": "Pastillas delanteras o traseras, con revisión de discos.",
+            "precio": 80,
+            "desde": true,
+            "duracion": 90,
+            "confirmado": false
+          },
+          {
+            "id": "neumaticos",
+            "nombre": "Cambio de neumáticos",
+            "descripcion": "Montaje, equilibrado y válvula. El precio de la cubierta va aparte.",
+            "precio": 15,
+            "desde": true,
+            "duracion": 45,
+            "confirmado": false
+          },
+          {
+            "id": "alineado",
+            "nombre": "Alineado de dirección",
+            "precio": 45,
+            "duracion": 60,
+            "confirmado": false
+          },
+          {
+            "id": "amortiguadores",
+            "nombre": "Amortiguadores (eje)",
+            "precio": 180,
+            "desde": true,
+            "duracion": 180,
+            "confirmado": false
+          }
+        ]
+      }
+    ]
+  },
+  "citas": {
+    "antelacionDias": 45,
+    "diasCerrado": [0],
+    "horaApertura": "08:30",
+    "horaCierre": "19:00",
+    "descanso": { "inicio": "13:00", "fin": "15:00" },
+    "intervaloMinutos": 30,
+    "duracionPorDefecto": 60,
+    "antelacionHoras": 2,
+    "pedirProfesional": false,
+    "profesionales": [],
+    "camposExtra": [
+      { "id": "matricula", "etiqueta": "Matrícula", "requerido": true, "placeholder": "0000 XXX" },
+      { "id": "vehiculo", "etiqueta": "Marca y modelo", "requerido": true, "placeholder": "Seat León 1.6 TDI" },
+      { "id": "kilometros", "etiqueta": "Kilómetros (aprox.)", "tipo": "number", "placeholder": "150000" }
+    ],
+    "aviso": "Si el coche no anda o lo traes en grúa, llámanos: eso no se agenda por la web.",
+    "avisoDatos": "Usamos tus datos y los del vehículo solo para preparar la cita y el presupuesto."
+  },
+  "comercial": {
+    "titulo": "¿Te gusta? Esto mismo, con tu taller dentro",
+    "texto": "Tus servicios con sus precios y la cita con matrícula y modelo ya rellenos. Dejas de coger el teléfono con las manos llenas de grasa."
+  }
+}

@@ -1,0 +1,197 @@
+{
+  "version": 1,
+  "id": "clinica-ejemplo",
+  "sector": "servicios",
+  "nombre": "Clínica Dental Ejemplo",
+  "eslogan": "Primera visita y revisión sin coste",
+  "logoUrl": "",
+  "demo": {
+    "activa": true,
+    "aviso": "Datos de ejemplo inventados para enseñar el producto. Ningún dato de este archivo corresponde a una clínica real."
+  },
+  "verificacion": {
+    "verificado": false,
+    "fuente": "",
+    "confirmado": [],
+    "pendiente": [
+      "Nombre, teléfono y dirección son inventados",
+      "Los precios y las duraciones son de muestra",
+      "Los nombres del equipo y sus números de colegiado son inventados"
+    ]
+  },
+  "colores": {
+    "fondo": "#0b1420",
+    "acento": "#2f9fd0",
+    "acento2": "#3fbf8f",
+    "texto": "#eaf3f9"
+  },
+  "contacto": {
+    "telefono": "+34000000000",
+    "telefonoTexto": "000 00 00 00",
+    "whatsapp": "",
+    "email": "citas@clinicaejemplo.example",
+    "direccion": "Avenida de Ejemplo, 12 · 33000 Ciudad (Asturias)",
+    "horario": "L-V 09:00-13:30 y 15:30-20:00 · sábados y domingos cerrado",
+    "mapaLat": null,
+    "mapaLng": null
+  },
+  "redes": {
+    "web": "",
+    "instagram": "",
+    "facebook": "",
+    "tiktok": "",
+    "googleBusiness": ""
+  },
+  "modulos": {
+    "catalogoServicios": true,
+    "citas": true,
+    "pedirDemo": true
+  },
+  "datos": {
+    "modo": "local",
+    "api": { "lead": "/api/lead", "cita": "" }
+  },
+  "servicios": {
+    "preciosEjemplo": true,
+    "moneda": "€",
+    "aviso": "Precios y duraciones de muestra. Un tratamiento dental no se puede cerrar sin ver la boca: por eso varios van como «presupuesto» y no como precio fijo.",
+    "maxTarjetas3D": 24,
+    "vocabulario": {
+      "elemento": "tratamiento",
+      "elementos": "tratamientos",
+      "profesional": "doctor o doctora",
+      "accion": "Pedir hora",
+      "seccion": "Tratamientos"
+    },
+    "categorias": [
+      {
+        "id": "prevencion",
+        "nombre": "Revisión y prevención",
+        "items": [
+          {
+            "id": "primera-visita",
+            "nombre": "Primera visita y revisión",
+            "descripcion": "Exploración completa y plan de tratamiento explicado. Sin coste y sin compromiso.",
+            "precio": 0,
+            "precioTexto": "Gratis",
+            "duracion": 30,
+            "destacado": true,
+            "confirmado": false
+          },
+          {
+            "id": "limpieza",
+            "nombre": "Limpieza bucal",
+            "descripcion": "Tartrectomía con ultrasonidos y pulido.",
+            "precio": 50,
+            "duracion": 45,
+            "destacado": true,
+            "confirmado": false
+          },
+          {
+            "id": "revision-nino",
+            "nombre": "Revisión infantil",
+            "descripcion": "Hasta 14 años, con control de la erupción dental.",
+            "precio": 0,
+            "precioTexto": "Gratis",
+            "duracion": 30,
+            "confirmado": false
+          }
+        ]
+      },
+      {
+        "id": "conservadora",
+        "nombre": "Conservadora",
+        "items": [
+          {
+            "id": "empaste",
+            "nombre": "Empaste (obturación)",
+            "descripcion": "Composite del color del diente.",
+            "precio": 55,
+            "desde": true,
+            "duracion": 45,
+            "confirmado": false
+          },
+          {
+            "id": "endodoncia",
+            "nombre": "Endodoncia",
+            "descripcion": "Tratamiento de conductos. El precio depende del número de raíces.",
+            "precio": 150,
+            "desde": true,
+            "duracion": 90,
+            "confirmado": false
+          },
+          {
+            "id": "extraccion",
+            "nombre": "Extracción",
+            "precio": 60,
+            "desde": true,
+            "duracion": 45,
+            "confirmado": false
+          }
+        ]
+      },
+      {
+        "id": "estetica",
+        "nombre": "Estética y ortodoncia",
+        "items": [
+          {
+            "id": "blanqueamiento",
+            "nombre": "Blanqueamiento",
+            "descripcion": "En clínica, una sesión.",
+            "precio": 250,
+            "desde": true,
+            "duracion": 60,
+            "confirmado": false
+          },
+          {
+            "id": "estudio-ortodoncia",
+            "nombre": "Estudio de ortodoncia",
+            "descripcion": "Radiografías, fotos y presupuesto cerrado antes de empezar.",
+            "precioTexto": "Presupuesto",
+            "duracion": 45,
+            "destacado": true,
+            "confirmado": false
+          }
+        ]
+      },
+      {
+        "id": "implantes",
+        "nombre": "Implantes y prótesis",
+        "items": [
+          {
+            "id": "implante",
+            "nombre": "Implante dental",
+            "descripcion": "Cada caso es distinto: se valora en consulta con un TAC.",
+            "precioTexto": "Presupuesto",
+            "duracion": 60,
+            "confirmado": false,
+            "aviso": "Este tratamiento no se puede presupuestar por teléfono ni por la web."
+          }
+        ]
+      }
+    ]
+  },
+  "citas": {
+    "antelacionDias": 90,
+    "diasCerrado": [0, 6],
+    "horaApertura": "09:00",
+    "horaCierre": "20:00",
+    "descanso": { "inicio": "13:30", "fin": "15:30" },
+    "intervaloMinutos": 15,
+    "duracionPorDefecto": 30,
+    "antelacionHoras": 2,
+    "pedirProfesional": true,
+    "profesionales": [
+      { "id": "general-1", "nombre": "Dra. Ejemplo (general)" },
+      { "id": "orto", "nombre": "Dr. Ejemplo (ortodoncia)", "servicios": ["estudio-ortodoncia", "primera-visita"] },
+      { "id": "higiene", "nombre": "Higienista", "servicios": ["limpieza", "revision-nino"] }
+    ],
+    "camposExtra": [],
+    "aviso": "Si tienes dolor agudo hoy, no pidas hora por aquí: llámanos y te buscamos un hueco de urgencia.",
+    "avisoDatos": "Solo te pedimos nombre y teléfono para gestionar la cita. No escribas aquí datos de salud ni tu historial: eso se habla en consulta."
+  },
+  "comercial": {
+    "titulo": "¿Te gusta? Esto mismo, con tu clínica dentro",
+    "texto": "Tus tratamientos, tu equipo y tus horarios. Las horas se piden solas desde el móvil y a recepción le llega todo ordenado, sin interrumpir un gabinete."
+  }
+}

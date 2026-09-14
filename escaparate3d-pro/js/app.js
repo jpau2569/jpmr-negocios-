@@ -26,6 +26,8 @@ const REGISTRO = [
   { id: "pedidos", ruta: "../modules/pedidos.js", sector: "restaurante", flag: "pedidosDomicilio" },
   { id: "reservas", ruta: "../modules/reservas.js", sector: "restaurante", flag: "reservas" },
   { id: "qr", ruta: "../modules/qr.js", sector: "restaurante", flag: "qrMesas" },
+  { id: "servicios", ruta: "../modules/servicios.js", sector: "servicios", siempre: true },
+  { id: "citas", ruta: "../modules/citas.js", sector: "servicios", flag: "citas" },
   { id: "inmuebles", ruta: "../modules/inmuebles.js", sector: "inmobiliaria", flag: "catalogoInmuebles" },
   { id: "valoracion", ruta: "../modules/valoracion.js", sector: "inmobiliaria", flag: "valoracionGratis" },
   { id: "demo", ruta: "../modules/demo.js", sector: "todos", flag: "pedirDemo" },
@@ -50,7 +52,7 @@ async function arrancar() {
     carrito: crearCarrito(config.id),
     almacen: crearAlmacen(config),
     mesa: (parametros.get("mesa") || "").replace(/\D/g, "") || null,
-    abrirModulo: (id) => modulos.get(id)?.abrir?.(),
+    abrirModulo: (id, ...datos) => modulos.get(id)?.abrir?.(...datos),
     modulos,          // el tour necesita alcanzar a demo.compartir()
     refrescar,
   };
@@ -73,6 +75,7 @@ async function arrancar() {
   if (location.hash === "#pedido") modulos.get("pedidos")?.abrir?.();
   if (location.hash === "#demo") modulos.get("demo")?.abrir?.();
   if (location.hash === "#reserva") modulos.get("reservas")?.abrir?.();
+  if (location.hash === "#cita") modulos.get("citas")?.abrir?.();
   if (location.hash === "#como-funciona") modulos.get("tour")?.abrir?.();
   if (location.hash === "#compartir") modulos.get("demo")?.compartir?.();
   console.info(`[escaparate3d-pro] configuración: ${origen} · sector ${config.sector} · datos en modo ${ctx.almacen.modo}`);
@@ -176,7 +179,8 @@ function montarAcciones() {
   for (const [id, modulo] of modulos) {
     if (typeof modulo.abrir !== "function") continue;
     const boton = crear("button", {
-      clase: "boton" + (id === "demo" ? " secundario" : id === "pedidos" || id === "valoracion" ? " principal" : ""),
+      clase: "boton" + (id === "demo" ? " secundario"
+        : id === "pedidos" || id === "valoracion" || id === "citas" ? " principal" : ""),
       type: "button",
       datos: { modulo: id },
       texto: modulo.meta?.nombre || id,

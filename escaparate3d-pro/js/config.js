@@ -20,7 +20,16 @@ export const CATALOGO = [
   { id: "la-taberna", archivo: "restaurante-la-taberna.json", sector: "restaurante", nombre: "La Taberna · The White Bar (Mieres)", real: true },
   { id: "inmobiliaria-ejemplo", archivo: "inmobiliaria-ejemplo.json", sector: "inmobiliaria", nombre: "Fincas Ejemplo (ficticia)", real: false },
   { id: "restaurante-ejemplo", archivo: "restaurante-ejemplo.json", sector: "restaurante", nombre: "Casa Ejemplo (ficticia)", real: false },
+  { id: "peluqueria-ejemplo", archivo: "peluqueria-ejemplo.json", sector: "servicios", nombre: "Peluquería Ejemplo (ficticia)", real: false },
+  { id: "clinica-ejemplo", archivo: "clinica-ejemplo.json", sector: "servicios", nombre: "Clínica Dental Ejemplo (ficticia)", real: false },
+  { id: "taller-ejemplo", archivo: "taller-ejemplo.json", sector: "servicios", nombre: "Taller Ejemplo (ficticio)", real: false },
 ];
+
+// Los tres sectores del producto. "servicios" cubre peluquería, clínica, taller
+// y cualquier negocio de cita previa: técnicamente son el mismo problema
+// (catálogo con duración + hueco con un profesional), y lo que cambia son los
+// textos, que viven en el JSON de cada cliente.
+export const SECTORES = ["restaurante", "inmobiliaria", "servicios"];
 
 export const CLAVE_BORRADOR = "escaparate3d-pro:borrador";
 
@@ -45,12 +54,14 @@ export const POR_DEFECTO = {
   redes: { web: "", instagram: "", facebook: "", tiktok: "", googleBusiness: "", tripadvisor: "" },
   modulos: {
     pedidosDomicilio: false, reservas: false, qrMesas: false,
-    catalogoInmuebles: false, valoracionGratis: false, pedirDemo: true,
+    catalogoInmuebles: false, valoracionGratis: false,
+    catalogoServicios: false, citas: false,
+    pedirDemo: true,
   },
   datos: {
     modo: "local",
-    api: { lead: "/api/lead", pedido: "", reserva: "" },
-    firebase: { apiKey: "", authDomain: "", projectId: "", coleccionPedidos: "pedidos", coleccionReservas: "reservas", coleccionConfig: "negocios" },
+    api: { lead: "/api/lead", pedido: "", reserva: "", cita: "" },
+    firebase: { apiKey: "", authDomain: "", projectId: "", coleccionPedidos: "pedidos", coleccionReservas: "reservas", coleccionCitas: "citas", coleccionConfig: "negocios" },
   },
   carta: { preciosEjemplo: false, moneda: "€", aviso: "", categorias: [] },
   pedidos: { recogidaEnLocal: true, pedidoMinimo: 0, zonasReparto: [], formasPago: [], avisoLegal: "" },
@@ -58,6 +69,20 @@ export const POR_DEFECTO = {
   qr: { mesas: 0, prefijoMesa: "Mesa", destino: "carta" },
   inmuebles: { origenes: [], maxTarjetas3D: 24, maxEnMensaje: 12, proxyFotos: "", respaldo: [] },
   valoracion: { titulo: "¿Cuánto vale tu casa?", texto: "", preguntarDireccion: true, preciosZona: [] },
+  // --- Sector servicios (peluquería, clínica, taller, cita previa en general) ---
+  // "vocabulario" es lo que hace que el mismo código diga "Pedir cita" en una
+  // peluquería y "Pedir hora" en una clínica sin tocar una línea de JS.
+  servicios: {
+    preciosEjemplo: false, moneda: "€", aviso: "", maxTarjetas3D: 24, categorias: [],
+    vocabulario: { elemento: "servicio", elementos: "servicios", profesional: "profesional", accion: "Pedir cita", seccion: "Nuestros servicios" },
+  },
+  citas: {
+    antelacionDias: 60, diasCerrado: [], horaApertura: "09:30", horaCierre: "20:00",
+    descanso: { inicio: "", fin: "" }, intervaloMinutos: 15, duracionPorDefecto: 30,
+    antelacionHoras: 1,
+    profesionales: [], camposExtra: [], aviso: "", avisoDatos: "",
+    pedirProfesional: true,
+  },
   // Quién vende el producto (no el negocio del cliente): es a donde llegan las
   // peticiones de "quiero esta demo para mi negocio". Se puede cambiar por
   // despliegue si algún día lo revende otra persona.
@@ -128,7 +153,7 @@ function telefonoLimpio(valor) {
 
 export function normalizar(bruto) {
   const cfg = mezclar(POR_DEFECTO, bruto && typeof bruto === "object" ? bruto : {});
-  cfg.sector = cfg.sector === "restaurante" ? "restaurante" : "inmobiliaria";
+  cfg.sector = SECTORES.includes(cfg.sector) ? cfg.sector : "inmobiliaria";
   cfg.nombre = String(cfg.nombre || POR_DEFECTO.nombre).slice(0, 120);
   cfg.colores = {
     fondo: colorValido(cfg.colores.fondo, POR_DEFECTO.colores.fondo),
@@ -147,14 +172,20 @@ export function normalizar(bruto) {
   const precio = Number(cfg.comercial.precio);
   cfg.comercial.precio = Number.isFinite(precio) && precio > 0 ? precio : 0;
   // Un módulo de otro sector no se enciende aunque venga a true en el JSON.
-  if (cfg.sector === "restaurante") {
-    cfg.modulos.catalogoInmuebles = false;
-    cfg.modulos.valoracionGratis = false;
-  } else {
-    cfg.modulos.pedidosDomicilio = false;
-    cfg.modulos.reservas = false;
-    cfg.modulos.qrMesas = false;
+  const DE_CADA_SECTOR = {
+    restaurante: ["pedidosDomicilio", "reservas", "qrMesas"],
+    inmobiliaria: ["catalogoInmuebles", "valoracionGratis"],
+    servicios: ["catalogoServicios", "citas"],
+  };
+  for (const [sector, flags] of Object.entries(DE_CADA_SECTOR)) {
+    if (sector === cfg.sector) continue;
+    for (const flag of flags) cfg.modulos[flag] = false;
   }
+  // Sin catálogo no hay nada que enseñar en el escaparate: en el sector de cita
+  // previa el catálogo va siempre encendido, como la carta en un restaurante.
+  if (cfg.sector === "servicios") cfg.modulos.catalogoServicios = true;
+  cfg.citas.intervaloMinutos = Math.min(60, Math.max(5, Number(cfg.citas.intervaloMinutos) || 15));
+  cfg.citas.duracionPorDefecto = Math.min(480, Math.max(5, Number(cfg.citas.duracionPorDefecto) || 30));
   return cfg;
 }
 
