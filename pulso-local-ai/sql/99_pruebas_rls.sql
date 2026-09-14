@@ -172,14 +172,22 @@ select assert((select count(*) from daily_menus where is_demo) >= 1,
   'el menú del día de muestra está marcado como muestra');
 select assert((select count(*) from business_settings where review_url is not null) = 0,
   'ninguna review_url inventada: sin enlace oficial, no hay botón de Google');
--- La Taberna tiene móvil confirmado (684 65 05 16). La Viña solo tiene fijo,
--- así que se queda sin WhatsApp: poner el fijo sería un botón que no lee nadie.
+-- "Siempre a ambos al móvil, no al fijo": los dos WhatsApp son móviles
+-- españoles (34 + 6 o 7 + 8 cifras), y ningún fijo del local se cuela.
+select assert((select count(*) from business_settings where whatsapp !~ '^34[67][0-9]{8}$') = 0,
+  'los dos WhatsApp son móviles españoles');
+select assert((select count(*) from business_settings
+               where phone like '%984253352%' or phone like '%985426690%'
+                  or whatsapp like '%984253352%' or whatsapp like '%985426690%') = 0,
+  'ningún fijo del local se usa como teléfono principal ni como WhatsApp');
+select assert((select count(*) from business_settings where phone_alt is not null) = 2,
+  'los dos fijos siguen ahí como segunda opción de contacto');
 select assert((select whatsapp from business_settings s join businesses b on b.id = s.business_id
                where b.slug = 'thewhitebar-mieres') = '34684650516',
-  'La Taberna usa su móvil confirmado para WhatsApp');
+  'La Taberna usa su móvil 684 65 05 16');
 select assert((select whatsapp from business_settings s join businesses b on b.id = s.business_id
-               where b.slug = 'la-vina-cenera') is null,
-  'La Viña no tiene WhatsApp: solo hay fijo, y no se inventa uno');
+               where b.slug = 'la-vina-cenera') = '34620583770',
+  'La Viña usa su móvil 620 58 37 70');
 
 select assert((select count(*) from business_settings where opening_hours = '[]'::jsonb) = 0,
   'los dos horarios están confirmados y cargados');

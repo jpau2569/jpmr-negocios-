@@ -122,6 +122,8 @@ function construir({ slug, archivo, plantilla }) {
       lat: c.mapaLat ?? null,
       lng: c.mapaLng ?? null,
       phone: ok.telefono || c.telefono || null,
+      phone_alt: ok.telefonoAlt || null,
+      phone_alt_label: ok.telefonoAltEtiqueta || null,
       // Sin número de móvil confirmado, NO se pinta el botón de WhatsApp.
       // Un botón que lleva a un chat que nadie lee es peor que no tenerlo.
       whatsapp: ok.whatsapp || c.whatsapp || null,

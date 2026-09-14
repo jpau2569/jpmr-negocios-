@@ -15,6 +15,8 @@
       "lat": null,
       "lng": null,
       "phone": "+34684650516",
+      "phone_alt": "+34984253352",
+      "phone_alt_label": "Reservas (fijo): 984 25 33 52",
       "whatsapp": "34684650516",
       "email": null,
       "review_url": null,
@@ -995,8 +997,10 @@
       "address": "La Viña, 1 · 33615 Cenera, Mieres (Asturias)",
       "lat": null,
       "lng": null,
-      "phone": "+34985426690",
-      "whatsapp": null,
+      "phone": "+34620583770",
+      "phone_alt": "+34985426690",
+      "phone_alt_label": "Fijo del local: 985 42 66 90",
+      "whatsapp": "34620583770",
       "email": "Restaurantelagarlavina@gmail.com",
       "review_url": null,
       "website": null,
@@ -1086,7 +1090,7 @@
         "qr": true
       },
       "pending_notes": [
-        "FALTA EL MÓVIL del local: Pau pidió que el contacto vaya al móvil, pero el 985 42 66 90 es fijo. Sin móvil no hay botón de WhatsApp",
+        "Falta confirmar que el 620 58 37 70 tiene WhatsApp activo y lo atiende alguien",
         "Falta el enlace oficial de Google Reviews: sin él no se pinta el botón de reseña",
         "Faltan las fotos de los platos",
         "La carta cargada son solo sus especialidades conocidas, no la carta completa con precios"

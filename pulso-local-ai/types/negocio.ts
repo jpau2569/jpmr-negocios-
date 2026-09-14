@@ -115,6 +115,9 @@ export interface AjustesNegocio {
   lat: number | null;
   lng: number | null;
   phone: string | null;
+  /** Segunda opción de contacto, normalmente el fijo del local. */
+  phone_alt: string | null;
+  phone_alt_label: string | null;
   whatsapp: string | null;
   email: string | null;
   /** URL oficial de Google. null = no se pinta botón de reseña. Jamás se inventa. */

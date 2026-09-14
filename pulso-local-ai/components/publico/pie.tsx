@@ -27,6 +27,10 @@ export function Pie({ espacio }: { espacio: EspacioNegocio }) {
   const base = `/b/${negocio.slug}`;
   const horario = horarioLegible(ajustes.opening_hours ?? []);
   const tel = enlaceTelefono(ajustes.phone);
+  // El fijo va aquí abajo y no en la cabecera: arriba solo cabe un botón
+  // grande, y ese tiene que ser el móvil. Pero hay clientes que prefieren
+  // llamar al fijo de toda la vida, y tienen que poder encontrarlo.
+  const telAlt = enlaceTelefono(ajustes.phone_alt);
   const mapa = enlaceMapa(ajustes.address, ajustes.lat, ajustes.lng);
   const demo = estadoDemo(negocio);
   const sinConfirmar = haySinConfirmar(espacio);
@@ -61,6 +65,15 @@ export function Pie({ espacio }: { espacio: EspacioNegocio }) {
               <li>
                 <Rastreador evento="call_click">
                   <a href={tel} className="underline underline-offset-4">{ajustes.phone}</a>
+                </Rastreador>
+              </li>
+            ) : null}
+            {telAlt ? (
+              <li>
+                <Rastreador evento="call_click">
+                  <a href={telAlt} className="underline underline-offset-4">
+                    {ajustes.phone_alt_label || ajustes.phone_alt}
+                  </a>
                 </Rastreador>
               </li>
             ) : null}

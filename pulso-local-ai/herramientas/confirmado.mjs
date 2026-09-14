@@ -35,6 +35,10 @@ export const CONFIRMADO = {
     telefono: "+34684650516",
     telefonoTexto: "684 65 05 16",
     whatsapp: "34684650516",
+    // El fijo de la pizarra, como segunda opción: hay clientes que prefieren
+    // llamar al local de toda la vida antes que escribir por WhatsApp.
+    telefonoAlt: "+34984253352",
+    telefonoAltEtiqueta: "Reservas (fijo): 984 25 33 52",
 
     // Nada de esto está confirmado todavía: se ve avisado en el pie de la web.
     pendiente: [
@@ -63,20 +67,23 @@ export const CONFIRMADO = {
     ],
 
     direccion: "La Viña, 1 · 33615 Cenera, Mieres (Asturias)",
-    telefono: "+34985426690",
-    telefonoTexto: "985 42 66 90",
     email: "Restaurantelagarlavina@gmail.com",
 
-    // Pau pidió que el contacto vaya al móvil y no al fijo, pero el 985 es un
-    // fijo y es el único número que hay. NO se pone un WhatsApp inventado:
-    // hasta que llegue el móvil del local, el botón sencillamente no aparece.
-    whatsapp: null,
+    // Pau: "siempre a ambos al móvil, no al fijo". El móvil lo dio el
+    // 2026-09-14. El fijo del local (985 42 66 90) existe y sigue en su ficha
+    // de Google, pero NO es el que se pone aquí: quien escanea el QR desde la
+    // mesa escribe por WhatsApp, y eso solo funciona en un móvil.
+    telefono: "+34620583770",
+    telefonoTexto: "620 58 37 70",
+    whatsapp: "34620583770",
+    telefonoAlt: "+34985426690",
+    telefonoAltEtiqueta: "Fijo del local: 985 42 66 90",
 
     instagram: "https://www.instagram.com/restaurantelavinacenera/",
     tripadvisor: "https://www.tripadvisor.es/Restaurant_Review-g21305928-d10392942-Reviews-La_Vina_Restaurante-Casaviedra_Mieres_Municipality_Asturias.html",
 
     pendiente: [
-      "FALTA EL MÓVIL del local: Pau pidió que el contacto vaya al móvil, pero el 985 42 66 90 es fijo. Sin móvil no hay botón de WhatsApp",
+      "Falta confirmar que el 620 58 37 70 tiene WhatsApp activo y lo atiende alguien",
       "Falta el enlace oficial de Google Reviews: sin él no se pinta el botón de reseña",
       "Faltan las fotos de los platos",
       "La carta cargada son solo sus especialidades conocidas, no la carta completa con precios",

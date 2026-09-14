@@ -150,17 +150,37 @@ test("no se inventa ningún enlace de reseñas", () => {
   }
 });
 
-test("el WhatsApp solo existe donde hay un móvil confirmado", () => {
-  // La Taberna: 684 65 05 16, móvil confirmado. Pau pidió que el contacto
-  // vaya al móvil y no al fijo.
+test("el contacto va al móvil, nunca al fijo", () => {
+  // Regla de Pau: "siempre a ambos al móvil, no al fijo". Quien escanea el QR
+  // desde la mesa escribe por WhatsApp, y eso solo funciona en un móvil.
+  // Los fijos de los dos locales (984 25 33 52 y 985 42 66 90) existen, pero
+  // no son los que se pintan.
+  const FIJOS = ["984253352", "985426690"];
+
+  for (const [slug, esp] of Object.entries(datos)) {
+    const { phone, whatsapp } = esp.ajustes;
+    assert.ok(whatsapp, `${slug} debería tener WhatsApp`);
+    // Móvil español: empieza por 6 o 7 después del prefijo 34.
+    assert.match(whatsapp, /^34[67]\d{8}$/, `el WhatsApp de ${slug} no es un móvil español`);
+    for (const fijo of FIJOS) {
+      assert.ok(!phone.includes(fijo), `${slug} está usando un fijo (${fijo}) como teléfono`);
+      assert.ok(!whatsapp.includes(fijo), `${slug} está usando un fijo (${fijo}) para WhatsApp`);
+    }
+  }
+
+  assert.equal(datos["thewhitebar-mieres"].ajustes.phone, "+34684650516");
   assert.equal(datos["thewhitebar-mieres"].ajustes.whatsapp, "34684650516");
-  // La Viña: solo hay fijo (985 42 66 90). Sin móvil NO hay botón, y no se
-  // pone el fijo por salir del paso: WhatsApp en un fijo no lo lee nadie.
-  assert.equal(datos["la-vina-cenera"].ajustes.whatsapp, null);
+  assert.equal(datos["la-vina-cenera"].ajustes.phone, "+34620583770");
+  assert.equal(datos["la-vina-cenera"].ajustes.whatsapp, "34620583770");
 });
 
-test("el teléfono de La Taberna es el móvil, no el fijo de la pizarra", () => {
-  assert.equal(datos["thewhitebar-mieres"].ajustes.phone, "+34684650516");
+test("los fijos siguen ahí, como segunda opción", () => {
+  // Quitarlos sería perder al cliente que prefiere llamar al local de toda la
+  // vida. Van en el pie, etiquetados, no en el botón grande de la cabecera.
+  assert.equal(datos["thewhitebar-mieres"].ajustes.phone_alt, "+34984253352");
+  assert.match(datos["thewhitebar-mieres"].ajustes.phone_alt_label, /984 25 33 52/);
+  assert.equal(datos["la-vina-cenera"].ajustes.phone_alt, "+34985426690");
+  assert.match(datos["la-vina-cenera"].ajustes.phone_alt_label, /985 42 66 90/);
 });
 
 test("el horario confirmado es el que dio el negocio", () => {
@@ -213,11 +233,14 @@ test("cada negocio dice qué le falta por confirmar", () => {
       `${slug} debe avisar de que falta el enlace de Google`,
     );
   }
-  // La Viña no tiene móvil, y eso tiene que estar dicho.
-  assert.ok(
-    datos["la-vina-cenera"].ajustes.pending_notes.some((n) => /M[ÓO]VIL/i.test(n)),
-    "La Viña debe avisar de que falta el móvil",
-  );
+  // Tener el número no es lo mismo que saber que lo atienden por WhatsApp:
+  // hasta confirmarlo con el local, se dice.
+  for (const [slug, esp] of Object.entries(datos)) {
+    assert.ok(
+      esp.ajustes.pending_notes.some((n) => /WhatsApp activo/i.test(n)),
+      `${slug} debe avisar de que falta confirmar el WhatsApp`,
+    );
+  }
 });
 
 test("los alérgenos son solo de los 14 oficiales", () => {

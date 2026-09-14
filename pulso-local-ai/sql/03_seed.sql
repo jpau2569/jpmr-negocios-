@@ -33,9 +33,10 @@ insert into businesses (id, slug, name, sector, status, trial_ends_at) values (
   'e3b9828d-0274-5089-94e7-99436aed33c9', 'thewhitebar-mieres', 'La Taberna · The White Bar', 'hosteleria', 'trial', now() + interval '7 days')
 on conflict (slug) do nothing;
 
-insert into business_settings (business_id, tagline, address, phone, whatsapp, email,
+insert into business_settings (business_id, tagline, address, phone, phone_alt, phone_alt_label, whatsapp, email,
   website, instagram, facebook, tripadvisor, review_url, opening_hours, theme, modules, pending_notes) values (
   'e3b9828d-0274-5089-94e7-99436aed33c9', 'Cocina de siempre y buen producto en el centro de Mieres', 'Calle Jerónimo Ibrán, 11 · 33600 Mieres (Asturias)', '+34684650516',
+  '+34984253352', 'Reservas (fijo): 984 25 33 52',
   '34684650516',  -- sin móvil confirmado, el botón de WhatsApp no se pinta
   null, null,
   null, null,
@@ -381,10 +382,11 @@ insert into businesses (id, slug, name, sector, status, trial_ends_at) values (
   'd8406b62-63ab-5511-99bf-3af5ab602235', 'la-vina-cenera', 'Restaurante La Viña', 'hosteleria', 'trial', now() + interval '7 days')
 on conflict (slug) do nothing;
 
-insert into business_settings (business_id, tagline, address, phone, whatsapp, email,
+insert into business_settings (business_id, tagline, address, phone, phone_alt, phone_alt_label, whatsapp, email,
   website, instagram, facebook, tripadvisor, review_url, opening_hours, theme, modules, pending_notes) values (
-  'd8406b62-63ab-5511-99bf-3af5ab602235', 'Cocina asturiana desde 1962, en el Valle de Cuna y Cenera', 'La Viña, 1 · 33615 Cenera, Mieres (Asturias)', '+34985426690',
-  null,  -- sin móvil confirmado, el botón de WhatsApp no se pinta
+  'd8406b62-63ab-5511-99bf-3af5ab602235', 'Cocina asturiana desde 1962, en el Valle de Cuna y Cenera', 'La Viña, 1 · 33615 Cenera, Mieres (Asturias)', '+34620583770',
+  '+34985426690', 'Fijo del local: 985 42 66 90',
+  '34620583770',  -- sin móvil confirmado, el botón de WhatsApp no se pinta
   'Restaurantelagarlavina@gmail.com', null,
   'https://www.instagram.com/restaurantelavinacenera/', 'https://www.facebook.com/p/Restaurante-La-Vi%C3%B1a-Cenera-100076182274701/',
   'https://www.tripadvisor.es/Restaurant_Review-g21305928-d10392942-Reviews-La_Vina_Restaurante-Casaviedra_Mieres_Municipality_Asturias.html',
@@ -392,7 +394,7 @@ insert into business_settings (business_id, tagline, address, phone, whatsapp, e
   '[{"dow":0,"ranges":[["12:00","02:00"]]},{"dow":1,"ranges":[["12:00","02:00"]]},{"dow":2,"ranges":[]},{"dow":3,"ranges":[["12:00","02:00"]]},{"dow":4,"ranges":[["12:00","02:00"]]},{"dow":5,"ranges":[["12:00","02:00"]]},{"dow":6,"ranges":[["12:00","02:00"]]}]'::jsonb,  -- confirmado: Ficha pública de Google y redes del local, facilitadas por Pau el 2026-09-14. Pau es de Cenera.
   '{"fondo":"#140e0b","acento":"#d98324","acento2":"#8fbf6a","texto":"#f7f0e8"}'::jsonb,
   '{"daily_menu":false,"menu":true,"reservations":true,"groups":true,"events":true,"feedback":true,"loyalty":true,"qr":true}'::jsonb,
-  '["FALTA EL MÓVIL del local: Pau pidió que el contacto vaya al móvil, pero el 985 42 66 90 es fijo. Sin móvil no hay botón de WhatsApp","Falta el enlace oficial de Google Reviews: sin él no se pinta el botón de reseña","Faltan las fotos de los platos","La carta cargada son solo sus especialidades conocidas, no la carta completa con precios"]'::jsonb)
+  '["Falta confirmar que el 620 58 37 70 tiene WhatsApp activo y lo atiende alguien","Falta el enlace oficial de Google Reviews: sin él no se pinta el botón de reseña","Faltan las fotos de los platos","La carta cargada son solo sus especialidades conocidas, no la carta completa con precios"]'::jsonb)
 on conflict (business_id) do nothing;
 
 insert into trial_settings (business_id, trial_days) values ('d8406b62-63ab-5511-99bf-3af5ab602235', 7)

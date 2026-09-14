@@ -128,6 +128,10 @@ create table business_settings (
   lat             double precision,
   lng             double precision,
   phone           text,
+  -- Segunda opción de contacto: normalmente el fijo del local. Va en el pie,
+  -- no en la cabecera: el botón grande tiene que ser uno solo.
+  phone_alt       text,
+  phone_alt_label text,
   -- Solo dígitos con prefijo (34...). Vacío = no se pinta el botón.
   whatsapp        text,
   email           citext,

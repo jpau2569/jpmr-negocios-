@@ -64,8 +64,8 @@ la base, pero la interfaz no debe ni enseñar lo que no toca.
 
 ```bash
 npm run typecheck                 # TypeScript strict, sin errores
-npm test                          # 24 comprobaciones de la lógica
-npm run test:sql                  # 34 comprobaciones de aislamiento contra PostgreSQL real
+npm test                          # 25 comprobaciones de la lógica
+npm run test:sql                  # 36 comprobaciones de aislamiento contra PostgreSQL real
 npm run build                     # build de producción
 ```
 
@@ -142,16 +142,19 @@ ve marcado en la propia página**, en el pie.
 - [x] **Horario de los dos locales.** La Taberna: dom 11-17, lun/mar/jue 11-23,
       miércoles cerrado, vie/sáb hasta la 1. La Viña: 12:00-2:00 todos los días
       menos el martes, que cierra.
-- [x] **Teléfono de La Taberna al móvil** (`684 65 05 16`), no al fijo de la
-      pizarra de reservas (`984 25 33 52`), y su WhatsApp.
-- [x] **Dirección, teléfono, correo, Instagram y TripAdvisor de La Viña.**
+- [x] **Contacto al móvil en los dos**, como pidió Pau: La Taberna
+      `684 65 05 16`, La Viña `620 58 37 70`. Son los que llevan el botón de
+      llamar y el de WhatsApp.
+- [x] **Los fijos, como segunda opción** en el pie y etiquetados: La Taberna
+      `984 25 33 52` (reservas), La Viña `985 42 66 90`. Hay clientes que
+      prefieren llamar al local de toda la vida.
+- [x] **Dirección, correo, Instagram y TripAdvisor de La Viña.**
 
 ### Pendiente (bloquea publicar, no desarrollar)
 
-- [ ] **Móvil de La Viña.** Solo hay fijo (`985 42 66 90`), así que no tiene
-      botón de WhatsApp. Pau pidió que el contacto vaya al móvil.
 - [ ] **Enlace oficial de Google Reviews** de los dos. Sin él no hay botón.
-- [ ] Confirmar que el `684 65 05 16` tiene WhatsApp activo y lo atiende alguien.
+- [ ] Confirmar que los dos móviles tienen **WhatsApp activo y lo atiende
+      alguien**: tener el número no es lo mismo que saber que lo leen.
 - [ ] Fotos de los platos.
 - [ ] Los 30 precios de La Taberna marcados como muestra, confirmados uno a uno.
 - [ ] La carta completa de La Viña con precios (ahora solo están sus

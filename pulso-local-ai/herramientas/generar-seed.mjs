@@ -136,9 +136,10 @@ function negocio({ slug, plantilla, fuente, trialDias = 7, qrs }) {
   // El horario solo se carga si está CONFIRMADO: sin él, la web no dice si
   // está abierto, porque decirlo mal hace que la gente se plante en la puerta.
   const ok = confirmadoDe(slug);
-  w(`insert into business_settings (business_id, tagline, address, phone, whatsapp, email,`);
+  w(`insert into business_settings (business_id, tagline, address, phone, phone_alt, phone_alt_label, whatsapp, email,`);
   w(`  website, instagram, facebook, tripadvisor, review_url, opening_hours, theme, modules, pending_notes) values (`);
   w(`  ${sql(bid)}, ${sql(cfg.eslogan)}, ${sql(ok.direccion || c.direccion)}, ${sql(ok.telefono || c.telefono)},`);
+  w(`  ${sql(ok.telefonoAlt || null)}, ${sql(ok.telefonoAltEtiqueta || null)},`);
   w(`  ${sql(ok.whatsapp ?? c.whatsapp ?? null)},  -- sin móvil confirmado, el botón de WhatsApp no se pinta`);
   w(`  ${sql(ok.email || c.email || null)}, ${sql(r.web || null)},`);
   w(`  ${sql(ok.instagram || r.instagram || null)}, ${sql(r.facebook || null)},`);
