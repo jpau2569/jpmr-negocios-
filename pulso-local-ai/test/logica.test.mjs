@@ -13,7 +13,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -333,4 +333,26 @@ test("la analítica no guarda datos personales", () => {
   for (const campo of ["name", "phone", "email"]) {
     assert.ok(!bloque.slice(0, 600).includes(`${campo}:`), `el evento no debe llevar ${campo}`);
   }
+});
+
+test("no hay archivos compilados junto al código fuente", () => {
+  // Un `tsc` sin outDir deja un .js al lado de cada .ts. Si ese .js se
+  // commitea, Next puede acabar usando next.config.js en vez de
+  // next.config.ts y ejecutando una versión vieja de la configuración.
+  // Pasó una vez; este test existe para que no vuelva a pasar.
+  const sobrantes = [];
+  const recorrer = (dir) => {
+    for (const entrada of readdirSync(dir, { withFileTypes: true })) {
+      const ruta = join(dir, entrada.name);
+      if (entrada.isDirectory()) {
+        if (["node_modules", ".next", ".git", "public"].includes(entrada.name)) continue;
+        recorrer(ruta);
+      } else if (/\.(js|jsx)$/.test(entrada.name)) {
+        const base = ruta.replace(/\.(js|jsx)$/, "");
+        if (existsSync(`${base}.ts`) || existsSync(`${base}.tsx`)) sobrantes.push(ruta);
+      }
+    }
+  };
+  recorrer(RAIZ);
+  assert.deepEqual(sobrantes, [], "hay salida de tsc commiteada junto al fuente");
 });

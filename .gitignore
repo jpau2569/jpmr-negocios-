@@ -12,3 +12,8 @@ chivato/fotos-calibracion/
 pulso-local-ai/.next/
 pulso-local-ai/node_modules/
 pulso-local-ai/tsconfig.tsbuildinfo
+
+# Salida de tsc dentro de pulso-local-ai: si aparece un .js junto a su .ts es
+# que alguien compiló sin outDir. No debe commitearse nunca.
+pulso-local-ai/**/*.js.map
+pulso-local-ai/tsconfig.tsbuildinfo
