@@ -138,6 +138,9 @@ create table business_settings (
   instagram       text,
   facebook        text,
   tiktok          text,
+  -- En hostelería TripAdvisor da tanta confianza como Google, y muchos locales
+  -- tienen ficha ahí antes que web propia.
+  tripadvisor     text,
   -- [{ "dow":1, "ranges":[["11:00","23:00"]] }]. Vacío = no se muestra
   -- abierto/cerrado: preferimos no decir nada a decir una mentira.
   opening_hours   jsonb not null default '[]'::jsonb,
@@ -145,6 +148,9 @@ create table business_settings (
   logo_url        text,
   cover_url       text,
   modules         jsonb not null default '{}'::jsonb,
+  -- Qué falta por confirmar. Se PINTA EN EL PIE de la web pública: mientras
+  -- haya algo aquí, el visitante sabe qué no está verificado.
+  pending_notes   jsonb not null default '[]'::jsonb,
   -- Teléfono y WhatsApp de Pulso Local AI para el CTA de reactivación.
   reactivation_whatsapp text,
   updated_at      timestamptz not null default now(),

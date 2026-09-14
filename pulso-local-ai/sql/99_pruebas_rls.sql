@@ -172,8 +172,22 @@ select assert((select count(*) from daily_menus where is_demo) >= 1,
   'el menú del día de muestra está marcado como muestra');
 select assert((select count(*) from business_settings where review_url is not null) = 0,
   'ninguna review_url inventada: sin enlace oficial, no hay botón de Google');
-select assert((select count(*) from business_settings where whatsapp is not null) = 0,
-  'ningún WhatsApp inventado: sin número, no hay botón');
+-- La Taberna tiene móvil confirmado (684 65 05 16). La Viña solo tiene fijo,
+-- así que se queda sin WhatsApp: poner el fijo sería un botón que no lee nadie.
+select assert((select whatsapp from business_settings s join businesses b on b.id = s.business_id
+               where b.slug = 'thewhitebar-mieres') = '34684650516',
+  'La Taberna usa su móvil confirmado para WhatsApp');
+select assert((select whatsapp from business_settings s join businesses b on b.id = s.business_id
+               where b.slug = 'la-vina-cenera') is null,
+  'La Viña no tiene WhatsApp: solo hay fijo, y no se inventa uno');
+
+select assert((select count(*) from business_settings where opening_hours = '[]'::jsonb) = 0,
+  'los dos horarios están confirmados y cargados');
+select assert((select opening_hours -> 2 ->> 'ranges' from business_settings s
+               join businesses b on b.id = s.business_id where b.slug = 'la-vina-cenera') = '[]',
+  'La Viña cierra los martes');
+select assert((select count(*) from business_settings where jsonb_array_length(pending_notes) > 0) = 2,
+  'los dos negocios declaran lo que les falta por confirmar');
 
 \o
 \echo ''

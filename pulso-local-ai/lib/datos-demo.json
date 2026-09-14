@@ -15,14 +15,74 @@
       "lat": null,
       "lng": null,
       "phone": "+34684650516",
-      "whatsapp": null,
+      "whatsapp": "34684650516",
       "email": null,
       "review_url": null,
       "website": null,
       "instagram": null,
       "facebook": null,
       "tiktok": null,
-      "opening_hours": [],
+      "tripadvisor": null,
+      "opening_hours": [
+        {
+          "dow": 0,
+          "ranges": [
+            [
+              "11:00",
+              "17:00"
+            ]
+          ]
+        },
+        {
+          "dow": 1,
+          "ranges": [
+            [
+              "11:00",
+              "23:00"
+            ]
+          ]
+        },
+        {
+          "dow": 2,
+          "ranges": [
+            [
+              "11:00",
+              "23:00"
+            ]
+          ]
+        },
+        {
+          "dow": 3,
+          "ranges": []
+        },
+        {
+          "dow": 4,
+          "ranges": [
+            [
+              "11:00",
+              "23:00"
+            ]
+          ]
+        },
+        {
+          "dow": 5,
+          "ranges": [
+            [
+              "11:00",
+              "01:00"
+            ]
+          ]
+        },
+        {
+          "dow": 6,
+          "ranges": [
+            [
+              "11:00",
+              "01:00"
+            ]
+          ]
+        }
+      ],
       "theme": {
         "fondo": "#171012",
         "acento": "#d99a3f",
@@ -44,6 +104,13 @@
         "assistant": true,
         "qr": true
       },
+      "pending_notes": [
+        "Falta el enlace oficial de Google Reviews: sin él no se pinta el botón de reseña",
+        "Falta confirmar que el 684 65 05 16 tiene WhatsApp activo y lo atiende alguien",
+        "Faltan las fotos de los platos",
+        "30 de los 44 platos tienen el precio sin confirmar por el local",
+        "El menú del día que se ve es de muestra: el real lo carga el negocio cada día"
+      ],
       "reactivation_whatsapp": null
     },
     "categorias": [
@@ -925,7 +992,7 @@
     "ajustes": {
       "business_id": "d8406b62-63ab-5511-99bf-3af5ab602235",
       "tagline": "Cocina asturiana desde 1962, en el Valle de Cuna y Cenera",
-      "address": "Ctra. de Cenera, 1 · 33615 Cenera, Mieres (Asturias)",
+      "address": "La Viña, 1 · 33615 Cenera, Mieres (Asturias)",
       "lat": null,
       "lng": null,
       "phone": "+34985426690",
@@ -936,7 +1003,67 @@
       "instagram": "https://www.instagram.com/restaurantelavinacenera/",
       "facebook": "https://www.facebook.com/p/Restaurante-La-Vi%C3%B1a-Cenera-100076182274701/",
       "tiktok": null,
-      "opening_hours": [],
+      "tripadvisor": "https://www.tripadvisor.es/Restaurant_Review-g21305928-d10392942-Reviews-La_Vina_Restaurante-Casaviedra_Mieres_Municipality_Asturias.html",
+      "opening_hours": [
+        {
+          "dow": 0,
+          "ranges": [
+            [
+              "12:00",
+              "02:00"
+            ]
+          ]
+        },
+        {
+          "dow": 1,
+          "ranges": [
+            [
+              "12:00",
+              "02:00"
+            ]
+          ]
+        },
+        {
+          "dow": 2,
+          "ranges": []
+        },
+        {
+          "dow": 3,
+          "ranges": [
+            [
+              "12:00",
+              "02:00"
+            ]
+          ]
+        },
+        {
+          "dow": 4,
+          "ranges": [
+            [
+              "12:00",
+              "02:00"
+            ]
+          ]
+        },
+        {
+          "dow": 5,
+          "ranges": [
+            [
+              "12:00",
+              "02:00"
+            ]
+          ]
+        },
+        {
+          "dow": 6,
+          "ranges": [
+            [
+              "12:00",
+              "02:00"
+            ]
+          ]
+        }
+      ],
       "theme": {
         "fondo": "#140e0b",
         "acento": "#d98324",
@@ -958,6 +1085,12 @@
         "assistant": true,
         "qr": true
       },
+      "pending_notes": [
+        "FALTA EL MÓVIL del local: Pau pidió que el contacto vaya al móvil, pero el 985 42 66 90 es fijo. Sin móvil no hay botón de WhatsApp",
+        "Falta el enlace oficial de Google Reviews: sin él no se pinta el botón de reseña",
+        "Faltan las fotos de los platos",
+        "La carta cargada son solo sus especialidades conocidas, no la carta completa con precios"
+      ],
       "reactivation_whatsapp": null
     },
     "categorias": [

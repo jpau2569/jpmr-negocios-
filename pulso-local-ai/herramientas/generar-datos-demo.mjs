@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import {
   uuid, leer, alergenosDe, centimos, avisarAlergenos, PLANTILLAS, NEGOCIOS,
 } from "./comun.mjs";
+import { confirmadoDe } from "./confirmado.mjs";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const SALIDA = resolve(AQUI, "../lib/datos-demo.json");
@@ -28,6 +29,9 @@ function construir({ slug, archivo, plantilla }) {
   const c = cfg.contacto ?? {};
   const r = cfg.redes ?? {};
   const bid = uuid("business", slug);
+  // Lo que el negocio (o Pau con la ficha delante) ha confirmado manda sobre
+  // lo que se encontró por ahí. Ver herramientas/confirmado.mjs.
+  const ok = confirmadoDe(slug);
 
   const categorias = [];
   const platos = [];
@@ -114,26 +118,29 @@ function construir({ slug, archivo, plantilla }) {
     ajustes: {
       business_id: bid,
       tagline: cfg.eslogan || null,
-      address: c.direccion || null,
+      address: ok.direccion || c.direccion || null,
       lat: c.mapaLat ?? null,
       lng: c.mapaLng ?? null,
-      phone: c.telefono || null,
-      // PENDIENTE de que el negocio lo dé. Sin número, no se pinta el botón.
-      whatsapp: c.whatsapp || null,
-      email: c.email || null,
+      phone: ok.telefono || c.telefono || null,
+      // Sin número de móvil confirmado, NO se pinta el botón de WhatsApp.
+      // Un botón que lleva a un chat que nadie lee es peor que no tenerlo.
+      whatsapp: ok.whatsapp || c.whatsapp || null,
+      email: ok.email || c.email || null,
       // PENDIENTE. Sin enlace oficial no hay botón de Google. Jamás se inventa.
       review_url: null,
       website: r.web || null,
-      instagram: r.instagram || null,
+      instagram: ok.instagram || r.instagram || null,
       facebook: r.facebook || null,
       tiktok: r.tiktok || null,
-      // Vacío a propósito: en la ficha hay un horario, pero sin confirmar por
-      // el local. Preferimos no decir si está abierto a decirlo mal.
-      opening_hours: [],
+      tripadvisor: ok.tripadvisor || r.tripadvisor || null,
+      // Solo se pinta el estado abierto/cerrado si el horario está CONFIRMADO.
+      // Sin confirmar, vacío: preferimos no decir nada a decirlo mal.
+      opening_hours: ok.horario ?? [],
       theme: cfg.colores ?? {},
       logo_url: null,
       cover_url: null,
       modules: modulosDe(plantilla),
+      pending_notes: ok.pendiente ?? [],
       reactivation_whatsapp: null,
     },
     categorias,

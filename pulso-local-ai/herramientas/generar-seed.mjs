@@ -14,6 +14,7 @@
 
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { confirmadoDe } from "./confirmado.mjs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -131,16 +132,22 @@ function negocio({ slug, plantilla, fuente, trialDias = 7, qrs }) {
   w(`on conflict (slug) do nothing;`);
   w();
 
-  // El horario se deja vacío a propósito si no está confirmado: preferimos no
-  // decir si está abierto a decirlo mal.
-  w(`insert into business_settings (business_id, tagline, address, phone, whatsapp, email, website, instagram, facebook, review_url, opening_hours, theme, modules) values (`);
-  w(`  ${sql(bid)}, ${sql(cfg.eslogan)}, ${sql(c.direccion)}, ${sql(c.telefono)},`);
-  w(`  ${sql(c.whatsapp || null)},  -- pendiente: sin número, el botón no se pinta`);
-  w(`  ${sql(c.email || null)}, ${sql(r.web || null)}, ${sql(r.instagram || null)}, ${sql(r.facebook || null)},`);
+  // Lo confirmado por el negocio manda sobre lo que se encontró por ahí.
+  // El horario solo se carga si está CONFIRMADO: sin él, la web no dice si
+  // está abierto, porque decirlo mal hace que la gente se plante en la puerta.
+  const ok = confirmadoDe(slug);
+  w(`insert into business_settings (business_id, tagline, address, phone, whatsapp, email,`);
+  w(`  website, instagram, facebook, tripadvisor, review_url, opening_hours, theme, modules, pending_notes) values (`);
+  w(`  ${sql(bid)}, ${sql(cfg.eslogan)}, ${sql(ok.direccion || c.direccion)}, ${sql(ok.telefono || c.telefono)},`);
+  w(`  ${sql(ok.whatsapp ?? c.whatsapp ?? null)},  -- sin móvil confirmado, el botón de WhatsApp no se pinta`);
+  w(`  ${sql(ok.email || c.email || null)}, ${sql(r.web || null)},`);
+  w(`  ${sql(ok.instagram || r.instagram || null)}, ${sql(r.facebook || null)},`);
+  w(`  ${sql(ok.tripadvisor || r.tripadvisor || null)},`);
   w(`  null,  -- review_url: PENDIENTE de que el negocio dé su enlace oficial de Google`);
-  w(`  '[]'::jsonb,  -- horario: en la ficha hay uno, pero sin confirmar por el local`);
+  w(`  ${sql(JSON.stringify(ok.horario ?? []))}::jsonb,${ok.horario ? `  -- confirmado: ${ok.origen}` : "  -- sin confirmar por el local"}`);
   w(`  ${sql(JSON.stringify(cfg.colores || {}))}::jsonb,`);
-  w(`  ${sql(JSON.stringify(plantillas.find((p) => p.key === plantilla)?.defaults?.modules || {}))}::jsonb)`);
+  w(`  ${sql(JSON.stringify(plantillas.find((p) => p.key === plantilla)?.defaults?.modules || {}))}::jsonb,`);
+  w(`  ${sql(JSON.stringify(ok.pendiente ?? []))}::jsonb)`);
   w(`on conflict (business_id) do nothing;`);
   w();
   w(`insert into trial_settings (business_id, trial_days) values (${sql(bid)}, ${trialDias})`);

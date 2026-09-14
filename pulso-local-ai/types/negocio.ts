@@ -123,11 +123,14 @@ export interface AjustesNegocio {
   instagram: string | null;
   facebook: string | null;
   tiktok: string | null;
+  tripadvisor: string | null;
   opening_hours: DiaHorario[];
   theme: Tema;
   logo_url: string | null;
   cover_url: string | null;
   modules: Modulos;
+  /** Lo que el negocio aún no ha confirmado. Se pinta en el pie. */
+  pending_notes: string[];
   reactivation_whatsapp: string | null;
 }
 

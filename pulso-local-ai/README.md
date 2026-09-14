@@ -42,6 +42,7 @@ montar la base de datos.
 | Pieza | Estado |
 |---|---|
 | Arquitectura, modelo, rutas, flujos, seguridad | ✅ |
+| Datos reales de los dos locales (horario, contacto, redes) | ✅ confirmados 2026-09-14 |
 | Esquema de base de datos (28 tablas) + RLS + seed | ✅ verificado contra PostgreSQL real |
 | Carta, menú del día, WhatsApp, reservas, grupos, feedback, reseñas, QR | ✅ |
 | Fidelización, analítica, PWA, demo de 7 días | ✅ |
@@ -63,8 +64,8 @@ la base, pero la interfaz no debe ni enseñar lo que no toca.
 
 ```bash
 npm run typecheck                 # TypeScript strict, sin errores
-npm test                          # 20 comprobaciones de la lógica
-npm run test:sql                  # 30 comprobaciones de aislamiento contra PostgreSQL real
+npm test                          # 24 comprobaciones de la lógica
+npm run test:sql                  # 34 comprobaciones de aislamiento contra PostgreSQL real
 npm run build                     # build de producción
 ```
 
@@ -130,19 +131,32 @@ No son buenas intenciones: hay tests que fallan si alguien las rompe.
 5. **La analítica no identifica a nadie.** Sin cookies, sin IP en claro, sin
    identificador de persona. Por eso esta web no necesita banner de consentimiento.
 
-## Antes de enviar una demo a un cliente
+## Datos confirmados y pendientes
 
-Ninguno de estos datos se puede inventar. No bloquean el desarrollo —se
-construye con muestra y se sustituye— pero **sí bloquean publicar**:
+Lo confirmado vive en [`herramientas/confirmado.mjs`](herramientas/confirmado.mjs),
+con su origen y su fecha. Lo que no esté ahí sigue marcado como muestra y **se
+ve marcado en la propia página**, en el pie.
 
-- [ ] WhatsApp de cada negocio (sin número, no se pinta el botón)
-- [ ] Enlace oficial de Google Reviews de cada uno
-- [ ] Horario confirmado por el propio local
-- [ ] Fotos de los platos
-- [ ] Los 30 precios de La Taberna marcados como muestra, confirmados uno a uno
-- [ ] Teléfono principal de La Taberna: hay dos (`684 65 05 16` y el de reservas
-      de la pizarra, `984 25 33 52`); el botón «Llamar» solo apunta a uno
-- [ ] Escanear un QR impreso con el móvil antes de imprimir la tirada
+### Confirmado el 2026-09-14
+
+- [x] **Horario de los dos locales.** La Taberna: dom 11-17, lun/mar/jue 11-23,
+      miércoles cerrado, vie/sáb hasta la 1. La Viña: 12:00-2:00 todos los días
+      menos el martes, que cierra.
+- [x] **Teléfono de La Taberna al móvil** (`684 65 05 16`), no al fijo de la
+      pizarra de reservas (`984 25 33 52`), y su WhatsApp.
+- [x] **Dirección, teléfono, correo, Instagram y TripAdvisor de La Viña.**
+
+### Pendiente (bloquea publicar, no desarrollar)
+
+- [ ] **Móvil de La Viña.** Solo hay fijo (`985 42 66 90`), así que no tiene
+      botón de WhatsApp. Pau pidió que el contacto vaya al móvil.
+- [ ] **Enlace oficial de Google Reviews** de los dos. Sin él no hay botón.
+- [ ] Confirmar que el `684 65 05 16` tiene WhatsApp activo y lo atiende alguien.
+- [ ] Fotos de los platos.
+- [ ] Los 30 precios de La Taberna marcados como muestra, confirmados uno a uno.
+- [ ] La carta completa de La Viña con precios (ahora solo están sus
+      especialidades conocidas).
+- [ ] Escanear un QR impreso con el móvil antes de imprimir la tirada.
 
 ## Estructura
 

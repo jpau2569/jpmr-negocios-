@@ -33,14 +33,18 @@ insert into businesses (id, slug, name, sector, status, trial_ends_at) values (
   'e3b9828d-0274-5089-94e7-99436aed33c9', 'thewhitebar-mieres', 'La Taberna · The White Bar', 'hosteleria', 'trial', now() + interval '7 days')
 on conflict (slug) do nothing;
 
-insert into business_settings (business_id, tagline, address, phone, whatsapp, email, website, instagram, facebook, review_url, opening_hours, theme, modules) values (
+insert into business_settings (business_id, tagline, address, phone, whatsapp, email,
+  website, instagram, facebook, tripadvisor, review_url, opening_hours, theme, modules, pending_notes) values (
   'e3b9828d-0274-5089-94e7-99436aed33c9', 'Cocina de siempre y buen producto en el centro de Mieres', 'Calle Jerónimo Ibrán, 11 · 33600 Mieres (Asturias)', '+34684650516',
-  null,  -- pendiente: sin número, el botón no se pinta
-  null, null, null, null,
+  '34684650516',  -- sin móvil confirmado, el botón de WhatsApp no se pinta
+  null, null,
+  null, null,
+  null,
   null,  -- review_url: PENDIENTE de que el negocio dé su enlace oficial de Google
-  '[]'::jsonb,  -- horario: en la ficha hay uno, pero sin confirmar por el local
+  '[{"dow":0,"ranges":[["11:00","17:00"]]},{"dow":1,"ranges":[["11:00","23:00"]]},{"dow":2,"ranges":[["11:00","23:00"]]},{"dow":3,"ranges":[]},{"dow":4,"ranges":[["11:00","23:00"]]},{"dow":5,"ranges":[["11:00","01:00"]]},{"dow":6,"ranges":[["11:00","01:00"]]}]'::jsonb,  -- confirmado: Ficha pública de Google del local, facilitada por Pau el 2026-09-14.
   '{"fondo":"#171012","acento":"#d99a3f","acento2":"#8c2f39","texto":"#f7efe6"}'::jsonb,
-  '{"daily_menu":true,"menu":true,"reservations":true,"groups":false,"feedback":true,"loyalty":true,"qr":true}'::jsonb)
+  '{"daily_menu":true,"menu":true,"reservations":true,"groups":false,"feedback":true,"loyalty":true,"qr":true}'::jsonb,
+  '["Falta el enlace oficial de Google Reviews: sin él no se pinta el botón de reseña","Falta confirmar que el 684 65 05 16 tiene WhatsApp activo y lo atiende alguien","Faltan las fotos de los platos","30 de los 44 platos tienen el precio sin confirmar por el local","El menú del día que se ve es de muestra: el real lo carga el negocio cada día"]'::jsonb)
 on conflict (business_id) do nothing;
 
 insert into trial_settings (business_id, trial_days) values ('e3b9828d-0274-5089-94e7-99436aed33c9', 7)
@@ -377,14 +381,18 @@ insert into businesses (id, slug, name, sector, status, trial_ends_at) values (
   'd8406b62-63ab-5511-99bf-3af5ab602235', 'la-vina-cenera', 'Restaurante La Viña', 'hosteleria', 'trial', now() + interval '7 days')
 on conflict (slug) do nothing;
 
-insert into business_settings (business_id, tagline, address, phone, whatsapp, email, website, instagram, facebook, review_url, opening_hours, theme, modules) values (
-  'd8406b62-63ab-5511-99bf-3af5ab602235', 'Cocina asturiana desde 1962, en el Valle de Cuna y Cenera', 'Ctra. de Cenera, 1 · 33615 Cenera, Mieres (Asturias)', '+34985426690',
-  null,  -- pendiente: sin número, el botón no se pinta
-  'Restaurantelagarlavina@gmail.com', null, 'https://www.instagram.com/restaurantelavinacenera/', 'https://www.facebook.com/p/Restaurante-La-Vi%C3%B1a-Cenera-100076182274701/',
+insert into business_settings (business_id, tagline, address, phone, whatsapp, email,
+  website, instagram, facebook, tripadvisor, review_url, opening_hours, theme, modules, pending_notes) values (
+  'd8406b62-63ab-5511-99bf-3af5ab602235', 'Cocina asturiana desde 1962, en el Valle de Cuna y Cenera', 'La Viña, 1 · 33615 Cenera, Mieres (Asturias)', '+34985426690',
+  null,  -- sin móvil confirmado, el botón de WhatsApp no se pinta
+  'Restaurantelagarlavina@gmail.com', null,
+  'https://www.instagram.com/restaurantelavinacenera/', 'https://www.facebook.com/p/Restaurante-La-Vi%C3%B1a-Cenera-100076182274701/',
+  'https://www.tripadvisor.es/Restaurant_Review-g21305928-d10392942-Reviews-La_Vina_Restaurante-Casaviedra_Mieres_Municipality_Asturias.html',
   null,  -- review_url: PENDIENTE de que el negocio dé su enlace oficial de Google
-  '[]'::jsonb,  -- horario: en la ficha hay uno, pero sin confirmar por el local
+  '[{"dow":0,"ranges":[["12:00","02:00"]]},{"dow":1,"ranges":[["12:00","02:00"]]},{"dow":2,"ranges":[]},{"dow":3,"ranges":[["12:00","02:00"]]},{"dow":4,"ranges":[["12:00","02:00"]]},{"dow":5,"ranges":[["12:00","02:00"]]},{"dow":6,"ranges":[["12:00","02:00"]]}]'::jsonb,  -- confirmado: Ficha pública de Google y redes del local, facilitadas por Pau el 2026-09-14. Pau es de Cenera.
   '{"fondo":"#140e0b","acento":"#d98324","acento2":"#8fbf6a","texto":"#f7f0e8"}'::jsonb,
-  '{"daily_menu":false,"menu":true,"reservations":true,"groups":true,"events":true,"feedback":true,"loyalty":true,"qr":true}'::jsonb)
+  '{"daily_menu":false,"menu":true,"reservations":true,"groups":true,"events":true,"feedback":true,"loyalty":true,"qr":true}'::jsonb,
+  '["FALTA EL MÓVIL del local: Pau pidió que el contacto vaya al móvil, pero el 985 42 66 90 es fijo. Sin móvil no hay botón de WhatsApp","Falta el enlace oficial de Google Reviews: sin él no se pinta el botón de reseña","Faltan las fotos de los platos","La carta cargada son solo sus especialidades conocidas, no la carta completa con precios"]'::jsonb)
 on conflict (business_id) do nothing;
 
 insert into trial_settings (business_id, trial_days) values ('d8406b62-63ab-5511-99bf-3af5ab602235', 7)
