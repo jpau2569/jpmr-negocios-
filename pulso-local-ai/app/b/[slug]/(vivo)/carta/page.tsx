@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { leerEspacio, platosDeCategoria } from "@/lib/datos";
+import { leerEspacio, platosDeCategoria, moduloActivo } from "@/lib/datos";
 import { Tarjeta, Vacio, SinConfirmar } from "@/components/ui/basicos";
 import { FichaPlato } from "@/components/publico/plato";
 import { IniciarAnalitica, Vista } from "@/components/publico/rastreador";
@@ -23,6 +23,9 @@ export default async function PaginaCarta({ params, searchParams }: Props) {
   const { qr } = await searchParams;
   const espacio = await leerEspacio(slug);
   if (!espacio) notFound();
+  // Las rutas son comunes a todos los sectores: si este negocio no tiene
+  // el módulo encendido, esta página no existe para él.
+  if (!moduloActivo(espacio, "menu")) notFound();
 
   const { negocio, ajustes, categorias } = espacio;
   const conPlatos = categorias

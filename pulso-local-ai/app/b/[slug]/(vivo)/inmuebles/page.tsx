@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { leerEspacio } from "@/lib/datos";
+import { leerEspacio, moduloActivo } from "@/lib/datos";
 import { Vacio, SinConfirmar } from "@/components/ui/basicos";
 import { TarjetaInmueble } from "@/components/publico/inmueble";
 import { IniciarAnalitica, Vista } from "@/components/publico/rastreador";
@@ -27,6 +27,9 @@ export default async function PaginaInmuebles({ params, searchParams }: Props) {
   const { qr } = await searchParams;
   const espacio = await leerEspacio(slug);
   if (!espacio) notFound();
+  // Las rutas son comunes a todos los sectores: si este negocio no tiene
+  // el módulo encendido, esta página no existe para él.
+  if (!moduloActivo(espacio, "properties")) notFound();
 
   const inmuebles = espacio.inmuebles;
   const disponibles = inmuebles.filter((i) => i.deal_state === "disponible");

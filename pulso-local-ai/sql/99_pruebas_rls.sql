@@ -85,8 +85,10 @@ select assert((select count(*) from daily_menus m join businesses b on b.id = m.
                where b.slug = 'thewhitebar-mieres' and m.service_date = current_date) = 1,
   've el menú del día publicado');
 
-select assert((select count(*) from businesses) = 2,
-  've los dos negocios vigentes');
+select assert((select count(*) from businesses where sector = 'hosteleria') = 2,
+  've los dos negocios de hosteleria vigentes');
+select assert((select count(*) from businesses) >= 2,
+  'y los de otros sectores que haya, que tambien son publicos');
 
 select assert((select count(*) from menu_item_allergens) > 0,
   've los alérgenos declarados de los platos visibles');
@@ -174,13 +176,15 @@ select assert((select count(*) from business_settings where review_url is not nu
   'ninguna review_url inventada: sin enlace oficial, no hay botón de Google');
 -- "Siempre a ambos al móvil, no al fijo": los dos WhatsApp son móviles
 -- españoles (34 + 6 o 7 + 8 cifras), y ningún fijo del local se cuela.
-select assert((select count(*) from business_settings where whatsapp !~ '^34[67][0-9]{8}$') = 0,
-  'los dos WhatsApp son móviles españoles');
+select assert((select count(*) from business_settings where whatsapp is not null
+                 and whatsapp !~ '^34[67][0-9]{8}$') = 0,
+  'todos los WhatsApp cargados son móviles españoles');
 select assert((select count(*) from business_settings
                where phone like '%984253352%' or phone like '%985426690%'
                   or whatsapp like '%984253352%' or whatsapp like '%985426690%') = 0,
   'ningún fijo del local se usa como teléfono principal ni como WhatsApp');
-select assert((select count(*) from business_settings where phone_alt is not null) = 2,
+select assert((select count(*) from business_settings s join businesses b on b.id = s.business_id
+               where b.sector = 'hosteleria' and s.phone_alt is not null) = 2,
   'los dos fijos siguen ahí como segunda opción de contacto');
 select assert((select whatsapp from business_settings s join businesses b on b.id = s.business_id
                where b.slug = 'thewhitebar-mieres') = '34684650516',
@@ -194,7 +198,8 @@ select assert((select count(*) from business_settings where opening_hours = '[]'
 select assert((select opening_hours -> 2 ->> 'ranges' from business_settings s
                join businesses b on b.id = s.business_id where b.slug = 'la-vina-cenera') = '[]',
   'La Viña cierra los martes');
-select assert((select count(*) from business_settings where jsonb_array_length(pending_notes) > 0) = 2,
+select assert((select count(*) from business_settings s join businesses b on b.id = s.business_id
+               where b.sector = 'hosteleria' and jsonb_array_length(s.pending_notes) > 0) = 2,
   'los dos negocios declaran lo que les falta por confirmar');
 
 \o

@@ -89,6 +89,52 @@ export const CONFIRMADO = {
       "La carta cargada son solo sus especialidades conocidas, no la carta completa con precios",
     ],
   },
+
+  "asesoria-castresana": {
+    origen: "Datos facilitados directamente por Pau (es su agencia) el 2026-09-15, "
+      + "con fotos del local. Corrigen el correo y el horario que estaban "
+      + "fichados en escaparate3d desde antes.",
+    fecha: "2026-09-15",
+
+    // Oficina, no hostelería: dos tramos y cerrado el fin de semana.
+    horario: [
+      { dow: 0, ranges: [] },                            // domingo: CERRADO
+      { dow: 1, ranges: [["10:00", "14:00"], ["17:00", "19:00"]] },
+      { dow: 2, ranges: [["10:00", "14:00"], ["17:00", "19:00"]] },
+      { dow: 3, ranges: [["10:00", "14:00"], ["17:00", "19:00"]] },
+      { dow: 4, ranges: [["10:00", "14:00"], ["17:00", "19:00"]] },
+      { dow: 5, ranges: [["10:00", "14:00"], ["17:00", "19:00"]] },
+      { dow: 6, ranges: [] },                            // sábado: CERRADO
+    ],
+
+    direccion: "Calle Cabo Noval, 8 Bajo 2 · 33007 Oviedo (Asturias)",
+    // OJO: no es asesoriacastresana@gmail.com, que es lo que había fichado.
+    email: "inmobiliariacastresana@gmail.com",
+    web: "https://www.asesoriacastresana.com",
+
+    // La agencia tiene DOS móviles con WhatsApp. El botón grande solo puede
+    // apuntar a uno: se toma el 689 por ser el primero que dio Pau, y el 672
+    // queda como segunda opción junto al fijo. Pendiente de que Pau confirme
+    // cuál quiere de principal, porque va impreso en los carteles.
+    telefono: "+34689929926",
+    telefonoTexto: "689 92 99 26",
+    whatsapp: "34689929926",
+    whatsappAlt: "34672775721",
+    whatsappAltTexto: "672 77 57 21",
+    telefonoAlt: "+34985210468",
+    // La etiqueta lleva DENTRO el segundo móvil. Si no, se perdería: el
+    // esquema solo tiene un hueco para WhatsApp y otro para el teléfono
+    // alternativo, y la agencia tiene tres números. Debe decir exactamente
+    // lo mismo que sql/05_castresana.sql; hay una prueba que lo compara.
+    telefonoAltEtiqueta: "Oficina (fijo): 985 21 04 68 · Otro WhatsApp: 672 77 57 21",
+
+    pendiente: [
+      "Falta confirmar cuál de los dos móviles (689 92 99 26 o 672 77 57 21) es el WhatsApp principal",
+      "Falta el enlace oficial de Google Reviews: sin él no se pinta el botón de reseña",
+      "La cartera se carga desde la web oficial al pulsar «Sincronizar» en el panel",
+      "Ningún inmueble tiene todavía cargada la etiqueta energética (obligatoria en anuncios, RD 390/2021)",
+    ],
+  },
 };
 
 /** Lo que este fichero confirma de un negocio, o un objeto vacío. */

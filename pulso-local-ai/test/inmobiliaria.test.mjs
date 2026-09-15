@@ -263,3 +263,102 @@ test("los estados y tipos de inmueble coinciden entre TypeScript y el SQL", () =
   assert.deepEqual(clavesDe("ESTADO_OPERACION_ES"), enumSql("property_deal_state"));
   assert.deepEqual(clavesDe("ESTADO_ENERGIA_ES"), enumSql("energy_status"));
 });
+
+// ============================================================================
+//  ASESORÍA CASTRESANA: LOS DATOS REALES
+// ----------------------------------------------------------------------------
+//  La agencia es de Pau y los carteles se imprimen con estos datos. Un correo
+//  mal escrito o un horario viejo no se arregla después de la tirada.
+// ============================================================================
+
+const demo = JSON.parse(readFileSync(join(RAIZ, "lib", "datos-demo.json"), "utf8"));
+const CAS = demo["asesoria-castresana"];
+
+test("la agencia está en el respaldo y es del sector inmobiliaria", () => {
+  assert.ok(CAS, "existe asesoria-castresana en datos-demo.json");
+  assert.equal(CAS.negocio.sector, "inmobiliaria");
+  assert.equal(CAS.negocio.name, "Asesoría Castresana");
+});
+
+test("el correo es el de inmobiliaria, no el que estaba mal fichado", () => {
+  assert.equal(CAS.ajustes.email, "inmobiliariacastresana@gmail.com");
+  assert.notEqual(CAS.ajustes.email, "asesoriacastresana@gmail.com");
+});
+
+test("el WhatsApp es móvil y el fijo queda de segunda opción", () => {
+  assert.match(CAS.ajustes.whatsapp, /^34[67]\d{8}$/);
+  assert.equal(CAS.ajustes.phone_alt, "+34985210468");
+  assert.ok(!CAS.ajustes.whatsapp.includes("985210468"),
+    "el fijo NO se usa como WhatsApp");
+  assert.ok(!String(CAS.ajustes.phone).includes("985210468"),
+    "ni como teléfono principal");
+  // Los dos móviles de la agencia tienen que aparecer en alguna parte: el
+  // segundo va en la etiqueta del contacto alternativo.
+  assert.ok(
+    `${CAS.ajustes.whatsapp}${CAS.ajustes.phone_alt_label}`.includes("672 77 57 21")
+    || CAS.ajustes.whatsapp === "34672775721",
+    "el segundo móvil no se pierde",
+  );
+});
+
+test("el horario de oficina es el nuevo: 10-14 y 17-19, de lunes a viernes", () => {
+  const h = CAS.ajustes.opening_hours;
+  assert.equal(h.length, 7);
+  assert.deepEqual(h[0].ranges, [], "domingo cerrado");
+  assert.deepEqual(h[6].ranges, [], "sábado cerrado");
+  for (const dow of [1, 2, 3, 4, 5]) {
+    assert.deepEqual(h[dow].ranges, [["10:00", "14:00"], ["17:00", "19:00"]],
+      `el día ${dow} abre en dos tramos`);
+  }
+});
+
+test("no hay ni un inmueble inventado en la demo de una agencia real", () => {
+  assert.deepEqual(CAS.inmuebles, [],
+    "la cartera se sincroniza desde su web, no se siembra a mano");
+  assert.equal(CAS.ajustes.review_url, null,
+    "ni una review_url inventada");
+});
+
+test("la agencia declara por escrito lo que le falta", () => {
+  assert.ok(CAS.ajustes.pending_notes.length >= 4);
+  const texto = CAS.ajustes.pending_notes.join(" ");
+  assert.match(texto, /energ/i, "avisa de que falta la etiqueta energética");
+  assert.match(texto, /Google/, "avisa de que falta el enlace de reseñas");
+});
+
+test("los módulos de hostelería nacen apagados en una inmobiliaria", () => {
+  for (const m of ["menu", "daily_menu", "reservations", "groups"]) {
+    assert.equal(CAS.ajustes.modules[m], false, `${m} apagado`);
+  }
+  for (const m of ["properties", "visits", "private_listings", "qr"]) {
+    assert.equal(CAS.ajustes.modules[m], true, `${m} encendido`);
+  }
+});
+
+test("el identificador del respaldo es el MISMO que el del seed SQL", () => {
+  const sql = readFileSync(join(RAIZ, "sql", "05_castresana.sql"), "utf8");
+  assert.ok(sql.includes(CAS.negocio.id),
+    "si no coinciden, Supabase y el respaldo dan dos versiones del mismo negocio");
+});
+
+test("la plantilla 'inmobiliaria' dice lo mismo en el generador y en el SQL", async () => {
+  const { PLANTILLAS } = await import(
+    pathToFileURL(join(RAIZ, "herramientas", "comun.mjs")).href);
+  const plantilla = PLANTILLAS.find((p) => p.key === "inmobiliaria");
+  assert.ok(plantilla, "existe en el generador");
+
+  const sql = readFileSync(join(RAIZ, "sql", "04_inmobiliaria.sql"), "utf8");
+  const bloque = sql.slice(sql.indexOf("'modules', jsonb_build_object("));
+  const delSql = {};
+  for (const m of bloque.slice(0, bloque.indexOf("),")).matchAll(/'([a-z_]+)', (true|false)/g)) {
+    delSql[m[1]] = m[2] === "true";
+  }
+  assert.deepEqual(plantilla.defaults.modules, delSql,
+    "un negocio nacería con módulos distintos según viniera de Supabase o del respaldo");
+});
+
+test("la etiqueta del contacto alternativo dice lo mismo en el respaldo y en el SQL", () => {
+  const sql = readFileSync(join(RAIZ, "sql", "05_castresana.sql"), "utf8");
+  assert.ok(sql.includes(CAS.ajustes.phone_alt_label),
+    "si no coinciden, un número de la agencia se pierde en uno de los dos caminos");
+});

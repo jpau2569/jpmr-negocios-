@@ -21,7 +21,7 @@ import respaldo from "./datos-demo.json";
 import { hoyISO } from "./utils";
 import type {
   EspacioNegocio, Plato, CategoriaCarta, MenuDelDia, MenuEspecial,
-  EventoNegocio, Promocion, Alergeno, Inmueble, FotoInmueble,
+  EventoNegocio, Promocion, Alergeno, Inmueble, FotoInmueble, Modulos,
 } from "@/types/negocio";
 
 /** Los negocios que existen. Se usa para generateStaticParams. */
@@ -183,6 +183,23 @@ export async function leerEspacio(slug: string): Promise<EspacioNegocio | null> 
     }
   }
   return desdeRespaldo(slug);
+}
+
+/* --- Módulos ------------------------------------------------------------------ */
+
+/**
+ * ¿Este negocio tiene encendido este módulo?
+ *
+ * Existe porque las rutas son las mismas para todos los sectores, y sin esto
+ * una inmobiliaria acaba con una página de «La carta» y un bar con una de
+ * «Nuestra cartera». No es solo feo: si alguien reparte ese enlace, el
+ * cliente se planta en una página vacía y piensa que el negocio está roto.
+ *
+ * Se decide con los módulos del negocio, no con el nombre del sector: un
+ * restaurante puede apagar las reservas y seguir siendo un restaurante.
+ */
+export function moduloActivo(espacio: EspacioNegocio, modulo: keyof Modulos): boolean {
+  return espacio.ajustes.modules?.[modulo] === true;
 }
 
 /* --- Inmuebles --------------------------------------------------------------- */

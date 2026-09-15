@@ -235,6 +235,68 @@ select assert((select count(*) from properties p
                where b.slug = 'agencia-b' and p.reference = 'B-001') = 1,
   'pero la misma referencia SI puede existir en otra agencia');
 
+\echo ''
+\echo '=== 5. ASESORIA CASTRESANA (datos reales) ==='
+
+select assert((select count(*) from businesses
+               where slug = 'asesoria-castresana' and sector = 'inmobiliaria') = 1,
+  'la agencia esta dada de alta en el sector inmobiliaria');
+
+-- El correo estaba MAL fichado en el repo (asesoria@ en vez de inmobiliaria@).
+-- Esta comprobacion existe para que no vuelva a colarse.
+select assert((select email from business_settings s join businesses b on b.id = s.business_id
+               where b.slug = 'asesoria-castresana') = 'inmobiliariacastresana@gmail.com',
+  'el correo es inmobiliariacastresana@, no asesoriacastresana@');
+
+select assert((select whatsapp from business_settings s join businesses b on b.id = s.business_id
+               where b.slug = 'asesoria-castresana') ~ '^34[67][0-9]{8}$',
+  'el WhatsApp es un movil espanol, no el fijo');
+
+select assert((select count(*) from business_settings s join businesses b on b.id = s.business_id
+               where b.slug = 'asesoria-castresana'
+                 and (s.phone like '%985210468%' or s.whatsapp like '%985210468%')) = 0,
+  'el fijo 985 21 04 68 no se usa como telefono principal ni como WhatsApp');
+
+select assert((select phone_alt from business_settings s join businesses b on b.id = s.business_id
+               where b.slug = 'asesoria-castresana') = '+34985210468',
+  'pero el fijo sigue ahi como segunda opcion');
+
+-- Horario de oficina: dos tramos de lunes a viernes, cerrado el fin de semana.
+select assert((select opening_hours -> 0 ->> 'ranges' from business_settings s
+               join businesses b on b.id = s.business_id
+               where b.slug = 'asesoria-castresana') = '[]',
+  'cierra los domingos');
+select assert((select opening_hours -> 6 ->> 'ranges' from business_settings s
+               join businesses b on b.id = s.business_id
+               where b.slug = 'asesoria-castresana') = '[]',
+  'cierra los sabados');
+select assert((select jsonb_array_length(opening_hours -> 1 -> 'ranges') from business_settings s
+               join businesses b on b.id = s.business_id
+               where b.slug = 'asesoria-castresana') = 2,
+  'los lunes abre en dos tramos, manana y tarde');
+
+select assert((select count(*) from business_settings s join businesses b on b.id = s.business_id
+               where b.slug = 'asesoria-castresana' and s.review_url is not null) = 0,
+  'ninguna review_url inventada: sin enlace oficial, no hay boton de Google');
+
+-- Lo mas importante de todo: no se ha sembrado ni un piso de mentira en la
+-- demo de una agencia REAL. La cartera entra por sincronizacion o a mano.
+select assert((select count(*) from properties p join businesses b on b.id = p.business_id
+               where b.slug = 'asesoria-castresana') = 0,
+  'NI UN inmueble inventado: la cartera se sincroniza desde su web');
+
+select assert((select count(*) from qr_codes q join businesses b on b.id = q.business_id
+               where b.slug = 'asesoria-castresana') = 4,
+  'tiene sus 4 QR de negocio (escaparate, balcon, VENDIDO y tarjeta)');
+select assert((select count(*) from qr_codes q join businesses b on b.id = q.business_id
+               where b.slug = 'asesoria-castresana' and q.location = 'sold_sign') = 1,
+  'entre ellos el del cartel VENDIDO, que es el de captacion');
+
+select assert((select jsonb_array_length(pending_notes) from business_settings s
+               join businesses b on b.id = s.business_id
+               where b.slug = 'asesoria-castresana') >= 4,
+  'y declara por escrito todo lo que le falta por confirmar');
+
 \o
 \echo ''
 \echo '=== TODAS LAS COMPROBACIONES DEL SECTOR INMOBILIARIA PASAN ==='

@@ -102,6 +102,13 @@ export interface Modulos {
   loyalty?: boolean;
   assistant?: boolean;
   qr?: boolean;
+  // Inmobiliaria. Las rutas son comunes a todos los sectores, así que son
+  // estos interruptores —y no el nombre del sector— los que deciden qué
+  // páginas existen para cada negocio.
+  properties?: boolean;
+  visits?: boolean;
+  private_listings?: boolean;
+  valuation?: boolean;
 }
 
 export interface Negocio {

@@ -151,11 +151,72 @@ function construir({ slug, archivo, plantilla }) {
     menusEspeciales,
     eventos: [],
     promociones: [],
+    inmuebles: [],
   };
 }
 
+/**
+ * Una agencia inmobiliaria. No lee ningún fichero de configuración: sale
+ * entera de herramientas/confirmado.mjs, que es donde vive lo que alguien ha
+ * confirmado de verdad.
+ *
+ * `inmuebles` va VACÍO a propósito. La cartera se carga desde la web oficial
+ * pulsando «Sincronizar» en el panel. Sembrar pisos de mentira en la demo de
+ * una agencia real sería pedir que alguien acabe enseñándoselos a un cliente.
+ */
+function construirAgencia({ slug, nombre, eslogan, plantilla }) {
+  const ok = confirmadoDe(slug);
+  const bid = uuid("business", slug);
+  return {
+    negocio: {
+      id: bid, slug, name: nombre, sector: "inmobiliaria", status: "trial",
+      // Demo siempre viva en el respaldo. En Supabase manda trial_ends_at.
+      trial_ends_at: null,
+    },
+    ajustes: {
+      business_id: bid,
+      tagline: eslogan,
+      address: ok.direccion ?? null,
+      lat: null, lng: null,
+      phone: ok.telefono ?? null,
+      phone_alt: ok.telefonoAlt ?? null,
+      phone_alt_label: ok.telefonoAltEtiqueta ?? null,
+      whatsapp: ok.whatsapp ?? null,
+      email: ok.email ?? null,
+      // PENDIENTE. Sin enlace oficial no hay botón de Google. Jamás se inventa.
+      review_url: null,
+      website: ok.web ?? null,
+      instagram: ok.instagram ?? null,
+      facebook: null, tiktok: null, tripadvisor: null,
+      opening_hours: ok.horario ?? [],
+      // Dorado sobre negro, como el rótulo del local.
+      theme: {
+        fondo: "#11161d", superficie: "#1a222c",
+        acento: "#c9a227", acento2: "#2f6bff", texto: "#eef2f6",
+      },
+      logo_url: null, cover_url: null,
+      modules: modulosDe(plantilla),
+      pending_notes: ok.pendiente ?? [],
+      reactivation_whatsapp: null,
+    },
+    categorias: [], platos: [], menuDeHoy: null,
+    menusEspeciales: [], eventos: [], promociones: [],
+    inmuebles: [],
+  };
+}
+
+const AGENCIAS = [
+  {
+    slug: "asesoria-castresana",
+    nombre: "Asesoría Castresana",
+    eslogan: "Inmobiliaria en el centro de Oviedo",
+    plantilla: "inmobiliaria",
+  },
+];
+
 const salida = {};
 for (const n of NEGOCIOS) salida[n.slug] = construir(n);
+for (const a of AGENCIAS) salida[a.slug] = construirAgencia(a);
 
 writeFileSync(SALIDA, `${JSON.stringify(salida, null, 2)}\n`, "utf8");
 

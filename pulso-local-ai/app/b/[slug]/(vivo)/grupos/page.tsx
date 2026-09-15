@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { leerEspacio, hayBackend } from "@/lib/datos";
+import { leerEspacio, hayBackend, moduloActivo } from "@/lib/datos";
 import { FormularioGrupo } from "@/components/publico/formulario-grupo";
 import { IniciarAnalitica } from "@/components/publico/rastreador";
 import { Aviso } from "@/components/ui/basicos";
@@ -16,6 +16,9 @@ export default async function PaginaGrupos({ params, searchParams }: Props) {
   const { qr } = await searchParams;
   const espacio = await leerEspacio(slug);
   if (!espacio) notFound();
+  // Las rutas son comunes a todos los sectores: si este negocio no tiene
+  // el módulo encendido, esta página no existe para él.
+  if (!moduloActivo(espacio, "groups")) notFound();
 
   const { negocio, ajustes } = espacio;
 

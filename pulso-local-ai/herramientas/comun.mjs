@@ -105,6 +105,26 @@ export const PLANTILLAS = [
       },
     },
   },
+  {
+    // Debe decir EXACTAMENTE lo mismo que la plantilla 'inmobiliaria' de
+    // sql/04_inmobiliaria.sql. Hay una prueba que compara las dos listas: si
+    // se separan, un negocio nacería con módulos distintos según viniera de
+    // Supabase o del respaldo, y nadie lo notaría hasta tenerlo delante.
+    key: "inmobiliaria",
+    name: "Inmobiliaria",
+    description:
+      "Agencia inmobiliaria: cartera con ficha por inmueble, petición de visita, "
+      + "inmuebles de enlace privado para el boca a boca y un QR por piso para el "
+      + "escaparate.",
+    defaults: {
+      modules: {
+        properties: true, visits: true, private_listings: true, valuation: false,
+        feedback: true, promotions: true, qr: true, assistant: false,
+        menu: false, daily_menu: false, special_menus: false,
+        reservations: false, groups: false, loyalty: false,
+      },
+    },
+  },
 ];
 
 /** Los QR que se crean de serie con cada negocio. */
@@ -121,6 +141,14 @@ export const QRS = {
     { token: "lv-grupos", label: "Cartel de grupos", target: "group", location: "window" },
     { token: "lv-ticket", label: "Ticket", target: "review", location: "ticket" },
     { token: "lv-redes", label: "Redes sociales", target: "landing", location: "social" },
+  ],
+  // Los QR de negocio de la agencia. El QR POR INMUEBLE no va aquí: se genera
+  // uno por ficha cuando la cartera está sincronizada.
+  "asesoria-castresana": [
+    { token: "cas-escap", label: "Escaparate (cartera completa)", target: "listings", location: "window" },
+    { token: "cas-balcon", label: "Cartel de balcón (SE VENDE)", target: "listings", location: "balcony" },
+    { token: "cas-vendido", label: "Cartel VENDIDO (¿cuánto vale el tuyo?)", target: "valuation", location: "sold_sign" },
+    { token: "cas-tarjeta", label: "Tarjeta y carpeta de documentación", target: "landing", location: "other" },
   ],
 };
 

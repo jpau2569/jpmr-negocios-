@@ -264,12 +264,16 @@ test("cada negocio dice qué le falta por confirmar", () => {
       `${slug} debe avisar de que falta el enlace de Google`,
     );
   }
-  // Tener el número no es lo mismo que saber que lo atienden por WhatsApp:
-  // hasta confirmarlo con el local, se dice.
+  // Todo negocio con botón de WhatsApp tiene que declarar qué le falta por
+  // confirmar de ese número. La duda no es la misma en todos: en un bar es
+  // "¿lo atiende alguien?", y en la agencia de Pau —que son sus propios
+  // móviles— es "¿cuál de los dos es el principal?". Se exige que haya un
+  // aviso sobre el WhatsApp, no una frase concreta.
   for (const [slug, esp] of Object.entries(datos)) {
+    if (!esp.ajustes.whatsapp) continue;
     assert.ok(
-      esp.ajustes.pending_notes.some((n) => /WhatsApp activo/i.test(n)),
-      `${slug} debe avisar de que falta confirmar el WhatsApp`,
+      esp.ajustes.pending_notes.some((n) => /whatsapp/i.test(n)),
+      `${slug} debe declarar qué le falta por confirmar del WhatsApp`,
     );
   }
 });

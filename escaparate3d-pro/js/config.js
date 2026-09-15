@@ -90,7 +90,7 @@ export const POR_DEFECTO = {
     marca: "Escaparate 3D",
     responsable: "Pau Moralejo",
     whatsapp: "34672775721",
-    email: "asesoriacastresana@gmail.com",
+    email: "inmobiliariacastresana@gmail.com",
     web: "",
     titulo: "¿Te gusta? Esto mismo, con tu negocio dentro",
     texto: "Lo que estás viendo es una demo real, no un vídeo: se puede montar con tus datos, tus fotos, tus colores y tu teléfono. Dime qué negocio tienes y te preparo la tuya.",

@@ -67,7 +67,7 @@ grant usage on schema public, auth to anon, authenticated, service_role;
 grant select, insert on auth.users to authenticated;
 SQL
 
-for f in 01_esquema 02_rls 03_seed 04_inmobiliaria; do
+for f in 01_esquema 02_rls 03_seed 04_inmobiliaria 05_castresana; do
   echo "▶ $f.sql"
   $P -q -d "$BASE" -v ON_ERROR_STOP=1 -f "$SQL/$f.sql" 2>&1 | grep -v "already exists, skipping" || true
 done

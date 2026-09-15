@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { leerEspacio, inmueblePorSlug } from "@/lib/datos";
+import { leerEspacio, inmueblePorSlug, moduloActivo } from "@/lib/datos";
 import { Tarjeta, Aviso, SinConfirmar } from "@/components/ui/basicos";
 import { EnlaceBoton } from "@/components/ui/boton";
 import { EtiquetaEnergia } from "@/components/publico/energia";
@@ -84,6 +84,9 @@ export default async function PaginaInmueble({ params, searchParams }: Props) {
   const { qr } = await searchParams;
   const espacio = await leerEspacio(slug);
   if (!espacio) notFound();
+  // Las rutas son comunes a todos los sectores: si este negocio no tiene
+  // el módulo encendido, esta página no existe para él.
+  if (!moduloActivo(espacio, "properties")) notFound();
 
   const ficha = inmueblePorSlug(espacio, inmueble);
   if (!ficha) notFound();

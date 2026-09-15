@@ -980,7 +980,8 @@
       }
     ],
     "eventos": [],
-    "promociones": []
+    "promociones": [],
+    "inmuebles": []
   },
   "la-vina-cenera": {
     "negocio": {
@@ -1256,6 +1257,149 @@
     "menuDeHoy": null,
     "menusEspeciales": [],
     "eventos": [],
-    "promociones": []
+    "promociones": [],
+    "inmuebles": []
+  },
+  "asesoria-castresana": {
+    "negocio": {
+      "id": "c58209b6-f648-519c-b92d-7eb6b48083a8",
+      "slug": "asesoria-castresana",
+      "name": "Asesoría Castresana",
+      "sector": "inmobiliaria",
+      "status": "trial",
+      "trial_ends_at": null
+    },
+    "ajustes": {
+      "business_id": "c58209b6-f648-519c-b92d-7eb6b48083a8",
+      "tagline": "Inmobiliaria en el centro de Oviedo",
+      "address": "Calle Cabo Noval, 8 Bajo 2 · 33007 Oviedo (Asturias)",
+      "lat": null,
+      "lng": null,
+      "phone": "+34689929926",
+      "phone_alt": "+34985210468",
+      "phone_alt_label": "Oficina (fijo): 985 21 04 68 · Otro WhatsApp: 672 77 57 21",
+      "whatsapp": "34689929926",
+      "email": "inmobiliariacastresana@gmail.com",
+      "review_url": null,
+      "website": "https://www.asesoriacastresana.com",
+      "instagram": null,
+      "facebook": null,
+      "tiktok": null,
+      "tripadvisor": null,
+      "opening_hours": [
+        {
+          "dow": 0,
+          "ranges": []
+        },
+        {
+          "dow": 1,
+          "ranges": [
+            [
+              "10:00",
+              "14:00"
+            ],
+            [
+              "17:00",
+              "19:00"
+            ]
+          ]
+        },
+        {
+          "dow": 2,
+          "ranges": [
+            [
+              "10:00",
+              "14:00"
+            ],
+            [
+              "17:00",
+              "19:00"
+            ]
+          ]
+        },
+        {
+          "dow": 3,
+          "ranges": [
+            [
+              "10:00",
+              "14:00"
+            ],
+            [
+              "17:00",
+              "19:00"
+            ]
+          ]
+        },
+        {
+          "dow": 4,
+          "ranges": [
+            [
+              "10:00",
+              "14:00"
+            ],
+            [
+              "17:00",
+              "19:00"
+            ]
+          ]
+        },
+        {
+          "dow": 5,
+          "ranges": [
+            [
+              "10:00",
+              "14:00"
+            ],
+            [
+              "17:00",
+              "19:00"
+            ]
+          ]
+        },
+        {
+          "dow": 6,
+          "ranges": []
+        }
+      ],
+      "theme": {
+        "fondo": "#11161d",
+        "superficie": "#1a222c",
+        "acento": "#c9a227",
+        "acento2": "#2f6bff",
+        "texto": "#eef2f6"
+      },
+      "logo_url": null,
+      "cover_url": null,
+      "modules": {
+        "properties": true,
+        "visits": true,
+        "private_listings": true,
+        "valuation": false,
+        "feedback": true,
+        "promotions": true,
+        "qr": true,
+        "assistant": false,
+        "menu": false,
+        "daily_menu": false,
+        "special_menus": false,
+        "reservations": false,
+        "groups": false,
+        "loyalty": false
+      },
+      "pending_notes": [
+        "Falta confirmar cuál de los dos móviles (689 92 99 26 o 672 77 57 21) es el WhatsApp principal",
+        "Falta el enlace oficial de Google Reviews: sin él no se pinta el botón de reseña",
+        "La cartera se carga desde la web oficial al pulsar «Sincronizar» en el panel",
+        "Ningún inmueble tiene todavía cargada la etiqueta energética (obligatoria en anuncios, RD 390/2021)"
+      ],
+      "reactivation_whatsapp": null
+    },
+    "categorias": [],
+    "platos": [],
+    "menuDeHoy": null,
+    "menusEspeciales": [],
+    "eventos": [],
+    "promociones": [],
+    "inmuebles": []
   }
 }

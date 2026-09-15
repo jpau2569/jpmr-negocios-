@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { leerEspacio, hayBackend } from "@/lib/datos";
+import { leerEspacio, hayBackend, moduloActivo } from "@/lib/datos";
 import { FormularioReserva } from "@/components/publico/formulario-reserva";
 import { IniciarAnalitica } from "@/components/publico/rastreador";
 import { Aviso } from "@/components/ui/basicos";
@@ -17,6 +17,9 @@ export default async function PaginaReservar({ params, searchParams }: Props) {
   const { qr } = await searchParams;
   const espacio = await leerEspacio(slug);
   if (!espacio) notFound();
+  // Las rutas son comunes a todos los sectores: si este negocio no tiene
+  // el módulo encendido, esta página no existe para él.
+  if (!moduloActivo(espacio, "reservations")) notFound();
 
   const { negocio, ajustes } = espacio;
   const horario = horarioLegible(ajustes.opening_hours ?? []);
