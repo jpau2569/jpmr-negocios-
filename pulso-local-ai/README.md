@@ -192,6 +192,28 @@ Las pruebas de RLS **contra una base de datos real** (aislamiento entre dos
 negocios de verdad) están en `docs/pruebas-rls.md` como guion SQL para ejecutar
 en Supabase.
 
+## Antes de enseñar un espacio a alguien
+
+`npm test` mira el código. Esto mira el **despliegue real**:
+
+```bash
+node herramientas/comprobar-despliegue.mjs --url https://app.tudominio.com
+node herramientas/comprobar-despliegue.mjs --url https://… --negocio otro-slug --qr castresana
+```
+
+Comprueba que la landing carga de verdad (no la pantalla de error), que hay
+inmuebles publicados, que el QR corto resuelve al negocio, que un formulario sin
+consentimiento se rechaza, que la trampa anti-bots responde sin guardar nada, que
+el cron está protegido, que un espacio en demo no se indexa en Google y que el
+enlace de reseñas está puesto.
+
+Cada línea sale como **OK**, **AVISO** (se puede enseñar, pero mírarlo) o
+**FALLO** (no lo enseñes). Si algo no se puede verificar —porque la landing no
+carga, por ejemplo— lo dice en vez de inventarse un OK. Sale con código 1 si hay
+fallos, así que se puede encadenar en un script.
+
+Pásalo **antes de mandar un enlace a un cliente y antes de imprimir un cartel**.
+
 ## Despliegue en Vercel
 
 1. **Importa el proyecto** y pon como *Root Directory* `pulso-local-ai` (esta
