@@ -176,8 +176,14 @@ test("lo no confirmado por el negocio va marcado", () => {
 });
 
 test("no se inventa ningún enlace de reseñas", () => {
+  // La regla no es "siempre vacío": es que, si hay enlace, lo haya dado el
+  // negocio y sea de Google. Una reseña que acaba en la ficha equivocada no
+  // se recupera, así que jamás se construye una URL a mano.
+  const DE_GOOGLE = /^https:\/\/(maps\.app\.goo\.gl|g\.page|search\.google\.com|www\.google\.com)\//;
   for (const [slug, esp] of Object.entries(datos)) {
-    assert.equal(esp.ajustes.review_url, null, `${slug} tiene review_url inventada`);
+    const url = esp.ajustes.review_url;
+    if (url === null) continue;
+    assert.match(url, DE_GOOGLE, `${slug}: la review_url no es un enlace de Google`);
   }
 });
 
@@ -259,9 +265,12 @@ test("cada negocio dice qué le falta por confirmar", () => {
   for (const [slug, esp] of Object.entries(datos)) {
     assert.ok(Array.isArray(esp.ajustes.pending_notes), `${slug} sin lista de pendientes`);
     assert.ok(esp.ajustes.pending_notes.length > 0, `${slug} debería declarar lo que le falta`);
+    // Todo negocio tiene algo que decir sobre su enlace de Google: o falta,
+    // o el que hay abre la ficha en vez del formulario de reseña. Se exige
+    // que lo declare, no una frase concreta.
     assert.ok(
-      esp.ajustes.pending_notes.some((n) => /Google Reviews/i.test(n)),
-      `${slug} debe avisar de que falta el enlace de Google`,
+      esp.ajustes.pending_notes.some((n) => /Google/i.test(n)),
+      `${slug} debe declarar en qué estado está su enlace de Google`,
     );
   }
   // Todo negocio con botón de WhatsApp tiene que declarar qué le falta por

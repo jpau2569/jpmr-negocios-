@@ -275,9 +275,9 @@ select assert((select jsonb_array_length(opening_hours -> 1 -> 'ranges') from bu
                where b.slug = 'asesoria-castresana') = 2,
   'los lunes abre en dos tramos, manana y tarde');
 
-select assert((select count(*) from business_settings s join businesses b on b.id = s.business_id
-               where b.slug = 'asesoria-castresana' and s.review_url is not null) = 0,
-  'ninguna review_url inventada: sin enlace oficial, no hay boton de Google');
+select assert((select review_url from business_settings s join businesses b on b.id = s.business_id
+               where b.slug = 'asesoria-castresana') = 'https://maps.app.goo.gl/rJXqk2JiHjRsev1g7',
+  'lleva el enlace de Google que dio el dueno, ni uno construido a mano');
 
 -- Lo mas importante de todo: no se ha sembrado ni un piso de mentira en la
 -- demo de una agencia REAL. La cartera entra por sincronizacion o a mano.

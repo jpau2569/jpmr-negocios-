@@ -128,9 +128,20 @@ export const CONFIRMADO = {
     // lo mismo que sql/05_castresana.sql; hay una prueba que lo compara.
     telefonoAltEtiqueta: "Oficina (fijo): 985 21 04 68 · Otro WhatsApp: 672 77 57 21",
 
+    // Enlace de compartir de su ficha de Google, facilitado por Pau el
+    // 2026-09-15. OJO: es un enlace de FICHA, no de "escribir reseña". Abre el
+    // perfil del negocio y el cliente tiene que buscar el botón de opinar: una
+    // pulsación más. El bueno sería el g.page/r/.../review que da el panel de
+    // Google Business ("Pedir reseñas"), y está pendiente.
+    //
+    // No se ha podido verificar desde el entorno de desarrollo: la política de
+    // red no deja salir a dominios de Google. Lo dio Pau, que es el dueño.
+    reviewUrl: "https://maps.app.goo.gl/rJXqk2JiHjRsev1g7",
+    reviewUrlDirecto: false,
+
     pendiente: [
       "Falta confirmar cuál de los dos móviles (689 92 99 26 o 672 77 57 21) es el WhatsApp principal",
-      "Falta el enlace oficial de Google Reviews: sin él no se pinta el botón de reseña",
+      "El enlace de Google abre la ficha, no el formulario de reseña: con el enlace directo el cliente se ahorra una pulsación",
       "La cartera se carga desde la web oficial al pulsar «Sincronizar» en el panel",
       "Ningún inmueble tiene todavía cargada la etiqueta energética (obligatoria en anuncios, RD 390/2021)",
     ],

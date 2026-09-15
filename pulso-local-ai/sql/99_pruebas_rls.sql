@@ -172,8 +172,14 @@ select assert((select count(*) from menu_items i join businesses b on b.id = i.b
   'los 14 platos ya confirmados NO están marcados is_demo');
 select assert((select count(*) from daily_menus where is_demo) >= 1,
   'el menú del día de muestra está marcado como muestra');
-select assert((select count(*) from business_settings where review_url is not null) = 0,
+select assert((select count(*) from business_settings s join businesses b on b.id = s.business_id
+               where b.sector = 'hosteleria' and s.review_url is not null) = 0,
   'ninguna review_url inventada: sin enlace oficial, no hay botón de Google');
+-- Y la que SÍ hay tiene que ser un dominio de Google, no una URL cualquiera.
+select assert((select count(*) from business_settings
+               where review_url is not null
+                 and review_url !~ '^https://(maps\.app\.goo\.gl|g\.page|search\.google\.com|www\.google\.com)/') = 0,
+  'las review_url cargadas son enlaces de Google, no de cualquier sitio');
 -- "Siempre a ambos al móvil, no al fijo": los dos WhatsApp son móviles
 -- españoles (34 + 6 o 7 + 8 cifras), y ningún fijo del local se cuela.
 select assert((select count(*) from business_settings where whatsapp is not null

@@ -46,7 +46,10 @@ insert into business_settings (
   'inmobiliariacastresana@gmail.com',
   'https://www.asesoriacastresana.com',
   null, null, null,
-  null,  -- review_url: PENDIENTE del enlace oficial de Google. Sin él, no hay botón.
+  -- Enlace de compartir de su ficha de Google, facilitado por Pau el 2026-09-15.
+  -- OJO: abre la FICHA, no el formulario de reseña. El bueno seria el
+  -- g.page/r/.../review del panel de Google Business; queda en pendientes.
+  'https://maps.app.goo.gl/rJXqk2JiHjRsev1g7',
   -- Oficina: dos tramos de lunes a viernes, cerrado el fin de semana.
   '[{"dow":0,"ranges":[]},
     {"dow":1,"ranges":[["10:00","14:00"],["17:00","19:00"]]},
@@ -63,7 +66,7 @@ insert into business_settings (
     "menu":false,"daily_menu":false,"special_menus":false,"reservations":false,
     "groups":false,"loyalty":false}'::jsonb,
   '["Falta confirmar cuál de los dos móviles (689 92 99 26 o 672 77 57 21) es el WhatsApp principal",
-    "Falta el enlace oficial de Google Reviews: sin él no se pinta el botón de reseña",
+    "El enlace de Google abre la ficha, no el formulario de reseña: con el enlace directo el cliente se ahorra una pulsación",
     "La cartera todavía no está sincronizada desde la web oficial",
     "Ningún inmueble tiene cargada la etiqueta energética, obligatoria en anuncios (RD 390/2021)"]'::jsonb)
 on conflict (business_id) do nothing;

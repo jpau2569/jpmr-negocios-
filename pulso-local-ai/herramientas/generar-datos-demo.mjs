@@ -183,8 +183,9 @@ function construirAgencia({ slug, nombre, eslogan, plantilla }) {
       phone_alt_label: ok.telefonoAltEtiqueta ?? null,
       whatsapp: ok.whatsapp ?? null,
       email: ok.email ?? null,
-      // PENDIENTE. Sin enlace oficial no hay botón de Google. Jamás se inventa.
-      review_url: null,
+      // Solo si el negocio ha dado su enlace OFICIAL. Jamás se construye uno
+      // a mano: una reseña que acaba en la ficha equivocada no se recupera.
+      review_url: ok.reviewUrl ?? null,
       website: ok.web ?? null,
       instagram: ok.instagram ?? null,
       facebook: null, tiktok: null, tripadvisor: null,

@@ -315,8 +315,11 @@ test("el horario de oficina es el nuevo: 10-14 y 17-19, de lunes a viernes", () 
 test("no hay ni un inmueble inventado en la demo de una agencia real", () => {
   assert.deepEqual(CAS.inmuebles, [],
     "la cartera se sincroniza desde su web, no se siembra a mano");
-  assert.equal(CAS.ajustes.review_url, null,
-    "ni una review_url inventada");
+  // El enlace de Google es el que dio el dueño, no uno construido a mano:
+  // una reseña que acaba en la ficha equivocada no se recupera.
+  assert.match(CAS.ajustes.review_url,
+    /^https:\/\/(maps\.app\.goo\.gl|g\.page|search\.google\.com)\//,
+    "la review_url es un enlace de Google");
 });
 
 test("la agencia declara por escrito lo que le falta", () => {
