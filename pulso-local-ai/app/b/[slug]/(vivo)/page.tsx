@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { leerEspacio, destacados, especialesVigentes, platosConEtiqueta } from "@/lib/datos";
+import {
+  leerEspacio, destacados, especialesVigentes, platosConEtiqueta, inmueblesDestacados,
+} from "@/lib/datos";
 import { Seccion, Tarjeta, Vacio, SinConfirmar } from "@/components/ui/basicos";
 import { EnlaceBoton } from "@/components/ui/boton";
 import { Hero } from "@/components/publico/hero";
 import { MenuDelDia } from "@/components/publico/menu-dia";
 import { FichaPlato } from "@/components/publico/plato";
+import { TarjetaInmueble } from "@/components/publico/inmueble";
 import { IniciarAnalitica, Vista, Rastreador } from "@/components/publico/rastreador";
 import { BloqueFidelizacion } from "@/components/publico/fidelizacion";
 import { euros, fechaLarga } from "@/lib/utils";
@@ -35,6 +38,7 @@ export default async function PaginaNegocio({ params, searchParams }: Props) {
   const { negocio, ajustes, categorias } = espacio;
   const base = `/b/${negocio.slug}`;
   const modulos = ajustes.modules ?? {};
+  const inmueblesPortada = inmueblesDestacados(espacio, 6);
   const wasap = enlaceWhatsapp(ajustes.whatsapp, negocio.name, { tipo: "grupo" });
 
   const recomendados = destacados(espacio, 6);
@@ -48,6 +52,49 @@ export default async function PaginaNegocio({ params, searchParams }: Props) {
       <Hero espacio={espacio} />
 
       {modulos.daily_menu !== false ? <MenuDelDia espacio={espacio} /> : null}
+
+      {/* --- Cartera (inmobiliaria) ---
+          Va lo primero después del hero por el mismo motivo que el menú del
+          día en un bar: es lo que la persona ha venido a ver. Quien escanea
+          el QR del escaparate de noche quiere pisos, no "quiénes somos". */}
+      {modulos.properties ? (
+        <Seccion
+          id="cartera"
+          titulo="Nuestra cartera"
+          descripcion={
+            inmueblesPortada.length > 0
+              ? "Mira lo que tenemos ahora mismo y pide visita desde la ficha."
+              : "Todavía no hay inmuebles cargados aquí."
+          }
+        >
+          {inmueblesPortada.length === 0 ? (
+            <Vacio>
+              Estamos cargando la cartera. Si buscas algo concreto, escríbenos y
+              te decimos qué tenemos hoy.
+            </Vacio>
+          ) : (
+            <>
+              <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {inmueblesPortada.map((i) => (
+                  <li key={i.id}>
+                    <TarjetaInmueble inmueble={i} slug={negocio.slug} />
+                  </li>
+                ))}
+              </ul>
+              {espacio.inmuebles.length > inmueblesPortada.length ? (
+                <EnlaceBoton
+                  href={`/b/${negocio.slug}/inmuebles`}
+                  variante="contorno"
+                  tamano="bloque"
+                  className="mt-5"
+                >
+                  Ver los {espacio.inmuebles.length} inmuebles
+                </EnlaceBoton>
+              ) : null}
+            </>
+          )}
+        </Seccion>
+      ) : null}
 
       {/* --- Platos destacados --- */}
       {recomendados.length > 0 ? (

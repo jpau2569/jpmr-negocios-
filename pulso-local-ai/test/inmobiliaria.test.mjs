@@ -668,3 +668,35 @@ test("las dos vías de alta registran el QR del inmueble", () => {
       `${ruta}: un inmueble que ya tenía QR conserva el suyo, para que el cartel impreso siga valiendo`);
   }
 });
+
+// ============================================================================
+//  LA PORTADA HABLA EL IDIOMA DE SU SECTOR
+// ----------------------------------------------------------------------------
+//  Esto se coló hasta producción: la portada de una inmobiliaria decía "Hoy se
+//  come, se brinda y se disfruta" y "reserva tu mesa", y no tenía ni un enlace
+//  a la cartera. Los módulos estaban bien; el TEXTO estaba escrito a pelo.
+//
+//  La prueba no mira el diseño: mira que el texto dependa del sector y que la
+//  portada lleve a lo que el negocio vende.
+// ============================================================================
+
+test("el hero no tiene el texto de restaurante escrito a pelo", () => {
+  const codigo = readFileSync(join(RAIZ, "components", "publico", "hero.tsx"), "utf8");
+  // Las frases de hostelería deben salir de una variable que dependa del
+  // sector, no estar sueltas dentro del JSX.
+  const jsx = codigo.slice(codigo.indexOf("return ("));
+  for (const frase of ["se come, se brinda", "reserva tu mesa"]) {
+    assert.ok(!jsx.includes(frase),
+      `«${frase}» está escrito a pelo en el hero: saldría en la portada de una inmobiliaria`);
+  }
+  assert.match(codigo, /esInmobiliaria/, "el hero decide según el sector");
+  assert.match(codigo, /\/inmuebles/, "y ofrece la cartera cuando toca");
+});
+
+test("la portada de una inmobiliaria enseña su cartera", () => {
+  const codigo = readFileSync(join(RAIZ, "app", "b", "[slug]", "(vivo)", "page.tsx"), "utf8");
+  assert.match(codigo, /modulos\.properties \?/,
+    "la sección de cartera solo existe si el negocio la tiene");
+  assert.match(codigo, /TarjetaInmueble/, "y pinta los inmuebles de verdad");
+  assert.match(codigo, /id="cartera"/);
+});
