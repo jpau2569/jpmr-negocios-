@@ -17,7 +17,11 @@ export type ContextoWhatsapp =
   | { tipo: "menu_dia" }
   | { tipo: "plato"; plato: string }
   | { tipo: "grupo" }
-  | { tipo: "evento"; evento: string };
+  | { tipo: "evento"; evento: string }
+  // Inmobiliaria. El mensaje lleva la referencia dentro a propósito: quien lo
+  // recibe en la agencia sabe de qué piso le hablan sin tener que preguntar.
+  | { tipo: "visita"; detalle?: string }
+  | { tipo: "inmueble"; detalle: string };
 
 export function mensajeWhatsapp(negocio: string, contexto: ContextoWhatsapp): string {
   switch (contexto.tipo) {
@@ -31,6 +35,12 @@ export function mensajeWhatsapp(negocio: string, contexto: ContextoWhatsapp): st
       return `Hola, quiero consultar una celebración o reserva de grupo.`;
     case "evento":
       return `Hola, quiero información sobre ${contexto.evento}.`;
+    case "visita":
+      return contexto.detalle
+        ? `Hola, me gustaría visitar ${contexto.detalle}.`
+        : `Hola, me gustaría concertar una visita con ${negocio}.`;
+    case "inmueble":
+      return `Hola, me interesa ${contexto.detalle}. ¿Sigue disponible?`;
     default:
       return `Hola, os escribo desde la web de ${negocio}.`;
   }

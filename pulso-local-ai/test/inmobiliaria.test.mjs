@@ -212,3 +212,54 @@ test("el enlace privado no puede existir sin token, ni al revés", () => {
   assert.match(sql, /constraint energia_coherente check/);
   assert.match(sql, /constraint precio_coherente check/);
 });
+
+// ============================================================================
+//  EL TIPO Y EL SQL TIENEN QUE DECIR LO MISMO
+// ----------------------------------------------------------------------------
+//  TipoEventoAnalitica (TypeScript) y el enum analytics_event (PostgreSQL) son
+//  la misma lista escrita dos veces. Si se separan, el typecheck pasa, el
+//  build pasa, y la inserción revienta en producción con un evento que la base
+//  no conoce. Esta prueba es el único sitio donde eso se nota a tiempo.
+// ============================================================================
+
+test("los eventos de analítica del sector existen en el tipo y en el enum SQL", () => {
+  const tipos = readFileSync(join(RAIZ, "types", "negocio.ts"), "utf8");
+  const sql = readFileSync(join(RAIZ, "sql", "04_inmobiliaria.sql"), "utf8");
+
+  const delSql = [...sql.matchAll(/alter type analytics_event add value if not exists '([a-z_]+)'/g)]
+    .map((m) => m[1]);
+  assert.ok(delSql.length >= 8, "el SQL añade los eventos del sector");
+
+  // El bloque del tipo: desde qr_print_preview (último de hostelería) hasta el
+  // punto y coma que cierra la unión.
+  const bloque = tipos.slice(tipos.indexOf('| "ai_chat_open"'));
+  const delTipo = new Set([...bloque.slice(0, bloque.indexOf(";")).matchAll(/"([a-z_]+)"/g)]
+    .map((m) => m[1]));
+
+  for (const evento of delSql) {
+    assert.ok(delTipo.has(evento),
+      `«${evento}» está en el SQL pero NO en TipoEventoAnalitica: la inserción reventaría`);
+  }
+});
+
+test("los estados y tipos de inmueble coinciden entre TypeScript y el SQL", () => {
+  const tipos = readFileSync(join(RAIZ, "types", "negocio.ts"), "utf8");
+  const sql = readFileSync(join(RAIZ, "sql", "04_inmobiliaria.sql"), "utf8");
+
+  const enumSql = (nombre) => {
+    const m = sql.match(new RegExp(`create type ${nombre} as enum \\(([^)]+)\\)`));
+    assert.ok(m, `existe el enum ${nombre}`);
+    return [...m[1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]).sort();
+  };
+
+  const clavesDe = (constante) => {
+    const m = tipos.match(new RegExp(`${constante}[^=]*= \\{([\\s\\S]*?)\\n\\};`));
+    assert.ok(m, `existe ${constante}`);
+    return [...m[1].matchAll(/^\s{2}([a-z_]+):/gm)].map((x) => x[1]).sort();
+  };
+
+  assert.deepEqual(clavesDe("TIPOS_INMUEBLE_ES"), enumSql("property_kind"),
+    "cada tipo de inmueble del SQL tiene su texto en español, y ninguno sobra");
+  assert.deepEqual(clavesDe("ESTADO_OPERACION_ES"), enumSql("property_deal_state"));
+  assert.deepEqual(clavesDe("ESTADO_ENERGIA_ES"), enumSql("energy_status"));
+});

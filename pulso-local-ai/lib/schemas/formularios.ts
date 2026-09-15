@@ -99,6 +99,37 @@ export const esquemaGrupo = z.object({
 });
 export type DatosGrupo = z.infer<typeof esquemaGrupo>;
 
+/* --- Petición de visita (inmobiliaria) ---------------------------------------
+   El equivalente a la reserva de mesa, pero no se parece en nada: aquí no hay
+   comensales ni hora exacta. Una agencia no confirma una hora por web sin
+   hablar antes con la propiedad, así que se pide FRANJA, no hora: prometer
+   "mañana a las 17:00" y luego llamar para cambiarlo quema la confianza justo
+   al empezar.
+
+   `property_ref` es opcional a propósito: alguien puede pedir visita desde el
+   listado sin haber elegido piso, y ese contacto vale exactamente igual. */
+
+export const esquemaVisita = z.object({
+  slug: z.string().min(1),
+  // Referencia comercial del inmueble (PIS0210). Vacío = petición general.
+  property_ref: z.string().trim().max(20).optional().or(z.literal("")),
+  name: nombre,
+  phone: telefono,
+  email: email.optional().or(z.literal("")),
+  preferred_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elige un día")
+    .optional().or(z.literal("")),
+  preferred_slot: z.enum(["manana", "tarde", "indiferente"]).default("indiferente"),
+  // Saberlo antes ahorra visitas que no llevan a ninguna parte, pero es
+  // voluntario: nadie tiene que contar sus finanzas para ver un piso.
+  needs_financing: z.enum(["si", "no", "no_lo_se"]).optional(),
+  comments: comentario,
+  consent: consentimiento,
+  website: honeypot,
+  qr: qrToken,
+  utm,
+});
+export type DatosVisita = z.infer<typeof esquemaVisita>;
+
 /* --- Feedback ----------------------------------------------------------------
    El comentario es opcional con CUALQUIER puntuación, y los datos de contacto
    solo se piden si la persona quiere que le respondan. */

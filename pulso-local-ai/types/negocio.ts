@@ -59,7 +59,12 @@ export type TipoEventoAnalitica =
   | "directions_click" | "reservation_start" | "reservation_submit"
   | "group_request_start" | "group_request_submit" | "feedback_start"
   | "feedback_submit" | "google_review_click" | "promotion_view" | "lead_submit"
-  | "ai_chat_open" | "ai_question_submit" | "qr_download" | "qr_print_preview";
+  | "ai_chat_open" | "ai_question_submit" | "qr_download" | "qr_print_preview"
+  // Inmobiliaria. Los mismos valores que añade sql/04_inmobiliaria.sql al
+  // enum analytics_event: si aquí y allí no coinciden, la inserción revienta.
+  | "property_list_view" | "property_view" | "property_photo_view"
+  | "private_link_view" | "visit_request_start" | "visit_request_submit"
+  | "valuation_start" | "valuation_submit";
 
 export type DestinoQr =
   | "landing" | "menu" | "daily_menu" | "reservation" | "group" | "review"
