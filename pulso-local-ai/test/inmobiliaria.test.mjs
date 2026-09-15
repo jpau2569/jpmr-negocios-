@@ -19,7 +19,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, mkdtempSync, writeFileSync } from "node:fs";
+import { readFileSync, mkdtempSync, writeFileSync, copyFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -31,7 +31,12 @@ const RAIZ = resolve(AQUI, "..");
  *  web, no una copia a la que se le han quitado los tipos con expresiones
  *  regulares y que se desincroniza al primer cambio. */
 let cache = null;
-async function cargar(archivoTs, salidaRelativa) {
+/**
+ * @param copiar  Archivos .mjs que el módulo importa tal cual. tsc no los
+ *   copia a la carpeta de salida (no son TypeScript), así que sin esto el
+ *   import de lib/qr/nucleo.mjs no resuelve.
+ */
+async function cargar(archivoTs, salidaRelativa, copiar = []) {
   if (cache?.[archivoTs]) return cache[archivoTs];
   const salida = mkdtempSync(join(RAIZ, ".test-build-"));
   const config = join(salida, "tsconfig.json");
@@ -46,6 +51,11 @@ async function cargar(archivoTs, salidaRelativa) {
   }));
   execFileSync(process.platform === "win32" ? "npx.cmd" : "npx",
     ["tsc", "--project", config], { cwd: RAIZ, stdio: "pipe" });
+  for (const relativo of copiar) {
+    const destino = join(salida, relativo);
+    mkdirSync(dirname(destino), { recursive: true });
+    copyFileSync(join(RAIZ, relativo), destino);
+  }
   const modulo = await import(pathToFileURL(join(salida, salidaRelativa)).href);
   cache = { ...(cache ?? {}), [archivoTs]: modulo };
   return modulo;
@@ -531,4 +541,130 @@ test("la sincronización nunca borra, solo despublica", () => {
     "toda escritura filtra por negocio: service_role salta RLS");
   assert.match(codigo, /plan\.abortado/,
     "respeta la negativa del plan cuando no se ha podido leer la web");
+});
+
+// ============================================================================
+//  EL CARTEL A4 DEL ESCAPARATE
+// ----------------------------------------------------------------------------
+//  Es el que se imprime y se pega al cristal. Un QR mal en un cartel ya
+//  impreso no se arregla, así que se comprueba que dentro lleva exactamente
+//  la URL de ESE inmueble, reconstruyendo la matriz por separado.
+// ============================================================================
+
+const cargarQr = () => cargar("lib/qr/index.ts", "lib/qr/index.js", ["lib/qr/nucleo.mjs"]);
+
+test("el cartel A4 mide un A4 de verdad", async () => {
+  const { cartelA4Inmueble } = await cargarQr();
+  const svg = cartelA4Inmueble({
+    url: "https://x.test/b/a/inmueble/piso-p1?qr=p-P1",
+    negocio: "Agencia", titulo: "Piso", precio: "165.000 €",
+  });
+  assert.match(svg, /width="210mm" height="297mm"/);
+});
+
+test("el cartel lleva el precio y el resumen, y nunca un cero", async () => {
+  const { cartelA4Inmueble } = await cargarQr();
+  const svg = cartelA4Inmueble({
+    url: "https://x.test/b/a/inmueble/p?qr=t",
+    negocio: "Asesoría Castresana", titulo: "Piso en el centro",
+    precio: "Consultar", resumen: "3 hab · 2 baños · 90 m²", referencia: "PIS0210",
+  });
+  assert.match(svg, /Consultar/);
+  assert.match(svg, /3 hab/);
+  assert.match(svg, /PIS0210/);
+  assert.ok(!/>0 €</.test(svg), "un precio a consultar no se pinta como 0 €");
+});
+
+test("un vendido lleva su sello y uno disponible no", async () => {
+  const { cartelA4Inmueble } = await cargarQr();
+  const base = { url: "https://x.test/b/a/inmueble/p?qr=t", negocio: "A", titulo: "T", precio: "1 €" };
+  assert.match(cartelA4Inmueble({ ...base, sello: "Vendido" }), /VENDIDO/);
+  assert.ok(!/VENDIDO/.test(cartelA4Inmueble(base)), "sin sello no se pinta nada");
+});
+
+test("el título largo se corta sin partir palabras", async () => {
+  const { cartelA4Inmueble } = await cargarQr();
+  const svg = cartelA4Inmueble({
+    url: "https://x.test/b/a/inmueble/p?qr=t", negocio: "A", precio: "1 €",
+    titulo: "Piso reformado de tres habitaciones con ascensor y plaza de garaje en el centro de Oviedo",
+  });
+  assert.match(svg, /…/, "se recorta");
+  assert.ok(!/garaj</.test(svg), "no parte una palabra por la mitad");
+});
+
+test("la URL del QR de un inmueble apunta a ESE inmueble", async () => {
+  const { urlDeQr } = await cargarQr();
+  assert.equal(
+    urlDeQr("https://pulso.test", "asesoria-castresana", "p-PIS0210", "property", "piso-en-oviedo-pis0210"),
+    "https://pulso.test/b/asesoria-castresana/inmueble/piso-en-oviedo-pis0210?qr=p-PIS0210",
+  );
+  // Y los destinos del sector que no son un inmueble concreto:
+  assert.match(urlDeQr("https://p.test", "a", "t", "listings"), /\/b\/a\/inmuebles\?qr=t$/);
+  assert.match(urlDeQr("https://p.test", "a", "t", "valuation"), /\/b\/a\/valoracion\?qr=t$/);
+});
+
+test("el QR impreso en el A4 codifica esa URL exacta, no otra", async () => {
+  const { cartelA4Inmueble } = await cargarQr();
+  const { matriz } = await import(resolve(RAIZ, "lib/qr/nucleo.mjs"));
+
+  const url = "https://pulso-local-ai.vercel.app/b/asesoria-castresana/inmueble/piso-oviedo-pis0210?qr=p-PIS0210";
+  const svg = cartelA4Inmueble({ url, negocio: "Asesoría Castresana", titulo: "Piso", precio: "165.000 €" });
+
+  // Se reconstruye la ruta igual que qrIncrustado, a mano y aquí: si el
+  // generador se equivoca, esta prueba no se equivoca con él.
+  const { tamano, modulos } = matriz(url, { nivel: "Q" });
+  const margen = 4, total = tamano + margen * 2, paso = 100 / total;
+  let d = "";
+  for (let f = 0; f < tamano; f += 1) {
+    for (let c = 0; c < tamano; c += 1) {
+      if (modulos[f][c]) {
+        d += `M${(55 + (c + margen) * paso).toFixed(2)} ${(110 + (f + margen) * paso).toFixed(2)}`
+          + `h${paso.toFixed(2)}v${paso.toFixed(2)}h-${paso.toFixed(2)}z`;
+      }
+    }
+  }
+  assert.ok(svg.includes(`d="${d}"`), "el QR del cartel no lleva dentro esa URL");
+
+  // Control: otra referencia tiene que dar un QR distinto. Si no, la prueba
+  // no valdría nada y dos pisos compartirían cartel.
+  const otro = cartelA4Inmueble({
+    url: url.replace("PIS0210", "PIS0211"), negocio: "Asesoría Castresana",
+    titulo: "Piso", precio: "165.000 €",
+  });
+  assert.notEqual(svg, otro, "dos inmuebles distintos no pueden dar el mismo cartel");
+});
+
+test("el token del QR no choca entre dos agencias con la misma referencia", async () => {
+  const { tokenDeInmueble } = await cargarQr();
+  const a = "c58209b6-f648-519c-b92d-7eb6b48083a8";
+  const b = "aaaaaaaa-0000-4000-8000-000000000001";
+  // PIS0210 lo usan las dos sin saberlo la una de la otra, y qr_codes.token
+  // es único en TODA la base: sin prefijo, la segunda se quedaría sin QR.
+  assert.notEqual(tokenDeInmueble(a, "PIS0210"), tokenDeInmueble(b, "PIS0210"));
+});
+
+test("el token es determinista: un cartel impreso sigue valiendo", async () => {
+  const { tokenDeInmueble } = await cargarQr();
+  const id = "c58209b6-f648-519c-b92d-7eb6b48083a8";
+  assert.equal(tokenDeInmueble(id, "PIS0210"), tokenDeInmueble(id, "PIS0210"));
+});
+
+test("el token siempre cumple lo que exige la base", async () => {
+  const { tokenDeInmueble } = await cargarQr();
+  const id = "c58209b6-f648-519c-b92d-7eb6b48083a8";
+  // constraint token_valido: ^[a-zA-Z0-9_-]{4,32}$
+  for (const ref of ["PIS0210", "REF/2024-A", "ÁTICO Nº3", "€€€", "A".repeat(40)]) {
+    const t = tokenDeInmueble(id, ref);
+    assert.match(t, /^[a-zA-Z0-9_-]{4,32}$/, `«${ref}» genera un token que la base rechazaría: ${t}`);
+  }
+});
+
+test("las dos vías de alta registran el QR del inmueble", () => {
+  for (const ruta of ["sincronizar-cartera", "inmueble"]) {
+    const codigo = readFileSync(join(RAIZ, "app", "api", "panel", ruta, "route.ts"), "utf8");
+    assert.match(codigo, /tokenDeInmueble/, `${ruta} debe registrar el QR`);
+    assert.match(codigo, /target:\s*"property"/, `${ruta} debe marcarlo como QR de inmueble`);
+    assert.match(codigo, /ignoreDuplicates:\s*true/,
+      `${ruta}: un inmueble que ya tenía QR conserva el suyo, para que el cartel impreso siga valiendo`);
+  }
 });

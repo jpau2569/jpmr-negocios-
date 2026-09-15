@@ -42,6 +42,10 @@ export interface InmueblePanel {
   energy_status: "disponible" | "en_tramite" | "exento" | "pendiente";
   source: "web" | "manual" | "portal";
   private_token: string | null;
+  /** Trozo de URL del inmueble: hace falta para su QR y su cartel. */
+  slug: string;
+  /** Token de su QR, tal y como está en la base. null = todavía no tiene. */
+  qrToken: string | null;
 }
 
 interface Props {
@@ -362,7 +366,8 @@ export function EditorInmuebles({ slug, negocio, web, inmuebles, hayBackend }: P
                   <th className="pb-2 pr-3">Inmueble</th>
                   <th className="pb-2 pr-3">Precio</th>
                   <th className="pb-2 pr-3">Estado</th>
-                  <th className="pb-2">Quién lo ve</th>
+                  <th className="pb-2 pr-3">Quién lo ve</th>
+                  <th className="pb-2">Su cartel</th>
                 </tr>
               </thead>
               <tbody>
@@ -381,13 +386,30 @@ export function EditorInmuebles({ slug, negocio, web, inmuebles, hayBackend }: P
                       {i.price_cents === null ? "Consultar" : euros(i.price_cents)}
                     </td>
                     <td className="py-2.5 pr-3">{ESTADO_OPERACION_ES[i.deal_state]}</td>
-                    <td className="py-2.5">
+                    <td className="py-2.5 pr-3">
                       {i.visibility === "publico"
                         ? "Todos"
                         : i.visibility === "enlace_privado"
                           ? "Solo con el enlace"
                           : "Solo tú"}
                       {i.status !== "published" ? " · sin publicar" : ""}
+                    </td>
+                    <td className="py-2.5">
+                      {/* El cartel A4 solo existe para los públicos: el de un
+                          inmueble de enlace privado, colgado en el escaparate,
+                          dejaría de ser privado en el acto. */}
+                      {i.visibility === "publico" && i.status === "published" && i.qrToken ? (
+                        <a
+                          href={`/api/qr/${encodeURIComponent(i.qrToken)}?negocio=${slug}&destino=property&inmueble=${encodeURIComponent(i.slug)}&formato=a4`}
+                          target="_blank"
+                          rel="noopener"
+                          className="text-[#d4a03c] underline"
+                        >
+                          A4 escaparate
+                        </a>
+                      ) : (
+                        <span className="text-white/25">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}

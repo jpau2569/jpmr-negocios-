@@ -4,6 +4,7 @@ import { admin } from "@/lib/supabase/servidor";
 import { escribir } from "@/lib/panel";
 import { esquemaSincronizar } from "@/lib/schemas/panel";
 import { obtenerCartera, fuenteInmoweb, slugDeInmueble } from "@/lib/cartera";
+import { tokenDeInmueble } from "@/lib/qr";
 import { planificarSincronizacion, resumenDelPlan, type InmuebleGuardado } from "@/lib/cartera/fusion";
 
 // ============================================================================
@@ -111,6 +112,25 @@ export async function POST(peticion: Request) {
         const { error: falloFoto } = await db.from("property_photos").insert(conFoto);
         // Una foto que no entra no debe tumbar la sincronización entera.
         if (falloFoto) console.error("[pulso-local-ai] fotos de la sincronización:", falloFoto);
+      }
+
+      // Su QR, uno por inmueble. Es lo que convierte "el escaparate funciona"
+      // en "tu piso se ha visto 47 veces este mes": sin una fila por inmueble,
+      // la visita no se puede atribuir al cartel del que vino.
+      const qrs = (creados ?? []).map((c) => ({
+        business_id: negocio.id,
+        token: tokenDeInmueble(negocio.id, c.reference),
+        label: `Escaparate · ${c.reference}`,
+        target: "property",
+        location: "window",
+        location_ref: c.id,
+      }));
+      if (qrs.length > 0) {
+        // on conflict: un inmueble que ya tuvo QR y vuelve a entrar conserva
+        // el suyo, para que el cartel impreso siga valiendo.
+        const { error: falloQr } = await db
+          .from("qr_codes").upsert(qrs, { onConflict: "token", ignoreDuplicates: true });
+        if (falloQr) console.error("[pulso-local-ai] QR de la sincronización:", falloQr);
       }
     }
 

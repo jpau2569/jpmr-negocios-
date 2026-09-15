@@ -5,6 +5,7 @@ import { admin } from "@/lib/supabase/servidor";
 import { escribir } from "@/lib/panel";
 import { esquemaInmueble } from "@/lib/schemas/panel";
 import { slugDeInmueble } from "@/lib/cartera";
+import { tokenDeInmueble } from "@/lib/qr";
 
 // ============================================================================
 //  Alta y corrección de un inmueble — /api/panel/inmueble
@@ -121,6 +122,18 @@ export async function POST(peticion: Request) {
       }
       throw fallo;
     }
+
+    // Su QR, igual que los que entran por sincronización: sin una fila por
+    // inmueble no se puede saber de qué cartel vino cada visita.
+    const { error: falloQr } = await db.from("qr_codes").upsert({
+      business_id: negocio.id,
+      token: tokenDeInmueble(negocio.id, datos.reference),
+      label: `Escaparate · ${datos.reference}`,
+      target: "property",
+      location: "window",
+      location_ref: creado.id,
+    }, { onConflict: "token", ignoreDuplicates: true });
+    if (falloQr) console.error("[pulso-local-ai] QR del alta manual:", falloQr);
 
     revalidatePath(`/b/${datos.slug}/inmuebles`);
     revalidatePath(`/b/${datos.slug}`);

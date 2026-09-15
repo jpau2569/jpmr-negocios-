@@ -28,13 +28,27 @@ async function leerCarteraCompleta(slug: string): Promise<InmueblePanel[]> {
   const { data } = await db
     .from("properties")
     .select(
-      "id, reference, title, operation, kind, price_cents, municipality,"
+      "id, reference, slug, title, operation, kind, price_cents, municipality,"
       + " visibility, deal_state, status, energy_status, source, private_token",
     )
     .eq("business_id", negocio.id)
     .order("position");
 
-  return (data ?? []) as unknown as InmueblePanel[];
+  const inmuebles = (data ?? []) as unknown as InmueblePanel[];
+
+  // El token del QR de cada inmueble sale de la base, NO se reconstruye aquí:
+  // si un día cambia la forma de generarlo, los carteles ya impresos siguen
+  // valiendo y el panel sigue enlazando al que se imprimió.
+  const { data: qrs } = await db
+    .from("qr_codes")
+    .select("token, location_ref")
+    .eq("business_id", negocio.id)
+    .eq("target", "property");
+
+  const porInmueble = new Map(
+    (qrs ?? []).map((q) => [q.location_ref as string, q.token as string]),
+  );
+  return inmuebles.map((i) => ({ ...i, qrToken: porInmueble.get(i.id) ?? null }));
 }
 
 export default async function PaginaInmuebles({

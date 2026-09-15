@@ -173,6 +173,69 @@ export function cartelA5(datos: DatosCartel): string {
 </svg>`;
 }
 
+/** Lo que distingue el cartel de un inmueble del de un bar. */
+export interface DatosCartelInmueble extends DatosCartel {
+  /** "165.000 €" o "Consultar". Nunca un cero. */
+  precio: string;
+  /** "3 hab · 2 baños · 90 m²". Puede ir vacío si no se sabe nada. */
+  resumen?: string;
+  referencia?: string;
+  /** Vendido, Reservado… Si va, se pinta en diagonal sobre el cartel. */
+  sello?: string;
+}
+
+/**
+ * Cartel A4 (210 × 297 mm) de UN inmueble, para el escaparate.
+ *
+ * Este es el que hace el trabajo de verdad: lo mira alguien de pie en la
+ * calle, de noche, con la oficina cerrada. Por eso el precio va enorme (es lo
+ * primero que busca cualquiera), el QR grande y bajo —a la altura cómoda para
+ * apuntar con el móvil pegado al cristal— y el reclamo dice qué va a pasar si
+ * escanea, no "escanéame".
+ *
+ * Que lleve QR PROPIO, y no uno general de la agencia, es lo que permite decir
+ * después: "tu piso se ha visto 47 veces este mes, 12 con la oficina cerrada".
+ */
+export function cartelA4Inmueble(datos: DatosCartelInmueble): string {
+  const {
+    url, negocio, titulo, precio, resumen = "", referencia = "",
+    reclamo = "Fotos, datos y pedir visita, en tu móvil",
+    pie = "", sello = "",
+    colorFondo = "#11161d", colorTinta = "#eef2f6", colorAcento = "#c9a227",
+  } = datos;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="297mm" viewBox="0 0 210 297">
+  <rect width="210" height="297" fill="${colorFondo}"/>
+  <rect x="8" y="8" width="194" height="281" rx="6" fill="none" stroke="${colorAcento}" stroke-width="0.7" opacity="0.5"/>
+
+  <text x="105" y="30" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="bold" fill="${colorTinta}">${escapar(negocio)}</text>
+
+  <text x="105" y="52" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="${colorTinta}">${escapar(recorte(titulo, 52))}</text>
+  ${resumen ? `<text x="105" y="63" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="6.5" fill="${colorTinta}" opacity="0.7">${escapar(resumen)}</text>` : ""}
+
+  <text x="105" y="90" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="${colorAcento}">${escapar(precio)}</text>
+
+  ${qrIncrustado(url, 55, 110, 100, "#000000")}
+
+  <text x="105" y="232" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="9" font-weight="bold" fill="${colorTinta}">${escapar(reclamo)}</text>
+  <text x="105" y="243" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="5.6" fill="${colorTinta}" opacity="0.65">Apunta con la cámara del móvil. No hace falta instalar nada.</text>
+  ${referencia ? `<text x="105" y="258" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="5.2" fill="${colorTinta}" opacity="0.5">Ref. ${escapar(referencia)}</text>` : ""}
+  ${pie ? `<text x="105" y="276" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="5" fill="${colorTinta}" opacity="0.45">${escapar(pie)}</text>` : ""}
+  ${sello ? `<g transform="rotate(-18 105 150)" opacity="0.9">
+    <rect x="42" y="135" width="126" height="30" rx="4" fill="none" stroke="${colorAcento}" stroke-width="2"/>
+    <text x="105" y="156" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" letter-spacing="3" fill="${colorAcento}">${escapar(sello.toUpperCase())}</text>
+  </g>` : ""}
+</svg>`;
+}
+
+/** Corta sin partir una palabra por la mitad, que en un cartel canta. */
+function recorte(texto: string, maximo: number): string {
+  if (texto.length <= maximo) return texto;
+  const corte = texto.slice(0, maximo);
+  const espacio = corte.lastIndexOf(" ");
+  return `${(espacio > maximo * 0.6 ? corte.slice(0, espacio) : corte).trimEnd()}…`;
+}
+
 /**
  * Pegatina de mesa o barra (70 × 90 mm). Pequeña, porque en una mesa de bar
  * compite con los platos: tiene que caber en un pie de metacrilato.
@@ -195,7 +258,37 @@ export function cartelMesa(datos: DatosCartel): string {
 }
 
 /** URL que codifica un QR, con su token para poder medir de dónde viene. */
-export function urlDeQr(base: string, slug: string, token: string, destino?: string): string {
+/**
+ * Token del QR de un inmueble.
+ *
+ * Lleva dentro un trozo del identificador del negocio por un motivo concreto:
+ * `qr_codes.token` es único EN TODA la base, y dos agencias distintas usan
+ * referencias como PIS0210 sin saber la una de la otra. Sin el prefijo, la
+ * segunda que sincronizara se quedaría sin QR por un choque absurdo.
+ *
+ * Es determinista a propósito: un cartel ya impreso tiene que seguir valiendo
+ * después de volver a sincronizar.
+ */
+export function tokenDeInmueble(businessId: string, referencia: string): string {
+  const negocio = businessId.replace(/-/g, "").slice(0, 8);
+  const ref = referencia
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 18);
+  // Si la referencia se queda en nada (venía solo con símbolos), se usa su
+  // posición en la base más adelante; aquí al menos no se genera un token
+  // inválido que la base rechazaría.
+  return `p${negocio}-${ref || "sinref"}`;
+}
+
+export function urlDeQr(
+  base: string,
+  slug: string,
+  token: string,
+  destino?: string,
+  /** Solo para destino "property": el trozo de URL de ese inmueble. */
+  inmueble?: string,
+): string {
   const raiz = base.replace(/\/+$/, "");
   const rutas: Record<string, string> = {
     menu: "/carta",
@@ -203,7 +296,13 @@ export function urlDeQr(base: string, slug: string, token: string, destino?: str
     reservation: "/reservar",
     group: "/grupos",
     review: "/opinion",
+    listings: "/inmuebles",
+    valuation: "/valoracion",
   };
-  const ruta = destino ? (rutas[destino] ?? "") : "";
+  // Un QR por inmueble: es lo que permite saber QUÉ piso se mira de noche con
+  // la oficina cerrada, y decirle luego al propietario cuántas veces.
+  const ruta = destino === "property" && inmueble
+    ? `/inmueble/${encodeURIComponent(inmueble)}`
+    : (destino ? (rutas[destino] ?? "") : "");
   return `${raiz}/b/${slug}${ruta}?qr=${encodeURIComponent(token)}`;
 }
