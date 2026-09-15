@@ -67,13 +67,16 @@ grant usage on schema public, auth to anon, authenticated, service_role;
 grant select, insert on auth.users to authenticated;
 SQL
 
-for f in 01_esquema 02_rls 03_seed; do
+for f in 01_esquema 02_rls 03_seed 04_inmobiliaria; do
   echo "▶ $f.sql"
   $P -q -d "$BASE" -v ON_ERROR_STOP=1 -f "$SQL/$f.sql" 2>&1 | grep -v "already exists, skipping" || true
 done
 
-echo "▶ Pruebas de aislamiento"
+echo "▶ Pruebas de aislamiento (hostelería)"
 $P -d "$BASE" -f "$SQL/99_pruebas_rls.sql" 2>&1 | sed 's/^psql:[^ ]* //' | grep -v '^$'
+
+echo "▶ Pruebas de aislamiento (inmobiliaria)"
+$P -d "$BASE" -f "$SQL/98_pruebas_inmobiliaria.sql" 2>&1 | sed 's/^psql:[^ ]* //' | grep -v '^$'
 
 echo
 echo "✅ Esquema, políticas y seed verificados contra PostgreSQL real."
