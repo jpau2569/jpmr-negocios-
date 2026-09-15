@@ -89,7 +89,7 @@ los ojos abiertos:
 - **Pulso Local AI es el producto de suscripción**: panel, métricas, multi-tenant
   y fidelización. Es lo que se cobra cada mes.
 
-La carta real de La Taberna (46 platos verificados) y los datos de La Viña se
+La carta real de La Taberna (44 platos verificados) y los datos de La Viña se
 portan de `escaparate3d-pro/config/ejemplos/` al seed. No se vuelven a teclear
 ni se vuelven a buscar.
 
@@ -97,7 +97,7 @@ ni se vuelven a buscar.
 
 ## 2. Modelo de datos
 
-28 tablas en cuatro bloques. El detalle ejecutable está en
+26 tablas en cuatro bloques. El detalle ejecutable está en
 [`sql/01_esquema.sql`](sql/01_esquema.sql); aquí va el mapa y las decisiones.
 
 ### 2.1 Identidad y tenencia
@@ -369,15 +369,28 @@ reservas.
 
 ## 8. Lo que hace falta de fuera (y que yo no puedo inventar)
 
-Bloquean la publicación, no el desarrollo. Se construye con DEMO y se sustituye.
+Lo confirmado y lo pendiente, con su origen y su fecha, vive en
+[`herramientas/confirmado.mjs`](herramientas/confirmado.mjs). Lo que no esté
+ahí sigue marcado como muestra **y se ve marcado en el pie de la web**.
+
+### Confirmado (2026-09-14)
+
+| Dato | Estado |
+|---|---|
+| Horario de los dos locales | ✅ De sus fichas de Google. El de La Taberna coincide además con lo fichado el 09-09 desde otra fuente. |
+| Teléfono y WhatsApp | ✅ Al móvil en los dos, como pidió Pau: La Taberna 684 65 05 16, La Viña 620 58 37 70. |
+| Los fijos, como segunda opción | ✅ En el pie y etiquetados. |
+| Dirección, correo, Instagram y TripAdvisor de La Viña | ✅ |
+
+### Pendiente — bloquea publicar, no desarrollar
 
 | Dato | Estado |
 |---|---|
 | Dominio `pulsolocal.ai` | **No existe todavía.** Hay que comprarlo y apuntarlo a Vercel. Mientras, la demo vive en la URL de Vercel. |
-| WhatsApp de cada negocio | Falta. Sin número, el botón no se pinta. |
-| `review_url` de Google | Falta en los dos. Sin ella no hay botón de reseña. |
+| `review_url` de Google | Falta en los dos. Sin ella no hay botón de reseña, y no se inventa una. |
+| WhatsApp activo | Tener el número no es saber que lo leen. Confirmar con los locales. |
 | Fotos de platos | Faltan. Sin foto, la ficha se ve pobre. |
-| Horario de La Taberna | En el repo, de sus fichas públicas. **Confirmar con el local.** |
-| Menú del día real | Cambia a diario: lo carga el negocio. |
-| Precios sin confirmar | 32 de los 46 platos de La Taberna. Van marcados. |
+| Precios sin confirmar | 30 de los 44 platos de La Taberna. Van marcados en la web. |
+| Carta completa de La Viña | Solo están sus especialidades conocidas, sin precios. |
+| Menú del día real | Cambia a diario: lo carga el negocio desde el panel. |
 | Proyecto Supabase | Hay que crearlo y poner las claves. |

@@ -34,6 +34,7 @@ montar la base de datos.
 | `/b/la-vina-cenera` | Restaurante La Viña (Cenera) |
 | `/b/<slug>/carta` · `/menu-del-dia` · `/reservar` · `/grupos` · `/opinion` | Las secciones |
 | `/b/<slug>/expirada` | Demo caducada |
+| `/entrar` | Acceso al panel |
 | `/dashboard` | Resumen y métricas |
 | `/dashboard/menu-del-dia` | Cargar el menú de hoy pegándolo |
 | `/dashboard/reservas` | Reservas y grupos, con teléfono y WhatsApp |
@@ -46,7 +47,7 @@ montar la base de datos.
 |---|---|
 | Arquitectura, modelo, rutas, flujos, seguridad | ✅ |
 | Datos reales de los dos locales (horario, contacto, redes) | ✅ confirmados 2026-09-14 |
-| Esquema de base de datos (28 tablas) + RLS + seed | ✅ verificado contra PostgreSQL real |
+| Esquema de base de datos (26 tablas) + RLS + seed | ✅ verificado contra PostgreSQL real |
 | Carta, menú del día, WhatsApp, reservas, grupos, feedback, reseñas, QR | ✅ |
 | Fidelización, analítica, PWA, demo de 7 días | ✅ |
 | Asistente «TheWhiteBar 24/7» | ✅ buscador sobre lo publicado, sin modelo |
@@ -83,7 +84,7 @@ configuración. Hoy la clave da acceso completo, y es de Pau.
 ```bash
 npm run typecheck                 # TypeScript strict, sin errores
 npm test                          # 45 comprobaciones (lógica, acceso y panel)
-npm run test:sql                  # 36 comprobaciones de aislamiento contra PostgreSQL real
+npm run test:sql                  # 37 comprobaciones de aislamiento contra PostgreSQL real
 npm run build                     # build de producción
 ```
 
@@ -94,7 +95,8 @@ desaparece; y que el dueño de un negocio no ve nada del otro.
 
 ## Regenerar los datos
 
-La carta de La Taberna (46 platos) y la ficha de La Viña ya estaban verificadas
+La carta de La Taberna (44 platos, más sus 2 formatos de menú) y la ficha de
+La Viña ya estaban verificadas
 en `escaparate3d-pro/config/ejemplos/`. Todo se genera de ahí, no se teclea:
 
 ```bash
@@ -105,6 +107,11 @@ node herramientas/generar-datos-demo.mjs   # → lib/datos-demo.json  (respaldo 
 Los dos usan los **mismos identificadores**, así que la analítica sigue siendo
 válida al pasar del respaldo a la base. Y conservan lo importante:
 `confirmado: false` en el JSON → `is_demo = true` → **la web lo dice**.
+
+Los generadores **solo funcionan desde el monorepo**, que es donde vive
+`escaparate3d-pro`. Para desplegar no hacen falta: `sql/03_seed.sql` y
+`lib/datos-demo.json` ya están generados y versionados. Si se lanzan sin el
+monorepo al lado, avisan y no hacen nada.
 
 ## Desplegar en Vercel
 
@@ -169,19 +176,29 @@ ve marcado en la propia página**, en el pie.
 ```
 pulso-local-ai/
   ARQUITECTURA.md          arquitectura, modelo, rutas, flujos, seguridad, RGPD
+  DESPLIEGUE.md            cómo subirlo a Vercel, paso a paso
+  middleware.ts            la puerta del panel: corre ANTES de renderizar
   sql/                     01 esquema · 02 RLS · 03 seed · 99 pruebas
-  herramientas/            generadores del seed y del respaldo, pruebas de SQL
+  herramientas/
+    confirmado.mjs         lo que el negocio ha confirmado, con origen y fecha
+    generar-seed.mjs       → sql/03_seed.sql
+    generar-datos-demo.mjs → lib/datos-demo.json
+    probar-sql.sh          PostgreSQL desechable + pruebas de aislamiento
   app/
     page.tsx               hub comercial
+    entrar/                acceso al panel
     b/[slug]/(vivo)/       espacio público (exige demo vigente)
     b/[slug]/expirada/     demo caducada (fuera del layout que redirige)
     api/public/            reserva, grupo, feedback, lead, analítica
+    api/panel/             escrituras del panel (tras el middleware)
+    api/auth/              entrar y salir
     api/ai/ask/            asistente
     api/qr/[token]/        QR en PNG/SVG y carteles A5 y de mesa
-    dashboard/             resumen, métricas y generador de QR
+    dashboard/             resumen, menú del día, reservas, carta y QR
   components/              ui/, publico/, dashboard/, tema
-  lib/                     supabase, schemas, whatsapp, horarios, trial, qr, analítica
-  test/                    pruebas de la lógica
+  lib/                     supabase, schemas, whatsapp, horarios, trial, qr,
+                           analítica, sesión
+  test/                    pruebas de la lógica y del acceso
 ```
 
 ## Relación con `escaparate3d-pro/`
@@ -198,7 +215,18 @@ El contenido verificado se comparte: el seed y el respaldo salen de sus JSON.
 
 ## Roadmap
 
-**Siguiente**: login del panel y editores de carta, menú del día y reservas.
+**Lo siguiente, por orden de lo que más falta hace:**
+
+1. **Desplegarlo.** Es lo único que separa esto de poder enseñarlo. Pasos en
+   [`DESPLIEGUE.md`](DESPLIEGUE.md).
+2. **Supabase Auth**: una cuenta por persona y el rol sacado de
+   `business_members`. Hoy la clave da acceso completo, y hace falta que un
+   camarero pueda ver las reservas sin poder tocar la configuración.
+3. **Editar contacto, horario y colores desde el panel.** Ahora se tocan en
+   `herramientas/confirmado.mjs` y hay que volver a generar. Es el último sitio
+   donde el dueño depende de Pau para un cambio trivial.
+4. **Feedback y contactos en el panel.** Se recogen y se guardan, pero todavía
+   no se leen desde ningún sitio.
 
 **Después**: Stripe, confirmación de reserva por WhatsApp, Google Calendar,
 pedido en mesa, pagos, TPV, RAG real para el asistente, campañas consentidas e
