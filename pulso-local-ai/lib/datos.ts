@@ -21,7 +21,7 @@ import respaldo from "./datos-demo.json";
 import { hoyISO } from "./utils";
 import type {
   EspacioNegocio, Plato, CategoriaCarta, MenuDelDia, MenuEspecial,
-  EventoNegocio, Promocion, Alergeno,
+  EventoNegocio, Promocion, Alergeno, Inmueble, FotoInmueble,
 } from "@/types/negocio";
 
 /** Los negocios que existen. Se usa para generateStaticParams. */
@@ -51,7 +51,15 @@ function desdeRespaldo(slug: string): EspacioNegocio | null {
     ? { ...espacio.negocio, trial_ends_at: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString() }
     : espacio.negocio;
 
-  return { ...espacio, negocio, menuDeHoy: menu };
+  // El respaldo puede traer inmuebles de cualquier visibilidad (se genera del
+  // mismo seed). Aquí se filtra igual que haría RLS: si un día alguien mete un
+  // inmueble de enlace privado en el JSON, NO va a salir en el listado por
+  // haberse olvidado de un filtro en una página.
+  const inmuebles = (espacio.inmuebles ?? []).filter(
+    (i) => i.visibility === "publico" && (i.status === "published" || i.status === "sold_out"),
+  );
+
+  return { ...espacio, negocio, menuDeHoy: menu, inmuebles };
 }
 
 /* --- Supabase ---------------------------------------------------------------- */
@@ -89,6 +97,24 @@ async function desdeSupabase(slug: string): Promise<EspacioNegocio | null> {
         .eq("business_id", negocio.id),
     ]);
 
+  // Inmuebles: solo los públicos. El filtro va escrito aquí además de estar en
+  // RLS, no porque haga falta, sino porque una consulta que no lo diga es una
+  // consulta que invita a que alguien la copie sin él.
+  const { data: filasInmuebles } = await db
+    .from("properties")
+    .select(
+      "id, reference, slug, title, description, operation, kind, price_cents, price_on_request,"
+      + " surface_built_m2, surface_useful_m2, rooms, bathrooms, floor_label, has_lift,"
+      + " condition_note, year_built, municipality, zone, street, street_is_public, lat, lng,"
+      + " energy_rating, energy_status, status, visibility, deal_state, source, source_url,"
+      + " synced_at, featured, position, is_demo,"
+      + " property_photos(id, url, alt, position, is_cover)",
+    )
+    .eq("business_id", negocio.id)
+    .eq("visibility", "publico")
+    .order("featured", { ascending: false })
+    .order("position");
+
   const platos = (platosRes.data ?? []) as Omit<Plato, "alergenos">[];
 
   // Los alérgenos van en tabla aparte: se piden en un solo viaje y se reparten.
@@ -124,7 +150,23 @@ async function desdeSupabase(slug: string): Promise<EspacioNegocio | null> {
     menusEspeciales: (especialesRes.data ?? []) as MenuEspecial[],
     eventos: (eventosRes.data ?? []) as EventoNegocio[],
     promociones: (promosRes.data ?? []) as Promocion[],
+    // Doble cast: sin tipos generados de Supabase, el select anidado de
+    // property_photos no se puede inferir y TypeScript lo da por error.
+    inmuebles: ordenarFotos((filasInmuebles ?? []) as unknown as FilaInmueble[]),
   };
+}
+
+type FilaInmueble = Omit<Inmueble, "fotos"> & { property_photos?: FotoInmueble[] };
+
+/** La portada primero y el resto por su orden: el cliente ve la foto buena. */
+function ordenarFotos(filas: FilaInmueble[]): Inmueble[] {
+  return filas.map(({ property_photos, ...resto }) => ({
+    ...resto,
+    fotos: [...(property_photos ?? [])].sort((a, b) => {
+      if (a.is_cover !== b.is_cover) return a.is_cover ? -1 : 1;
+      return a.position - b.position;
+    }),
+  }));
 }
 
 /* --- Entrada única ----------------------------------------------------------- */
@@ -141,6 +183,32 @@ export async function leerEspacio(slug: string): Promise<EspacioNegocio | null> 
     }
   }
   return desdeRespaldo(slug);
+}
+
+/* --- Inmuebles --------------------------------------------------------------- */
+
+export function inmueblePorSlug(espacio: EspacioNegocio, slug: string): Inmueble | null {
+  return espacio.inmuebles.find((i) => i.slug === slug) ?? null;
+}
+
+/** Los que se enseñan primero: destacados y disponibles antes que un vendido. */
+export function inmueblesDestacados(espacio: EspacioNegocio, maximo = 6): Inmueble[] {
+  return [...espacio.inmuebles]
+    .sort((a, b) => {
+      const libre = (i: Inmueble) => (i.deal_state === "disponible" ? 0 : 1);
+      if (libre(a) !== libre(b)) return libre(a) - libre(b);
+      if (a.featured !== b.featured) return a.featured ? -1 : 1;
+      return a.position - b.position;
+    })
+    .slice(0, maximo);
+}
+
+/**
+ * Un inmueble sin etiqueta energética cargada. El RD 390/2021 la exige en el
+ * anuncio, así que el panel tiene que poder listar los que van cojos.
+ */
+export function sinCertificadoEnergetico(espacio: EspacioNegocio): Inmueble[] {
+  return espacio.inmuebles.filter((i) => i.energy_status === "pendiente");
 }
 
 /** ¿Se pueden guardar formularios de verdad, o solo enseñar la demo? */

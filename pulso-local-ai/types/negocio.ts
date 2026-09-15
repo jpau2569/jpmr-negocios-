@@ -212,6 +212,149 @@ export interface Promocion {
   is_demo: boolean;
 }
 
+// ============================================================================
+//  SECTOR INMOBILIARIA
+// ----------------------------------------------------------------------------
+//  Las formas coinciden con sql/04_inmobiliaria.sql.
+// ============================================================================
+
+export type OperacionInmueble = "venta" | "alquiler";
+
+export type TipoInmueble =
+  | "piso" | "casa" | "chalet" | "atico" | "duplex" | "estudio"
+  | "local" | "oficina" | "nave" | "garaje" | "trastero" | "terreno"
+  | "edificio" | "otro";
+
+export const TIPOS_INMUEBLE_ES: Record<TipoInmueble, string> = {
+  piso: "Piso",
+  casa: "Casa",
+  chalet: "Chalet",
+  atico: "Ático",
+  duplex: "Dúplex",
+  estudio: "Estudio",
+  local: "Local",
+  oficina: "Oficina",
+  nave: "Nave",
+  garaje: "Garaje",
+  trastero: "Trastero",
+  terreno: "Terreno",
+  edificio: "Edificio",
+  otro: "Inmueble",
+};
+
+/**
+ * "enlace_privado" es la captación de boca a boca: existe y tiene ficha, pero
+ * no sale en el listado ni en buscadores. RLS no se la enseña nunca al
+ * público; la resuelve el servidor a partir del token.
+ */
+export type VisibilidadInmueble = "publico" | "enlace_privado" | "borrador";
+
+/** Estado comercial, independiente de si la ficha está publicada. */
+export type EstadoOperacion = "disponible" | "reservado" | "vendido" | "alquilado";
+
+export const ESTADO_OPERACION_ES: Record<EstadoOperacion, string> = {
+  disponible: "Disponible",
+  reservado: "Reservado",
+  vendido: "Vendido",
+  alquilado: "Alquilado",
+};
+
+export type LetraEnergia = "A" | "B" | "C" | "D" | "E" | "F" | "G";
+
+/**
+ * "pendiente" no es un hueco, es una declaración. El RD 390/2021 obliga a
+ * mostrar la etiqueta energética en cualquier anuncio, así que la ficha dice
+ * en voz alta que falta en vez de callar.
+ */
+export type EstadoEnergia = "disponible" | "en_tramite" | "exento" | "pendiente";
+
+export const ESTADO_ENERGIA_ES: Record<EstadoEnergia, string> = {
+  disponible: "Certificado energético",
+  en_tramite: "Certificado energético en trámite",
+  exento: "Exento de certificado energético",
+  pendiente: "Certificado energético pendiente de cargar",
+};
+
+export type OrigenInmueble = "web" | "manual" | "portal";
+
+export interface FotoInmueble {
+  id: string;
+  url: string;
+  alt: string | null;
+  position: number;
+  is_cover: boolean;
+}
+
+export interface Inmueble {
+  id: string;
+  reference: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  operation: OperacionInmueble;
+  kind: TipoInmueble;
+  /** En céntimos. null + price_on_request = "consultar". Nunca inventado. */
+  price_cents: number | null;
+  price_on_request: boolean;
+  surface_built_m2: number | null;
+  surface_useful_m2: number | null;
+  rooms: number | null;
+  bathrooms: number | null;
+  floor_label: string | null;
+  has_lift: boolean | null;
+  condition_note: string | null;
+  year_built: number | null;
+  municipality: string | null;
+  zone: string | null;
+  street: string | null;
+  street_is_public: boolean;
+  lat: number | null;
+  lng: number | null;
+  energy_rating: LetraEnergia | null;
+  energy_status: EstadoEnergia;
+  status: EstadoContenido;
+  visibility: VisibilidadInmueble;
+  deal_state: EstadoOperacion;
+  source: OrigenInmueble;
+  source_url: string | null;
+  synced_at: string | null;
+  featured: boolean;
+  position: number;
+  is_demo: boolean;
+  fotos: FotoInmueble[];
+}
+
+export type FranjaVisita = "manana" | "tarde" | "indiferente";
+
+export const FRANJA_VISITA_ES: Record<FranjaVisita, string> = {
+  manana: "Por la mañana",
+  tarde: "Por la tarde",
+  indiferente: "Me da igual",
+};
+
+export interface PeticionVisita {
+  id: string;
+  property_id: string | null;
+  property_ref: string | null;
+  name: string;
+  phone: string;
+  email: string | null;
+  preferred_date: string | null;
+  preferred_slot: string | null;
+  needs_financing: boolean | null;
+  comments: string | null;
+  status: EstadoReserva;
+  staff_notes: string | null;
+  created_at: string;
+}
+
+/** Precio por metro construido, en euros. null si falta alguno de los dos. */
+export function precioPorM2(inmueble: Inmueble): number | null {
+  if (inmueble.price_cents === null) return null;
+  if (!inmueble.surface_built_m2) return null;
+  return Math.round(inmueble.price_cents / 100 / inmueble.surface_built_m2);
+}
+
 /** Todo lo que la página pública necesita, en una sola consulta. */
 export interface EspacioNegocio {
   negocio: Negocio;
@@ -222,4 +365,6 @@ export interface EspacioNegocio {
   menusEspeciales: MenuEspecial[];
   eventos: EventoNegocio[];
   promociones: Promocion[];
+  /** Solo los de visibilidad "publico". Los de enlace privado nunca van aquí. */
+  inmuebles: Inmueble[];
 }
