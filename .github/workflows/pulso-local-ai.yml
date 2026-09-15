@@ -15,8 +15,13 @@
 
 name: Pulso Local AI
 
+#  `push` se limita a `main` a propósito: sin ese filtro, cada empujón a una
+#  rama con pull request abierto lanzaba DOS ejecuciones idénticas (una por el
+#  push y otra por el pull request) y gastaba el doble de minutos para dar la
+#  misma respuesta.
 on:
   push:
+    branches: [main]
     paths:
       - "pulso-local-ai/**"
       - ".github/workflows/pulso-local-ai.yml"
