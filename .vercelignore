@@ -3,3 +3,9 @@
 # rotas. La ficha pública es `fotos-faciles.html`, que sí se despliega.
 fotos-faciles/
 test/
+
+# PULSO LOCAL AI es una aplicación Next.js completa que se despliega como
+# proyecto propio de Vercel (Root Directory: pulso-local-ai). Si se subiera con
+# el sitio estático, solo añadiría peso y páginas que no se pueden servir desde
+# aquí. Ver pulso-local-ai/README.md.
+pulso-local-ai/

@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "../.test-build",
+    "rootDir": "../src",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowJs": true,
+    "noEmit": false,
+    "declaration": false,
+    "paths": { "@/*": ["../src/*"] },
+    "baseUrl": "."
+  },
+  "include": [
+    "../src/lib/asistente.ts",
+    "../src/lib/tema.ts",
+    "../src/lib/formato.ts",
+    "../src/lib/etiquetas.ts",
+    "../src/lib/qr/index.ts",
+    "../src/lib/qr/qr.mjs",
+    "../src/lib/validaciones/comunes.ts",
+    "../src/lib/validaciones/formularios.ts"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "pulso-local-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PULSO LOCAL AI — el QR que convierte visitas en clientes que vuelven. SaaS multi-tenant de captacion y fidelizacion para negocio local.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "node test/preparar.mjs && node --test test/*.test.mjs",
+    "db:reset": "node scripts/db.mjs reset",
+    "db:migrate": "node scripts/db.mjs migrate",
+    "db:seed": "node scripts/db.mjs seed",
+    "test:solo": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.9.1",
+    "@radix-ui/react-slot": "^1.3.3",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "next": "15.5.25",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-hook-form": "^7.88.0",
+    "tailwind-merge": "^3.7.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.25",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3"
+  }
+}

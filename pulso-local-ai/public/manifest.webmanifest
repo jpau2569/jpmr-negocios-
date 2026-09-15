@@ -1,0 +1,16 @@
+{
+  "name": "PULSO LOCAL AI",
+  "short_name": "Pulso Local",
+  "description": "El QR que convierte visitas en clientes que vuelven.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F6F7F9",
+  "theme_color": "#0E2A3F",
+  "lang": "es-ES",
+  "icons": [
+    { "src": "/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

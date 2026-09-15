@@ -1,0 +1,75 @@
+# ============================================================================
+#  PULSO LOCAL AI — comprobaciones automáticas
+# ----------------------------------------------------------------------------
+#  Corre en cada push y en cada pull request que toque `pulso-local-ai/`. El
+#  resto del monorepo son páginas estáticas y programas locales con sus propias
+#  pruebas manuales, así que el filtro de rutas evita gastar minutos de CI en
+#  cambios que no afectan a esta aplicación.
+#
+#  Las cuatro comprobaciones son exactamente las que se pasan en local antes de
+#  subir nada, y NINGUNA necesita secretos: la aplicación compila sin variables
+#  de entorno (lee Supabase en tiempo de ejecución, no en tiempo de build). Eso
+#  es deliberado: una CI que necesita las claves de producción para compilar es
+#  una CI que no se puede ejecutar desde una bifurcación del repositorio.
+# ============================================================================
+
+name: Pulso Local AI
+
+#  `push` se limita a `main` a propósito: sin ese filtro, cada empujón a una
+#  rama con pull request abierto lanzaba DOS ejecuciones idénticas (una por el
+#  push y otra por el pull request) y gastaba el doble de minutos para dar la
+#  misma respuesta.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "pulso-local-ai/**"
+      - ".github/workflows/pulso-local-ai.yml"
+  pull_request:
+    paths:
+      - "pulso-local-ai/**"
+      - ".github/workflows/pulso-local-ai.yml"
+
+# Si se empuja dos veces seguidas, la primera ejecución se cancela: interesa el
+# estado del último commit, no el de uno que ya nadie va a mirar.
+concurrency:
+  group: pulso-local-ai-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  comprobaciones:
+    name: Tipos, lint, pruebas y build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pulso-local-ai
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: pulso-local-ai/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Comprobar tipos
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # Las pruebas comparan el generador de QR con el del monorepo
+      # (`fotos-faciles/nucleo/qr.mjs`), así que necesitan el repositorio entero,
+      # no solo esta carpeta. El checkout completo ya lo garantiza.
+      - name: Pruebas
+        run: npm test
+
+      - name: Build de producción
+        run: npm run build
