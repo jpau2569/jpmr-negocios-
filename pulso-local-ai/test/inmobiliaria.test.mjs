@@ -365,3 +365,170 @@ test("la etiqueta del contacto alternativo dice lo mismo en el respaldo y en el 
   assert.ok(sql.includes(CAS.ajustes.phone_alt_label),
     "si no coinciden, un número de la agencia se pierde en uno de los dos caminos");
 });
+
+// ============================================================================
+//  SINCRONIZACIÓN: QUÉ SE TOCA Y QUÉ NO
+// ----------------------------------------------------------------------------
+//  Aquí es donde se puede hacer daño de verdad y en silencio: vaciar la
+//  cartera de un escaparate, o pisar la captación de boca a boca que la
+//  agencia dio de alta a mano. Las cuatro reglas se prueban una a una.
+// ============================================================================
+
+const cargarFusion = () => cargar("lib/cartera/fusion.ts", "lib/cartera/fusion.js");
+
+const leido = (reference, extra = {}) => ({
+  reference, slug: reference.toLowerCase(), title: `Piso ${reference}`,
+  description: null, operation: "venta", kind: "piso", price_cents: 10_000_000,
+  surface_built_m2: 80, rooms: 3, bathrooms: 1, municipality: "Oviedo",
+  energy_status: "pendiente", source_url: `https://x.test/${reference}.html`,
+  foto: null, ...extra,
+});
+const guardado = (reference, source = "web", status = "published") =>
+  ({ id: `id-${reference}`, reference, source, status });
+
+test("REGLA 1: si no se lee nada, no se toca NADA", async () => {
+  const { planificarSincronizacion } = await cargarFusion();
+  const plan = planificarSincronizacion([], [guardado("A"), guardado("B")]);
+  assert.ok(plan.abortado, "aborta en vez de seguir");
+  assert.deepEqual(plan.retirados, [], "y sobre todo NO retira la cartera entera");
+  assert.deepEqual(plan.nuevos, []);
+  assert.deepEqual(plan.actualizados, []);
+  assert.match(plan.abortado, /no se ha tocado nada/i);
+});
+
+test("REGLA 2: lo dado de alta a mano NO se toca jamás", async () => {
+  const { planificarSincronizacion } = await cargarFusion();
+  // El boca a boca: existe en la base, no está en la web. No debe retirarse.
+  const plan = planificarSincronizacion(
+    [leido("WEB-1")],
+    [guardado("WEB-1"), guardado("BOCA-1", "manual")],
+  );
+  assert.deepEqual(plan.retirados, [], "el manual no se retira aunque no esté en la web");
+  assert.equal(plan.intocables.length, 1);
+  assert.equal(plan.intocables[0].reference, "BOCA-1");
+});
+
+test("REGLA 2 bis: ni aunque la web use la misma referencia", async () => {
+  const { planificarSincronizacion } = await cargarFusion();
+  const plan = planificarSincronizacion([leido("X-1")], [guardado("X-1", "manual")]);
+  assert.deepEqual(plan.actualizados, [], "no lo actualiza");
+  assert.deepEqual(plan.nuevos, [], "ni lo duplica");
+  assert.equal(plan.intocables[0].reference, "X-1");
+});
+
+test("REGLA 3: solo se refrescan los campos que la web conoce", async () => {
+  const { planificarSincronizacion } = await cargarFusion();
+  const plan = planificarSincronizacion([leido("A")], [guardado("A")]);
+  const campos = plan.actualizados[0].campos;
+  // Lo que la web sí sabe:
+  assert.equal(campos.price_cents, 10_000_000);
+  assert.equal(campos.title, "Piso A");
+  // Lo que pone la agencia y la sincronización NO debe pisar:
+  for (const suyo of [
+    "energy_rating", "energy_status", "visibility", "deal_state",
+    "street", "street_is_public", "has_lift", "featured", "private_token",
+  ]) {
+    assert.ok(!(suyo in campos), `la sincronización no debe tocar ${suyo}`);
+  }
+});
+
+test("REGLA 4: lo que desaparece de la web se despublica, no se borra", async () => {
+  const { planificarSincronizacion } = await cargarFusion();
+  const plan = planificarSincronizacion([leido("A")], [guardado("A"), guardado("B")]);
+  assert.equal(plan.retirados.length, 1);
+  assert.equal(plan.retirados[0].reference, "B");
+  assert.ok(!("borrados" in plan), "no existe siquiera el concepto de borrar");
+});
+
+test("una lectura a medias no retira nada", async () => {
+  const { planificarSincronizacion } = await cargarFusion();
+  // Se leyó la página de venta pero falló la de alquiler: los de alquiler
+  // seguirían existiendo, y retirarlos sería un destrozo.
+  const plan = planificarSincronizacion(
+    [leido("VENTA-1")],
+    [guardado("VENTA-1"), guardado("ALQ-1")],
+    { huboErrores: true },
+  );
+  assert.deepEqual(plan.retirados, [], "con errores de lectura no se retira nada");
+  assert.equal(plan.actualizados.length, 1);
+});
+
+test("un inmueble ya despublicado no se vuelve a retirar", async () => {
+  const { planificarSincronizacion } = await cargarFusion();
+  const plan = planificarSincronizacion([leido("A")], [guardado("A"), guardado("B", "web", "draft")]);
+  assert.deepEqual(plan.retirados, [], "B ya estaba en borrador");
+});
+
+test("lo nuevo entra y lo existente se actualiza, a la vez", async () => {
+  const { planificarSincronizacion } = await cargarFusion();
+  const plan = planificarSincronizacion(
+    [leido("A"), leido("NUEVO")],
+    [guardado("A")],
+  );
+  assert.equal(plan.nuevos.length, 1);
+  assert.equal(plan.nuevos[0].reference, "NUEVO");
+  assert.equal(plan.actualizados.length, 1);
+  assert.equal(plan.actualizados[0].reference, "A");
+  assert.equal(plan.abortado, null);
+});
+
+test("el resumen se entiende sin saber programar", async () => {
+  const { planificarSincronizacion, resumenDelPlan } = await cargarFusion();
+  const plan = planificarSincronizacion(
+    [leido("A"), leido("NUEVO")],
+    [guardado("A"), guardado("VIEJO"), guardado("BOCA", "manual")],
+  );
+  const texto = resumenDelPlan(plan);
+  assert.match(texto, /1 nuevos/);
+  assert.match(texto, /1 actualizados/);
+  assert.match(texto, /1 retirados/);
+  assert.match(texto, /alta manual, sin tocar/);
+});
+
+// ============================================================================
+//  EL ENLACE PRIVADO, POR DENTRO
+// ============================================================================
+
+test("la página del enlace privado se resuelve en servidor y no se indexa", () => {
+  const codigo = readFileSync(
+    join(RAIZ, "app", "b", "[slug]", "(vivo)", "privado", "[token]", "page.tsx"), "utf8");
+
+  assert.match(codigo, /robots:\s*\{\s*index:\s*false/,
+    "un enlace privado que Google indexa deja de ser privado");
+  assert.match(codigo, /dynamic\s*=\s*"force-dynamic"/,
+    "no debe prerenderizarse: cada token se resuelve al pedirlo");
+  assert.match(codigo, /\.eq\("visibility",\s*"enlace_privado"\)/,
+    "solo resuelve inmuebles marcados como de enlace privado");
+  assert.match(codigo, /\.eq\("business_id",\s*negocio\.id\)/,
+    "y siempre filtrando por negocio: aquí service_role salta RLS");
+  assert.match(codigo, /notFound\(\)/,
+    "un token que no resuelve da 404, no un mensaje que confirme el mecanismo");
+  // Sin los comentarios: el propio archivo explica por qué NO se dice
+  // "token incorrecto", y esa explicación no debe hacer fallar la prueba.
+  const sinComentarios = codigo
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n").filter((l) => !l.trim().startsWith("//")).join("\n");
+  assert.ok(!/token incorrecto|token no v[áa]lido/i.test(sinComentarios),
+    "nada de decirle a quien prueba tokens que va por buen camino");
+});
+
+test("el alta manual nace con source manual, que es lo que la protege", () => {
+  const codigo = readFileSync(join(RAIZ, "app", "api", "panel", "inmueble", "route.ts"), "utf8");
+  assert.match(codigo, /source:\s*"manual"/,
+    "sin esto, la siguiente sincronización se llevaría por delante el boca a boca");
+  assert.match(codigo, /randomBytes/, "el token del enlace privado es aleatorio");
+  assert.match(codigo, /actual\.private_token \?\? tokenPrivado\(\)/,
+    "no se regenera un token ya repartido: el enlace que mandó la agencia debe seguir abriendo");
+});
+
+test("la sincronización nunca borra, solo despublica", () => {
+  const codigo = readFileSync(
+    join(RAIZ, "app", "api", "panel", "sincronizar-cartera", "route.ts"), "utf8");
+  assert.ok(!/\.delete\(\)/.test(codigo),
+    "la sincronización no debe borrar ni una fila");
+  assert.match(codigo, /status:\s*"draft"/, "lo retirado se despublica");
+  assert.match(codigo, /\.eq\("business_id",\s*negocio\.id\)/,
+    "toda escritura filtra por negocio: service_role salta RLS");
+  assert.match(codigo, /plan\.abortado/,
+    "respeta la negativa del plan cuando no se ha podido leer la web");
+});

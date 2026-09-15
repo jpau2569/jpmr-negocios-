@@ -60,6 +60,74 @@ export const esquemaPlato = z.object({
 });
 export type DatosPlato = z.infer<typeof esquemaPlato>;
 
+/* --- Inmuebles (sector inmobiliaria) ---------------------------------------- */
+
+export const esquemaSincronizar = z.object({
+  slug: z.string().min(1),
+});
+export type DatosSincronizar = z.infer<typeof esquemaSincronizar>;
+
+/**
+ * Alta o corrección de un inmueble desde el panel.
+ *
+ * Pensado para el boca a boca: la agencia acaba de salir de ver un piso y lo
+ * mete desde el móvil en dos minutos. Por eso solo `reference` y `title` son
+ * obligatorios — exigir superficie, planta y certificado en ese momento haría
+ * que no lo metiera nunca, y un inmueble a medias vale mucho más que ninguno.
+ */
+export const esquemaInmueble = z.object({
+  slug: z.string().min(1),
+  /** Sin id = alta. Con id = corrección de uno que ya existe. */
+  id: z.string().uuid().optional(),
+
+  reference: z.string().trim().min(1, "Ponle una referencia").max(20),
+  title: z.string().trim().min(3, "Ponle un título").max(140),
+  description: z.string().trim().max(3000).optional(),
+
+  operation: z.enum(["venta", "alquiler"]).default("venta"),
+  kind: z.enum([
+    "piso", "casa", "chalet", "atico", "duplex", "estudio", "local",
+    "oficina", "nave", "garaje", "trastero", "terreno", "edificio", "otro",
+  ]).default("piso"),
+
+  price_cents: precioEuros.nullable().optional(),
+  price_on_request: z.boolean().default(false),
+
+  surface_built_m2: z.coerce.number().int().min(1).max(100000).nullable().optional(),
+  rooms: z.coerce.number().int().min(0).max(60).nullable().optional(),
+  bathrooms: z.coerce.number().int().min(0).max(30).nullable().optional(),
+  floor_label: z.string().trim().max(40).optional(),
+  has_lift: z.boolean().nullable().optional(),
+  municipality: z.string().trim().max(80).optional(),
+  zone: z.string().trim().max(80).optional(),
+
+  /** La dirección exacta no se publica salvo que se diga explícitamente. */
+  street: z.string().trim().max(160).optional(),
+  street_is_public: z.boolean().default(false),
+
+  // Obligatorio en anuncios (RD 390/2021). Se pide siempre, aunque sea para
+  // decir "pendiente": así el panel puede listar los que van cojos.
+  energy_rating: z.enum(["A", "B", "C", "D", "E", "F", "G"]).nullable().optional(),
+  energy_status: z.enum(["disponible", "en_tramite", "exento", "pendiente"])
+    .default("pendiente"),
+
+  visibility: z.enum(["publico", "enlace_privado", "borrador"]).default("borrador"),
+  deal_state: z.enum(["disponible", "reservado", "vendido", "alquilado"])
+    .default("disponible"),
+  status: z.enum(["draft", "published", "sold_out"]).default("draft"),
+})
+  // Las mismas reglas que tiene la base, comprobadas antes de llegar a ella
+  // para poder dar un mensaje en español en vez de un error de PostgreSQL.
+  .refine((d) => !(d.price_on_request && d.price_cents != null), {
+    message: "O pones precio, o marcas «consultar». Las dos cosas a la vez, no.",
+    path: ["price_cents"],
+  })
+  .refine((d) => !(d.energy_status === "disponible" && !d.energy_rating), {
+    message: "Si el certificado está disponible, elige su letra (A-G).",
+    path: ["energy_rating"],
+  });
+export type DatosInmueble = z.infer<typeof esquemaInmueble>;
+
 export interface MenuInterpretado {
   platos: DatosMenuDia["platos"];
   /** En céntimos, si aparecía un precio en el texto. */

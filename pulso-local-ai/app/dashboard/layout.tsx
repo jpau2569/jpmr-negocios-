@@ -22,6 +22,7 @@ const SECCIONES = [
   { href: "/dashboard/menu-del-dia", texto: "Menú del día" },
   { href: "/dashboard/reservas", texto: "Reservas" },
   { href: "/dashboard/carta", texto: "Carta" },
+  { href: "/dashboard/inmuebles", texto: "Inmuebles" },
   { href: "/dashboard/qr", texto: "QR" },
 ];
 
