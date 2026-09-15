@@ -13,7 +13,7 @@
 // ============================================================================
 
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { confirmadoDe } from "./confirmado.mjs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -69,8 +69,20 @@ function alergeno(texto) {
   return mapeado || null;
 }
 
-/* --- Lectura de las fichas ya verificadas --- */
-const leer = (archivo) => JSON.parse(readFileSync(resolve(EJEMPLOS, archivo), "utf8"));
+/* --- Lectura de las fichas ya verificadas ---
+   Solo existen en el monorepo. En el repositorio suelto del producto no hacen
+   falta: el seed ya está generado y versionado. */
+const leer = (archivo) => {
+  const ruta = resolve(EJEMPLOS, archivo);
+  if (!existsSync(ruta)) {
+    console.error(
+      `\n❌ No encuentro ${archivo}. Los generadores necesitan el monorepo` +
+      " (escaparate3d-pro).\n   Para desplegar no hacen falta: sql/03_seed.sql ya está generado.\n",
+    );
+    process.exit(1);
+  }
+  return JSON.parse(readFileSync(ruta, "utf8"));
+};
 
 const lineas = [];
 const w = (t = "") => lineas.push(t);

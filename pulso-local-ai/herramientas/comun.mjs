@@ -7,7 +7,7 @@
 // ============================================================================
 
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -58,7 +58,21 @@ export function alergenosDe(plato) {
   return [...new Set((plato.alergenos || []).map(alergeno).filter(Boolean))];
 }
 
-export const leer = (archivo) => JSON.parse(readFileSync(resolve(EJEMPLOS, archivo), "utf8"));
+export const leer = (archivo) => {
+  const ruta = resolve(EJEMPLOS, archivo);
+  if (!existsSync(ruta)) {
+    console.error(
+      `\n❌ No encuentro ${archivo}.\n\n` +
+      "   Los generadores leen las fichas verificadas de escaparate3d-pro, que\n" +
+      "   vive en el monorepo de Pau. En este repositorio suelto no está.\n\n" +
+      "   No hace falta para desplegar: sql/03_seed.sql y lib/datos-demo.json ya\n" +
+      "   están generados y versionados. Solo necesitas los generadores si vas a\n" +
+      "   cambiar los datos de las demos, y para eso trabaja desde el monorepo.\n",
+    );
+    process.exit(1);
+  }
+  return JSON.parse(readFileSync(ruta, "utf8"));
+};
 
 export const centimos = (precio) =>
   Number.isFinite(Number(precio)) && precio !== null && precio !== "" && precio !== undefined

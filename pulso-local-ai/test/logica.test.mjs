@@ -104,14 +104,24 @@ test("horarios: sin horario configurado no se afirma nada", () => {
 /*  QR                                                                         */
 /* ========================================================================== */
 
-test("el QR es copia literal del de Fotos Fáciles", () => {
+test("el QR es copia literal del de Fotos Fáciles", (t) => {
   // Reescribir un codificador QR correcto es la mejor forma de introducir un
   // fallo que solo se ve cuando un cliente escanea un cartel ya impreso.
+  //
+  // Este proyecto vive en dos sitios: dentro del monorepo de Pau (donde está
+  // el original al lado) y suelto en su propio repositorio (donde no). Si no
+  // está el original, no hay nada que comparar y el test se salta: fallar
+  // aquí no diría nada útil sobre el código.
+  const original = resolve(RAIZ, "../fotos-faciles/nucleo/qr.mjs");
+  if (!existsSync(original)) {
+    t.skip("sin el monorepo al lado no hay original con el que comparar");
+    return;
+  }
   const aqui = readFileSync(resolve(RAIZ, "lib/qr/nucleo.mjs"), "utf8");
-  const original = readFileSync(resolve(RAIZ, "../fotos-faciles/nucleo/qr.mjs"), "utf8");
+  const originalTexto = readFileSync(original, "utf8");
   assert.equal(
     createHash("sha256").update(aqui).digest("hex"),
-    createHash("sha256").update(original).digest("hex"),
+    createHash("sha256").update(originalTexto).digest("hex"),
     "lib/qr/nucleo.mjs ha dejado de ser copia literal de fotos-faciles/nucleo/qr.mjs",
   );
 });
@@ -287,6 +297,7 @@ test("cada plantilla enciende los módulos de su tipo de local", () => {
 });
 
 test("los identificadores del respaldo coinciden con los del seed de Supabase", () => {
+  // Esto sí funciona en los dos sitios: los dos archivos van en el paquete.
   // Si no coincidieran, la analítica guardaría subject_id que no existen en la
   // base en cuanto se pasara del modo respaldo al modo Supabase.
   const seed = readFileSync(resolve(RAIZ, "sql/03_seed.sql"), "utf8");
