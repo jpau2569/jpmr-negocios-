@@ -1,0 +1,164 @@
+/* ==========================================================================
+   OPORTUNIDADES ÚNICAS — hoja de estilo
+   Identidad: azul noche (#0B3B60) y dorado (#D9B75F), la de la app original.
+   Sin frameworks: la app tiene que abrir rápido en el móvil, en una visita.
+   ========================================================================== */
+:root{
+  --azul:#0B3B60; --azul-2:#0E4A79; --azul-3:#093150;
+  --oro:#D9B75F; --oro-claro:#EBD290;
+  --tinta:#16202B; --tinta-2:#5A6B7C;
+  --papel:#F6F7F9; --blanco:#fff;
+  --linea:#E3E7EC;
+  --verde:#1F7A4D; --ambar:#B67A10; --rojo:#B3261E;
+  --r:10px; --sombra:0 1px 2px rgba(16,32,48,.06), 0 8px 24px rgba(16,32,48,.06);
+  --serif:'Iowan Old Style',Georgia,'Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--papel);color:var(--tinta);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--serif);font-weight:600;line-height:1.2}
+a{color:var(--azul-2)}
+[hidden]{display:none !important}
+.apunte{color:var(--tinta-2);font-size:13.5px}
+
+/* ---------- Botones y campos ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--azul);color:#fff;
+  border:1px solid var(--azul);border-radius:var(--r);padding:11px 18px;font:inherit;font-weight:600;font-size:14px;
+  cursor:pointer;transition:.18s;text-decoration:none}
+.btn:hover{background:var(--azul-2);border-color:var(--azul-2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ancho{width:100%}
+.btn.fino{padding:8px 14px;font-size:13px}
+.btn.claro{background:#fff;color:var(--azul);border-color:var(--linea)}
+.btn.claro:hover{background:#fff;border-color:var(--azul)}
+.btn.oro{background:var(--oro);border-color:var(--oro);color:#2A2410}
+.btn.oro:hover{background:var(--oro-claro);border-color:var(--oro-claro)}
+.btn.peligro{background:#fff;color:var(--rojo);border-color:#F0D2D0}
+
+.campo{display:block;margin-bottom:14px}
+.campo>span{display:block;font-size:12.5px;font-weight:600;color:var(--tinta-2);margin-bottom:6px}
+input,select,textarea{width:100%;font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--linea);
+  border-radius:var(--r);background:#fff;color:var(--tinta)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px rgba(11,59,96,.1)}
+textarea{min-height:110px;resize:vertical}
+fieldset{border:0}
+
+.aviso{margin-top:14px;padding:11px 14px;border-radius:var(--r);background:#FCF2F1;color:var(--rojo);
+  border:1px solid #F0D2D0;font-size:13.5px}
+.aviso.ok{background:#F0F7F3;color:var(--verde);border-color:#CDE6DA}
+
+/* ---------- Acceso ---------- */
+.acceso{min-height:100dvh;display:grid;place-items:center;padding:24px;
+  background:linear-gradient(160deg,var(--azul) 0%,var(--azul-3) 100%)}
+.tarjeta-acceso{width:100%;max-width:400px;background:#fff;border-radius:16px;padding:34px 30px;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.tarjeta-acceso h1{font-size:25px;text-align:center;margin-bottom:4px}
+.tarjeta-acceso .apunte{text-align:center;margin-bottom:26px}
+.marca-grande{display:flex;justify-content:center;margin-bottom:16px}
+.sigla{display:grid;place-items:center;width:52px;height:52px;border-radius:14px;background:var(--azul);
+  color:var(--oro);font-family:var(--serif);font-size:21px;font-weight:600}
+
+/* ---------- Estructura ---------- */
+#app{display:grid;grid-template-columns:238px 1fr;min-height:100dvh}
+.lateral{background:var(--azul);color:#fff;display:flex;flex-direction:column;padding:20px 14px;gap:26px}
+.marca{display:flex;align-items:center;gap:11px;color:#fff;text-decoration:none;padding:0 6px}
+.marca .sigla{width:40px;height:40px;font-size:16px;background:rgba(255,255,255,.1);border:1px solid rgba(217,183,95,.4)}
+.marca b{font-family:var(--serif);font-size:16px;font-weight:600;line-height:1.15}
+.marca em{font-style:normal;color:var(--oro)}
+#menu{display:flex;flex-direction:column;gap:3px;flex:1}
+#menu a{display:flex;align-items:center;gap:11px;color:rgba(255,255,255,.76);text-decoration:none;
+  padding:11px 12px;border-radius:var(--r);font-size:14.5px;font-weight:500;transition:.15s}
+#menu a:hover{background:rgba(255,255,255,.08);color:#fff}
+#menu a.activo{background:#fff;color:var(--azul);font-weight:600}
+#menu .ico{width:18px;text-align:center;opacity:.9}
+.usuario{border-top:1px solid rgba(255,255,255,.14);padding-top:14px;font-size:13px;color:rgba(255,255,255,.7)}
+.usuario b{display:block;color:#fff;font-size:14.5px}
+.usuario .btn{margin-top:10px;width:100%;background:transparent;border-color:rgba(255,255,255,.25);color:#fff}
+.usuario .btn:hover{background:rgba(255,255,255,.1)}
+
+main{padding:28px 30px 60px;max-width:1240px}
+@media(max-width:860px){
+  #app{grid-template-columns:1fr}
+  .lateral{flex-direction:row;align-items:center;gap:12px;padding:10px 14px;overflow-x:auto;position:sticky;top:0;z-index:20}
+  .marca b,.usuario b,.usuario .apunte{display:none}
+  #menu{flex-direction:row;gap:4px}
+  #menu a{padding:9px 12px;white-space:nowrap}
+  .usuario{border:0;padding:0}
+  .usuario .btn{margin:0;white-space:nowrap}
+  main{padding:20px 16px 50px}
+}
+
+/* ---------- Cabecera de sección ---------- */
+.cab{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;margin-bottom:22px}
+.cab h2{font-size:27px}
+.cab .acciones{display:flex;gap:9px;flex-wrap:wrap}
+
+/* ---------- Tarjetas y métricas ---------- */
+.tarjeta{background:#fff;border:1px solid var(--linea);border-radius:14px;padding:18px;box-shadow:var(--sombra)}
+.metricas{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px}
+.metrica{background:#fff;border:1px solid var(--linea);border-radius:14px;padding:16px 18px}
+.metrica b{display:block;font-family:var(--serif);font-size:30px;line-height:1.1;color:var(--azul)}
+.metrica span{font-size:12.5px;color:var(--tinta-2)}
+
+.columnas{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start}
+@media(max-width:1000px){.columnas{grid-template-columns:1fr}}
+
+/* ---------- Rejilla de inmuebles ---------- */
+.rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.inmueble{background:#fff;border:1px solid var(--linea);border-radius:14px;overflow:hidden;box-shadow:var(--sombra);
+  display:flex;flex-direction:column;cursor:pointer;transition:.18s;text-align:left;font:inherit;padding:0;color:inherit}
+.inmueble:hover{transform:translateY(-2px);border-color:#C9D2DC}
+.inmueble .foto{aspect-ratio:4/3;background:#E9EDF2 center/cover no-repeat;position:relative;display:grid;place-items:center;
+  color:#9FAEBC;font-size:30px}
+.inmueble .cuerpo{padding:14px 15px 16px}
+.inmueble .precio{font-family:var(--serif);font-size:20px;font-weight:600;color:var(--azul)}
+.inmueble h3{font-size:15.5px;font-family:var(--sans);font-weight:600;margin:3px 0 6px}
+.inmueble .datos{font-size:13px;color:var(--tinta-2);display:flex;gap:10px;flex-wrap:wrap}
+
+.pastilla{position:absolute;top:10px;left:10px;background:rgba(255,255,255,.95);border-radius:999px;padding:4px 11px;
+  font-size:11.5px;font-weight:600;color:var(--tinta)}
+.pastilla.disponible{color:var(--verde)} .pastilla.borrador{color:var(--tinta-2)}
+.pastilla.reservado{color:var(--ambar)} .pastilla.vendido{color:var(--azul)}
+.etiqueta{display:inline-block;font-size:11.5px;background:#EEF3F8;color:var(--azul);border-radius:999px;padding:3px 10px;margin:6px 5px 0 0}
+
+/* ---------- Listas ---------- */
+.lista{display:flex;flex-direction:column;gap:1px;background:var(--linea);border:1px solid var(--linea);border-radius:14px;overflow:hidden}
+.lista .fila{background:#fff;padding:14px 16px;display:flex;gap:14px;align-items:center;justify-content:space-between;
+  cursor:pointer;font:inherit;text-align:left;color:inherit;border:0;width:100%}
+.lista .fila:hover{background:#FAFBFC}
+.lista .fila b{font-size:15px}
+.lista .fila .apunte{margin-top:1px}
+.vacio{background:#fff;border:1px dashed var(--linea);border-radius:14px;padding:34px;text-align:center;color:var(--tinta-2)}
+
+/* ---------- Filtros ---------- */
+.filtros{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.filtros input,.filtros select{width:auto;min-width:140px;flex:0 1 auto}
+.filtros input[type=search]{flex:1 1 240px}
+
+/* ---------- Coincidencias ---------- */
+.puntos{display:inline-grid;place-items:center;min-width:42px;height:28px;border-radius:999px;font-weight:700;font-size:13px;
+  background:#EEF3F8;color:var(--azul)}
+.puntos.alto{background:#E8F4EE;color:var(--verde)}
+.puntos.bajo{background:#F5F1E6;color:var(--ambar)}
+
+/* ---------- Ventana de edición ---------- */
+dialog{border:0;border-radius:16px;padding:0;max-width:min(760px,94vw);width:100%;box-shadow:0 30px 80px rgba(0,0,0,.28)}
+dialog::backdrop{background:rgba(9,25,40,.55)}
+#form-ficha{padding:26px}
+.dos{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.tres{display:grid;grid-template-columns:repeat(3,1fr);gap:0 16px}
+@media(max-width:620px){.dos,.tres{grid-template-columns:1fr}}
+.pie-ficha{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:20px;padding-top:18px;border-top:1px solid var(--linea)}
+.casillas{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.casillas label{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--linea);border-radius:999px;
+  padding:7px 13px;font-size:13.5px;cursor:pointer;background:#fff}
+.casillas input{width:auto;margin:0}
+.casillas label:has(input:checked){border-color:var(--azul);background:#EEF3F8;font-weight:600}
+
+/* ---------- Avisos flotantes ---------- */
+.cargando{position:fixed;inset:0;display:none;place-items:center;background:rgba(246,247,249,.8);z-index:60;
+  font-weight:600;color:var(--azul)}
+.cargando.on{display:grid}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);background:var(--tinta);color:#fff;
+  padding:12px 20px;border-radius:var(--r);font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:70;
+  max-width:calc(100vw - 32px);box-shadow:0 12px 30px rgba(0,0,0,.25)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}

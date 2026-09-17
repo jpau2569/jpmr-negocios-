@@ -34,6 +34,9 @@
     "api/luxury-motion.js": {
       "maxDuration": 60,
       "includeFiles": "agentes/**"
+    },
+    "api/oportunidades.js": {
+      "maxDuration": 30
     }
   },
   "crons": [
