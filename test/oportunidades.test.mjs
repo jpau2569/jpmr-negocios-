@@ -11,6 +11,7 @@ import handler, { nubeConfigurada } from "../api/oportunidades.js";
 import {
   normalizarInmueble, normalizarCliente, coincidencia, mejoresClientes,
   dinero, entero, slug, referencia, tokenPortal, mensajeWhatsapp,
+  normalizarFoto, rutaFoto, normalizarGaleria, MAX_FOTO_BYTES,
   CARACTERISTICAS, ESTADOS,
 } from "../lib/oportunidades.js";
 
@@ -174,7 +175,14 @@ const llamadas = [];
 function simula(respuestas) {
   globalThis.fetch = async (url, init) => {
     const u = String(url);
-    llamadas.push({ url: u, metodo: init?.metodo || init?.method, cuerpo: init?.body ? JSON.parse(init.body) : null, cabeceras: init?.headers });
+    // El cuerpo de una subida de foto es binario: no se puede leer como JSON.
+    let cuerpoLeido = null;
+    if (typeof init?.body === "string") {
+      try { cuerpoLeido = JSON.parse(init.body); } catch { cuerpoLeido = init.body; }
+    } else if (init?.body) {
+      cuerpoLeido = { binario: init.body.length };
+    }
+    llamadas.push({ url: u, metodo: init?.metodo || init?.method, cuerpo: cuerpoLeido, cabeceras: init?.headers });
     for (const [patron, salida] of respuestas) {
       if (u.includes(patron)) {
         const { estado = 200, datos = null } = typeof salida === "function" ? salida(u, init) : salida;
@@ -288,6 +296,98 @@ await handler({ method: "POST", body: { accion: "portal.responder", token: "a".r
 check("respuesta válida se registra", res.r.statusCode === 200 && res.r.body.ok === true);
 
 // ---------------------------------------------------------------------------
+console.log("\n— fotos —");
+// ---------------------------------------------------------------------------
+const JPG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(60)]).toString("base64");
+const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47]), Buffer.alloc(60)]).toString("base64");
+
+check("jpg con prefijo data: se acepta", normalizarFoto({ tipo: "image/jpeg", datos: "data:image/jpeg;base64," + JPG }).ok);
+check("png se acepta", normalizarFoto({ tipo: "image/png", datos: PNG }).ok);
+check("un PDF disfrazado no pasa", !normalizarFoto({ tipo: "application/pdf", datos: JPG }).ok);
+check("un archivo que no es imagen no pasa (se mira la cabecera, no el nombre)",
+  normalizarFoto({ tipo: "image/jpeg", datos: Buffer.from("<?php system($_GET[0]);").toString("base64") }).errores[0].includes("no parece una foto"));
+check("base64 corrupto no pasa", !normalizarFoto({ tipo: "image/jpeg", datos: "@@@no-es-base64@@@" }).ok);
+check("foto vacía no pasa", !normalizarFoto({ tipo: "image/jpeg", datos: "" }).ok);
+const gorda = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(MAX_FOTO_BYTES + 100)]).toString("base64");
+check("foto de más de 4 MB no pasa", normalizarFoto({ tipo: "image/jpeg", datos: gorda }).errores[0].includes("4 MB"));
+
+const ruta = rutaFoto("../../etc/passwd", "jpg", () => 0.42);
+check("la ruta no deja escapar de la carpeta del inmueble", !ruta.includes("..") && ruta.endsWith(".jpg"));
+check("la galería descarta repetidas y acota",
+  normalizarGaleria([{ url: "a", ruta: "r1" }, { url: "a", ruta: "r2" }, { url: "b", ruta: "r3" }]).length === 2);
+
+llamadas.length = 0;
+let inmuebleFalso = { id: "i-1", titulo: "Ático", fotos: [], portada_url: null };
+simula([
+  ["/rest/v1/ou_usuarios", { datos: [PERFIL] }],
+  ["/storage/v1/object/inmuebles/", { datos: { Key: "ok" } }],
+  ["/rest/v1/ou_inmuebles", (u, init) => {
+    const metodo = init?.method || "GET";
+    if (metodo === "GET") return { datos: [inmuebleFalso] };
+    inmuebleFalso = { ...inmuebleFalso, ...JSON.parse(init.body) };
+    return { datos: [inmuebleFalso] };
+  }],
+]);
+
+res = mockRes();
+await handler({
+  method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "fotos.subir", id: "i-1", tipo: "image/jpeg", datos: JPG },
+}, res);
+check("subir foto → 200", res.r.statusCode === 200, JSON.stringify(res.r.body));
+check("la foto queda en la galería con su ruta", res.r.body.inmueble.fotos.length === 1 && res.r.body.inmueble.fotos[0].ruta.startsWith("i-1/"));
+check("la primera foto se pone de portada sola", res.r.body.inmueble.portada_url === res.r.body.inmueble.fotos[0].url);
+const subida = llamadas.find((l) => l.url.includes("/storage/v1/object/inmuebles/"));
+check("la foto sube con el token del usuario, no con la clave de servicio",
+  subida?.cabeceras?.Authorization === "Bearer tok-1" && subida?.cabeceras?.apikey === "anon-de-prueba");
+check("la foto sube con su tipo real", subida?.cabeceras?.["Content-Type"] === "image/jpeg");
+
+res = mockRes();
+await handler({
+  method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "fotos.subir", id: "i-1", tipo: "image/jpeg", datos: "no-base64-@" },
+}, res);
+check("foto inválida → 400 sin tocar el almacén", res.r.statusCode === 400);
+
+res = mockRes();
+await handler({
+  method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "fotos.subir", tipo: "image/jpeg", datos: JPG },
+}, res);
+check("sin inmueble guardado → avisa de que hay que guardarlo antes",
+  res.r.statusCode === 400 && res.r.body.error.includes("Guarda el inmueble"));
+
+// Portada de una foto que no es suya
+res = mockRes();
+await handler({
+  method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "fotos.portada", id: "i-1", url: "https://otra-web.com/foto.jpg" },
+}, res);
+check("no se puede poner de portada una foto ajena", res.r.statusCode === 400);
+
+// Borrar la portada la reasigna
+inmuebleFalso = {
+  id: "i-1", titulo: "Ático",
+  fotos: [{ url: "u1", ruta: "i-1/a.jpg" }, { url: "u2", ruta: "i-1/b.jpg" }],
+  portada_url: "u1",
+};
+res = mockRes();
+await handler({
+  method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "fotos.borrar", id: "i-1", ruta: "i-1/a.jpg" },
+}, res);
+check("al borrar la portada, la siguiente toma el relevo",
+  res.r.statusCode === 200 && res.r.body.inmueble.portada_url === "u2" && res.r.body.inmueble.fotos.length === 1);
+
+simula([["/rest/v1/ou_usuarios", { datos: [{ ...PERFIL, rol: "lector" }] }]]);
+res = mockRes();
+await handler({
+  method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "fotos.subir", id: "i-1", tipo: "image/jpeg", datos: JPG },
+}, res);
+check("un lector no puede subir fotos → 403", res.r.statusCode === 403);
+
+// ---------------------------------------------------------------------------
 console.log("\n— el esquema SQL y la app van a una —");
 // ---------------------------------------------------------------------------
 const { readFileSync } = await import("node:fs");
@@ -299,6 +399,10 @@ check("los estados del catálogo son los del check de la tabla",
   ESTADOS.every((e) => sql.includes(`'${e.id}'`)));
 check("la vista pública no expone la dirección privada",
   !sql.split("create or replace view public.ou_publico")[1].split(";")[0].includes("direccion_privada"));
+check("el esquema crea el almacén de fotos con límite y tipos",
+  sql.includes("storage.buckets") && sql.includes("'image/webp'") && sql.includes("6291456"));
+check("solo el personal sube o borra fotos",
+  sql.includes("create policy ou_fotos_sube") && sql.includes("public.ou_es_staff()"));
 check("las funciones del portal no las puede llamar cualquiera",
   sql.includes("revoke all on function public.ou_portal(text) from public, anon, authenticated"));
 

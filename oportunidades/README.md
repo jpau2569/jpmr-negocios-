@@ -88,9 +88,23 @@ delante de un cliente.
 
 ---
 
+## Fotos
+
+Se suben desde la ficha del inmueble, con el inmueble ya guardado. **El navegador
+las reduce antes de mandarlas**: 1600 px de lado largo y JPEG al 82 %, así que
+una foto de móvil de 4 MB viaja como 20-40 KB. Eso importa cuando subes fotos
+desde la calle con cobertura regular.
+
+La primera foto se pone de portada sola; se puede cambiar con un botón y, si
+borras la portada, pasa a serlo la siguiente. Van a un bucket público de lectura
+(una foto de un piso en venta está para enseñarse) pero solo el personal puede
+subir o borrar.
+
+El backend comprueba **la cabecera real del archivo**, no la extensión: un
+archivo con nombre de foto que no lo sea se rechaza.
+
 ## Lo que falta (siguiente fase)
 
-- Subida de fotos a Supabase Storage (ahora la portada se pone por dirección web).
 - Ficha pública individual `/p/<slug>` con vista previa al compartir en WhatsApp.
 - Tareas y analítica con pantalla propia (los datos ya se guardan).
 - Asistente de redacción con Claude, reutilizando `ANTHROPIC_API_KEY`.

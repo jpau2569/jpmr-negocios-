@@ -357,7 +357,41 @@ revoke all on function public.ou_portal_responde(text, text, text) from public, 
 -- Solo el backend (que usa la clave de servicio) puede invocarlas.
 
 -- ---------------------------------------------------------------------------
---  9. Primer administrador
+--  9. Fotos de los inmuebles (Supabase Storage)
+-- ---------------------------------------------------------------------------
+--  Las fotos van a un bucket PÚBLICO de lectura: una foto de un piso a la
+--  venta está para enseñarse, y así la ficha y el portal cargan sin firmar
+--  cada URL. Subir, reemplazar y borrar, en cambio, solo el personal.
+--
+--  Las fotos NO se suben desde el navegador: van por `/api/oportunidades`,
+--  que es quien comprueba el tipo, el tamaño y quién las manda.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('inmuebles', 'inmuebles', true, 6291456,
+        array['image/jpeg','image/png','image/webp'])
+on conflict (id) do update
+  set public = true,
+      file_size_limit = 6291456,
+      allowed_mime_types = array['image/jpeg','image/png','image/webp'];
+
+drop policy if exists ou_fotos_lee on storage.objects;
+create policy ou_fotos_lee on storage.objects
+  for select using (bucket_id = 'inmuebles');
+
+drop policy if exists ou_fotos_sube on storage.objects;
+create policy ou_fotos_sube on storage.objects
+  for insert with check (bucket_id = 'inmuebles' and public.ou_es_staff());
+
+drop policy if exists ou_fotos_cambia on storage.objects;
+create policy ou_fotos_cambia on storage.objects
+  for update using (bucket_id = 'inmuebles' and public.ou_es_staff())
+  with check (bucket_id = 'inmuebles' and public.ou_es_staff());
+
+drop policy if exists ou_fotos_borra on storage.objects;
+create policy ou_fotos_borra on storage.objects
+  for delete using (bucket_id = 'inmuebles' and public.ou_es_staff());
+
+-- ---------------------------------------------------------------------------
+--  10. Primer administrador
 -- ---------------------------------------------------------------------------
 --  Después de crear tu usuario en Authentication → Users, ejecuta esto
 --  cambiando el correo por el tuyo:

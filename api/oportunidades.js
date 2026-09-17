@@ -26,6 +26,10 @@ import {
   tokenPortal,
   mensajeWhatsapp,
   texto,
+  normalizarFoto,
+  rutaFoto,
+  normalizarGaleria,
+  MAX_FOTOS,
   ESTADOS,
   OPERACIONES,
   RESPUESTAS_PORTAL,
@@ -372,6 +376,144 @@ async function apuntar(token, perfil, { tipo, resumen, inmueble_id = null, clien
   }
 }
 
+// ---- Fotos -----------------------------------------------------------------
+//  El archivo viaja en base64 dentro del JSON y se sube al almacén de Supabase
+//  con el token del usuario, así que las políticas del bucket deciden si puede.
+const urlPublica = (ruta) => `${process.env.SUPABASE_URL}/storage/v1/object/public/inmuebles/${ruta}`;
+
+async function subirAlAlmacen(ruta, bytes, tipo, token) {
+  const ctrl = new AbortController();
+  const alarma = setTimeout(() => ctrl.abort(), 20000);
+  let resp;
+  try {
+    resp = await fetch(`${process.env.SUPABASE_URL}/storage/v1/object/inmuebles/${ruta}`, {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: {
+        apikey: process.env.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        "Content-Type": tipo,
+        "x-upsert": "false",
+      },
+      body: bytes,
+    });
+  } catch (e) {
+    const err = new Error(
+      e?.name === "AbortError"
+        ? "La foto no se pudo subir: la conexión tardó demasiado."
+        : `La foto no se pudo subir: ${e?.message || e}`
+    );
+    err.status = 504;
+    throw err;
+  } finally {
+    clearTimeout(alarma);
+  }
+  if (!resp.ok) {
+    const detalle = await resp.text().catch(() => "");
+    const err = new Error(
+      resp.status === 403
+        ? "Tu usuario no puede subir fotos."
+        : `El almacén rechazó la foto (${resp.status}).`
+    );
+    err.status = resp.status;
+    err.detalle = detalle;
+    throw err;
+  }
+}
+
+async function borrarDelAlmacen(ruta, token) {
+  try {
+    await fetch(`${process.env.SUPABASE_URL}/storage/v1/object/inmuebles/${ruta}`, {
+      method: "DELETE",
+      headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
+    });
+  } catch (e) {
+    // Si el archivo se queda huérfano en el almacén no es grave; lo que importa
+    // es que desaparezca de la ficha, y eso sí se comprueba.
+    console.error("No se pudo borrar la foto del almacén:", String(e?.message || e));
+  }
+}
+
+async function inmuebleDe(token, id) {
+  const filas = await tabla("ou_inmuebles", `?id=eq.${id}&select=${CAMPOS_INMUEBLE}&limit=1`, { token });
+  return filas[0] || null;
+}
+
+async function accionFotoSubir(token, perfil, cuerpo) {
+  if (perfil.rol === "lector") {
+    return { estado: 403, cuerpo: { error: "Tu usuario es de solo lectura." } };
+  }
+  const id = texto(cuerpo.id, 40);
+  if (!id) return { estado: 400, cuerpo: { error: "Guarda el inmueble antes de añadirle fotos." } };
+
+  const inmueble = await inmuebleDe(token, id);
+  if (!inmueble) return { estado: 404, cuerpo: { error: "Ese inmueble ya no existe." } };
+
+  const galeria = normalizarGaleria(inmueble.fotos);
+  if (galeria.length >= MAX_FOTOS) {
+    return { estado: 400, cuerpo: { error: `Este inmueble ya tiene ${MAX_FOTOS} fotos, que son de sobra.` } };
+  }
+
+  const { ok, errores, foto } = normalizarFoto(cuerpo);
+  if (!ok) return { estado: 400, cuerpo: { error: errores.join(" "), errores } };
+
+  const ruta = rutaFoto(id, foto.extension);
+  await subirAlAlmacen(ruta, foto.bytes, foto.tipo, token);
+
+  const url = urlPublica(ruta);
+  const fotos = [...galeria, { url, ruta }];
+  // La primera foto que entra se queda de portada: es lo que se espera.
+  const cambios = { fotos };
+  if (!inmueble.portada_url) cambios.portada_url = url;
+
+  const filas = await tabla("ou_inmuebles", `?id=eq.${id}&select=${CAMPOS_INMUEBLE}`, {
+    metodo: "PATCH", token, cuerpo: cambios, prefer: "return=representation",
+  });
+  return { estado: 200, cuerpo: { inmueble: filas[0] } };
+}
+
+async function accionFotoBorrar(token, perfil, cuerpo) {
+  if (perfil.rol === "lector") {
+    return { estado: 403, cuerpo: { error: "Tu usuario es de solo lectura." } };
+  }
+  const id = texto(cuerpo.id, 40);
+  const ruta = texto(cuerpo.ruta, 200);
+  const inmueble = id ? await inmuebleDe(token, id) : null;
+  if (!inmueble) return { estado: 404, cuerpo: { error: "Ese inmueble ya no existe." } };
+
+  const galeria = normalizarGaleria(inmueble.fotos);
+  const quitada = galeria.find((f) => f.ruta === ruta);
+  if (!quitada) return { estado: 404, cuerpo: { error: "Esa foto ya no está en la ficha." } };
+
+  const fotos = galeria.filter((f) => f.ruta !== ruta);
+  const cambios = { fotos };
+  // Si se borra la portada, pasa a serlo la siguiente (o ninguna).
+  if (inmueble.portada_url === quitada.url) cambios.portada_url = fotos[0]?.url || null;
+
+  const filas = await tabla("ou_inmuebles", `?id=eq.${id}&select=${CAMPOS_INMUEBLE}`, {
+    metodo: "PATCH", token, cuerpo: cambios, prefer: "return=representation",
+  });
+  await borrarDelAlmacen(ruta, token);
+  return { estado: 200, cuerpo: { inmueble: filas[0] } };
+}
+
+async function accionFotoPortada(token, perfil, cuerpo) {
+  if (perfil.rol === "lector") {
+    return { estado: 403, cuerpo: { error: "Tu usuario es de solo lectura." } };
+  }
+  const id = texto(cuerpo.id, 40);
+  const url = texto(cuerpo.url, 500);
+  const inmueble = id ? await inmuebleDe(token, id) : null;
+  if (!inmueble) return { estado: 404, cuerpo: { error: "Ese inmueble ya no existe." } };
+  if (!normalizarGaleria(inmueble.fotos).some((f) => f.url === url)) {
+    return { estado: 400, cuerpo: { error: "Esa foto no es de este inmueble." } };
+  }
+  const filas = await tabla("ou_inmuebles", `?id=eq.${id}&select=${CAMPOS_INMUEBLE}`, {
+    metodo: "PATCH", token, cuerpo: { portada_url: url }, prefer: "return=representation",
+  });
+  return { estado: 200, cuerpo: { inmueble: filas[0] } };
+}
+
 // ---- Sin sesión: ficha pública y portal del comprador ----------------------
 async function accionFichaPublica(cuerpo) {
   const slug = texto(cuerpo.slug, 100);
@@ -420,6 +562,9 @@ const PRIVADAS = {
   "clientes.listar": (token) => accionClientesListar(token),
   "clientes.guardar": (token, perfil, cuerpo) => accionClienteGuardar(token, perfil, cuerpo),
   coincidencias: (token, _p, cuerpo) => accionCoincidencias(token, cuerpo),
+  "fotos.subir": (token, perfil, cuerpo) => accionFotoSubir(token, perfil, cuerpo),
+  "fotos.borrar": (token, perfil, cuerpo) => accionFotoBorrar(token, perfil, cuerpo),
+  "fotos.portada": (token, perfil, cuerpo) => accionFotoPortada(token, perfil, cuerpo),
   "seleccion.enviar": (token, perfil, cuerpo) => accionEnviarSeleccion(token, perfil, cuerpo),
 };
 

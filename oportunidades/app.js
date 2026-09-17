@@ -310,6 +310,118 @@ async function vistaActividad() {
   ]);
 }
 
+/* ---------- fotos ---------- */
+//  Las fotos de un móvil pesan 4-8 MB y no hacen falta: para una ficha sobra
+//  con 1600 px de lado largo. Se reducen aquí, en el propio navegador, antes
+//  de mandarlas — así la subida es rápida aunque Pau esté en la calle con
+//  cobertura regular, y nunca se pasa del límite del servidor.
+const LADO_MAX = 1600;
+
+function comprimirFoto(archivo) {
+  return new Promise((resuelve, rechaza) => {
+    if (!archivo.type.startsWith("image/")) {
+      return rechaza(new Error(`"${archivo.name}" no es una foto.`));
+    }
+    const lector = new FileReader();
+    lector.onerror = () => rechaza(new Error(`No se pudo leer "${archivo.name}".`));
+    lector.onload = () => {
+      const img = new Image();
+      img.onerror = () => rechaza(new Error(`"${archivo.name}" no se pudo abrir como imagen.`));
+      img.onload = () => {
+        const escala = Math.min(1, LADO_MAX / Math.max(img.width, img.height));
+        const lienzo = document.createElement("canvas");
+        lienzo.width = Math.round(img.width * escala);
+        lienzo.height = Math.round(img.height * escala);
+        const ctx = lienzo.getContext("2d");
+        ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
+        // JPEG al 82 %: la diferencia no se ve y el archivo baja muchísimo.
+        resuelve({ tipo: "image/jpeg", datos: lienzo.toDataURL("image/jpeg", 0.82) });
+      };
+      img.src = lector.result;
+    };
+    lector.readAsDataURL(archivo);
+  });
+}
+
+/**
+ * Zona de fotos de la ficha. Solo aparece con el inmueble ya guardado: las
+ * fotos se guardan contra su identificador, así que antes no hay dónde ponerlas.
+ */
+function zonaFotos(inm, alCambiar) {
+  const caja = el("div", { clase: "fotos" });
+  const entrada = el("input", { type: "file", accept: "image/jpeg,image/png,image/webp", multiple: true, hidden: true });
+  const aviso = el("p", { clase: "aviso", hidden: true });
+
+  function pintar(actual) {
+    const galeria = Array.isArray(actual.fotos) ? actual.fotos : [];
+    caja.replaceChildren(
+      el("div", { clase: "rejilla-fotos" }, [
+        ...galeria.map((f) => {
+          const esPortada = actual.portada_url === f.url;
+          const miniatura = el("div", { clase: "mini" + (esPortada ? " portada" : "") });
+          miniatura.style.backgroundImage = `url(${CSS.escape(f.url)})`;
+          return el("div", { clase: "mini-caja" }, [
+            miniatura,
+            esPortada ? el("span", { clase: "sello-portada", texto: "Portada" }) : null,
+            el("div", { clase: "mini-acciones" }, [
+              esPortada ? null : el("button", {
+                clase: "btn fino claro", type: "button", texto: "Portada",
+                onclick: () => cambiar("fotos.portada", { id: actual.id, url: f.url }),
+              }),
+              el("button", {
+                clase: "btn fino peligro", type: "button", texto: "Quitar",
+                onclick: () => cambiar("fotos.borrar", { id: actual.id, ruta: f.ruta }),
+              }),
+            ]),
+          ]);
+        }),
+        el("button", {
+          clase: "mini-anadir", type: "button", onclick: () => entrada.click(),
+        }, [el("span", { texto: "+" }), el("small", { texto: galeria.length ? "Añadir" : "Añadir fotos" })]),
+      ]),
+      el("p", { clase: "apunte", texto: `${galeria.length} de 20 · se reducen solas antes de subirse` }),
+      aviso,
+      entrada
+    );
+  }
+
+  async function cambiar(accion, datos) {
+    try {
+      const r = await api(accion, datos);
+      pintar(r.inmueble);
+      alCambiar?.(r.inmueble);
+    } catch (e) {
+      mostrarAviso(aviso, e.message);
+    }
+  }
+
+  entrada.addEventListener("change", async () => {
+    const archivos = [...entrada.files];
+    entrada.value = "";
+    mostrarAviso(aviso, "");
+    let ultimo = null;
+    for (const [i, archivo] of archivos.entries()) {
+      try {
+        cargando(true);
+        const foto = await comprimirFoto(archivo);
+        cargando(false);
+        const r = await api("fotos.subir", { id: inm.id, ...foto });
+        ultimo = r.inmueble;
+        pintar(r.inmueble);
+        toast(`Foto ${i + 1} de ${archivos.length} subida.`);
+      } catch (e) {
+        cargando(false);
+        mostrarAviso(aviso, e.message);
+        break;
+      }
+    }
+    if (ultimo) alCambiar?.(ultimo);
+  });
+
+  pintar(inm);
+  return caja;
+}
+
 /* ---------- ficha de inmueble ---------- */
 function campo(etiqueta, nodo) {
   return el("label", { clase: "campo" }, [el("span", { texto: etiqueta }), nodo]);
@@ -358,7 +470,13 @@ function abrirInmueble(inm) {
     el("p", { clase: "apunte", texto: "Características", style: "margin-bottom:8px" }),
     casillas,
     campo("Descripción", descripcion),
-    campo("Foto de portada (dirección web)", portada),
+    inm
+      ? el("div", {}, [
+          el("p", { clase: "apunte", texto: "Fotos", style: "margin-bottom:8px" }),
+          zonaFotos(inm, (actualizado) => { inm = actualizado; portada.value = actualizado.portada_url || ""; }),
+        ])
+      : el("p", { clase: "apunte", texto: "Guarda el inmueble y podrás añadirle fotos.", style: "margin-bottom:14px" }),
+    campo("Foto de portada (dirección web, opcional si subes fotos)", portada),
     el("label", { clase: "casillas" }, [el("label", {}, [publico, "Publicar la ficha (hace falta precio y estado disponible)"])]),
     aviso,
     el("div", { clase: "pie-ficha" }, [
