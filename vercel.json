@@ -37,6 +37,9 @@
     },
     "api/oportunidades.js": {
       "maxDuration": 30
+    },
+    "api/oportunidades-ficha.js": {
+      "maxDuration": 15
     }
   },
   "crons": [
@@ -47,6 +50,12 @@
     {
       "path": "/api/castebot-informe",
       "schedule": "0 7 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/p/:slug",
+      "destination": "/api/oportunidades-ficha?slug=:slug"
     }
   ]
 }

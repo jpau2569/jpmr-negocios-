@@ -103,8 +103,28 @@ subir o borrar.
 El backend comprueba **la cabecera real del archivo**, no la extensión: un
 archivo con nombre de foto que no lo sea se rechaza.
 
-## Lo que falta (siguiente fase)
+## Ficha pública compartible
 
-- Ficha pública individual `/p/<slug>` con vista previa al compartir en WhatsApp.
+Al marcar un inmueble como **público** (hace falta precio y estado disponible o
+reservado) se genera su dirección: **`tudominio.com/p/<slug>`**. En la ficha del
+inmueble aparece el botón **Compartir ficha**, con el enlace, el mensaje ya
+redactado y el botón de WhatsApp.
+
+Esa página **la monta el servidor** (`api/oportunidades-ficha.js`), no el
+navegador. El motivo es concreto: WhatsApp lee las etiquetas Open Graph sin
+ejecutar JavaScript, así que si la página se montara en el navegador, al pegar
+el enlace saldría una tarjeta vacía. Montada en el servidor, sale con la foto,
+el título y el precio.
+
+La ficha lee de la vista `ou_publico`: la dirección exacta y los datos de
+clientes no salen de ahí ni por error. Lleva `noindex` por defecto —es un
+enlace para mandar a un cliente, no para que lo encuentre cualquiera en
+Google—; si algún día quieres que se indexe la cartera, está señalado en el
+código dónde cambiarlo.
+
+El botón de contacto escribe al WhatsApp del despacho: **663 26 38 42**
+(centralizado en `CONTACTO`, dentro de `lib/oportunidades.js`).
+
+## Lo que falta (siguiente fase)
 - Tareas y analítica con pantalla propia (los datos ya se guardan).
 - Asistente de redacción con Claude, reutilizando `ANTHROPIC_API_KEY`.

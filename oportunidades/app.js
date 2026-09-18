@@ -481,6 +481,10 @@ function abrirInmueble(inm) {
     aviso,
     el("div", { clase: "pie-ficha" }, [
       el("button", { clase: "btn claro", type: "button", texto: "Cancelar", onclick: () => d.close() }),
+      inm && inm.slug ? el("button", {
+        clase: "btn claro", type: "button", texto: "Compartir ficha",
+        onclick: () => compartirFicha(inm),
+      }) : null,
       inm ? el("button", {
         clase: "btn claro", type: "button", texto: "Ver coincidencias",
         onclick: () => verCoincidencias(inm),
@@ -571,6 +575,50 @@ function abrirCliente(cli) {
     }
   }
 
+  d.showModal();
+}
+
+/* ---------- compartir la ficha pública ---------- */
+//  El enlace de la ficha es lo que Pau manda por WhatsApp a un cliente o pega
+//  en un anuncio. Lleva la vista previa con foto y precio porque la página la
+//  monta el servidor (api/oportunidades-ficha.js).
+function compartirFicha(inm) {
+  const enlace = `${location.origin}/p/${inm.slug}`;
+  const mensaje = [
+    `${inm.titulo}`,
+    [inm.habitaciones ? `${inm.habitaciones} hab` : null, inm.metros ? `${inm.metros} m²` : null,
+     [inm.zona, inm.ciudad].filter(Boolean).join(", ")].filter(Boolean).join(" · "),
+    euros(inm.precio) + (inm.operacion === "alquiler" ? "/mes" : ""),
+    "",
+    enlace,
+  ].filter((l) => l !== null).join("\n");
+
+  const d = $("ficha");
+  const f = $("form-ficha");
+  f.replaceChildren(
+    el("h2", { texto: "Compartir esta ficha", style: "margin-bottom:6px" }),
+    el("p", { clase: "apunte", texto: "Al pegarlo en WhatsApp sale la tarjeta con la foto y el precio.", style: "margin-bottom:16px" }),
+    el("label", { clase: "campo" }, [
+      el("span", { texto: "Enlace" }),
+      el("input", { value: enlace, readonly: true, onclick: (ev) => ev.target.select() }),
+    ]),
+    el("label", { clase: "campo" }, [
+      el("span", { texto: "Mensaje listo para mandar" }),
+      el("textarea", { readonly: true, style: "min-height:130px" }, [mensaje]),
+    ]),
+    el("div", { clase: "pie-ficha" }, [
+      el("button", { clase: "btn claro", type: "button", texto: "Cerrar", onclick: () => d.close() }),
+      el("button", { clase: "btn claro", type: "button", texto: "Copiar enlace", onclick: () => copiar(enlace) }),
+      el("a", {
+        clase: "btn", target: "_blank", rel: "noopener", texto: "Abrir la ficha",
+        href: enlace,
+      }),
+      el("a", {
+        clase: "btn oro", target: "_blank", rel: "noopener", texto: "Mandar por WhatsApp",
+        href: `https://wa.me/?text=${encodeURIComponent(mensaje)}`,
+      }),
+    ])
+  );
   d.showModal();
 }
 

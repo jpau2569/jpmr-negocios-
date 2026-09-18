@@ -8,10 +8,12 @@
 // ============================================================================
 
 import handler, { nubeConfigurada } from "../api/oportunidades.js";
+import fichaHandler, { paginaFicha, esc } from "../api/oportunidades-ficha.js";
 import {
   normalizarInmueble, normalizarCliente, coincidencia, mejoresClientes,
   dinero, entero, slug, referencia, tokenPortal, mensajeWhatsapp,
   normalizarFoto, rutaFoto, normalizarGaleria, MAX_FOTO_BYTES,
+  CONTACTO, enlaceWhatsapp,
   CARACTERISTICAS, ESTADOS,
 } from "../lib/oportunidades.js";
 
@@ -386,6 +388,90 @@ await handler({
   body: { accion: "fotos.subir", id: "i-1", tipo: "image/jpeg", datos: JPG },
 }, res);
 check("un lector no puede subir fotos → 403", res.r.statusCode === 403);
+
+// ---------------------------------------------------------------------------
+console.log("\n— ficha pública compartible (/p/<slug>) —");
+// ---------------------------------------------------------------------------
+check("el WhatsApp de contacto es el del despacho", CONTACTO.whatsapp === "663263842");
+check("el enlace de WhatsApp lleva el prefijo de España",
+  enlaceWhatsapp("hola").startsWith("https://wa.me/34663263842?text="));
+check("el texto del enlace va codificado", enlaceWhatsapp("piso en Gijón & Oviedo").includes("%26"));
+
+check("esc() cierra las comillas y los signos", esc('<img src=x onerror="alert(1)">') === "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
+
+const FICHA = {
+  slug: "atico-con-terraza-gijon-ou-2026-0001", referencia: "OU-2026-0001",
+  titulo: "Ático con terraza en San Lorenzo", operacion: "venta", precio: 289000,
+  ciudad: "Gijón", zona: "Centro", habitaciones: 3, banos: 2, metros: 118,
+  caracteristicas: ["terraza", "vistas"], descripcion: "Ático exterior con terraza al sur.",
+  portada_url: "https://ejemplo.com/foto1.jpg",
+  fotos: [{ url: "https://ejemplo.com/foto1.jpg" }, { url: "https://ejemplo.com/foto2.jpg" }],
+};
+const html = paginaFicha(FICHA, "https://ejemplo.com");
+
+check("la tarjeta de WhatsApp lleva título con precio",
+  html.includes('<meta property="og:title" content="Ático con terraza en San Lorenzo · 289.000') , "og:title");
+check("la tarjeta lleva la foto de portada",
+  html.includes('<meta property="og:image" content="https://ejemplo.com/foto1.jpg"'));
+check("la tarjeta lleva la dirección canónica",
+  html.includes(`<meta property="og:url" content="https://ejemplo.com/p/${FICHA.slug}"`));
+check("la descripción de la tarjeta usa datos reales",
+  html.includes("3 hab · 2 baños · 118 m²"));
+check("el enlace no se indexa en Google por defecto", html.includes('name="robots" content="noindex, nofollow"'));
+check("el botón de visita escribe al WhatsApp del despacho",
+  html.includes("wa.me/34663263842") && html.includes("Pedir visita por WhatsApp"));
+check("el mensaje del botón cita la referencia", html.includes("OU-2026-0001"));
+check("las características salen con su nombre, no con el identificador",
+  html.includes(">Terraza<") && html.includes(">Vistas<") && !html.includes(">terraza<"));
+check("la segunda foto también se muestra", html.includes("foto2.jpg"));
+check("aparece el aviso de que los datos son orientativos", html.includes("no constituyen oferta contractual"));
+
+// Lo que NUNCA debe salir en una ficha pública
+const conPrivados = paginaFicha({ ...FICHA, direccion_privada: "C/ Uría 12, 3º B", agente_id: "u-1" }, "https://ejemplo.com");
+check("la dirección exacta no aparece en la ficha pública", !conPrivados.includes("Uría"));
+
+// Un título con comillas o etiquetas no rompe la página ni inyecta nada
+const conTrampa = paginaFicha({ ...FICHA, titulo: '<script>alert(1)</script>"', descripcion: "<b>ojo</b>" }, "https://ejemplo.com");
+check("un título con código se escapa en el cuerpo y en las etiquetas",
+  !conTrampa.includes("<script>alert(1)</script>") && conTrampa.includes("&lt;script&gt;"));
+check("la descripción también se escapa", !conTrampa.includes("<b>ojo</b>"));
+
+// El handler
+function mockResHtml() {
+  const r = { statusCode: 0, cuerpo: "", headers: {} };
+  return {
+    status(c) { r.statusCode = c; return this; },
+    send(t) { r.cuerpo = t; return this; },
+    setHeader(k, v) { r.headers[k] = v; },
+    r,
+  };
+}
+
+let rh = mockResHtml();
+await fichaHandler({ query: { slug: "" }, headers: {} }, rh);
+check("sin slug → 400 con página amable", rh.r.statusCode === 400 && rh.r.cuerpo.includes("Enlace incompleto"));
+
+simula([["/rest/v1/ou_publico", { datos: [] }]]);
+rh = mockResHtml();
+await fichaHandler({ query: { slug: "no-existe" }, headers: { host: "ejemplo.com" } }, rh);
+check("inmueble retirado → 404 que invita a escribir",
+  rh.r.statusCode === 404 && rh.r.cuerpo.includes("ya no está disponible") && rh.r.cuerpo.includes("wa.me/34663263842"));
+
+llamadas.length = 0;
+simula([["/rest/v1/ou_publico", { datos: [FICHA] }]]);
+rh = mockResHtml();
+await fichaHandler({ query: { slug: FICHA.slug }, headers: { host: "ejemplo.com" } }, rh);
+check("ficha publicada → 200 con la página montada",
+  rh.r.statusCode === 200 && rh.r.cuerpo.includes("Ático con terraza en San Lorenzo"));
+check("se sirve como HTML", String(rh.r.headers["Content-Type"]).includes("text/html"));
+check("se cachea un rato en el borde", String(rh.r.headers["Cache-Control"]).includes("s-maxage"));
+check("la ficha se lee de la vista pública, no de la tabla",
+  llamadas.some((l) => l.url.includes("ou_publico")) && !llamadas.some((l) => l.url.includes("ou_inmuebles")));
+
+rh = mockResHtml();
+await fichaHandler({ query: { slug: "../../ou_clientes?select=*" }, headers: { host: "ejemplo.com" } }, rh);
+check("un slug con trampa se limpia antes de consultar",
+  !llamadas.some((l) => l.url.includes("ou_clientes")), llamadas.map((l) => l.url).join(" "));
 
 // ---------------------------------------------------------------------------
 console.log("\n— el esquema SQL y la app van a una —");

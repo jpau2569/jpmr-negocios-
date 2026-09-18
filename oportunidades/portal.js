@@ -144,6 +144,11 @@ async function abrir() {
         el("p", { clase: "apunte", style: "margin-top:6px", texto: e.message }),
         el("p", { clase: "apunte", style: "margin-top:10px" }, [
           "Escríbenos y te mandamos un enlace nuevo: ",
+          el("a", {
+            href: "https://wa.me/34663263842?text=" + encodeURIComponent("Hola, el enlace de mi selección no me funciona."),
+            target: "_blank", rel: "noopener", texto: "WhatsApp 663 26 38 42",
+          }),
+          " · ",
           el("a", { href: "tel:+34985210468", texto: "985 210 468" }),
         ]),
       ])
