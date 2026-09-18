@@ -88,6 +88,9 @@ create table if not exists public.ou_inmuebles (
   slug              text unique,
   portada_url       text,
   fotos             jsonb not null default '[]',
+  -- Vídeo del inmueble: YouTube, Vimeo o un enlace directo. Se guarda la
+  -- dirección, no el archivo: los vídeos pesan y ya están alojados fuera.
+  video_url         text,
   creado            timestamptz not null default now(),
   actualizado       timestamptz not null default now()
 );
@@ -262,7 +265,7 @@ with (security_invoker = off) as
 select
   slug, referencia, titulo, operacion, precio, ciudad, zona, provincia,
   habitaciones, banos, metros, caracteristicas, descripcion, portada_url,
-  fotos, actualizado
+  fotos, video_url, actualizado
 from public.ou_inmuebles
 where publico = true and slug is not null and estado in ('disponible', 'reservado');
 
@@ -391,7 +394,14 @@ create policy ou_fotos_borra on storage.objects
   for delete using (bucket_id = 'inmuebles' and public.ou_es_staff());
 
 -- ---------------------------------------------------------------------------
---  10. Primer administrador
+--  10. Para quien ya ejecutó una versión anterior de este esquema
+-- ---------------------------------------------------------------------------
+--  `create table if not exists` no añade columnas nuevas a una tabla que ya
+--  existe, así que las añadimos aparte. Si la base es nueva, esto no hace nada.
+alter table public.ou_inmuebles add column if not exists video_url text;
+
+-- ---------------------------------------------------------------------------
+--  11. Primer administrador
 -- ---------------------------------------------------------------------------
 --  Después de crear tu usuario en Authentication → Users, ejecuta esto
 --  cambiando el correo por el tuyo:

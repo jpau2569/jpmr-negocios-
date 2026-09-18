@@ -113,7 +113,7 @@ async function perfilDe(token) {
 const CAMPOS_INMUEBLE =
   "id,referencia,titulo,operacion,precio,ciudad,zona,codigo_postal,provincia,direccion_privada," +
   "habitaciones,banos,metros,caracteristicas,etiquetas,descripcion,estado,agente_id,publico,slug," +
-  "portada_url,fotos,creado,actualizado";
+  "portada_url,fotos,video_url,creado,actualizado";
 
 const CAMPOS_CLIENTE =
   "id,nombre,apellidos,telefono,email,tipo,operacion,presupuesto_max,zonas,habitaciones_min," +
@@ -333,9 +333,14 @@ async function accionEnviarSeleccion(token, perfil, cuerpo) {
 
   const inmuebles = await tabla(
     "ou_inmuebles",
-    `?id=in.(${ids.join(",")})&select=id,titulo,metros,habitaciones,precio,slug`,
+    `?id=in.(${ids.join(",")})&select=id,titulo,metros,habitaciones,precio,zona,ciudad,slug,publico,estado,video_url`,
     { token }
   );
+
+  // Un inmueble sin publicar no aparece en el portal del cliente ni tiene
+  // ficha que enseñarle. Se manda igual —a veces es lo que quieres— pero se
+  // avisa, porque si no el cliente abre el enlace y no ve ese piso.
+  const sinPublicar = inmuebles.filter((i) => !i.publico || !i.slug).map((i) => i.titulo);
 
   const base = texto(cuerpo.base_url, 200) || "";
   const enlacePortal = base ? `${base.replace(/\/+$/, "")}/oportunidades/portal.html#${token_portal}` : "";
@@ -351,11 +356,13 @@ async function accionEnviarSeleccion(token, perfil, cuerpo) {
     cuerpo: {
       cliente: filas[0],
       enlace: enlacePortal,
+      sin_publicar: sinPublicar,
       mensaje: mensajeWhatsapp({
         cliente,
         inmuebles,
         enlacePortal,
-        firma: { agente: perfil.nombre, empresa: "Asesoría Castresana" },
+        base,
+        firma: { agente: perfil.nombre },
       }),
     },
   };
@@ -514,6 +521,76 @@ async function accionFotoPortada(token, perfil, cuerpo) {
   return { estado: 200, cuerpo: { inmueble: filas[0] } };
 }
 
+// ---- Comprobación de la instalación ----------------------------------------
+//  Para que montar esto no sea adivinar: dice qué falta y cómo arreglarlo.
+//  No devuelve ninguna clave ni ningún dato de la base; solo si cada pieza
+//  responde. Es la pantalla que se mira cuando algo no entra.
+async function accionEstado() {
+  const pasos = [];
+  const apunta = (nombre, ok, detalle, arreglo = null) => pasos.push({ nombre, ok, detalle, arreglo });
+
+  const url = process.env.SUPABASE_URL;
+  const anon = process.env.SUPABASE_ANON_KEY;
+  const servicio = process.env.SUPABASE_SERVICE_KEY;
+
+  apunta("Dirección del proyecto (SUPABASE_URL)", Boolean(url),
+    url ? "configurada" : "falta",
+    "Vercel → Settings → Environment Variables → SUPABASE_URL (Supabase → Settings → API → Project URL).");
+  apunta("Clave pública (SUPABASE_ANON_KEY)", Boolean(anon),
+    anon ? "configurada" : "falta",
+    "Vercel → Settings → Environment Variables → SUPABASE_ANON_KEY (la clave `anon public`).");
+  apunta("Clave de servicio (SUPABASE_SERVICE_KEY)", Boolean(servicio),
+    servicio ? "configurada" : "falta — sin ella el portal del comprador no abrirá",
+    "Vercel → Settings → Environment Variables → SUPABASE_SERVICE_KEY (la clave `service_role`, secreta).");
+
+  if (!url || !anon) {
+    return { estado: 200, cuerpo: { listo: false, pasos } };
+  }
+
+  // Las tablas: si el esquema no se ha ejecutado, PostgREST responde 404.
+  for (const [tablaNombre, etiqueta] of [
+    ["ou_usuarios", "Tabla de usuarios"],
+    ["ou_inmuebles", "Tabla de inmuebles"],
+    ["ou_clientes", "Tabla de clientes"],
+    ["ou_publico", "Vista de fichas públicas"],
+  ]) {
+    try {
+      await tabla(tablaNombre, "?select=*&limit=0");
+      apunta(etiqueta, true, "creada");
+    } catch (e) {
+      apunta(etiqueta, false,
+        e.status === 404 ? "no existe todavía" : `no responde (${e.status || "?"})`,
+        "Supabase → SQL Editor → pega `oportunidades/esquema.sql` entero y pulsa Run.");
+    }
+  }
+
+  // El almacén de fotos (hace falta la clave de servicio para preguntarlo).
+  if (servicio) {
+    try {
+      await llamar("/storage/v1/bucket/inmuebles", { servicio: true });
+      apunta("Almacén de fotos", true, "listo");
+    } catch (e) {
+      apunta("Almacén de fotos", false,
+        e.status === 404 ? "el bucket `inmuebles` no existe" : `no responde (${e.status || "?"})`,
+        "Lo crea el propio esquema. Vuelve a ejecutar `oportunidades/esquema.sql` entero.");
+    }
+
+    // ¿Hay alguien dado de alta? Sin eso se puede entrar pero no se ve nada.
+    try {
+      const usuarios = await llamar("/rest/v1/ou_usuarios?select=id&limit=1", { servicio: true });
+      const hay = Array.isArray(usuarios) && usuarios.length > 0;
+      apunta("Usuario del despacho", hay,
+        hay ? "hay al menos uno dado de alta" : "no hay ninguno: podrás iniciar sesión pero no verás nada",
+        "Crea el usuario en Authentication → Users y ejecuta el `insert` del final de `esquema.sql` con tu correo.");
+    } catch {
+      apunta("Usuario del despacho", false, "no se pudo comprobar",
+        "Revisa que el esquema esté ejecutado y que la clave de servicio sea la correcta.");
+    }
+  }
+
+  return { estado: 200, cuerpo: { listo: pasos.every((p) => p.ok), pasos } };
+}
+
 // ---- Sin sesión: ficha pública y portal del comprador ----------------------
 async function accionFichaPublica(cuerpo) {
   const slug = texto(cuerpo.slug, 100);
@@ -549,6 +626,7 @@ async function accionPortalResponder(cuerpo) {
 // Acciones que no necesitan sesión del despacho.
 const PUBLICAS = {
   login: (_t, _p, cuerpo) => accionLogin(cuerpo),
+  estado: () => accionEstado(),
   ficha: (_t, _p, cuerpo) => accionFichaPublica(cuerpo),
   "portal.leer": (_t, _p, cuerpo) => accionPortalLeer(cuerpo),
   "portal.responder": (_t, _p, cuerpo) => accionPortalResponder(cuerpo),
@@ -574,6 +652,10 @@ const PRIVADAS = {
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Usa POST con un cuerpo JSON." });
+  }
+  if (!nubeConfigurada() && String(req.body?.accion || "") === "estado") {
+    const r = await accionEstado();
+    return res.status(r.estado).json(r.cuerpo);
   }
   if (!nubeConfigurada()) {
     return res.status(503).json({

@@ -178,3 +178,30 @@ dialog::backdrop{background:rgba(9,25,40,.55)}
 .mini-anadir:hover{border-color:var(--azul);color:var(--azul);background:#F4F8FC}
 .mini-anadir span{font-size:26px;line-height:1}
 .mini-anadir small{font-size:12px}
+
+/* ---------- Marcar inmuebles para enviarlos juntos ---------- */
+.inmueble-caja{position:relative}
+.marcar-caja{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.95);border-radius:8px;
+  padding:6px;line-height:0;box-shadow:0 2px 6px rgba(16,32,48,.18);cursor:pointer}
+.marcar{width:19px;height:19px;margin:0;accent-color:var(--azul);cursor:pointer}
+.etiqueta.video{background:#FBF3DF;color:#7A5A10}
+.barra-marcados{position:sticky;bottom:14px;margin-top:18px;display:flex;flex-wrap:wrap;gap:12px;
+  align-items:center;justify-content:space-between;background:var(--azul);color:#fff;border-radius:14px;
+  padding:13px 18px;box-shadow:0 12px 30px rgba(11,59,96,.28);z-index:15}
+.barra-marcados b{font-size:15px}
+.barra-marcados .acciones{display:flex;gap:8px;flex-wrap:wrap}
+.barra-marcados .btn.claro{background:transparent;color:#fff;border-color:rgba(255,255,255,.35)}
+.barra-marcados .btn.claro:hover{background:rgba(255,255,255,.12)}
+
+/* ---------- Comprobación de la instalación ---------- */
+.enlace{background:none;border:0;color:var(--azul-2);font:inherit;font-size:13.5px;text-decoration:underline;cursor:pointer;padding:0}
+#diagnostico{margin-top:18px;border-top:1px solid var(--linea);padding-top:16px;text-align:left}
+#diagnostico h3{font-size:16px;margin-bottom:10px}
+.paso{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--linea);font-size:13.5px}
+.paso:last-child{border-bottom:0}
+.paso .marca-paso{flex:none;width:18px;text-align:center;font-weight:700}
+.paso.bien .marca-paso{color:var(--verde)}
+.paso.mal .marca-paso{color:var(--rojo)}
+.paso b{display:block;font-size:13.5px}
+.paso small{color:var(--tinta-2);display:block}
+.paso .arreglo{color:var(--azul);display:block;margin-top:3px}

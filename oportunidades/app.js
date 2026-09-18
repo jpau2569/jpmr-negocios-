@@ -153,7 +153,7 @@ function pintarCabecera(titulo, acciones = []) {
   ]);
 }
 
-function tarjetaInmueble(inm, alPulsar) {
+function tarjetaInmueble(inm, alPulsar, seleccion = null) {
   const estado = CATALOGO.estados.find((e) => e.id === inm.estado);
   const datos = [
     inm.habitaciones ? `${inm.habitaciones} hab` : null,
@@ -167,7 +167,7 @@ function tarjetaInmueble(inm, alPulsar) {
   ]);
   if (inm.portada_url) foto.style.backgroundImage = `url(${CSS.escape(inm.portada_url)})`;
 
-  return el("button", { clase: "inmueble", type: "button", onclick: () => alPulsar(inm) }, [
+  const tarjeta = el("button", { clase: "inmueble", type: "button", onclick: () => alPulsar(inm) }, [
     foto,
     el("div", { clase: "cuerpo" }, [
       el("div", { clase: "precio", texto: euros(inm.precio) + (inm.operacion === "alquiler" ? "/mes" : "") }),
@@ -176,9 +176,26 @@ function tarjetaInmueble(inm, alPulsar) {
         el("span", { texto: [inm.zona, inm.ciudad].filter(Boolean).join(", ") }),
       ]),
       el("div", { clase: "datos", style: "margin-top:4px" }, datos.map((d) => el("span", { texto: d }))),
-      el("div", {}, (inm.etiquetas || []).slice(0, 3).map((t) => el("span", { clase: "etiqueta", texto: t }))),
+      el("div", {}, [
+        ...(inm.video_url ? [el("span", { clase: "etiqueta video", texto: "▶ con vídeo" })] : []),
+        ...(inm.etiquetas || []).slice(0, 3).map((t) => el("span", { clase: "etiqueta", texto: t })),
+      ]),
     ]),
   ]);
+
+  // Sin selección (panel, coincidencias) la tarjeta va sola. En la cartera se
+  // envuelve para poder marcarla y mandar varias de una vez.
+  if (!seleccion) return tarjeta;
+
+  const casilla = el("input", {
+    type: "checkbox", clase: "marcar", checked: seleccion.marcados.has(inm.id),
+    title: "Marcar para enviar",
+    onchange: (ev) => {
+      ev.target.checked ? seleccion.marcados.add(inm.id) : seleccion.marcados.delete(inm.id);
+      seleccion.alCambiar();
+    },
+  });
+  return el("div", { clase: "inmueble-caja" }, [tarjeta, el("label", { clase: "marcar-caja" }, [casilla])]);
 }
 
 async function vistaPanel() {
@@ -228,6 +245,32 @@ async function vistaPanel() {
 async function vistaPisos() {
   const contenedor = el("div", {});
   const rejilla = el("div", {});
+  const barra = el("div", { clase: "barra-marcados", hidden: true });
+
+  // Lo que hay marcado para mandar por WhatsApp. Sobrevive a los filtros:
+  // puedes buscar en Oviedo, marcar dos, buscar en Gijón y marcar otro.
+  const seleccion = {
+    marcados: new Set(),
+    alCambiar: () => {
+      const n = seleccion.marcados.size;
+      barra.hidden = n === 0;
+      if (n) {
+        barra.replaceChildren(
+          el("b", { texto: n === 1 ? "1 inmueble marcado" : `${n} inmuebles marcados` }),
+          el("div", { clase: "acciones" }, [
+            el("button", {
+              clase: "btn claro fino", type: "button", texto: "Quitar marcas",
+              onclick: () => { seleccion.marcados.clear(); seleccion.alCambiar(); recargar(); },
+            }),
+            el("button", {
+              clase: "btn oro", type: "button", texto: "Enviar por WhatsApp",
+              onclick: () => enviarSeleccion([...seleccion.marcados]),
+            }),
+          ])
+        );
+      }
+    },
+  };
 
   const busca = el("input", { type: "search", placeholder: "Buscar por título, referencia o zona…" });
   const filtroEstado = el("select", {}, [
@@ -246,9 +289,10 @@ async function vistaPisos() {
     cache.inmuebles = inmuebles;
     rejilla.replaceChildren(
       inmuebles.length
-        ? el("div", { clase: "rejilla" }, inmuebles.map((i) => tarjetaInmueble(i, abrirInmueble)))
+        ? el("div", { clase: "rejilla" }, inmuebles.map((i) => tarjetaInmueble(i, abrirInmueble, seleccion)))
         : el("div", { clase: "vacio", texto: "Ningún inmueble con esos filtros." })
     );
+    seleccion.alCambiar();
   }
 
   let reloj;
@@ -260,8 +304,10 @@ async function vistaPisos() {
     pintarCabecera("Inmuebles", [
       el("button", { clase: "btn", type: "button", texto: "Añadir inmueble", onclick: () => abrirInmueble(null) }),
     ]),
+    el("p", { clase: "apunte", style: "margin:-10px 0 16px", texto: "Marca varios inmuebles para mandárselos juntos a un cliente por WhatsApp." }),
     el("div", { clase: "filtros" }, [busca, filtroEstado, filtroOperacion]),
-    rejilla
+    rejilla,
+    barra
   );
   await recargar();
   return contenedor;
@@ -443,6 +489,7 @@ function abrirInmueble(inm) {
   const metros = entrada("metros", v.metros, { type: "number", min: "0" });
   const direccion = entrada("direccion_privada", v.direccion_privada, { maxlength: 160 });
   const portada = entrada("portada_url", v.portada_url, { type: "url", placeholder: "https://…" });
+  const video = entrada("video_url", v.video_url, { type: "url", placeholder: "https://youtu.be/… o Vimeo" });
   const descripcion = el("textarea", { name: "descripcion", maxlength: 4000 }, [v.descripcion || ""]);
 
   const operacion = el("select", { name: "operacion" }, CATALOGO.operaciones.map((o) =>
@@ -477,6 +524,7 @@ function abrirInmueble(inm) {
         ])
       : el("p", { clase: "apunte", texto: "Guarda el inmueble y podrás añadirle fotos.", style: "margin-bottom:14px" }),
     campo("Foto de portada (dirección web, opcional si subes fotos)", portada),
+    campo("Vídeo del inmueble (YouTube, Vimeo o enlace directo)", video),
     el("label", { clase: "casillas" }, [el("label", {}, [publico, "Publicar la ficha (hace falta precio y estado disponible)"])]),
     aviso,
     el("div", { clase: "pie-ficha" }, [
@@ -498,7 +546,8 @@ function abrirInmueble(inm) {
       titulo: titulo.value, ciudad: ciudad.value, zona: zona.value, precio: precio.value,
       referencia: referencia.value, habitaciones: habitaciones.value, banos: banos.value,
       metros: metros.value, direccion_privada: direccion.value, descripcion: descripcion.value,
-      portada_url: portada.value, operacion: operacion.value, estado: estado.value,
+      portada_url: portada.value, video_url: video.value,
+      operacion: operacion.value, estado: estado.value,
       publico: publico.checked,
       caracteristicas: [...casillas.querySelectorAll("input:checked")].map((i) => i.value),
       etiquetas: v.etiquetas || [],
@@ -570,6 +619,96 @@ function abrirCliente(cli) {
       d.close();
       toast(`Guardado: ${r.cliente.nombre}`);
       recargarVista();
+    } catch (e) {
+      mostrarAviso(aviso, e.message);
+    }
+  }
+
+  d.showModal();
+}
+
+/* ---------- enviar una selección de inmuebles a un cliente ---------- */
+//  El caso de todos los días: tengo tres pisos que le encajan a Lucía, se los
+//  mando por WhatsApp con sus fichas y sus vídeos, y de paso quedan
+//  autorizados en su portal privado para que me diga cuáles quiere ver.
+async function enviarSeleccion(ids) {
+  const d = $("ficha");
+  const f = $("form-ficha");
+
+  let clientes = cache.clientes;
+  if (!clientes.length) {
+    try {
+      clientes = (await api("clientes.listar")).clientes;
+      cache.clientes = clientes;
+    } catch (e) {
+      return toast(e.message);
+    }
+  }
+  if (!clientes.length) {
+    return toast("Primero da de alta al cliente al que se lo quieres mandar.");
+  }
+
+  const selector = el("select", {}, clientes.map((c) =>
+    el("option", {
+      value: c.id,
+      texto: [c.nombre, c.apellidos].filter(Boolean).join(" ") +
+        (c.telefono ? ` · ${c.telefono}` : c.email ? ` · ${c.email}` : " · sin contacto"),
+    })));
+  const aviso = el("p", { clase: "aviso", hidden: true });
+  const salida = el("div", {});
+
+  f.replaceChildren(
+    el("h2", { texto: ids.length === 1 ? "Enviar este inmueble" : `Enviar ${ids.length} inmuebles`, style: "margin-bottom:6px" }),
+    el("p", { clase: "apunte", texto: "Se autorizan en el portal privado del cliente y se prepara el mensaje.", style: "margin-bottom:18px" }),
+    el("label", { clase: "campo" }, [el("span", { texto: "¿A quién?" }), selector]),
+    salida,
+    aviso,
+    el("div", { clase: "pie-ficha" }, [
+      el("button", { clase: "btn claro", type: "button", texto: "Cerrar", onclick: () => d.close() }),
+      el("button", { clase: "btn oro", type: "button", texto: "Preparar mensaje", onclick: preparar }),
+    ])
+  );
+
+  async function preparar() {
+    mostrarAviso(aviso, "");
+    try {
+      const r = await api("seleccion.enviar", {
+        cliente_id: selector.value,
+        inmuebles: ids,
+        base_url: location.origin,
+      });
+      const telefono = (r.cliente.telefono || "").replace(/\D/g, "");
+      // Un móvil español sin prefijo se manda con el 34 delante; si ya trae
+      // prefijo o es de fuera, se respeta tal cual.
+      const numero = telefono.length === 9 ? "34" + telefono : telefono;
+
+      salida.replaceChildren(
+        el("label", { clase: "campo" }, [
+          el("span", { texto: "Mensaje" }),
+          el("textarea", { readonly: true, style: "min-height:210px" }, [r.mensaje]),
+        ]),
+        el("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, [
+          el("button", { clase: "btn claro fino", type: "button", texto: "Copiar mensaje", onclick: () => copiar(r.mensaje) }),
+          numero
+            ? el("a", {
+                clase: "btn fino", target: "_blank", rel: "noopener",
+                texto: `Abrir WhatsApp de ${r.cliente.nombre}`,
+                href: `https://wa.me/${numero}?text=${encodeURIComponent(r.mensaje)}`,
+              })
+            : el("span", { clase: "apunte", texto: "Este cliente no tiene teléfono: copia el mensaje y mándaselo por donde lo tengas." }),
+          r.enlace
+            ? el("a", { clase: "btn claro fino", target: "_blank", rel: "noopener", texto: "Ver su portal", href: r.enlace })
+            : null,
+        ])
+      );
+      if (r.sin_publicar?.length) {
+        // Se ha enviado igual, pero el cliente no podrá abrir esas fichas.
+        mostrarAviso(aviso,
+          `Enviado. Ojo: ${r.sin_publicar.join(", ")} ${r.sin_publicar.length === 1 ? "no está publicado" : "no están publicados"}, ` +
+          "así que no aparecerá en su portal ni tiene ficha que abrir. Publícalo desde su ficha si quieres que lo vea.");
+      } else {
+        mostrarAviso(aviso, "Listo: ya están autorizados en su portal privado.", true);
+      }
     } catch (e) {
       mostrarAviso(aviso, e.message);
     }
@@ -756,6 +895,33 @@ $("form-acceso").addEventListener("submit", async (ev) => {
     mostrarAviso($("aviso-acceso"), e.message);
   } finally {
     $("btn-entrar").disabled = false;
+  }
+});
+
+$("btn-comprobar").addEventListener("click", async () => {
+  const caja = $("diagnostico");
+  caja.hidden = false;
+  caja.replaceChildren(el("p", { clase: "apunte", texto: "Comprobando…" }));
+  try {
+    const r = await api("estado");
+    caja.replaceChildren(
+      el("h3", { texto: r.listo ? "Todo listo" : "Falta algo por configurar" }),
+      ...r.pasos.map((p) =>
+        el("div", { clase: `paso ${p.ok ? "bien" : "mal"}` }, [
+          el("span", { clase: "marca-paso", texto: p.ok ? "✓" : "✕" }),
+          el("div", {}, [
+            el("b", { texto: p.nombre }),
+            el("small", { texto: p.detalle }),
+            !p.ok && p.arreglo ? el("small", { clase: "arreglo", texto: p.arreglo }) : null,
+          ]),
+        ])
+      ),
+      r.listo
+        ? el("p", { clase: "apunte", style: "margin-top:12px", texto: "Si aun así no entras, revisa el correo y la contraseña." })
+        : null
+    );
+  } catch (e) {
+    caja.replaceChildren(el("p", { clase: "aviso", texto: e.message }));
   }
 });
 

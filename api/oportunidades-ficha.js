@@ -13,7 +13,7 @@
 //  salen de aquí ni por equivocación, porque esa vista no los tiene.
 // ============================================================================
 
-import { CONTACTO, enlaceWhatsapp, texto } from "../lib/oportunidades.js";
+import { CONTACTO, enlaceWhatsapp, texto, normalizarVideo } from "../lib/oportunidades.js";
 
 const CARACTERISTICAS = {
   terraza: "Terraza", ascensor: "Ascensor", garaje: "Garaje", trastero: "Trastero",
@@ -93,6 +93,9 @@ export function paginaFicha(inm, origen) {
   const fotos = Array.isArray(inm.fotos) ? inm.fotos.filter((f) => f && f.url) : [];
   const portada = inm.portada_url || fotos[0]?.url || "";
 
+  // Si el vídeo no es de los admitidos, simplemente no se muestra.
+  const video = normalizarVideo(inm.video_url);
+
   const mensaje = `Hola, me interesa el inmueble ${inm.referencia}: ${inm.titulo}. ¿Podemos concertar una visita?`;
 
   return `<!doctype html>
@@ -141,6 +144,9 @@ ${portada ? `<meta property="og:image" content="${esc(portada)}" />
   @media(max-width:700px){.galeria.varias{grid-template-columns:1fr}
     .galeria .resto{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));grid-template-rows:none}
     .galeria .resto img{aspect-ratio:4/3}}
+  .video{margin:0 0 4px;background:#000}
+  .video .marco{max-width:960px;margin:0 auto;aspect-ratio:16/9}
+  .video iframe,.video video{width:100%;height:100%;border:0;display:block}
   .cuerpo{max-width:960px;margin:0 auto;padding:26px 20px 40px}
   .precio{font-family:Georgia,serif;font-size:clamp(28px,6vw,38px);color:var(--azul);font-weight:600;line-height:1.1}
   h1{font-family:Georgia,serif;font-size:clamp(20px,4vw,26px);font-weight:600;margin:6px 0 2px}
@@ -180,6 +186,12 @@ ${portada ? `<div class="galeria${fotos.length > 1 ? " varias" : ""}">
   ${fotos.length > 1 ? `<div class="resto">${fotos.filter((f) => f.url !== portada).slice(0, 2)
     .map((f) => `<img src="${esc(f.url)}" alt="${esc(inm.titulo)}" loading="lazy" />`).join("")}</div>` : ""}
 </div>` : ""}
+
+${video ? `<section class="video"><div class="marco">${
+  video.embed
+    ? `<iframe src="${esc(video.embed)}" title="Vídeo de ${esc(inm.titulo)}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`
+    : `<video controls preload="metadata" ${portada ? `poster="${esc(portada)}"` : ""}><source src="${esc(video.url)}" /></video>`
+}</div></section>` : ""}
 
 <main class="cuerpo">
   <div class="precio">${esc(euros(inm.precio))}${inm.operacion === "alquiler" ? " al mes" : ""}</div>

@@ -13,7 +13,7 @@ import {
   normalizarInmueble, normalizarCliente, coincidencia, mejoresClientes,
   dinero, entero, slug, referencia, tokenPortal, mensajeWhatsapp,
   normalizarFoto, rutaFoto, normalizarGaleria, MAX_FOTO_BYTES,
-  CONTACTO, enlaceWhatsapp,
+  CONTACTO, enlaceWhatsapp, normalizarVideo,
   CARACTERISTICAS, ESTADOS,
 } from "../lib/oportunidades.js";
 
@@ -141,7 +141,8 @@ const mensaje = mensajeWhatsapp({
   firma: { agente: "Pau", empresa: "Asesoría Castresana" },
 });
 check("el mensaje saluda por el nombre", mensaje.startsWith("Hola Lucía"));
-check("lista los inmuebles y el enlace", mensaje.includes("Ático en Somió (118 m² · 3 hab)") && mensaje.includes("#abc"));
+check("lista los inmuebles y el enlace",
+  mensaje.includes("*Ático en Somió*") && mensaje.includes("3 hab") && mensaje.includes("118 m²") && mensaje.includes("#abc"));
 
 // ---------------------------------------------------------------------------
 console.log("\n— handler: sin configurar y validaciones —");
@@ -390,6 +391,87 @@ await handler({
 check("un lector no puede subir fotos → 403", res.r.statusCode === 403);
 
 // ---------------------------------------------------------------------------
+console.log("\n— vídeos y envío por WhatsApp —");
+// ---------------------------------------------------------------------------
+check("YouTube normal", normalizarVideo("https://www.youtube.com/watch?v=dQw4w9WgXcQ")?.id === "dQw4w9WgXcQ");
+check("YouTube corto", normalizarVideo("https://youtu.be/abc123XYZ_-")?.tipo === "youtube");
+check("YouTube shorts (los reels de pisos)", normalizarVideo("https://www.youtube.com/shorts/xyz987abcde")?.tipo === "youtube");
+check("Vimeo", normalizarVideo("https://vimeo.com/123456789")?.tipo === "vimeo");
+check("archivo mp4 por https", normalizarVideo("https://midominio.com/tour.mp4")?.tipo === "archivo");
+check("http sin cifrar se rechaza", normalizarVideo("http://inseguro.com/x.mp4") === null);
+check("javascript: se rechaza", normalizarVideo("javascript:alert(1)") === null);
+check("una web cualquiera se rechaza", normalizarVideo("https://sitio-raro.com/pagina") === null);
+check("YouTube se incrusta sin cookies de seguimiento",
+  normalizarVideo("https://youtu.be/abc123XYZ_-").embed.includes("youtube-nocookie.com"));
+check("el inmueble guarda el vídeo ya normalizado",
+  normalizarInmueble({ titulo: "P", ciudad: "Oviedo", video_url: "https://youtu.be/abc123XYZ_-" }).inmueble.video_url === "https://www.youtube.com/watch?v=abc123XYZ_-");
+check("un vídeo no admitido no se guarda",
+  normalizarInmueble({ titulo: "P", ciudad: "Oviedo", video_url: "https://sitio-raro.com/x" }).inmueble.video_url === null);
+
+const msg = mensajeWhatsapp({
+  cliente: { nombre: "Lucía" },
+  inmuebles: [
+    { titulo: "Ático en San Lorenzo", precio: 289000, habitaciones: 3, metros: 118, zona: "Centro", ciudad: "Gijón",
+      slug: "atico-gijon", video_url: "https://www.youtube.com/watch?v=abc" },
+    { titulo: "Piso sin publicar", precio: 132000, ciudad: "Oviedo" },
+  ],
+  enlacePortal: "https://ej.com/oportunidades/portal.html#tok",
+  base: "https://ej.com",
+  firma: { agente: "Pau" },
+});
+check("el mensaje saluda y firma", msg.startsWith("Hola Lucía, soy Pau de"));
+// Intl pone un espacio duro antes del €: se normaliza para comparar.
+const msgLlano = msg.replace(/\u00a0/g, " ");
+check("cada inmueble lleva su precio y sus datos", msgLlano.includes("289.000 € · 3 hab · 118 m² · Centro, Gijón"), msgLlano.split("\n")[4]);
+check("el publicado lleva su ficha", msg.includes("https://ej.com/p/atico-gijon"));
+check("el que no está publicado no inventa enlace", !msg.includes("https://ej.com/p/\n") && !/\/p\/$/m.test(msg));
+check("el vídeo va en el mensaje", msg.includes("Vídeo: https://www.youtube.com/watch?v=abc"));
+check("y el enlace del portal al final", msg.includes("portal.html#tok"));
+
+// La ficha pública incrusta el vídeo
+const conVideo = paginaFicha({ slug: "x", referencia: "R", titulo: "Ático", precio: 200000, ciudad: "Gijón",
+  operacion: "venta", caracteristicas: [], fotos: [], video_url: "https://www.youtube.com/watch?v=abc123XYZ" }, "https://ej.com");
+check("la ficha incrusta el vídeo de YouTube", conVideo.includes("youtube-nocookie.com/embed/abc123XYZ"));
+const videoMalo = paginaFicha({ slug: "x", referencia: "R", titulo: "Ático", precio: 200000, ciudad: "Gijón",
+  operacion: "venta", caracteristicas: [], fotos: [], video_url: "https://sitio-raro.com/malo" }, "https://ej.com");
+check("un enlace de vídeo no admitido no se incrusta",
+  !videoMalo.includes("<iframe") && !videoMalo.includes("sitio-raro"));
+
+// Envío: avisa de lo que el cliente no podrá ver
+llamadas.length = 0;
+simula([
+  ["/rest/v1/ou_usuarios", { datos: [PERFIL] }],
+  ["/rest/v1/ou_actividad", { datos: null }],
+  ["/rest/v1/ou_clientes", { datos: [{ id: "c-1", nombre: "Lucía", telefono: "600111222", inmuebles_autorizados: [], token_portal: null }] }],
+  ["/rest/v1/ou_inmuebles", { datos: [
+    { id: "i-1", titulo: "Ático publicado", precio: 289000, slug: "atico", publico: true },
+    { id: "i-2", titulo: "Piso en borrador", precio: 132000, slug: null, publico: false },
+  ] }],
+]);
+res = mockRes();
+await handler({
+  method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "seleccion.enviar", cliente_id: "c-1", inmuebles: ["i-1", "i-2"], base_url: "https://ej.com" },
+}, res);
+check("enviar varios → 200", res.r.statusCode === 200, JSON.stringify(res.r.body).slice(0, 120));
+check("avisa de los que el cliente no podrá abrir",
+  res.r.body.sin_publicar?.join(",") === "Piso en borrador", JSON.stringify(res.r.body.sin_publicar));
+check("el enlace del portal se genera con el dominio recibido",
+  res.r.body.enlace.startsWith("https://ej.com/oportunidades/portal.html#"));
+
+// El comprobador de instalación
+delete process.env.SUPABASE_URL;
+res = mockRes();
+await handler({ method: "POST", body: { accion: "estado" }, headers: {} }, res);
+check("el comprobador funciona aunque no haya nada configurado",
+  res.r.statusCode === 200 && res.r.body.listo === false);
+check("y dice exactamente qué falta y dónde ponerlo",
+  res.r.body.pasos.some((p) => !p.ok && p.arreglo.includes("Environment Variables")));
+check("el comprobador no filtra ninguna clave",
+  !JSON.stringify(res.r.body).includes("service-de-prueba") && !JSON.stringify(res.r.body).includes("anon-de-prueba"));
+process.env.SUPABASE_URL = "https://prueba.supabase.co";
+
+// ---------------------------------------------------------------------------
 console.log("\n— ficha pública compartible (/p/<slug>) —");
 // ---------------------------------------------------------------------------
 check("el WhatsApp de contacto es el del despacho", CONTACTO.whatsapp === "663263842");
@@ -485,6 +567,9 @@ check("los estados del catálogo son los del check de la tabla",
   ESTADOS.every((e) => sql.includes(`'${e.id}'`)));
 check("la vista pública no expone la dirección privada",
   !sql.split("create or replace view public.ou_publico")[1].split(";")[0].includes("direccion_privada"));
+check("el esquema añade la columna del vídeo aunque la base ya existiera",
+  sql.includes("add column if not exists video_url"));
+check("la vista pública incluye el vídeo", sql.split("create or replace view public.ou_publico")[1].split(";")[0].includes("video_url"));
 check("el esquema crea el almacén de fotos con límite y tipos",
   sql.includes("storage.buckets") && sql.includes("'image/webp'") && sql.includes("6291456"));
 check("solo el personal sube o borra fotos",
