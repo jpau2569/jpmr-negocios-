@@ -7,8 +7,8 @@
 //  handler: sesiones, permisos por rol, portal del comprador y errores.
 // ============================================================================
 
-import handler, { nubeConfigurada } from "../api/oportunidades.js";
-import fichaHandler, { paginaFicha, esc } from "../api/oportunidades-ficha.js";
+import handler, { nubeConfigurada } from "../api/_oportunidades.js";
+import fichaHandler, { paginaFicha, esc } from "../api/_oportunidades-ficha.js";
 import {
   normalizarInmueble, normalizarCliente, coincidencia, mejoresClientes,
   dinero, entero, slug, referencia, tokenPortal, mensajeWhatsapp,

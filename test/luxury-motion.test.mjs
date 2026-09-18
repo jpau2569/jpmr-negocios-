@@ -12,7 +12,7 @@
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import handler, { briefingParaModelo, extraerJSON, normalizarCampanaIA } from "../api/luxury-motion.js";
+import handler, { briefingParaModelo, extraerJSON, normalizarCampanaIA } from "../api/_luxury-motion.js";
 import {
   TIPOS, CARACTERISTICAS, CLIENTES, OBJETIVOS, PLATAFORMAS, DURACIONES, ESTILOS, GENERADORES,
   MOVIMIENTOS_EN, NEGATIVE_PROMPT, MARCA,

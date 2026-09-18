@@ -143,10 +143,10 @@ console.log("\n🔌 Backend que se lleva cada cliente");
 //  la carpeta entera a su despliegue. Son copias EXACTAS del monorepo: si
 //  alguien toca un original y olvida la copia, esto lo caza.
 for (const [original, copia] of [
-  ["api/escaparate.js", "escaparate3d-pro/api/escaparate.js"],
-  ["api/foto.js", "escaparate3d-pro/api/foto.js"],
-  ["api/lead.js", "escaparate3d-pro/api/lead.js"],
-  ["api/health.js", "escaparate3d-pro/api/health.js"],
+  ["api/_escaparate.js", "escaparate3d-pro/api/escaparate.js"],
+  ["api/_foto.js", "escaparate3d-pro/api/foto.js"],
+  ["api/_lead.js", "escaparate3d-pro/api/lead.js"],
+  ["api/_health.js", "escaparate3d-pro/api/health.js"],
   ["lib/cartera.js", "escaparate3d-pro/lib/cartera.js"],
   ["lib/memoria.js", "escaparate3d-pro/lib/memoria.js"],
 ]) {

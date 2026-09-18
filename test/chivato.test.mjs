@@ -269,14 +269,14 @@ console.log("\n📱 PWA e integración");
     leer("chivato/DOMINIO.md").includes("Root Directory") &&
     leer("chivato/DOMINIO.md").includes("generar-enlace.mjs"));
 
-  const reenvio = leer("api/chivato.js");
+  const reenvio = leer("api/_chivato.js");
   check("la ruta /api/chivato del monorepo apunta a la app",
     reenvio.includes("../chivato/api/chivato.js"));
 
   const vercel = json("vercel.json");
   check("la función tiene tiempo y datos suficientes en Vercel",
-    vercel.functions["api/chivato.js"]?.maxDuration >= 60 &&
-    String(vercel.functions["api/chivato.js"]?.includeFiles || "").includes("chivato"));
+    vercel.functions["api/[ruta].js"]?.maxDuration >= 60 &&
+    String(vercel.functions["api/[ruta].js"]?.includeFiles || "").includes("chivato"));
 }
 
 console.log(`\n${fallados === 0 ? "✅" : "❌"} Chivato AI: ${pasados} pasados, ${fallados} fallados\n`);

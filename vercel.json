@@ -1,45 +1,8 @@
 {
   "functions": {
-    "api/clara.js": {
-      "maxDuration": 60
-    },
-    "api/castebot.js": {
+    "api/[ruta].js": {
       "maxDuration": 60,
-      "includeFiles": "agentes/**"
-    },
-    "api/castebot-informe.js": {
-      "maxDuration": 60,
-      "includeFiles": "agentes/**"
-    },
-    "api/escaparate.js": {
-      "maxDuration": 30
-    },
-    "api/foto.js": {
-      "maxDuration": 15
-    },
-    "api/fotos.js": {
-      "maxDuration": 20
-    },
-    "api/briefing.js": {
-      "maxDuration": 60
-    },
-    "api/tiempo.js": {
-      "maxDuration": 30,
-      "includeFiles": "sol-niebla-agua/api/**"
-    },
-    "api/chivato.js": {
-      "maxDuration": 60,
-      "includeFiles": "chivato/datos/**"
-    },
-    "api/luxury-motion.js": {
-      "maxDuration": 60,
-      "includeFiles": "agentes/**"
-    },
-    "api/oportunidades.js": {
-      "maxDuration": 30
-    },
-    "api/oportunidades-ficha.js": {
-      "maxDuration": 15
+      "includeFiles": "{agentes/**,sol-niebla-agua/api/**,chivato/datos/**}"
     }
   },
   "crons": [
