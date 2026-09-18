@@ -1,0 +1,9 @@
+/* Componentes de automatización comercial. */
+export { WorkflowStatusCard } from './WorkflowStatusCard';
+export { AutomationPanel } from './AutomationPanel';
+export { TaskList } from './TaskList';
+export { VisitScheduler } from './VisitScheduler';
+export { VisitCard } from './VisitCard';
+export { CommunicationHistory } from './CommunicationHistory';
+export { MessageTemplatePicker } from './MessageTemplatePicker';
+export { DocumentGeneratorPanel } from './DocumentGeneratorPanel';
