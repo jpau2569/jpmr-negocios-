@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Oportunidades Únicas</title>
+<meta name="description" content="Gestión de inmuebles y clientes de Asesoría Castresana." />
+<meta name="theme-color" content="#0B3B60" />
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" href='data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" rx="20" fill="%230B3B60"/%3E%3Ctext x="50" y="64" font-family="Georgia,serif" font-size="40" fill="%23D9B75F" text-anchor="middle"%3EOU%3C/text%3E%3C/svg%3E' />
+<link rel="stylesheet" href="estilo.css" />
+</head>
+<body>
+
+<!-- ═══════════ Pantalla de acceso ═══════════ -->
+<section id="acceso" class="acceso" hidden>
+  <form class="tarjeta-acceso" id="form-acceso" autocomplete="on">
+    <div class="marca-grande"><span class="sigla">OU</span></div>
+    <h1>Oportunidades Únicas</h1>
+    <p class="apunte">Gestión de inmuebles y clientes · Asesoría Castresana</p>
+
+    <label class="campo">
+      <span>Correo</span>
+      <input type="email" id="email" autocomplete="username" required />
+    </label>
+    <label class="campo">
+      <span>Contraseña</span>
+      <input type="password" id="password" autocomplete="current-password" required />
+    </label>
+
+    <button class="btn ancho" type="submit" id="btn-entrar">Entrar</button>
+    <p class="aviso" id="aviso-acceso" hidden></p>
+    <p style="text-align:center;margin-top:18px">
+      <button type="button" id="btn-comprobar" class="enlace">¿No consigues entrar? Comprobar la instalación</button>
+    </p>
+    <div id="diagnostico" hidden></div>
+  </form>
+</section>
+
+<!-- ═══════════ Aplicación ═══════════ -->
+<div id="app" hidden>
+  <aside class="lateral">
+    <a class="marca" href="#/panel">
+      <span class="sigla">OU</span>
+      <b>Oportunidades<br /><em>Únicas</em></b>
+    </a>
+    <nav id="menu">
+      <a href="#/panel" data-ruta="panel"><span class="ico">◧</span> Inicio</a>
+      <a href="#/pisos" data-ruta="pisos"><span class="ico">⌂</span> Inmuebles</a>
+      <a href="#/clientes" data-ruta="clientes"><span class="ico">☺</span> Clientes</a>
+      <a href="#/actividad" data-ruta="actividad"><span class="ico">≡</span> Actividad</a>
+    </nav>
+    <div class="usuario">
+      <b id="usuario-nombre"></b>
+      <span id="usuario-rol"></span>
+      <button class="btn fino" type="button" id="btn-salir">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <main id="vista" aria-live="polite"></main>
+</div>
+
+<div id="cargando" class="cargando">Cargando…</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- ═══════════ Ventana de edición ═══════════ -->
+<dialog id="ficha">
+  <form method="dialog" id="form-ficha"></form>
+</dialog>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Tu selección · Asesoría Castresana</title>
+<meta name="description" content="Selección privada de inmuebles preparada por Asesoría Castresana." />
+<meta name="theme-color" content="#0B3B60" />
+<!-- Un enlace privado no debe acabar en Google. -->
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" href='data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" rx="20" fill="%230B3B60"/%3E%3Ctext x="50" y="64" font-family="Georgia,serif" font-size="40" fill="%23D9B75F" text-anchor="middle"%3EOU%3C/text%3E%3C/svg%3E' />
+<link rel="stylesheet" href="estilo.css" />
+<style>
+  body{background:#fff}
+  .cabecera{background:linear-gradient(160deg,var(--azul),var(--azul-3));color:#fff;padding:30px 20px 34px}
+  .cabecera .dentro{max-width:1000px;margin:0 auto}
+  .cabecera .sigla{background:rgba(255,255,255,.12);border:1px solid rgba(217,183,95,.4);margin-bottom:14px}
+  .cabecera h1{font-size:clamp(24px,5vw,33px);margin-bottom:6px}
+  .cabecera p{color:rgba(255,255,255,.8);max-width:52ch}
+  .contenido{max-width:1000px;margin:0 auto;padding:26px 20px 70px}
+  .pieza{background:#fff;border:1px solid var(--linea);border-radius:16px;overflow:hidden;box-shadow:var(--sombra);margin-bottom:20px}
+  .pieza .foto{aspect-ratio:16/9;background:#E9EDF2 center/cover no-repeat;display:grid;place-items:center;color:#9FAEBC;font-size:38px}
+  .pieza .cuerpo{padding:20px}
+  .pieza h2{font-size:21px;margin-bottom:4px}
+  .pieza .precio{font-family:var(--serif);font-size:26px;color:var(--azul);font-weight:600}
+  .pieza .datos{display:flex;flex-wrap:wrap;gap:14px;color:var(--tinta-2);font-size:14px;margin:10px 0 14px}
+  .pieza .descripcion{white-space:pre-wrap;color:#33404E;font-size:14.5px}
+  .respuestas{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;padding-top:16px;border-top:1px solid var(--linea)}
+  .respondido{margin-top:16px;padding:12px 15px;border-radius:var(--r);background:#F0F7F3;color:var(--verde);
+    border:1px solid #CDE6DA;font-size:14px}
+  .pie-legal{max-width:1000px;margin:0 auto;padding:0 20px 50px;color:var(--tinta-2);font-size:13px}
+  .pie-legal a{color:var(--azul-2)}
+</style>
+</head>
+<body>
+
+<header class="cabecera">
+  <div class="dentro">
+    <span class="sigla">OU</span>
+    <h1 id="saludo">Tu selección</h1>
+    <p id="intro">Estos son los inmuebles que hemos elegido para ti.</p>
+  </div>
+</header>
+
+<main class="contenido" id="contenido">
+  <div class="vacio">Abriendo tu selección…</div>
+</main>
+
+<footer class="pie-legal">
+  <p>
+    <b>Asesoría Castresana · Gestión Inmobiliaria</b> — Oviedo, Asturias ·
+    WhatsApp <a href="https://wa.me/34663263842" target="_blank" rel="noopener">663 26 38 42</a> ·
+    <a href="tel:+34985210468">985 210 468</a> ·
+    <a href="https://www.asesoriacastresana.com" target="_blank" rel="noopener">asesoriacastresana.com</a>
+  </p>
+  <p style="margin-top:8px">
+    Este enlace es privado y personal. Si prefieres que dejemos de enviarte propuestas, dínoslo y lo hacemos al momento.
+  </p>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="portal.js"></script>
+</body>
+</html>
