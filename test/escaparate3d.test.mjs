@@ -6,8 +6,8 @@
 // ============================================================================
 
 import { extraeFotos } from "../lib/fotos-ficha.js";
-import foto, { dominioPermitido } from "../api/foto.js";
-import fotos from "../api/fotos.js";
+import foto, { dominioPermitido } from "../api/_foto.js";
+import fotos from "../api/_fotos.js";
 
 let pasados = 0, fallados = 0;
 function check(nombre, cond, detalle = "") {
