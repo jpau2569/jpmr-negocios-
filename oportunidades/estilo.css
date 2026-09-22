@@ -250,3 +250,9 @@ input.rellenado,textarea.rellenado{border-color:var(--oro);box-shadow:0 0 0 3px 
 /* ---------- Tarjeta visual ---------- */
 .marco-tarjeta{background:#0B1F30;border-radius:14px;padding:12px;display:flex;justify-content:center}
 .lienzo-tarjeta{width:100%;max-width:360px;height:auto;border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+
+/* ---------- Vídeo propio ---------- */
+.zona-video{margin-bottom:14px}
+.video-previa{width:100%;max-height:320px;border-radius:12px;background:#000}
+.progreso{height:8px;border-radius:99px;background:#E9EDF2;overflow:hidden;margin-top:10px}
+.progreso span{display:block;height:100%;width:0;background:var(--oro);transition:width .2s}

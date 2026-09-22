@@ -46,6 +46,13 @@ import {
   PROMPT_ALTA,
   pendientesSeguimiento,
   mensajeSeguimiento,
+  HERRAMIENTA_FICHA,
+  BUCKET_VIDEOS,
+  MAX_VIDEO_BYTES,
+  TIPOS_VIDEO,
+  validarVideo,
+  rutaVideo,
+  rutaVideoPropio,
 } from "../lib/oportunidades-extras.js";
 
 const MODELO_IA = "claude-sonnet-5";
@@ -257,16 +264,25 @@ async function accionRedactar(perfil, cuerpo) {
       aviso: "Rellenado sin IA (falta ANTHROPIC_API_KEY en Vercel). Con la clave, el anuncio sale mejor redactado." } };
   }
   try {
-    const client = new Anthropic({ timeout: 25000, maxRetries: 1 });
-    const r = await client.messages.create({
-      model: MODELO_IA,
-      max_tokens: 1200,
-      system: [{ type: "text", text: PROMPT_ALTA, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: `Notas del agente:\n"""\n${notas}\n"""` }],
-    });
-    const bruto = r.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
-    const ficha = normalizarAltaIA(extraerJSON(bruto), notas);
-    if (!ficha) throw new Error("respuesta sin JSON");
+    // La ficha se pide como llamada a herramienta: así el JSON llega entero y
+    // bien formado. Si aun así no se puede leer, se intenta una vez más.
+    const client = new Anthropic({ timeout: 45000, maxRetries: 1 });
+    let ficha = null, ultimoMotivo = "";
+    for (let intento = 0; intento < 2 && !ficha; intento++) {
+      const r = await client.messages.create({
+        model: MODELO_IA,
+        max_tokens: 3000,
+        system: [{ type: "text", text: PROMPT_ALTA, cache_control: { type: "ephemeral" } }],
+        tools: [HERRAMIENTA_FICHA],
+        tool_choice: { type: "tool", name: HERRAMIENTA_FICHA.name },
+        messages: [{ role: "user", content: `Notas del agente:\n"""\n${notas}\n"""` }],
+      });
+      const uso = r.content.find((b) => b.type === "tool_use");
+      const bruto = uso?.input || extraerJSON(r.content.filter((b) => b.type === "text").map((b) => b.text).join("\n"));
+      ficha = normalizarAltaIA(bruto, notas);
+      ultimoMotivo = `stop_reason=${r.stop_reason}`;
+    }
+    if (!ficha) throw new Error(`respuesta sin ficha (${ultimoMotivo})`);
     return { estado: 200, cuerpo: { ficha, motor: "ia", aviso: null } };
   } catch (e) {
     console.error("Alta rápida: la IA no respondió, uso el extractor local:", String(e?.message || e));
@@ -637,6 +653,91 @@ async function accionFotoSubir(token, perfil, cuerpo) {
   return { estado: 200, cuerpo: { inmueble: filas[0] } };
 }
 
+// ---- Vídeo propio ----------------------------------------------------------
+//  El vídeo no pasa por Vercel (su límite es 4,5 MB por petición): el backend
+//  comprueba quién es y qué sube, y le da al navegador una dirección firmada
+//  para subirlo DIRECTO al almacén de Supabase. El bucket «videos» se crea
+//  solo la primera vez, con la clave de servicio.
+let bucketVideosListo = false;
+async function asegurarBucketVideos() {
+  if (bucketVideosListo) return;
+  const config = { public: true, file_size_limit: MAX_VIDEO_BYTES, allowed_mime_types: Object.keys(TIPOS_VIDEO) };
+  try {
+    await llamar("/storage/v1/bucket", { metodo: "POST", servicio: true, cuerpo: { id: BUCKET_VIDEOS, name: BUCKET_VIDEOS, ...config } });
+  } catch (e) {
+    // Ya existía: basta con que tenga la configuración buena.
+    if (![400, 409].includes(e.status)) throw e;
+    await llamar(`/storage/v1/bucket/${BUCKET_VIDEOS}`, { metodo: "PUT", servicio: true, cuerpo: config }).catch(() => {});
+  }
+  bucketVideosListo = true;
+}
+
+async function accionVideoPreparar(token, perfil, cuerpo) {
+  if (perfil.rol === "lector") return { estado: 403, cuerpo: { error: "Tu usuario es de solo lectura." } };
+  if (!process.env.SUPABASE_SERVICE_KEY) {
+    return { estado: 503, cuerpo: { error: "Falta SUPABASE_SERVICE_KEY en Vercel: sin ella no se pueden subir vídeos." } };
+  }
+  const id = texto(cuerpo.id, 40);
+  const inmueble = id ? await inmuebleDe(token, id) : null;
+  if (!inmueble) return { estado: 404, cuerpo: { error: "Guarda el inmueble antes de subirle un vídeo." } };
+  const v = validarVideo({ tipo: cuerpo.tipo, tamano: cuerpo.tamano });
+  if (!v.ok) return { estado: 400, cuerpo: { error: v.error } };
+
+  await asegurarBucketVideos();
+  const ruta = rutaVideo(id, v.ext);
+  const firmada = await llamar(`/storage/v1/object/upload/sign/${BUCKET_VIDEOS}/${ruta}`, { metodo: "POST", servicio: true, cuerpo: {} });
+  const relativa = firmada?.url || "";
+  if (!relativa) return { estado: 502, cuerpo: { error: "El almacén no ha dado permiso de subida. Prueba otra vez." } };
+  return {
+    estado: 200,
+    cuerpo: { subida: `${process.env.SUPABASE_URL}/storage/v1${relativa}`, ruta, tipo: String(cuerpo.tipo).toLowerCase() },
+  };
+}
+
+/** Tras subirlo: se comprueba que está en el almacén y se pone en la ficha. */
+async function accionVideoGuardar(token, perfil, cuerpo) {
+  if (perfil.rol === "lector") return { estado: 403, cuerpo: { error: "Tu usuario es de solo lectura." } };
+  const id = texto(cuerpo.id, 40);
+  const ruta = texto(cuerpo.ruta, 200);
+  const inmueble = id ? await inmuebleDe(token, id) : null;
+  if (!inmueble) return { estado: 404, cuerpo: { error: "Ese inmueble ya no existe." } };
+  if (!ruta || !ruta.startsWith(`${id}/`) || ruta.includes("..")) {
+    return { estado: 400, cuerpo: { error: "Ese vídeo no es de este inmueble." } };
+  }
+  const url = `${process.env.SUPABASE_URL}/storage/v1/object/public/${BUCKET_VIDEOS}/${ruta}`;
+  const existe = await fetch(url, { method: "HEAD" }).then((r) => r.ok).catch(() => false);
+  if (!existe) return { estado: 400, cuerpo: { error: "El vídeo no ha llegado al almacén. Vuelve a subirlo." } };
+
+  const anterior = rutaVideoPropio(inmueble.video_url, process.env.SUPABASE_URL);
+  const filas = await tabla("ou_inmuebles", `?id=eq.${id}&select=${CAMPOS_INMUEBLE}`, {
+    metodo: "PATCH", token, cuerpo: { video_url: url }, prefer: "return=representation",
+  });
+  if (anterior && anterior !== ruta) await borrarVideo(anterior);
+  await apuntar(token, perfil, { tipo: "video", resumen: `Vídeo subido a ${inmueble.titulo}`, inmueble_id: id });
+  return { estado: 200, cuerpo: { inmueble: filas[0] } };
+}
+
+async function accionVideoQuitar(token, perfil, cuerpo) {
+  if (perfil.rol === "lector") return { estado: 403, cuerpo: { error: "Tu usuario es de solo lectura." } };
+  const id = texto(cuerpo.id, 40);
+  const inmueble = id ? await inmuebleDe(token, id) : null;
+  if (!inmueble) return { estado: 404, cuerpo: { error: "Ese inmueble ya no existe." } };
+  const propio = rutaVideoPropio(inmueble.video_url, process.env.SUPABASE_URL);
+  const filas = await tabla("ou_inmuebles", `?id=eq.${id}&select=${CAMPOS_INMUEBLE}`, {
+    metodo: "PATCH", token, cuerpo: { video_url: null }, prefer: "return=representation",
+  });
+  if (propio) await borrarVideo(propio);
+  return { estado: 200, cuerpo: { inmueble: filas[0] } };
+}
+
+async function borrarVideo(ruta) {
+  try {
+    await llamar(`/storage/v1/object/${BUCKET_VIDEOS}`, { metodo: "DELETE", servicio: true, cuerpo: { prefixes: [ruta] } });
+  } catch (e) {
+    console.error("No se pudo borrar el vídeo anterior del almacén:", String(e?.message || e));
+  }
+}
+
 async function accionFotoBorrar(token, perfil, cuerpo) {
   if (perfil.rol === "lector") {
     return { estado: 403, cuerpo: { error: "Tu usuario es de solo lectura." } };
@@ -801,6 +902,9 @@ const PRIVADAS = {
   "fotos.subir": (token, perfil, cuerpo) => accionFotoSubir(token, perfil, cuerpo),
   "fotos.borrar": (token, perfil, cuerpo) => accionFotoBorrar(token, perfil, cuerpo),
   "fotos.portada": (token, perfil, cuerpo) => accionFotoPortada(token, perfil, cuerpo),
+  "video.preparar": (token, perfil, cuerpo) => accionVideoPreparar(token, perfil, cuerpo),
+  "video.guardar": (token, perfil, cuerpo) => accionVideoGuardar(token, perfil, cuerpo),
+  "video.quitar": (token, perfil, cuerpo) => accionVideoQuitar(token, perfil, cuerpo),
   "seleccion.enviar": (token, perfil, cuerpo) => accionEnviarSeleccion(token, perfil, cuerpo),
   "cliente.detalle": (token, perfil, cuerpo) => accionClienteDetalle(token, perfil, cuerpo),
   "cliente.contactado": (token, perfil, cuerpo) => accionClienteContactado(token, perfil, cuerpo),

@@ -16,13 +16,14 @@ import fichaHandler, { paginaFicha, esc } from "../api/_oportunidades-ficha.js";
 import {
   normalizarInmueble, normalizarCliente, coincidencia, mejoresClientes,
   dinero, entero, slug, referencia, tokenPortal, mensajeWhatsapp,
-  normalizarFoto, rutaFoto, normalizarGaleria, MAX_FOTO_BYTES,
+  normalizarFoto, rutaFoto, normalizarGaleria, MAX_FOTO_BYTES, MAX_FOTOS,
   CONTACTO, enlaceWhatsapp, normalizarVideo,
   CARACTERISTICAS, ESTADOS,
   numeroWhatsapp, enlaceWhatsappCliente, mensajesWhatsapp, mejoresInmuebles, mensajeRespuesta,
 } from "../lib/oportunidades.js";
 import {
   extraerFicha, altaLocal, normalizarAltaIA, pendientesSeguimiento, mensajeSeguimiento, datosTarjeta,
+  validarVideo, rutaVideo, rutaVideoPropio, MAX_VIDEO_BYTES,
 } from "../lib/oportunidades-extras.js";
 
 let pasados = 0;
@@ -617,6 +618,84 @@ check("pone la fecha de último contacto a hoy",
   llamadas.some((l) => l.url.includes("ou_clientes") && l.metodo === "PATCH" && l.cuerpo?.ultimo_contacto));
 check("y lo apunta en la actividad", llamadas.some((l) => l.url.includes("ou_actividad") && l.cuerpo?.tipo === "seguimiento"));
 
+// ---------------------------------------------------------------------------
+console.log("\n— 18 fotos, vídeo propio e IA por herramienta —");
+// ---------------------------------------------------------------------------
+check("máximo 18 fotos por piso", MAX_FOTOS === 18);
+check("vídeo MP4 de 30 MB → vale", validarVideo({ tipo: "video/mp4", tamano: 30 * 1048576 }).ok);
+check("vídeo de iPhone (MOV) → vale", validarVideo({ tipo: "video/quicktime", tamano: 1000 }).ext === "mov");
+check("vídeo de más de 50 MB → rechazado y explica cómo", /50 MB/.test(validarVideo({ tipo: "video/mp4", tamano: MAX_VIDEO_BYTES + 1 }).error || ""));
+check("un PDF no es un vídeo", !validarVideo({ tipo: "application/pdf", tamano: 10 }).ok);
+check("la ruta del vídeo va dentro de la carpeta del inmueble", /^i-1\/[a-z0-9]{10}\.mp4$/.test(rutaVideo("i-1", "mp4")));
+check("reconoce un vídeo subido a nuestro almacén",
+  rutaVideoPropio("https://x.supabase.co/storage/v1/object/public/videos/i-1/abc.mp4", "https://x.supabase.co") === "i-1/abc.mp4");
+check("y no confunde un vídeo de YouTube con uno propio", rutaVideoPropio("https://youtu.be/abc", "https://x.supabase.co") === null);
+
+process.env.SUPABASE_URL = process.env.SUPABASE_URL || "https://x.supabase.co";
+process.env.SUPABASE_SERVICE_KEY = "srv";
+llamadas.length = 0;
+simula([
+  ["/rest/v1/ou_usuarios", { datos: [PERFIL] }],
+  ["/rest/v1/ou_inmuebles", { datos: [{ id: "i-1", titulo: "Ático", video_url: null, fotos: [] }] }],
+  ["/storage/v1/bucket", { estado: 400, datos: { statusCode: "409", error: "Duplicate" } }],
+  ["/storage/v1/object/upload/sign/videos/", { datos: { url: "/object/upload/sign/videos/i-1/abc.mp4?token=t" } }],
+]);
+res = mockRes();
+await handler({ method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "video.preparar", id: "i-1", tipo: "video/mp4", tamano: 20 * 1048576 } }, res);
+check("video.preparar → dirección firmada para subir directo al almacén",
+  res.r.statusCode === 200 && res.r.body.subida.includes("/storage/v1/object/upload/sign/videos/") && res.r.body.ruta.startsWith("i-1/"),
+  JSON.stringify(res.r.body));
+check("si el bucket de vídeos ya existe, no falla", res.r.statusCode === 200);
+res = mockRes();
+await handler({ method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "video.preparar", id: "i-1", tipo: "video/mp4", tamano: 80 * 1048576 } }, res);
+check("video.preparar de 80 MB → 400", res.r.statusCode === 400);
+
+simula([
+  ["/rest/v1/ou_usuarios", { datos: [PERFIL] }],
+  ["/rest/v1/ou_actividad", { datos: null }],
+  ["/storage/v1/object/public/videos/", { datos: null }],
+  ["/rest/v1/ou_inmuebles", (u, init) => ({ datos: [{ id: "i-1", titulo: "Ático", fotos: [],
+    video_url: (init?.method || init?.metodo) === "PATCH" ? JSON.parse(init.body).video_url : null }] })],
+]);
+res = mockRes();
+await handler({ method: "POST", headers: { authorization: "Bearer tok-1" }, body: { accion: "video.guardar", id: "i-1", ruta: "i-1/abc.mp4" } }, res);
+check("video.guardar pone el vídeo en la ficha", res.r.statusCode === 200 && res.r.body.inmueble.video_url.endsWith("/videos/i-1/abc.mp4"), JSON.stringify(res.r.body).slice(0, 200));
+res = mockRes();
+await handler({ method: "POST", headers: { authorization: "Bearer tok-1" }, body: { accion: "video.guardar", id: "i-1", ruta: "i-2/otro.mp4" } }, res);
+check("no se puede colgar el vídeo de otro inmueble", res.r.statusCode === 400);
+
+// La IA devuelve la ficha como llamada a herramienta
+process.env.ANTHROPIC_API_KEY = "sk-prueba";
+let pedido = null;
+simula([
+  ["/rest/v1/ou_usuarios", { datos: [PERFIL] }],
+  ["api.anthropic.com", (u, init) => { pedido = JSON.parse(init.body); return { datos: {
+    id: "m", type: "message", role: "assistant", model: "x", stop_reason: "tool_use", stop_sequence: null,
+    usage: { input_tokens: 1, output_tokens: 1 },
+    content: [{ type: "tool_use", id: "t", name: "rellenar_ficha", input: {
+      titulo: "Piso con terraza en El Llano", operacion: "venta", precio: 185000, ciudad: "Gijón", zona: "El Llano",
+      habitaciones: 3, banos: 2, metros: 90, caracteristicas: ["terraza", "piscina"], descripcion: "Anuncio de la IA.", faltan: ["planta"] } }],
+  } }; }],
+]);
+res = mockRes();
+await handler({ method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "inmuebles.redactar", notas: "piso 3 hab en El Llano, Gijón, 185k, 2 baños, 90 m2, terraza" } }, res);
+check("IA: la ficha llega por herramienta y se usa", res.r.body.motor === "ia" && res.r.body.ficha.titulo === "Piso con terraza en El Llano", JSON.stringify(res.r.body).slice(0, 200));
+check("IA: se le obliga a usar la herramienta", pedido?.tool_choice?.name === "rellenar_ficha" && pedido?.max_tokens >= 3000);
+check("IA: la piscina inventada se descarta también por esta vía", res.r.body.ficha.caracteristicas.join() === "terraza");
+simula([
+  ["/rest/v1/ou_usuarios", { datos: [PERFIL] }],
+  ["api.anthropic.com", { datos: { id: "m", type: "message", role: "assistant", model: "x", stop_reason: "end_turn", stop_sequence: null,
+    usage: { input_tokens: 1, output_tokens: 1 }, content: [{ type: "text", text: "Lo siento" }] } }],
+]);
+res = mockRes();
+await handler({ method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "inmuebles.redactar", notas: "piso 3 hab en Mieres 95.000 €" } }, res);
+check("IA sin ficha → reintenta y cae al asistente local sin error", res.r.statusCode === 200 && res.r.body.motor === "local" && res.r.body.ficha.precio === 95000);
+delete process.env.ANTHROPIC_API_KEY;
+
 // El comprobador de instalación
 delete process.env.SUPABASE_URL;
 res = mockRes();
@@ -814,6 +893,9 @@ if (chromium) {
       mensajes: { completo: "Hola Lucía, soy Pau (completo)", corto: "Hola Lucía! (corto)", formal: "Buenos días, Lucía (formal)" },
     },
     "cliente.contactado": { cliente: { id: "c-9", nombre: "Bea" } },
+    "video.preparar": { subida: "http://127.0.0.1:8131/__subida?token=t", ruta: "i-1/abc.mp4", tipo: "video/mp4" },
+    "video.guardar": { inmueble: { id: "i-1", titulo: "Ático", fotos: [],
+      video_url: "https://x.supabase.co/storage/v1/object/public/videos/i-1/abc.mp4" } },
     "inmuebles.redactar": { motor: "local", aviso: "Rellenado sin IA.", ficha: {
       titulo: "Piso de 3 habitaciones en El Llano, Gijón", operacion: "venta", precio: 185000, ciudad: "Gijón",
       zona: "El Llano", habitaciones: 3, banos: 2, metros: 90, caracteristicas: ["terraza", "ascensor"],
@@ -836,8 +918,16 @@ if (chromium) {
   };
 
   const ultimoCuerpo = {};
+  const subidas = [];
   const servidor = http.createServer(async (req, res) => {
     const ruta = decodeURIComponent(req.url.split("?")[0]);
+    if (ruta === "/__subida" && req.method === "PUT") {
+      let n = 0;
+      for await (const trozo of req) n += trozo.length;
+      subidas.push({ bytes: n, tipo: req.headers["content-type"] });
+      res.writeHead(200, { "content-type": "application/json" }).end('{"Key":"videos/i-1/abc.mp4"}');
+      return;
+    }
     if (ruta === "/api/oportunidades") {
       let cuerpo = "";
       for await (const trozo of req) cuerpo += trozo;
@@ -963,6 +1053,14 @@ if (chromium) {
   await app.waitForSelector("#form-ficha h2:has-text('Editar inmueble')", { timeout: 5000 }).catch(() => {});
   check("un inmueble ya guardado se abre (antes se colgaba por la galería de fotos)",
     await app.locator("#form-ficha h2:has-text('Editar inmueble')").isVisible() && (await app.locator(".rejilla-fotos").count()) === 1);
+  check("la galería dice el máximo de 18 fotos", (await app.textContent(".fotos")).includes("de 18"));
+  await app.locator(".zona-video input[type=file]").setInputFiles({ name: "piso.mp4", mimeType: "video/mp4", buffer: Buffer.alloc(300000, 1) });
+  await app.waitForSelector(".video-previa", { timeout: 5000 }).catch(() => {});
+  check("el vídeo se sube directo al almacén (no por Vercel)", subidas.length === 1 && subidas[0].bytes === 300000 && subidas[0].tipo === "video/mp4", JSON.stringify(subidas));
+  check("y queda puesto en la ficha con su reproductor",
+    ultimoCuerpo["video.guardar"]?.ruta === "i-1/abc.mp4" && (await app.locator(".video-previa").count()) === 1);
+  check("el campo de enlace se actualiza con el vídeo subido",
+    (await app.locator("#form-ficha [name=video_url]").inputValue()).endsWith("/videos/i-1/abc.mp4"));
   await app.locator("button:has-text('Tarjeta para WhatsApp')").click();
   await app.waitForFunction(() => document.querySelector(".lienzo-tarjeta")?.width === 1080);
   await app.waitForTimeout(400);

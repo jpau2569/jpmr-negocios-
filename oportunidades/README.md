@@ -155,7 +155,8 @@ Todo esto no cambia la base de datos: usa las tablas que ya había.
 (botón 🎤, reconocimiento de voz del navegador en español) lo que se sabe del
 piso y la ficha se rellena sola: título, operación, precio, ciudad, zona,
 habitaciones, baños, metros, características y el anuncio. Con
-`ANTHROPIC_API_KEY` lo redacta Claude; sin ella, el extractor local de
+`ANTHROPIC_API_KEY` lo redacta Claude (como llamada a la herramienta
+`rellenar_ficha`, para que el JSON llegue siempre entero; si no, reintenta una vez); sin ella, el extractor local de
 `lib/oportunidades-extras.js`. **Lo que no está en las notas no entra**: los
 números de la IA se comprueban contra el texto y una característica que no se
 menciona se descarta. Dice qué falta para vender más. En un inmueble ya
@@ -174,6 +175,19 @@ de portada, precio, título, zona, datos y la marca, en **publicación 4:5** o
 con la imagen y el enlace de la ficha; en ordenador se descarga el PNG. La
 dibuja el navegador (canvas); las fotos del almacén de Supabase se pueden usar
 porque se sirven con CORS abierto.
+
+## 18 fotos y un vídeo por piso
+
+Hasta **18 fotos** por inmueble (`MAX_FOTOS`); si eliges más de las que caben,
+sube las que quepan y lo avisa. Y **un vídeo propio** que se sube desde el móvil
+(MP4, MOV de iPhone o WebM, **máximo 50 MB**, el límite por archivo del plan
+gratuito de Supabase: un minuto en 1080p cabe, en 4K no). El vídeo no pasa por
+Vercel —su límite es 4,5 MB por petición—: `video.preparar` comprueba quién es
+y qué sube y devuelve una **dirección firmada** para subirlo directo al bucket
+`videos` de Supabase (se crea solo la primera vez, con la clave de servicio);
+`video.guardar` comprueba que ha llegado y lo pone en `video_url`. Al cambiarlo
+o quitarlo, el anterior se borra del almacén. Sigue valiendo pegar un enlace de
+YouTube o Vimeo.
 
 ## Logo 3D e instalar en el móvil
 

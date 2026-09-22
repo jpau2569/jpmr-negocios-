@@ -39,6 +39,8 @@ const CATALOGO = {
 };
 
 const CLAVE_SESION = "ou_sesion_v1";
+const MAX_FOTOS = 18;          // = MAX_FOTOS de lib/oportunidades.js
+const MAX_VIDEO_MB = 50;       // = MAX_VIDEO_BYTES de lib/oportunidades-extras.js
 const $ = (id) => document.getElementById(id);
 
 let sesion = null;   // { token, usuario }
@@ -463,7 +465,9 @@ function zonaFotos(inm, alCambiar) {
 
   // Se llamaba «pintar» y tapaba al pintar() general: se llamaba a sí misma
   // sin fin y la ficha de un inmueble ya guardado no llegaba a abrirse.
+  let actualGaleria = inm;
   function pintarGaleria(actual) {
+    actualGaleria = actual;
     const galeria = Array.isArray(actual.fotos) ? actual.fotos : [];
     pintar(caja, 
       el("div", { clase: "rejilla-fotos" }, [
@@ -486,11 +490,11 @@ function zonaFotos(inm, alCambiar) {
             ]),
           ]);
         }),
-        el("button", {
+        galeria.length >= MAX_FOTOS ? null : el("button", {
           clase: "mini-anadir", type: "button", onclick: () => entrada.click(),
         }, [el("span", { texto: "+" }), el("small", { texto: galeria.length ? "Añadir" : "Añadir fotos" })]),
       ]),
-      el("p", { clase: "apunte", texto: `${galeria.length} de 20 · se reducen solas antes de subirse` }),
+      el("p", { clase: "apunte", texto: `${galeria.length} de ${MAX_FOTOS} · se reducen solas antes de subirse` }),
       aviso,
       entrada
     );
@@ -507,9 +511,12 @@ function zonaFotos(inm, alCambiar) {
   }
 
   entrada.addEventListener("change", async () => {
-    const archivos = [...entrada.files];
+    const hueco = MAX_FOTOS - (Array.isArray(actualGaleria.fotos) ? actualGaleria.fotos.length : 0);
+    const todas = [...entrada.files];
+    const archivos = todas.slice(0, Math.max(0, hueco));
     entrada.value = "";
-    mostrarAviso(aviso, "");
+    mostrarAviso(aviso, todas.length > archivos.length
+      ? `Máximo ${MAX_FOTOS} fotos por piso: subo ${archivos.length} de las ${todas.length} que has elegido.` : "");
     let ultimo = null;
     for (const [i, archivo] of archivos.entries()) {
       try {
@@ -591,7 +598,8 @@ function abrirInmueble(inm) {
         ])
       : el("p", { clase: "apunte", texto: "Guarda el inmueble y podrás añadirle fotos.", style: "margin-bottom:14px" }),
     campo("Foto de portada (dirección web, opcional si subes fotos)", portada),
-    campo("Vídeo del inmueble (YouTube, Vimeo o enlace directo)", video),
+    inm ? zonaVideo(inm, video, (actualizado) => { inm = actualizado; video.value = actualizado.video_url || ""; }) : null,
+    campo(inm ? "…o pega un enlace de YouTube o Vimeo" : "Vídeo del inmueble (YouTube, Vimeo o enlace directo)", video),
     el("label", { clase: "casillas" }, [el("label", {}, [publico, "Publicar la ficha (hace falta precio y estado disponible)"])]),
     aviso,
     el("div", { clase: "pie-ficha" }, [
@@ -894,6 +902,77 @@ async function copiar(texto) {
   } catch {
     toast("No se pudo copiar: selecciona el texto a mano.");
   }
+}
+
+/* ---------- vídeo propio del inmueble ---------- */
+//  Se sube del móvil DIRECTO al almacén (el backend solo firma el permiso):
+//  así no choca con el límite de 4,5 MB por petición de Vercel.
+function zonaVideo(inm, campoUrl, alCambiar) {
+  const caja = el("div", { clase: "zona-video" });
+  const entrada = el("input", { type: "file", accept: "video/mp4,video/quicktime,video/webm,video/*", hidden: true });
+  const aviso = el("p", { clase: "aviso", hidden: true });
+  const barra = el("div", { clase: "progreso", hidden: true }, [el("span")]);
+  let actual = inm;
+
+  function dibujar() {
+    const url = actual.video_url;
+    const propio = url && /\/storage\/v1\/object\/public\/videos\//.test(url);
+    pintar(caja,
+      el("p", { clase: "apunte", texto: "Vídeo (uno por piso, máx. 50 MB ≈ 1 minuto en 1080p)", style: "margin-bottom:8px" }),
+      url && propio ? el("video", { src: url, controls: true, playsinline: true, preload: "metadata", clase: "video-previa" }) : null,
+      url && !propio ? el("p", { clase: "apunte", texto: `Enlace puesto: ${url}` }) : null,
+      el("div", { style: "display:flex;gap:8px;flex-wrap:wrap;margin-top:8px" }, [
+        el("button", { clase: "btn claro fino", type: "button", texto: url ? "🎬 Cambiar vídeo" : "🎬 Subir vídeo del móvil",
+          onclick: () => entrada.click() }),
+        url ? el("button", { clase: "btn fino peligro", type: "button", texto: "Quitar vídeo", onclick: quitar }) : null,
+      ]),
+      barra, aviso, entrada);
+  }
+
+  async function quitar() {
+    try {
+      const r = await api("video.quitar", { id: actual.id });
+      actual = r.inmueble; alCambiar?.(actual); dibujar(); toast("Vídeo quitado.");
+    } catch (e) { mostrarAviso(aviso, e.message); }
+  }
+
+  entrada.addEventListener("change", async () => {
+    const archivo = entrada.files[0];
+    entrada.value = "";
+    if (!archivo) return;
+    mostrarAviso(aviso, "");
+    if (archivo.size > MAX_VIDEO_MB * 1048576) {
+      return mostrarAviso(aviso, `El vídeo pesa ${Math.round(archivo.size / 1048576)} MB y el máximo es ${MAX_VIDEO_MB} MB. Grábalo en 1080p o recórtalo a menos de un minuto.`);
+    }
+    const tipo = archivo.type || (/\.mov$/i.test(archivo.name) ? "video/quicktime" : "video/mp4");
+    try {
+      const p = await api("video.preparar", { id: actual.id, tipo, tamano: archivo.size });
+      barra.hidden = false;
+      await subirConProgreso(p.subida, archivo, p.tipo, (x) => { barra.firstChild.style.width = `${Math.round(x * 100)}%`; });
+      const r = await api("video.guardar", { id: actual.id, ruta: p.ruta });
+      actual = r.inmueble; alCambiar?.(actual);
+      barra.hidden = true; dibujar();
+      toast("Vídeo subido. Ya sale en la ficha y en los WhatsApp.");
+    } catch (e) {
+      barra.hidden = true;
+      mostrarAviso(aviso, e.message);
+    }
+  });
+
+  dibujar();
+  return caja;
+}
+
+function subirConProgreso(url, archivo, tipo, alAvanzar) {
+  return new Promise((ok, mal) => {
+    const x = new XMLHttpRequest();
+    x.open("PUT", url);
+    x.setRequestHeader("Content-Type", tipo);
+    x.upload.onprogress = (ev) => ev.lengthComputable && alAvanzar(ev.loaded / ev.total);
+    x.onload = () => (x.status >= 200 && x.status < 300 ? ok() : mal(new Error(`El almacén rechazó el vídeo (${x.status}).`)));
+    x.onerror = () => mal(new Error("Se cortó la conexión subiendo el vídeo. Prueba con wifi."));
+    x.send(archivo);
+  });
 }
 
 /* ---------- 1. Alta rápida: notas o voz → ficha rellena ---------- */
