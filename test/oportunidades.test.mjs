@@ -7,6 +7,10 @@
 //  handler: sesiones, permisos por rol, portal del comprador y errores.
 // ============================================================================
 
+import http from "node:http";
+import { readFile } from "node:fs/promises";
+import { extname, join } from "node:path";
+
 import handler, { nubeConfigurada } from "../api/_oportunidades.js";
 import fichaHandler, { paginaFicha, esc } from "../api/_oportunidades-ficha.js";
 import {
@@ -578,6 +582,118 @@ check("las funciones del portal no las puede llamar cualquiera",
   sql.includes("revoke all on function public.ou_portal(text) from public, anon, authenticated"));
 
 globalThis.fetch = realFetch;
+
+/* ========================================================================== */
+//  La interfaz en un Chromium real
+//  --------------------------------------------------------------------------
+//  Existe por un fallo que llegó a producción: el comprobador de instalación
+//  terminaba escribiendo la palabra «null» debajo de los avisos. `el()`
+//  descarta los hijos nulos, pero `replaceChildren()` del navegador los
+//  convierte en texto, y aquí se pinta con `condición ? el(...) : null`.
+//  Ahora todo pasa por `pintar()`; esto vigila que siga siendo así.
+/* ========================================================================== */
+let chromium = null;
+try {
+  ({ chromium } = await import("playwright"));
+} catch {
+  console.log("\n⚠️  Playwright no está instalado: me salto los tests de interfaz.");
+}
+
+if (chromium) {
+  console.log("\n🌐 Interfaz en Chromium");
+
+  const RAIZ = new URL("..", import.meta.url).pathname;
+  const MIME = {
+    ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8",
+  };
+
+  // Lo que contestaría el backend. `estado` va sin ninguna variable puesta:
+  // es justo el caso en el que aparecía el «null».
+  const RESPUESTAS = {
+    estado: {
+      listo: false,
+      pasos: [
+        { nombre: "Dirección del proyecto (SUPABASE_URL)", ok: false, detalle: "falta", arreglo: "Vercel → Settings → Environment Variables." },
+        { nombre: "Clave pública (SUPABASE_ANON_KEY)", ok: false, detalle: "falta", arreglo: "La clave anon public." },
+        { nombre: "Tablas creadas", ok: true, detalle: "las 6 tablas existen" },
+      ],
+    },
+    "portal.leer": {
+      cliente: { nombre: "Marta" },
+      inmuebles: [{
+        id: "1", titulo: "Piso en el centro de Oviedo", precio: 189000,
+        operacion: "venta", ciudad: "Oviedo", habitaciones: 3, metros: 90,
+        // Sin descripción a propósito: esa rama pinta un null.
+        galeria: [], respuesta: null,
+      }],
+    },
+  };
+
+  const servidor = http.createServer(async (req, res) => {
+    const ruta = decodeURIComponent(req.url.split("?")[0]);
+    if (ruta === "/api/oportunidades") {
+      let cuerpo = "";
+      for await (const trozo of req) cuerpo += trozo;
+      const accion = JSON.parse(cuerpo || "{}").accion;
+      const datos = RESPUESTAS[accion];
+      if (!datos) { res.writeHead(400, { "content-type": "application/json" }).end('{"error":"acción no simulada"}'); return; }
+      res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(datos));
+      return;
+    }
+    try {
+      const archivo = await readFile(join(RAIZ, ruta));
+      res.writeHead(200, { "content-type": MIME[extname(ruta)] || "application/octet-stream" }).end(archivo);
+    } catch {
+      res.writeHead(404).end("no encontrado");
+    }
+  });
+  await new Promise((ok) => servidor.listen(8131, ok));
+  const BASE = "http://127.0.0.1:8131/oportunidades/";
+
+  const navegador = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+  const contexto = await navegador.newContext({ viewport: { width: 1100, height: 900 } });
+  const pagina = await contexto.newPage();
+  const errores = [];
+  pagina.on("pageerror", (e) => errores.push(String(e)));
+
+  /* --- El comprobador de instalación --- */
+  await pagina.goto(BASE + "index.html", { waitUntil: "networkidle" });
+  await pagina.locator("#btn-comprobar").click();
+  await pagina.waitForSelector("#diagnostico .paso");
+
+  const panel = await pagina.textContent("#diagnostico");
+  check("el comprobador dice qué falta", panel.includes("Falta algo por configurar"));
+  check("lista cada variable que falta", (await pagina.locator("#diagnostico .paso.mal").count()) === 2);
+  check("y también lo que ya está bien", (await pagina.locator("#diagnostico .paso.bien").count()) === 1);
+  check("el comprobador NO escribe «null» debajo de los avisos",
+    !panel.includes("null"), panel.slice(-80));
+
+  /* --- El portal del comprador --- */
+  const pagina2 = await contexto.newPage();
+  pagina2.on("pageerror", (e) => errores.push(String(e)));
+  await pagina2.goto(BASE + "portal.html#abcdefghjkmnpqrstuvwxyz23456789", { waitUntil: "networkidle" });
+  await pagina2.waitForSelector(".pieza");
+
+  const portal = await pagina2.textContent("#contenido");
+  check("el portal saluda al cliente por su nombre",
+    (await pagina2.textContent("#saludo")).includes("Marta"));
+  check("el portal muestra el inmueble con su precio", portal.includes("189.000"));
+  check("un inmueble sin descripción no pinta «null» en el portal",
+    !portal.includes("null"), portal.slice(0, 120));
+
+  /* --- Un enlace incompleto se explica, no se rompe --- */
+  const pagina3 = await contexto.newPage();
+  pagina3.on("pageerror", (e) => errores.push(String(e)));
+  await pagina3.goto(BASE + "portal.html#corto", { waitUntil: "networkidle" });
+  check("un enlace cortado avisa en vez de quedarse en blanco",
+    (await pagina3.textContent("#contenido")).includes("no está completo"));
+
+  check("ninguna pantalla ha lanzado errores de JavaScript", errores.length === 0, errores.join(" | "));
+
+  await navegador.close();
+  await new Promise((ok) => servidor.close(ok));
+}
 
 console.log(`\n${fallados === 0 ? "✅" : "❌"} Oportunidades Únicas: ${pasados} comprobaciones correctas, ${fallados} fallidas.\n`);
 // `exitCode` en vez de `exit()`: así no se corta la salida al redirigirla.

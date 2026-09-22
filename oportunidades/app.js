@@ -63,6 +63,16 @@ function el(etiqueta, props = {}, hijos = []) {
   return nodo;
 }
 
+// Vaciar un nodo y volver a pintarlo. Existe porque `replaceChildren()` del
+// navegador escribe literalmente «null» cuando le llega uno, y aquí se pinta a
+// base de `condición ? el(...) : null`. Todo el render pasa por aquí para que
+// los hijos se comporten igual que dentro de el().
+function pintar(nodo, ...hijos) {
+  nodo.replaceChildren(
+    ...hijos.flat().filter((h) => h !== null && h !== undefined && h !== false)
+  );
+}
+
 const euros = (n) =>
   n === null || n === undefined || n === "" ? "Sin precio"
     : new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(Number(n));
@@ -255,7 +265,7 @@ async function vistaPisos() {
       const n = seleccion.marcados.size;
       barra.hidden = n === 0;
       if (n) {
-        barra.replaceChildren(
+        pintar(barra, 
           el("b", { texto: n === 1 ? "1 inmueble marcado" : `${n} inmuebles marcados` }),
           el("div", { clase: "acciones" }, [
             el("button", {
@@ -287,7 +297,7 @@ async function vistaPisos() {
       busca: busca.value, estado: filtroEstado.value, operacion: filtroOperacion.value,
     });
     cache.inmuebles = inmuebles;
-    rejilla.replaceChildren(
+    pintar(rejilla, 
       inmuebles.length
         ? el("div", { clase: "rejilla" }, inmuebles.map((i) => tarjetaInmueble(i, abrirInmueble, seleccion)))
         : el("div", { clase: "vacio", texto: "Ningún inmueble con esos filtros." })
@@ -400,7 +410,7 @@ function zonaFotos(inm, alCambiar) {
 
   function pintar(actual) {
     const galeria = Array.isArray(actual.fotos) ? actual.fotos : [];
-    caja.replaceChildren(
+    pintar(caja, 
       el("div", { clase: "rejilla-fotos" }, [
         ...galeria.map((f) => {
           const esPortada = actual.portada_url === f.url;
@@ -506,7 +516,7 @@ function abrirInmueble(inm) {
 
   const aviso = el("p", { clase: "aviso", hidden: true });
 
-  f.replaceChildren(
+  pintar(f, 
     el("h2", { texto: inm ? "Editar inmueble" : "Nuevo inmueble", style: "margin-bottom:18px" }),
     campo("Título comercial", titulo),
     el("div", { clase: "tres" }, [campo("Operación", operacion), campo("Precio (€)", precio), campo("Estado", estado)]),
@@ -590,7 +600,7 @@ function abrirCliente(cli) {
     ])));
   const aviso = el("p", { clase: "aviso", hidden: true });
 
-  f.replaceChildren(
+  pintar(f, 
     el("h2", { texto: cli ? "Editar cliente" : "Nuevo cliente", style: "margin-bottom:18px" }),
     el("div", { clase: "dos" }, [campo("Nombre", nombre), campo("Apellidos", apellidos)]),
     el("div", { clase: "dos" }, [campo("Teléfono", telefono), campo("Correo", email)]),
@@ -657,7 +667,7 @@ async function enviarSeleccion(ids) {
   const aviso = el("p", { clase: "aviso", hidden: true });
   const salida = el("div", {});
 
-  f.replaceChildren(
+  pintar(f, 
     el("h2", { texto: ids.length === 1 ? "Enviar este inmueble" : `Enviar ${ids.length} inmuebles`, style: "margin-bottom:6px" }),
     el("p", { clase: "apunte", texto: "Se autorizan en el portal privado del cliente y se prepara el mensaje.", style: "margin-bottom:18px" }),
     el("label", { clase: "campo" }, [el("span", { texto: "¿A quién?" }), selector]),
@@ -682,7 +692,7 @@ async function enviarSeleccion(ids) {
       // prefijo o es de fuera, se respeta tal cual.
       const numero = telefono.length === 9 ? "34" + telefono : telefono;
 
-      salida.replaceChildren(
+      pintar(salida, 
         el("label", { clase: "campo" }, [
           el("span", { texto: "Mensaje" }),
           el("textarea", { readonly: true, style: "min-height:210px" }, [r.mensaje]),
@@ -734,7 +744,7 @@ function compartirFicha(inm) {
 
   const d = $("ficha");
   const f = $("form-ficha");
-  f.replaceChildren(
+  pintar(f, 
     el("h2", { texto: "Compartir esta ficha", style: "margin-bottom:6px" }),
     el("p", { clase: "apunte", texto: "Al pegarlo en WhatsApp sale la tarjeta con la foto y el precio.", style: "margin-bottom:16px" }),
     el("label", { clase: "campo" }, [
@@ -796,7 +806,7 @@ async function verCoincidencias(inm) {
   const aviso = el("p", { clase: "aviso", hidden: true });
   const salida = el("div", {});
 
-  f.replaceChildren(
+  pintar(f, 
     el("h2", { texto: "A quién le encaja", style: "margin-bottom:6px" }),
     el("p", { clase: "apunte", texto: `${inm.titulo} · ${euros(inm.precio)}`, style: "margin-bottom:18px" }),
     filas,
@@ -869,9 +879,9 @@ async function recargarVista() {
   }
   try {
     const contenido = await RUTAS[ruta]();
-    $("vista").replaceChildren(contenido);
+    pintar($("vista"), contenido);
   } catch (e) {
-    $("vista").replaceChildren(
+    pintar($("vista"), 
       el("div", { clase: "vacio" }, [
         el("b", { texto: "No se pudo cargar" }),
         el("p", { clase: "apunte", texto: e.message, style: "margin-top:6px" }),
@@ -901,10 +911,10 @@ $("form-acceso").addEventListener("submit", async (ev) => {
 $("btn-comprobar").addEventListener("click", async () => {
   const caja = $("diagnostico");
   caja.hidden = false;
-  caja.replaceChildren(el("p", { clase: "apunte", texto: "Comprobando…" }));
+  pintar(caja, el("p", { clase: "apunte", texto: "Comprobando…" }));
   try {
     const r = await api("estado");
-    caja.replaceChildren(
+    pintar(caja, 
       el("h3", { texto: r.listo ? "Todo listo" : "Falta algo por configurar" }),
       ...r.pasos.map((p) =>
         el("div", { clase: `paso ${p.ok ? "bien" : "mal"}` }, [
@@ -921,7 +931,7 @@ $("btn-comprobar").addEventListener("click", async () => {
         : null
     );
   } catch (e) {
-    caja.replaceChildren(el("p", { clase: "aviso", texto: e.message }));
+    pintar(caja, el("p", { clase: "aviso", texto: e.message }));
   }
 });
 
