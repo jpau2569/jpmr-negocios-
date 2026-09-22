@@ -19,6 +19,7 @@ import {
   normalizarFoto, rutaFoto, normalizarGaleria, MAX_FOTO_BYTES,
   CONTACTO, enlaceWhatsapp, normalizarVideo,
   CARACTERISTICAS, ESTADOS,
+  numeroWhatsapp, enlaceWhatsappCliente, mensajesWhatsapp, mejoresInmuebles, mensajeRespuesta,
 } from "../lib/oportunidades.js";
 
 let pasados = 0;
@@ -463,6 +464,71 @@ check("avisa de los que el cliente no podrá abrir",
 check("el enlace del portal se genera con el dominio recibido",
   res.r.body.enlace.startsWith("https://ej.com/oportunidades/portal.html#"));
 
+check("el envío trae los tres estilos de mensaje",
+  ["completo", "corto", "formal"].every((e) => typeof res.r.body.mensajes?.[e] === "string" && res.r.body.mensajes[e].length > 20));
+check("el mensaje de siempre no cambia (compatibilidad)", res.r.body.mensaje === res.r.body.mensajes.completo);
+
+// ---------------------------------------------------------------------------
+console.log("\n— WhatsApp pro: números, estilos, sugerencias y respuestas —");
+// ---------------------------------------------------------------------------
+check("móvil español de 9 cifras → con 34", numeroWhatsapp("663 26 38 42") === "34663263842");
+check("+34 con espacios", numeroWhatsapp("+34 663-263-842") === "34663263842");
+check("0034 delante", numeroWhatsapp("0034663263842") === "34663263842");
+check("extranjero con prefijo se respeta", numeroWhatsapp("+44 7700 900123") === "447700900123");
+check("un número incompleto no da enlace", numeroWhatsapp("12345") === "" && enlaceWhatsappCliente("12345", "hola") === "");
+check("enlace a cliente con texto", enlaceWhatsappCliente("600111222", "Hola Ana") === "https://wa.me/34600111222?text=Hola%20Ana");
+
+const estilos = mensajesWhatsapp({
+  cliente: { nombre: "Lucía" },
+  inmuebles: [{ titulo: "Ático", precio: 289000, slug: "atico", operacion: "venta" }],
+  enlacePortal: "https://ej.com/oportunidades/portal.html#tok", base: "https://ej.com", firma: { agente: "Pau" },
+});
+check("estilo corto: breve y con la ficha", estilos.corto.length < estilos.completo.length && estilos.corto.includes("https://ej.com/p/atico"));
+check("estilo formal: de usted", estilos.formal.includes("Le escribe Pau") && estilos.formal.includes("Quedo a su disposición"));
+check("estilo formal con un solo inmueble no habla en plural", !estilos.formal.includes("verlos todos"));
+check("alquiler lleva /mes en el corto",
+  mensajesWhatsapp({ cliente: { nombre: "A" }, inmuebles: [{ titulo: "B", precio: 700, operacion: "alquiler" }] }).corto.includes("/mes"));
+
+const cliLucia = { nombre: "Lucía", operacion: "venta", presupuesto_max: 200000, zonas: ["Oviedo"], inmuebles_autorizados: ["i-3"] };
+const cartera = [
+  { id: "i-1", titulo: "Encaja", operacion: "venta", precio: 180000, ciudad: "Oviedo", estado: "disponible" },
+  { id: "i-2", titulo: "Caro", operacion: "venta", precio: 400000, ciudad: "Oviedo", estado: "disponible" },
+  { id: "i-3", titulo: "Ya enviado", operacion: "venta", precio: 170000, ciudad: "Oviedo", estado: "disponible" },
+  { id: "i-4", titulo: "Vendido", operacion: "venta", precio: 150000, ciudad: "Oviedo", estado: "vendido" },
+  { id: "i-5", titulo: "Borrador", operacion: "venta", precio: 150000, ciudad: "Oviedo", estado: "borrador" },
+];
+const sug = mejoresInmuebles(cliLucia, cartera);
+check("sugerencias: el que mejor encaja va primero", sug[0].inmueble.id === "i-1", sug.map((x) => x.inmueble.id).join());
+check("sugerencias: lo ya enviado va al final y marcado", sug.at(-1).inmueble.id === "i-3" && sug.at(-1).ya_enviado === true);
+check("sugerencias: no ofrece vendidos ni borradores", !sug.some((x) => ["i-4", "i-5"].includes(x.inmueble.id)));
+
+const resp = mensajeRespuesta({ respuesta: "visita", cliente: { nombre: "Marta" }, inmueble: { titulo: "Piso Uría" }, firma: { agente: "Pau" } });
+check("contestar a una petición de visita pregunta día y hora", resp.includes("Marta") && resp.includes("Piso Uría") && resp.includes("día"));
+check("cada respuesta del portal tiene su contestación",
+  ["interesa", "visita", "no_encaja", "similares"].every((r) => mensajeRespuesta({ respuesta: r, cliente: { nombre: "X" }, inmueble: { titulo: "Y" } }).length > 30));
+
+// La ficha del cliente: enviados, respuestas y sugerencias
+simula([
+  ["/rest/v1/ou_usuarios", { datos: [PERFIL] }],
+  ["/rest/v1/ou_clientes", { datos: [{ id: "c-1", ...cliLucia, telefono: "600111222" }] }],
+  ["/rest/v1/ou_inmuebles", { datos: cartera }],
+  ["/rest/v1/ou_respuestas", { datos: [
+    { id: "r-1", respuesta: "visita", creado: "2026-09-20T10:00:00Z",
+      cliente: { id: "c-1", nombre: "Lucía", telefono: "600111222" }, inmueble: { id: "i-3", titulo: "Ya enviado" } },
+  ] }],
+]);
+res = mockRes();
+await handler({ method: "POST", headers: { authorization: "Bearer tok-1" }, body: { accion: "cliente.detalle", id: "c-1" } }, res);
+check("cliente.detalle → 200", res.r.statusCode === 200, JSON.stringify(res.r.body).slice(0, 160));
+check("dice qué le has mandado", res.r.body.enviados?.length === 1 && res.r.body.enviados[0].id === "i-3");
+check("y qué ha contestado a cada uno", res.r.body.enviados?.[0].respuesta === "visita");
+check("la respuesta trae el WhatsApp de contestación escrito", res.r.body.respuestas?.[0].mensaje.includes("visitar"));
+check("sugiere los que encajan sin repetir el enviado arriba", res.r.body.sugeridos?.[0].inmueble.id === "i-1");
+
+res = mockRes();
+await handler({ method: "POST", headers: { authorization: "Bearer tok-1" }, body: { accion: "cliente.detalle" } }, res);
+check("cliente.detalle sin id → 400", res.r.statusCode === 400);
+
 // El comprobador de instalación
 delete process.env.SUPABASE_URL;
 res = mockRes();
@@ -619,6 +685,41 @@ if (chromium) {
         { nombre: "Tablas creadas", ok: true, detalle: "las 6 tablas existen" },
       ],
     },
+    perfil: { usuario: { id: "u-1", nombre: "Pau", rol: "admin" } },
+    panel: {
+      usuario: { id: "u-1", nombre: "Pau", rol: "admin" },
+      metricas: { disponibles: 2, borradores: 0, reservados: 0, vendidos: 0, total: 2 },
+      inmuebles: [], tareas: [], actividad: [],
+      respuestas: [{
+        id: "r-1", respuesta: "visita", creado: new Date().toISOString(),
+        cliente: { id: "c-1", nombre: "Lucía", telefono: "600 111 222" },
+        inmueble: { id: "i-1", titulo: "Ático en Uría" },
+        mensaje: "Hola Lucía, soy Pau. He visto que quieres visitar *Ático en Uría*",
+      }],
+    },
+    "clientes.listar": { clientes: [
+      { id: "c-1", nombre: "Lucía", apellidos: "Gar", telefono: "600 111 222", tipo: "comprador",
+        presupuesto_max: 200000, zonas: ["Oviedo"], inmuebles_autorizados: ["i-3"], ultimo_contacto: new Date().toISOString() },
+      { id: "c-2", nombre: "Sin Móvil", tipo: "comprador", zonas: [], inmuebles_autorizados: [] },
+    ] },
+    "cliente.detalle": {
+      cliente: { id: "c-1", nombre: "Lucía", telefono: "600 111 222", tipo: "comprador", operacion: "venta", zonas: ["Oviedo"], necesita: [] },
+      enviados: [{ id: "i-3", titulo: "Piso ya enviado", precio: 170000, respuesta: "visita" }],
+      respuestas: [{ id: "r-1", respuesta: "visita", inmueble: { id: "i-3", titulo: "Piso ya enviado" },
+        cliente: { id: "c-1", nombre: "Lucía" }, mensaje: "Hola Lucía, ¿qué día te viene bien?" }],
+      sugeridos: [
+        { inmueble: { id: "i-1", titulo: "Ático en Uría", precio: 189000, operacion: "venta", publico: true, slug: "atico" }, puntos: 90, resumen: "encaja", ya_enviado: false },
+        { inmueble: { id: "i-2", titulo: "Piso Buenavista", precio: 175000, operacion: "venta", publico: true, slug: "bv" }, puntos: 60, resumen: "zona", ya_enviado: false },
+        { inmueble: { id: "i-4", titulo: "Bajo con patio", precio: 150000, operacion: "venta", publico: false, slug: null }, puntos: 30, resumen: "poco", ya_enviado: false },
+        { inmueble: { id: "i-3", titulo: "Piso ya enviado", precio: 170000, operacion: "venta", publico: true, slug: "ya" }, puntos: 80, resumen: "ya", ya_enviado: true },
+      ],
+    },
+    "seleccion.enviar": {
+      cliente: { id: "c-1", nombre: "Lucía", telefono: "600 111 222" },
+      enlace: "https://ej.com/oportunidades/portal.html#tok", sin_publicar: [],
+      mensaje: "Hola Lucía, soy Pau (completo)",
+      mensajes: { completo: "Hola Lucía, soy Pau (completo)", corto: "Hola Lucía! (corto)", formal: "Buenos días, Lucía (formal)" },
+    },
     "portal.leer": {
       cliente: { nombre: "Marta" },
       inmuebles: [{
@@ -630,12 +731,14 @@ if (chromium) {
     },
   };
 
+  const ultimoCuerpo = {};
   const servidor = http.createServer(async (req, res) => {
     const ruta = decodeURIComponent(req.url.split("?")[0]);
     if (ruta === "/api/oportunidades") {
       let cuerpo = "";
       for await (const trozo of req) cuerpo += trozo;
       const accion = JSON.parse(cuerpo || "{}").accion;
+      ultimoCuerpo[accion] = JSON.parse(cuerpo || "{}");
       const datos = RESPUESTAS[accion];
       if (!datos) { res.writeHead(400, { "content-type": "application/json" }).end('{"error":"acción no simulada"}'); return; }
       res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(datos));
@@ -688,6 +791,57 @@ if (chromium) {
   await pagina3.goto(BASE + "portal.html#corto", { waitUntil: "networkidle" });
   check("un enlace cortado avisa en vez de quedarse en blanco",
     (await pagina3.textContent("#contenido")).includes("no está completo"));
+
+  /* --- WhatsApp pro: con sesión iniciada --- */
+  const ctxApp = await navegador.newContext({ viewport: { width: 390, height: 844 } });
+  await ctxApp.addInitScript(() => localStorage.setItem("ou_sesion_v1",
+    JSON.stringify({ token: "tok", usuario: { id: "u-1", nombre: "Pau", rol: "admin" } })));
+  const app = await ctxApp.newPage();
+  app.on("pageerror", (e) => errores.push(String(e)));
+  await app.goto(BASE + "index.html#/panel", { waitUntil: "networkidle" });
+  await app.waitForSelector("text=Respuestas de clientes");
+  const panelTxt = await app.textContent("main");
+  check("el panel enseña lo que han contestado los clientes", panelTxt.includes("Lucía quiere visitarlo"));
+  const hrefContestar = await app.locator("a:has-text('Contestar')").first().getAttribute("href");
+  check("«Contestar» abre el WhatsApp del cliente con 34 y el texto puesto",
+    hrefContestar.startsWith("https://wa.me/34600111222?text=Hola%20Luc"), hrefContestar);
+
+  await app.goto(BASE + "index.html#/clientes", { waitUntil: "networkidle" });
+  await app.waitForSelector(".fila-cliente");
+  check("cada cliente con móvil tiene botón de WhatsApp",
+    (await app.locator(".fila-cliente a.wa").count()) === 1);
+  check("la lista dice cuántos pisos le has mandado", (await app.textContent("main")).includes("1 enviado "));
+  await app.screenshot({ path: "/tmp/ou-clientes-movil.png", fullPage: true }).catch(() => {});
+
+  await app.locator(".fila-cliente >> text=Enviar pisos").first().click();
+  await app.waitForSelector("text=Enviar pisos a Lucía");
+  const marcadosIni = await app.locator("#form-ficha .lista input[type=checkbox]:checked").count();
+  check("se preparan marcados los que mejor encajan y aún no tiene (2 de 4)", marcadosIni === 2, String(marcadosIni));
+  check("lo ya enviado sale marcado como tal", (await app.textContent("#form-ficha")).includes("ya enviado"));
+  check("lo que no está publicado se avisa", (await app.textContent("#form-ficha")).includes("sin publicar"));
+  await app.screenshot({ path: "/tmp/ou-enviar-movil.png", fullPage: true }).catch(() => {});
+
+  await app.locator("text=Preparar WhatsApp").click();
+  await app.waitForSelector(".caja-mensaje");
+  check("se envían justo los marcados", JSON.stringify(ultimoCuerpo["seleccion.enviar"]?.inmuebles) === '["i-1","i-2"]',
+    JSON.stringify(ultimoCuerpo["seleccion.enviar"]));
+  const caja = app.locator(".caja-mensaje textarea");
+  check("el mensaje se puede editar", (await caja.getAttribute("readonly")) === null);
+  await app.locator(".chip:has-text('Corto')").click();
+  check("cambiar a estilo corto cambia el texto", (await caja.inputValue()).includes("(corto)"));
+  await caja.fill("Texto retocado a mano");
+  const hrefWa = await app.locator(".caja-mensaje a.wa").getAttribute("href");
+  check("el botón de WhatsApp lleva lo que has escrito", hrefWa === "https://wa.me/34600111222?text=Texto%20retocado%20a%20mano", hrefWa);
+  await app.screenshot({ path: "/tmp/ou-mensaje-movil.png", fullPage: true }).catch(() => {});
+
+  await app.locator("text=Volver a su ficha").click();
+  await app.waitForSelector(".seguimiento .fila");
+  check("la ficha del cliente dice qué le mandaste y qué contestó",
+    (await app.textContent(".seguimiento")).includes("quiere visitarlo"));
+  check("y tiene botón directo de WhatsApp y de enviarle pisos",
+    (await app.locator("#form-ficha .pie-ficha a:has-text('WhatsApp')").count()) === 1 &&
+    (await app.locator("#form-ficha .pie-ficha button:has-text('Enviarle pisos')").count()) === 1);
+  await ctxApp.close();
 
   check("ninguna pantalla ha lanzado errores de JavaScript", errores.length === 0, errores.join(" | "));
 

@@ -25,6 +25,10 @@ import {
   mejoresClientes,
   tokenPortal,
   mensajeWhatsapp,
+  mensajesWhatsapp,
+  mejoresInmuebles,
+  mensajeRespuesta,
+  ESTILOS_MENSAJE,
   texto,
   normalizarFoto,
   rutaFoto,
@@ -162,6 +166,30 @@ async function accionLogin(cuerpo) {
   };
 }
 
+// Lo que los clientes han dicho en su portal, con el mensaje de contestación
+// ya escrito. Si la consulta falla, el panel sale igual sin esta sección: es
+// una ayuda, no algo que deba tumbar la pantalla principal.
+async function respuestasRecientes(token, perfil, filtro = "", limite = 12) {
+  try {
+    const filas = await tabla(
+      "ou_respuestas",
+      "?select=id,respuesta,creado,cliente:ou_clientes(id,nombre,apellidos,telefono)," +
+        "inmueble:ou_inmuebles(id,titulo,slug,precio,operacion)" +
+        `${filtro}&order=creado.desc&limit=${limite}`,
+      { token }
+    );
+    return (filas || [])
+      .filter((r) => r.cliente && r.inmueble)
+      .map((r) => ({
+        ...r,
+        mensaje: mensajeRespuesta({ respuesta: r.respuesta, cliente: r.cliente, inmueble: r.inmueble, firma: { agente: perfil.nombre } }),
+      }));
+  } catch (e) {
+    console.error("No se pudieron leer las respuestas del portal:", String(e?.message || e));
+    return [];
+  }
+}
+
 async function accionPanel(token, perfil) {
   const [inmuebles, tareas, actividad] = await Promise.all([
     tabla("ou_inmuebles", `?select=${CAMPOS_INMUEBLE}&order=actualizado.desc&limit=6`, { token }),
@@ -171,6 +199,7 @@ async function accionPanel(token, perfil) {
 
   const total = await tabla("ou_inmuebles", "?select=id,estado", { token });
   const cuenta = (estado) => total.filter((i) => i.estado === estado).length;
+  const respuestas = await respuestasRecientes(token, perfil);
 
   return {
     estado: 200,
@@ -186,6 +215,7 @@ async function accionPanel(token, perfil) {
       inmuebles,
       tareas,
       actividad,
+      respuestas,
     },
   };
 }
@@ -333,7 +363,7 @@ async function accionEnviarSeleccion(token, perfil, cuerpo) {
 
   const inmuebles = await tabla(
     "ou_inmuebles",
-    `?id=in.(${ids.join(",")})&select=id,titulo,metros,habitaciones,precio,zona,ciudad,slug,publico,estado,video_url`,
+    `?id=in.(${ids.join(",")})&select=id,titulo,operacion,metros,habitaciones,precio,zona,ciudad,slug,publico,estado,video_url`,
     { token }
   );
 
@@ -364,6 +394,47 @@ async function accionEnviarSeleccion(token, perfil, cuerpo) {
         base,
         firma: { agente: perfil.nombre },
       }),
+      // Los tres estilos, para cambiar de tono en la pantalla sin otra llamada.
+      mensajes: mensajesWhatsapp({ cliente, inmuebles, enlacePortal, base, firma: { agente: perfil.nombre } }),
+      estilos: ESTILOS_MENSAJE,
+    },
+  };
+}
+
+/**
+ * Todo lo de un cliente para trabajar con él desde su ficha: qué le he
+ * mandado, qué ha contestado y qué más le podría encajar.
+ */
+async function accionClienteDetalle(token, perfil, cuerpo) {
+  const id = texto(cuerpo.id, 40);
+  if (!id) return { estado: 400, cuerpo: { error: "Falta el cliente." } };
+  const [clientes, inmuebles] = await Promise.all([
+    tabla("ou_clientes", `?id=eq.${id}&select=${CAMPOS_CLIENTE}&limit=1`, { token }),
+    tabla("ou_inmuebles", `?select=${CAMPOS_INMUEBLE}&order=actualizado.desc&limit=300`, { token }),
+  ]);
+  const cliente = clientes[0];
+  if (!cliente) return { estado: 404, cuerpo: { error: "Ese cliente ya no existe." } };
+
+  const respuestas = await respuestasRecientes(token, perfil, `&cliente_id=eq.${id}`, 50);
+  // La última respuesta a cada inmueble es la que vale.
+  const ultima = {};
+  for (const r of respuestas) if (!ultima[r.inmueble.id]) ultima[r.inmueble.id] = r.respuesta;
+
+  const autorizados = new Set(cliente.inmuebles_autorizados || []);
+  const enviados = inmuebles
+    .filter((i) => autorizados.has(i.id))
+    .map((i) => ({ id: i.id, titulo: i.titulo, precio: i.precio, operacion: i.operacion, estado: i.estado,
+      slug: i.slug, publico: i.publico, portada_url: i.portada_url, respuesta: ultima[i.id] || null }));
+
+  return {
+    estado: 200,
+    cuerpo: {
+      cliente,
+      enviados,
+      respuestas,
+      sugeridos: mejoresInmuebles(cliente, inmuebles).map((m) => ({
+        inmueble: m.inmueble, puntos: m.puntos, resumen: m.resumen, ya_enviado: m.ya_enviado,
+      })),
     },
   };
 }
@@ -644,6 +715,7 @@ const PRIVADAS = {
   "fotos.borrar": (token, perfil, cuerpo) => accionFotoBorrar(token, perfil, cuerpo),
   "fotos.portada": (token, perfil, cuerpo) => accionFotoPortada(token, perfil, cuerpo),
   "seleccion.enviar": (token, perfil, cuerpo) => accionEnviarSeleccion(token, perfil, cuerpo),
+  "cliente.detalle": (token, perfil, cuerpo) => accionClienteDetalle(token, perfil, cuerpo),
 };
 
 // ---------------------------------------------------------------------------

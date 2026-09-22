@@ -236,6 +236,20 @@ async function vistaPanel() {
         ])))
     : el("div", { clase: "vacio", texto: "Sin actividad todavía." });
 
+  const respuestas = (datos.respuestas || []).length
+    ? el("div", { clase: "lista" }, datos.respuestas.map((r) =>
+        el("div", { clase: "fila" }, [
+          el("div", { style: "min-width:0" }, [
+            el("b", { texto: `${ICONO_RESPUESTA[r.respuesta] || ""} ${r.cliente.nombre} ${TEXTO_RESPUESTA[r.respuesta] || r.respuesta}` }),
+            el("div", { clase: "apunte", texto: `${r.inmueble.titulo} · ${cuando(r.creado)}` }),
+          ]),
+          numeroWa(r.cliente.telefono)
+            ? el("a", { clase: "btn fino wa", target: "_blank", rel: "noopener", texto: "Contestar",
+                href: enlaceWa(r.cliente.telefono, r.mensaje) })
+            : null,
+        ])))
+    : el("div", { clase: "vacio", texto: "Cuando un cliente marque en su portal que un piso le interesa o quiere verlo, aparecerá aquí." });
+
   return el("div", {}, [
     pintarCabecera(`Hola, ${sesion.usuario.nombre}`, [
       el("button", { clase: "btn", type: "button", texto: "Añadir inmueble", onclick: () => abrirInmueble(null) }),
@@ -245,6 +259,7 @@ async function vistaPanel() {
     el("div", { clase: "columnas" }, [
       el("section", {}, [el("h3", { texto: "Últimos movimientos", style: "margin-bottom:12px" }), recientes]),
       el("div", {}, [
+        el("section", { style: "margin-bottom:20px" }, [el("h3", { texto: "Respuestas de clientes", style: "margin-bottom:12px" }), respuestas]),
         el("section", { style: "margin-bottom:20px" }, [el("h3", { texto: "Tareas pendientes", style: "margin-bottom:12px" }), tareas]),
         el("section", {}, [el("h3", { texto: "Actividad", style: "margin-bottom:12px" }), actividad]),
       ]),
@@ -329,16 +344,26 @@ async function vistaClientes() {
 
   const lista = clientes.length
     ? el("div", { clase: "lista" }, clientes.map((c) =>
-        el("button", { clase: "fila", type: "button", onclick: () => abrirCliente(c) }, [
-          el("div", {}, [
+        el("div", { clase: "fila fila-cliente" }, [
+          el("button", { clase: "fila-principal", type: "button", onclick: () => abrirCliente(c) }, [
             el("b", { texto: [c.nombre, c.apellidos].filter(Boolean).join(" ") }),
             el("div", { clase: "apunte", texto: [
               CATALOGO.tipos.find((t) => t.id === c.tipo)?.nombre,
               c.presupuesto_max ? `hasta ${euros(c.presupuesto_max)}` : "sin presupuesto anotado",
               (c.zonas || []).join(", "),
             ].filter(Boolean).join(" · ") }),
+            el("div", { clase: "apunte", texto: [
+              c.telefono || c.email || "",
+              (c.inmuebles_autorizados || []).length
+                ? `${c.inmuebles_autorizados.length} ${c.inmuebles_autorizados.length === 1 ? "enviado" : "enviados"}` : "",
+              c.ultimo_contacto ? `último envío ${cuando(c.ultimo_contacto)}` : "",
+            ].filter(Boolean).join(" · ") }),
           ]),
-          el("div", { clase: "apunte", texto: c.telefono || c.email || "" }),
+          el("div", { clase: "acciones-fila" }, [
+            numeroWa(c.telefono) ? el("a", { clase: "btn fino wa", target: "_blank", rel: "noopener", title: "Abrir su WhatsApp",
+              texto: "WhatsApp", href: enlaceWa(c.telefono) }) : null,
+            el("button", { clase: "btn fino oro", type: "button", texto: "Enviar pisos", onclick: () => enviarACliente(c) }),
+          ]),
         ])))
     : el("div", { clase: "vacio", texto: "Todavía no hay clientes." });
 
@@ -609,9 +634,18 @@ function abrirCliente(cli) {
     el("p", { clase: "apunte", texto: "Necesita sí o sí", style: "margin-bottom:8px" }),
     necesita,
     campo("Notas", notas),
+    cli ? el("div", { style: "margin-top:6px" }, [
+      el("p", { clase: "apunte", texto: "Lo que le has mandado y qué ha dicho", style: "margin-bottom:8px" }),
+      zonaSeguimiento(cli),
+    ]) : null,
     aviso,
     el("div", { clase: "pie-ficha" }, [
       el("button", { clase: "btn claro", type: "button", texto: "Cancelar", onclick: () => d.close() }),
+      cli && numeroWa(cli.telefono) ? el("a", {
+        clase: "btn claro wa-claro", target: "_blank", rel: "noopener", texto: "WhatsApp",
+        href: enlaceWa(cli.telefono, `Hola ${cli.nombre}, soy ${sesion.usuario.nombre}. `),
+      }) : null,
+      cli ? el("button", { clase: "btn oro", type: "button", texto: "Enviarle pisos", onclick: () => enviarACliente(cli) }) : null,
       el("button", { clase: "btn", type: "button", texto: "Guardar", onclick: guardar }),
     ])
   );
@@ -634,7 +668,7 @@ function abrirCliente(cli) {
     }
   }
 
-  d.showModal();
+  if (!d.open) d.showModal();
 }
 
 /* ---------- enviar una selección de inmuebles a un cliente ---------- */
@@ -687,30 +721,7 @@ async function enviarSeleccion(ids) {
         inmuebles: ids,
         base_url: location.origin,
       });
-      const telefono = (r.cliente.telefono || "").replace(/\D/g, "");
-      // Un móvil español sin prefijo se manda con el 34 delante; si ya trae
-      // prefijo o es de fuera, se respeta tal cual.
-      const numero = telefono.length === 9 ? "34" + telefono : telefono;
-
-      pintar(salida, 
-        el("label", { clase: "campo" }, [
-          el("span", { texto: "Mensaje" }),
-          el("textarea", { readonly: true, style: "min-height:210px" }, [r.mensaje]),
-        ]),
-        el("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, [
-          el("button", { clase: "btn claro fino", type: "button", texto: "Copiar mensaje", onclick: () => copiar(r.mensaje) }),
-          numero
-            ? el("a", {
-                clase: "btn fino", target: "_blank", rel: "noopener",
-                texto: `Abrir WhatsApp de ${r.cliente.nombre}`,
-                href: `https://wa.me/${numero}?text=${encodeURIComponent(r.mensaje)}`,
-              })
-            : el("span", { clase: "apunte", texto: "Este cliente no tiene teléfono: copia el mensaje y mándaselo por donde lo tengas." }),
-          r.enlace
-            ? el("a", { clase: "btn claro fino", target: "_blank", rel: "noopener", texto: "Ver su portal", href: r.enlace })
-            : null,
-        ])
-      );
+      pintar(salida, cajaMensaje(r));
       if (r.sin_publicar?.length) {
         // Se ha enviado igual, pero el cliente no podrá abrir esas fichas.
         mostrarAviso(aviso,
@@ -828,19 +839,9 @@ async function verCoincidencias(inm) {
           inmuebles: [inm.id],
           base_url: location.origin,
         });
-        const texto = el("textarea", { readonly: true, style: "min-height:140px;margin-top:14px" }, [r.mensaje]);
         salida.append(
           el("p", { clase: "apunte", texto: `Mensaje para ${r.cliente.nombre}:`, style: "margin-top:14px" }),
-          texto,
-          el("div", { style: "display:flex;gap:8px;margin-top:8px;flex-wrap:wrap" }, [
-            el("button", { clase: "btn fino claro", type: "button", texto: "Copiar", onclick: () => copiar(r.mensaje) }),
-            r.cliente.telefono
-              ? el("a", {
-                  clase: "btn fino", target: "_blank", rel: "noopener", texto: "Abrir WhatsApp",
-                  href: `https://wa.me/${r.cliente.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(r.mensaje)}`,
-                })
-              : null,
-          ])
+          cajaMensaje(r)
         );
       }
       mostrarAviso(aviso, "Listo: los inmuebles ya están autorizados en su portal privado.", true);
@@ -857,6 +858,183 @@ async function copiar(texto) {
   } catch {
     toast("No se pudo copiar: selecciona el texto a mano.");
   }
+}
+
+/* ---------- WhatsApp ---------- */
+//  wa.me necesita el número con prefijo de país: un móvil español de 9 cifras
+//  va con el 34 delante («663…» → «34663…»). Misma regla que numeroWhatsapp()
+//  en lib/oportunidades.js.
+function numeroWa(telefono) {
+  let d = String(telefono || "").replace(/\D/g, "");
+  if (d.startsWith("00")) d = d.slice(2);
+  if (d.length === 9 && /^[6789]/.test(d)) return "34" + d;
+  if (d.length < 10 || d.length > 15) return "";
+  return d;
+}
+
+function enlaceWa(telefono, texto = "") {
+  const n = numeroWa(telefono);
+  return n ? `https://wa.me/${n}` + (texto ? `?text=${encodeURIComponent(texto)}` : "") : "";
+}
+
+const NOMBRE_ESTILO = { completo: "Completo", corto: "Corto", formal: "De usted" };
+const TEXTO_RESPUESTA = {
+  visita: "quiere visitarlo", interesa: "le interesa",
+  similares: "quiere ver otros parecidos", no_encaja: "dice que no le encaja",
+};
+const ICONO_RESPUESTA = { visita: "📅", interesa: "👍", similares: "🔁", no_encaja: "✋" };
+
+//  El mensaje ya preparado, pero editable: se elige el tono, se retoca a mano
+//  y el botón de WhatsApp lleva siempre lo que hay escrito en la caja.
+function cajaMensaje(r) {
+  const mensajes = r.mensajes || { completo: r.mensaje };
+  const estilos = Object.keys(mensajes);
+  const texto = el("textarea", { clase: "mensaje-wa", style: "min-height:200px" }, [mensajes.completo || r.mensaje || ""]);
+  const telefono = r.cliente?.telefono;
+  const abrir = el("a", { clase: "btn wa", target: "_blank", rel: "noopener",
+    texto: `Abrir WhatsApp de ${r.cliente?.nombre || "cliente"}` });
+  const actualizar = () => { abrir.href = enlaceWa(telefono, texto.value); };
+  texto.addEventListener("input", actualizar);
+  actualizar();
+
+  const chips = estilos.length > 1
+    ? el("div", { clase: "estilos" }, estilos.map((e, n) => el("button", {
+        type: "button", clase: "chip" + (n === 0 ? " activo" : ""), texto: NOMBRE_ESTILO[e] || e,
+        onclick: (ev) => {
+          ev.currentTarget.parentNode.querySelectorAll(".chip").forEach((c) => c.classList.remove("activo"));
+          ev.currentTarget.classList.add("activo");
+          texto.value = mensajes[e];
+          actualizar();
+        },
+      })))
+    : null;
+
+  return el("div", { clase: "caja-mensaje" }, [
+    el("label", { clase: "campo" }, [el("span", { texto: "Mensaje (puedes retocarlo antes de enviar)" }), chips, texto]),
+    el("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, [
+      numeroWa(telefono)
+        ? abrir
+        : el("span", { clase: "apunte", texto: "Este cliente no tiene un teléfono válido: copia el mensaje y mándaselo por donde lo tengas." }),
+      el("button", { clase: "btn claro fino", type: "button", texto: "Copiar mensaje", onclick: () => copiar(texto.value) }),
+      r.enlace ? el("a", { clase: "btn claro fino", target: "_blank", rel: "noopener", texto: "Ver su portal", href: r.enlace }) : null,
+    ]),
+  ]);
+}
+
+/* ---------- enviar pisos desde la ficha del cliente ---------- */
+//  El otro sentido del día a día: entra Lucía, abro su ficha y le mando lo
+//  que mejor le encaja, sin repetirle lo que ya tiene.
+async function enviarACliente(cli) {
+  const d = $("ficha");
+  const f = $("form-ficha");
+  let datos;
+  try {
+    datos = await api("cliente.detalle", { id: cli.id });
+  } catch (e) {
+    return toast(e.message);
+  }
+
+  const elegidos = new Set();
+  // Se preparan marcados los tres que mejor encajan y que aún no tiene.
+  datos.sugeridos.filter((s) => !s.ya_enviado && s.puntos >= 45).slice(0, 3)
+    .forEach((s) => elegidos.add(s.inmueble.id));
+
+  const contador = el("b", {});
+  const boton = el("button", { clase: "btn oro", type: "button", onclick: preparar });
+  const refrescar = () => {
+    const n = elegidos.size;
+    contador.textContent = n ? `${n} marcado${n === 1 ? "" : "s"}` : "Marca los que le quieres mandar";
+    boton.textContent = n ? `Preparar WhatsApp (${n})` : "Preparar WhatsApp";
+    boton.disabled = n === 0;
+  };
+
+  const filas = datos.sugeridos.length
+    ? el("div", { clase: "lista" }, datos.sugeridos.map((s) => {
+        const i = s.inmueble;
+        const casilla = el("input", { type: "checkbox", checked: elegidos.has(i.id), onchange: (ev) => {
+          ev.target.checked ? elegidos.add(i.id) : elegidos.delete(i.id);
+          refrescar();
+        } });
+        const nivel = s.puntos >= 75 ? "alto" : s.puntos >= 45 ? "" : "bajo";
+        const mini = el("div", { clase: "mini-foto" }, [i.portada_url ? "" : "⌂"]);
+        if (i.portada_url) mini.style.backgroundImage = `url(${CSS.escape(i.portada_url)})`;
+        return el("label", { clase: "fila" + (s.ya_enviado ? " atenuada" : ""), style: "cursor:pointer" }, [
+          el("div", { style: "display:flex;gap:12px;align-items:center;min-width:0" }, [
+            casilla, mini,
+            el("div", { style: "min-width:0" }, [
+              el("b", { texto: `${i.titulo} · ${euros(i.precio)}${i.operacion === "alquiler" ? "/mes" : ""}` }),
+              el("div", { clase: "apunte", texto: s.resumen }),
+              s.ya_enviado ? el("span", { clase: "etiqueta", texto: "ya enviado" }) : null,
+              !i.publico || !i.slug ? el("span", { clase: "etiqueta aviso-etq", texto: "sin publicar" }) : null,
+            ]),
+          ]),
+          el("span", { clase: `puntos ${nivel}`, texto: String(s.puntos) }),
+        ]);
+      }))
+    : el("div", { clase: "vacio", texto: "No hay inmuebles disponibles para enseñar ahora mismo." });
+
+  const aviso = el("p", { clase: "aviso", hidden: true });
+  const salida = el("div", {});
+
+  pintar(f,
+    el("h2", { texto: `Enviar pisos a ${cli.nombre}`, style: "margin-bottom:6px" }),
+    el("p", { clase: "apunte", style: "margin-bottom:16px", texto:
+      "Ordenados por lo que mejor le encaja. Te dejo marcados los mejores que aún no tiene." }),
+    filas,
+    el("div", { clase: "resumen-marcados" }, [contador]),
+    salida,
+    aviso,
+    el("div", { clase: "pie-ficha" }, [
+      el("button", { clase: "btn claro", type: "button", texto: "Volver a su ficha", onclick: () => abrirCliente(datos.cliente) }),
+      boton,
+    ])
+  );
+  refrescar();
+
+  async function preparar() {
+    if (!elegidos.size) return;
+    mostrarAviso(aviso, "");
+    try {
+      const r = await api("seleccion.enviar", { cliente_id: cli.id, inmuebles: [...elegidos], base_url: location.origin });
+      pintar(salida, cajaMensaje(r));
+      salida.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (r.sin_publicar?.length) {
+        mostrarAviso(aviso, `Ojo: ${r.sin_publicar.join(", ")} ${r.sin_publicar.length === 1 ? "no está publicado" : "no están publicados"}; no lo verá en su portal.`);
+      } else {
+        mostrarAviso(aviso, "Listo: ya están en su portal privado. Pulsa «Abrir WhatsApp».", true);
+      }
+    } catch (e) {
+      mostrarAviso(aviso, e.message);
+    }
+  }
+
+  if (!d.open) d.showModal();
+}
+
+//  Lo que tiene y lo que ha dicho, dentro de la ficha del cliente.
+function zonaSeguimiento(cli) {
+  const caja = el("div", { clase: "seguimiento" }, [el("p", { clase: "apunte", texto: "Cargando lo que le has mandado…" })]);
+  api("cliente.detalle", { id: cli.id }).then((datos) => {
+    if (!datos.enviados.length) {
+      pintar(caja, el("div", { clase: "vacio", style: "padding:18px", texto: "Todavía no le has mandado ningún inmueble." }));
+      return;
+    }
+    pintar(caja, el("div", { clase: "lista" }, datos.enviados.map((i) => {
+      const r = datos.respuestas.find((x) => x.inmueble.id === i.id);
+      return el("div", { clase: "fila" }, [
+        el("div", { style: "min-width:0" }, [
+          el("b", { texto: i.titulo }),
+          el("div", { clase: "apunte", texto: [euros(i.precio),
+            i.respuesta ? `${ICONO_RESPUESTA[i.respuesta] || ""} ${TEXTO_RESPUESTA[i.respuesta] || i.respuesta}` : "sin respuesta todavía",
+          ].join(" · ") }),
+        ]),
+        r && numeroWa(cli.telefono)
+          ? el("a", { clase: "btn fino wa", target: "_blank", rel: "noopener", texto: "Contestar", href: enlaceWa(cli.telefono, r.mensaje) })
+          : null,
+      ]);
+    })));
+  }).catch((e) => pintar(caja, el("p", { clase: "apunte", texto: e.message })));
+  return caja;
 }
 
 /* ---------- rutas ---------- */

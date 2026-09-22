@@ -77,7 +77,7 @@ fieldset{border:0}
 
 main{padding:28px 30px 60px;max-width:1240px}
 @media(max-width:860px){
-  #app{grid-template-columns:1fr}
+  #app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
   .lateral{flex-direction:row;align-items:center;gap:12px;padding:10px 14px;overflow-x:auto;position:sticky;top:0;z-index:20}
   .marca b,.usuario b,.usuario .apunte{display:none}
   #menu{flex-direction:row;gap:4px}
@@ -205,3 +205,27 @@ dialog::backdrop{background:rgba(9,25,40,.55)}
 .paso b{display:block;font-size:13.5px}
 .paso small{color:var(--tinta-2);display:block}
 .paso .arreglo{color:var(--azul);display:block;margin-top:3px}
+
+/* ---------- WhatsApp ---------- */
+.btn.wa{background:#1F8A4C;border-color:#1F8A4C;color:#fff}
+.btn.wa:hover{background:#177040;border-color:#177040}
+.btn.wa-claro{color:#1F8A4C}
+.btn.wa-claro:hover{border-color:#1F8A4C}
+.caja-mensaje{margin-top:16px}
+.estilos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.chip{border:1px solid var(--linea);background:#fff;border-radius:999px;padding:6px 13px;font:inherit;font-size:13px;cursor:pointer;color:var(--tinta)}
+.chip.activo{border-color:var(--azul);background:#EEF3F8;color:var(--azul);font-weight:600}
+.lista .fila.atenuada{opacity:.62}
+.etiqueta.aviso-etq{background:#FCF2F1;color:var(--rojo)}
+.mini-foto{flex:none;width:58px;height:44px;border-radius:8px;background:#E9EDF2 center/cover no-repeat;display:grid;place-items:center;color:#9FAEBC}
+.lista .fila input[type=checkbox]{width:19px;height:19px;flex:none;margin:0;accent-color:var(--azul)}
+.resumen-marcados{margin:12px 2px 0;font-size:14px;color:var(--azul)}
+.seguimiento{margin-bottom:12px}
+.lista .fila-cliente{cursor:default}
+.fila-principal{display:block;width:100%;flex:1;min-width:0;background:none;border:0;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.acciones-fila{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:620px){
+  .lista .fila-cliente{flex-direction:column;align-items:stretch;gap:10px}
+  .acciones-fila{justify-content:stretch}
+  .acciones-fila .btn{flex:1}
+}

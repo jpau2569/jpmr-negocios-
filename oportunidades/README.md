@@ -125,6 +125,30 @@ código dónde cambiarlo.
 El botón de contacto escribe al WhatsApp del despacho: **663 26 38 42**
 (centralizado en `CONTACTO`, dentro de `lib/oportunidades.js`).
 
+## Enviar pisos por WhatsApp
+
+Tres caminos, los tres acaban en el mismo mensaje editable:
+
+- **Desde el cliente** (el de todos los días): *Clientes → Enviar pisos*. Salen
+  los inmuebles disponibles ordenados por lo que mejor le encajan, con los tres
+  mejores que aún no tiene ya marcados; lo que ya le mandaste va al final con la
+  etiqueta *ya enviado*.
+- **Desde la cartera**: marca varios inmuebles y *Enviar por WhatsApp*.
+- **Desde un inmueble**: *Ver coincidencias* → marca clientes → *Preparar envío*.
+
+El mensaje sale en tres tonos (**Completo**, **Corto**, **De usted**), se puede
+retocar a mano y el botón verde abre el WhatsApp **de ese cliente** con lo que
+haya escrito en la caja. Los móviles de 9 cifras se mandan con el 34 delante
+(`numeroWhatsapp()` en `lib/oportunidades.js`).
+
+**Las respuestas del portal ya se ven.** Cuando un cliente marca en su portal
+que un piso le interesa, quiere visitarlo, quiere parecidos o no le encaja, sale
+en *Inicio → Respuestas de clientes* y en su ficha, con un botón *Contestar* que
+abre su WhatsApp con la contestación ya escrita («¿qué día y a qué hora te viene
+bien?»). Antes se guardaban en `ou_respuestas` pero no se enseñaban en ningún sitio.
+
+Todo esto no cambia la base de datos: usa las tablas que ya había.
+
 ## Lo que falta (siguiente fase)
 - Tareas y analítica con pantalla propia (los datos ya se guardan).
 - Asistente de redacción con Claude, reutilizando `ANTHROPIC_API_KEY`.
