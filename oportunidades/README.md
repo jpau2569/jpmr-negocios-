@@ -149,6 +149,32 @@ bien?»). Antes se guardaban en `ou_respuestas` pero no se enseñaban en ningún
 
 Todo esto no cambia la base de datos: usa las tablas que ya había.
 
+## Alta rápida, seguimientos y tarjeta visual
+
+**Alta rápida** (*Añadir inmueble*, arriba del todo): se escribe o se **dicta**
+(botón 🎤, reconocimiento de voz del navegador en español) lo que se sabe del
+piso y la ficha se rellena sola: título, operación, precio, ciudad, zona,
+habitaciones, baños, metros, características y el anuncio. Con
+`ANTHROPIC_API_KEY` lo redacta Claude; sin ella, el extractor local de
+`lib/oportunidades-extras.js`. **Lo que no está en las notas no entra**: los
+números de la IA se comprueban contra el texto y una característica que no se
+menciona se descarta. Dice qué falta para vender más. En un inmueble ya
+guardado solo rellena lo vacío y el anuncio nuevo se ofrece, no se impone.
+
+**Seguimientos** (*Inicio → Seguimientos de hoy*): clientes a los que les
+mandaste pisos hace 3 días o más y no han contestado en su portal, con el
+recordatorio de WhatsApp escrito según los días (4: «¿pudiste echarles un
+vistazo?», 6: «¿alguno para verlo?», 10+: «¿sigues buscando?»). *Recordar* o
+*Hecho* ponen su fecha de contacto a hoy (acción `cliente.contactado`) y vuelve
+a salir si pasan otros 3 días sin respuesta.
+
+**Tarjeta para WhatsApp** (botón en la ficha del inmueble): imagen con la foto
+de portada, precio, título, zona, datos y la marca, en **publicación 4:5** o
+**estado 9:16**. *Compartir por WhatsApp* abre el menú de compartir del móvil
+con la imagen y el enlace de la ficha; en ordenador se descarga el PNG. La
+dibuja el navegador (canvas); las fotos del almacén de Supabase se pueden usar
+porque se sirven con CORS abierto.
+
 ## Logo 3D e instalar en el móvil
 
 La marca es una **casa dorada con una gema tallada dentro** (el inmueble y la

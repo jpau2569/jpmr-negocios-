@@ -21,6 +21,9 @@ import {
   CARACTERISTICAS, ESTADOS,
   numeroWhatsapp, enlaceWhatsappCliente, mensajesWhatsapp, mejoresInmuebles, mensajeRespuesta,
 } from "../lib/oportunidades.js";
+import {
+  extraerFicha, altaLocal, normalizarAltaIA, pendientesSeguimiento, mensajeSeguimiento, datosTarjeta,
+} from "../lib/oportunidades-extras.js";
 
 let pasados = 0;
 let fallados = 0;
@@ -529,6 +532,91 @@ res = mockRes();
 await handler({ method: "POST", headers: { authorization: "Bearer tok-1" }, body: { accion: "cliente.detalle" } }, res);
 check("cliente.detalle sin id → 400", res.r.statusCode === 400);
 
+// ---------------------------------------------------------------------------
+console.log("\n— alta rápida, seguimientos y tarjeta —");
+// ---------------------------------------------------------------------------
+const alta1 = extraerFicha("Piso 3 hab en El Llano, Gijón. 185k. 2 baños, 90 m2, ascensor y terraza");
+check("alta: precio en «185k»", alta1.precio === 185000);
+check("alta: habitaciones, baños y metros", alta1.habitaciones === 3 && alta1.banos === 2 && alta1.metros === 90);
+check("alta: ciudad y zona", alta1.ciudad === "Gijón" && alta1.zona === "El Llano", JSON.stringify(alta1));
+check("alta: características del catálogo", alta1.caracteristicas.includes("ascensor") && alta1.caracteristicas.includes("terraza"));
+check("alta: título armado solo con datos", alta1.titulo === "Piso de 3 habitaciones en El Llano, Gijón");
+const alta2 = extraerFicha("alquilo apartamento amueblado en Avilés 650 €/mes, dos habitaciones, sin ascensor");
+check("alta: alquiler con renta mensual", alta2.operacion === "alquiler" && alta2.precio === 650);
+check("alta: números en palabras", alta2.habitaciones === 2);
+check("alta: «sin ascensor» no marca ascensor", !alta2.caracteristicas.includes("ascensor"));
+check("alta: formato 245.000 €", extraerFicha("ático en Oviedo 245.000 € tres habitaciones").precio === 245000);
+const alta3 = altaLocal("casa con jardín en Llanes");
+check("alta local: no inventa precio ni metros", !("precio" in alta3) && !("metros" in alta3));
+check("alta local: dice lo que falta", alta3.faltan.includes("precio") && alta3.faltan.includes("metros"));
+check("alta local: el anuncio no menciona datos que no hay", !/\d+ m²|€/.test(alta3.descripcion), alta3.descripcion);
+
+const notasIA = "piso en Oviedo zona Buenavista, 3 habitaciones, 180.000 euros, terraza";
+const ia = normalizarAltaIA({
+  titulo: "Piso luminoso con terraza en Buenavista", operacion: "venta", precio: 180000, ciudad: "Oviedo", zona: "Buenavista",
+  habitaciones: 3, banos: 2, metros: 110, caracteristicas: ["terraza", "vistas", "piscina", "inventada"],
+  descripcion: "Texto de la IA", faltan: ["metros"],
+}, notasIA);
+check("IA: los datos que están en las notas se aceptan", ia.precio === 180000 && ia.habitaciones === 3 && ia.ciudad === "Oviedo");
+check("IA: baños y metros inventados se descartan", !("banos" in ia) && !("metros" in ia), JSON.stringify(ia));
+check("IA: vistas y piscina inventadas se descartan", ia.caracteristicas.join() === "terraza", ia.caracteristicas.join());
+check("IA: una ciudad que no está en las notas no entra",
+  !normalizarAltaIA({ titulo: "x", ciudad: "Madrid" }, "piso de 2 hab 90.000 €").ciudad);
+check("IA: respuesta vacía → null (se usa el extractor local)", normalizarAltaIA(null, notasIA) === null);
+
+const hoy = Date.parse("2026-09-22T10:00:00Z");
+const dia = 86400000;
+const segs = pendientesSeguimiento([
+  { id: "a", nombre: "Ana", inmuebles_autorizados: ["x"], ultimo_contacto: new Date(hoy - 4 * dia).toISOString() },
+  { id: "b", nombre: "Bea", inmuebles_autorizados: ["x"], ultimo_contacto: new Date(hoy - 8 * dia).toISOString() },
+  { id: "c", nombre: "Carla", inmuebles_autorizados: ["x"], ultimo_contacto: new Date(hoy - 1 * dia).toISOString() },
+  { id: "d", nombre: "Dani", inmuebles_autorizados: [], ultimo_contacto: new Date(hoy - 9 * dia).toISOString() },
+  { id: "e", nombre: "Eva", inmuebles_autorizados: ["x"], ultimo_contacto: new Date(hoy - 5 * dia).toISOString() },
+], [{ cliente_id: "e", creado: new Date(hoy - 2 * dia).toISOString() }], hoy);
+check("seguimiento: solo quien lleva 3+ días sin contestar", segs.map((x) => x.cliente.id).join() === "b,a", segs.map((x) => x.cliente.id).join());
+check("seguimiento: el que más espera va primero", segs[0].dias === 8);
+check("seguimiento: 4 días → «¿pudiste echar un vistazo?»",
+  mensajeSeguimiento({ cliente: { nombre: "Ana" }, dias: 4, enviados: 2 }).includes("echar un vistazo"));
+check("seguimiento: 10+ días → «¿sigues buscando?»",
+  mensajeSeguimiento({ cliente: { nombre: "Ana" }, dias: 12 }).includes("Sigues buscando"));
+check("seguimiento: singular si solo mandaste uno",
+  mensajeSeguimiento({ cliente: { nombre: "Ana" }, dias: 4, enviados: 1 }).includes("el piso que te pasé"));
+
+const tj = datosTarjeta({ titulo: "Ático", precio: 289000, operacion: "venta", habitaciones: 3, metros: 118, caracteristicas: ["terraza"] });
+check("tarjeta: precio, datos y extras", tj.precio.replace(/\u00a0/g, " ") === "289.000 €" && tj.datos.join() === "3 hab,118 m²" && tj.extras[0] === "Terraza");
+check("tarjeta: sin precio no inventa", datosTarjeta({ titulo: "X" }).precio === "Consultar precio");
+
+// Backend: alta rápida sin clave de IA → extractor local
+delete process.env.ANTHROPIC_API_KEY;
+simula([["/rest/v1/ou_usuarios", { datos: [PERFIL] }]]);
+res = mockRes();
+await handler({ method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "inmuebles.redactar", notas: "piso 2 hab en Mieres 95.000 €" } }, res);
+check("redactar sin clave → 200 con el asistente local", res.r.statusCode === 200 && res.r.body.motor === "local" && res.r.body.ficha.precio === 95000);
+check("y avisa de que falta la clave", /ANTHROPIC_API_KEY/.test(res.r.body.aviso || ""));
+res = mockRes();
+await handler({ method: "POST", headers: { authorization: "Bearer tok-1" }, body: { accion: "inmuebles.redactar", notas: "hola" } }, res);
+check("redactar con notas vacías → 400", res.r.statusCode === 400);
+simula([["/rest/v1/ou_usuarios", { datos: [{ ...PERFIL, rol: "lector" }] }]]);
+res = mockRes();
+await handler({ method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "inmuebles.redactar", notas: "piso 2 hab en Mieres 95.000 €" } }, res);
+check("un lector no redacta fichas → 403", res.r.statusCode === 403);
+
+// Backend: marcar un seguimiento como hecho
+llamadas.length = 0;
+simula([
+  ["/rest/v1/ou_usuarios", { datos: [PERFIL] }],
+  ["/rest/v1/ou_actividad", { datos: null }],
+  ["/rest/v1/ou_clientes", { datos: [{ id: "c-1", nombre: "Lucía", ultimo_contacto: "2026-09-22T10:00:00Z" }] }],
+]);
+res = mockRes();
+await handler({ method: "POST", headers: { authorization: "Bearer tok-1" }, body: { accion: "cliente.contactado", id: "c-1" } }, res);
+check("cliente.contactado → 200", res.r.statusCode === 200);
+check("pone la fecha de último contacto a hoy",
+  llamadas.some((l) => l.url.includes("ou_clientes") && l.metodo === "PATCH" && l.cuerpo?.ultimo_contacto));
+check("y lo apunta en la actividad", llamadas.some((l) => l.url.includes("ou_actividad") && l.cuerpo?.tipo === "seguimiento"));
+
 // El comprobador de instalación
 delete process.env.SUPABASE_URL;
 res = mockRes();
@@ -691,6 +779,10 @@ if (chromium) {
       usuario: { id: "u-1", nombre: "Pau", rol: "admin" },
       metricas: { disponibles: 2, borradores: 0, reservados: 0, vendidos: 0, total: 2 },
       inmuebles: [], tareas: [], actividad: [],
+      seguimientos: [{
+        cliente: { id: "c-9", nombre: "Bea", telefono: "611 222 333" }, dias: 5, enviados: 2,
+        mensaje: "Hola Bea, soy Pau. ¿Pudiste echar un vistazo a los pisos que te pasé?",
+      }],
       respuestas: [{
         id: "r-1", respuesta: "visita", creado: new Date().toISOString(),
         cliente: { id: "c-1", nombre: "Lucía", telefono: "600 111 222" },
@@ -721,6 +813,17 @@ if (chromium) {
       mensaje: "Hola Lucía, soy Pau (completo)",
       mensajes: { completo: "Hola Lucía, soy Pau (completo)", corto: "Hola Lucía! (corto)", formal: "Buenos días, Lucía (formal)" },
     },
+    "cliente.contactado": { cliente: { id: "c-9", nombre: "Bea" } },
+    "inmuebles.redactar": { motor: "local", aviso: "Rellenado sin IA.", ficha: {
+      titulo: "Piso de 3 habitaciones en El Llano, Gijón", operacion: "venta", precio: 185000, ciudad: "Gijón",
+      zona: "El Llano", habitaciones: 3, banos: 2, metros: 90, caracteristicas: ["terraza", "ascensor"],
+      descripcion: "Piso en venta en El Llano, Gijón, con 90 m².", faltan: ["planta"] } },
+    "inmuebles.listar": { inmuebles: [{
+      id: "i-1", titulo: "Ático con terraza en Uría, uno de los mejores de la zona centro", precio: 289000, operacion: "venta",
+      ciudad: "Oviedo", zona: "Uría", habitaciones: 3, banos: 2, metros: 118, estado: "disponible", publico: true,
+      slug: "atico-uria", referencia: "OU-1", caracteristicas: ["terraza", "ascensor", "garaje"],
+      portada_url: "/oportunidades/iconos/icono-512.png", fotos: [],
+    }] },
     "portal.leer": {
       cliente: { nombre: "Marta" },
       inmuebles: [{
@@ -828,6 +931,61 @@ if (chromium) {
   const hrefContestar = await app.locator("a:has-text('Contestar')").first().getAttribute("href");
   check("«Contestar» abre el WhatsApp del cliente con 34 y el texto puesto",
     hrefContestar.startsWith("https://wa.me/34600111222?text=Hola%20Luc"), hrefContestar);
+
+  check("el panel avisa de a quién toca hacer seguimiento", panelTxt.includes("Seguimientos de hoy") && panelTxt.includes("hace 5 días"));
+  const hrefRecordar = await app.locator("a:has-text('Recordar')").getAttribute("href");
+  check("«Recordar» abre su WhatsApp con el recordatorio escrito", hrefRecordar.startsWith("https://wa.me/34611222333?text=Hola%20Bea"), hrefRecordar);
+  await app.locator("button:has-text('Hecho')").click();
+  await app.waitForTimeout(300);
+  check("«Hecho» lo apunta y lo quita de la lista",
+    ultimoCuerpo["cliente.contactado"]?.id === "c-9" && !(await app.textContent("main")).includes("Bea"));
+
+  /* Alta rápida */
+  await app.locator("button:has-text('Añadir inmueble')").first().click();
+  await app.waitForSelector(".alta-rapida[open]");
+  await app.fill(".notas-alta", "Piso 3 hab en El Llano, Gijón. 185k. 2 baños, 90 m2, ascensor y terraza");
+  await app.locator("button:has-text('Rellenar ficha')").click();
+  await app.waitForSelector(".resultado-alta");
+  const val = (n) => app.locator(`#form-ficha [name=${n}]`).inputValue();
+  check("alta rápida: rellena título, ciudad y zona",
+    (await val("titulo")) === "Piso de 3 habitaciones en El Llano, Gijón" && (await val("ciudad")) === "Gijón" && (await val("zona")) === "El Llano");
+  check("alta rápida: rellena precio, habitaciones, baños y metros",
+    (await val("precio")) === "185.000" && (await val("habitaciones")) === "3" && (await val("banos")) === "2" && (await val("metros")) === "90");
+  check("alta rápida: marca las características",
+    await app.locator('#form-ficha input[value=terraza]').isChecked() && await app.locator('#form-ficha input[value=ascensor]').isChecked());
+  check("alta rápida: dice qué falta para vender más", (await app.textContent(".resultado-alta")).includes("planta"));
+  await app.screenshot({ path: "/tmp/ou-alta-movil.png", fullPage: false }).catch(() => {});
+  await app.locator("#form-ficha button:has-text('Cancelar')").click();
+
+  /* Tarjeta visual */
+  await app.goto(BASE + "index.html#/pisos", { waitUntil: "networkidle" });
+  await app.locator(".inmueble").first().click();
+  await app.waitForSelector("#form-ficha h2:has-text('Editar inmueble')", { timeout: 5000 }).catch(() => {});
+  check("un inmueble ya guardado se abre (antes se colgaba por la galería de fotos)",
+    await app.locator("#form-ficha h2:has-text('Editar inmueble')").isVisible() && (await app.locator(".rejilla-fotos").count()) === 1);
+  await app.locator("button:has-text('Tarjeta para WhatsApp')").click();
+  await app.waitForFunction(() => document.querySelector(".lienzo-tarjeta")?.width === 1080);
+  await app.waitForTimeout(400);
+  const lienzo = await app.evaluate(() => {
+    const c = document.querySelector(".lienzo-tarjeta");
+    let exportable = true;
+    try { c.toDataURL("image/png"); } catch { exportable = false; }
+    return { w: c.width, h: c.height, exportable };
+  });
+  check("tarjeta de publicación 1080×1350 y exportable", lienzo.w === 1080 && lienzo.h === 1350 && lienzo.exportable, JSON.stringify(lienzo));
+  await app.evaluate(() => { const a = document.createElement("a"); a.id = "png"; a.href = document.querySelector(".lienzo-tarjeta").toDataURL(); document.body.append(a); });
+  const png = await app.evaluate(() => document.getElementById("png").href);
+  await import("node:fs/promises").then((fs) => fs.writeFile("/tmp/ou-tarjeta.png", Buffer.from(png.split(",")[1], "base64")));
+  await app.locator(".chip:has-text('Estado')").click();
+  await app.waitForFunction(() => document.querySelector(".lienzo-tarjeta").height === 1920);
+  check("formato estado 1080×1920", true);
+  await app.waitForTimeout(300);
+  const png2 = await app.evaluate(() => document.querySelector(".lienzo-tarjeta").toDataURL());
+  await import("node:fs/promises").then((fs) => fs.writeFile("/tmp/ou-tarjeta-estado.png", Buffer.from(png2.split(",")[1], "base64")));
+  check("la tarjeta no avisa de problemas con la foto", !(await app.locator(".aviso:not([hidden])").count()));
+  await app.locator("button:has-text('Volver a la ficha')").click();
+  check("«Volver a la ficha» vuelve a la ficha", await app.locator("#form-ficha h2:has-text('Editar inmueble')").isVisible());
+  await app.keyboard.press("Escape");
 
   await app.goto(BASE + "index.html#/clientes", { waitUntil: "networkidle" });
   await app.waitForSelector(".fila-cliente");

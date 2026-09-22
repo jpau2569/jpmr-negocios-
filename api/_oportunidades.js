@@ -38,6 +38,17 @@ import {
   OPERACIONES,
   RESPUESTAS_PORTAL,
 } from "../lib/oportunidades.js";
+import Anthropic from "@anthropic-ai/sdk";
+import {
+  altaLocal,
+  normalizarAltaIA,
+  extraerJSON,
+  PROMPT_ALTA,
+  pendientesSeguimiento,
+  mensajeSeguimiento,
+} from "../lib/oportunidades-extras.js";
+
+const MODELO_IA = "claude-sonnet-5";
 
 const TIEMPO_LIMITE = 12000;
 
@@ -190,6 +201,80 @@ async function respuestasRecientes(token, perfil, filtro = "", limite = 12) {
   }
 }
 
+// A quién le mandaste pisos hace días y no ha contestado. Igual que las
+// respuestas: si falla, el panel sale sin esta sección.
+async function seguimientosPendientes(token, perfil) {
+  try {
+    const [clientes, respuestas] = await Promise.all([
+      tabla("ou_clientes",
+        "?select=id,nombre,apellidos,telefono,ultimo_contacto,inmuebles_autorizados,anonimizado" +
+          "&anonimizado=is.false&ultimo_contacto=not.is.null&order=ultimo_contacto.asc&limit=300", { token }),
+      tabla("ou_respuestas", "?select=cliente_id,creado&order=creado.desc&limit=2000", { token }),
+    ]);
+    return pendientesSeguimiento(clientes, respuestas).slice(0, 15).map((s) => ({
+      cliente: s.cliente,
+      dias: s.dias,
+      enviados: (s.cliente.inmuebles_autorizados || []).length,
+      mensaje: mensajeSeguimiento({
+        cliente: s.cliente, dias: s.dias,
+        enviados: (s.cliente.inmuebles_autorizados || []).length, firma: { agente: perfil.nombre },
+      }),
+    }));
+  } catch (e) {
+    console.error("No se pudieron calcular los seguimientos:", String(e?.message || e));
+    return [];
+  }
+}
+
+/** «Ya le he escrito»: el seguimiento vuelve a contar desde hoy. */
+async function accionClienteContactado(token, perfil, cuerpo) {
+  if (perfil.rol === "lector") return { estado: 403, cuerpo: { error: "Tu usuario es de solo lectura." } };
+  const id = texto(cuerpo.id, 40);
+  if (!id) return { estado: 400, cuerpo: { error: "Falta el cliente." } };
+  const filas = await tabla("ou_clientes", `?id=eq.${id}&select=id,nombre,ultimo_contacto`, {
+    metodo: "PATCH", token, cuerpo: { ultimo_contacto: new Date().toISOString() }, prefer: "return=representation",
+  });
+  if (!filas?.[0]) return { estado: 404, cuerpo: { error: "Ese cliente ya no existe." } };
+  await apuntar(token, perfil, { tipo: "seguimiento", resumen: `Seguimiento por WhatsApp a ${filas[0].nombre}`, cliente_id: id });
+  return { estado: 200, cuerpo: { cliente: filas[0] } };
+}
+
+/**
+ * Alta rápida: notas sueltas → ficha + anuncio. Con ANTHROPIC_API_KEY lo
+ * redacta Claude y sus números se comprueban contra las notas; sin clave o si
+ * la IA falla, lo hace el extractor local. Nunca devuelve error por la IA.
+ */
+async function accionRedactar(perfil, cuerpo) {
+  if (perfil.rol === "lector") return { estado: 403, cuerpo: { error: "Tu usuario es de solo lectura." } };
+  const notas = String(cuerpo.notas || "").trim().slice(0, 4000);
+  if (notas.length < 8) {
+    return { estado: 400, cuerpo: { error: "Escribe o dicta algo más sobre el inmueble (tipo, zona, precio…)." } };
+  }
+  const local = () => altaLocal(notas);
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return { estado: 200, cuerpo: { ficha: local(), motor: "local",
+      aviso: "Rellenado sin IA (falta ANTHROPIC_API_KEY en Vercel). Con la clave, el anuncio sale mejor redactado." } };
+  }
+  try {
+    const client = new Anthropic({ timeout: 25000, maxRetries: 1 });
+    const r = await client.messages.create({
+      model: MODELO_IA,
+      max_tokens: 1200,
+      system: [{ type: "text", text: PROMPT_ALTA, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: `Notas del agente:\n"""\n${notas}\n"""` }],
+    });
+    const bruto = r.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+    const ficha = normalizarAltaIA(extraerJSON(bruto), notas);
+    if (!ficha) throw new Error("respuesta sin JSON");
+    return { estado: 200, cuerpo: { ficha, motor: "ia", aviso: null } };
+  } catch (e) {
+    console.error("Alta rápida: la IA no respondió, uso el extractor local:", String(e?.message || e));
+    return { estado: 200, cuerpo: { ficha: local(), motor: "local",
+      aviso: "La IA no ha respondido ahora; lo he rellenado con el asistente local. Revisa los campos." } };
+  }
+}
+
 async function accionPanel(token, perfil) {
   const [inmuebles, tareas, actividad] = await Promise.all([
     tabla("ou_inmuebles", `?select=${CAMPOS_INMUEBLE}&order=actualizado.desc&limit=6`, { token }),
@@ -200,6 +285,7 @@ async function accionPanel(token, perfil) {
   const total = await tabla("ou_inmuebles", "?select=id,estado", { token });
   const cuenta = (estado) => total.filter((i) => i.estado === estado).length;
   const respuestas = await respuestasRecientes(token, perfil);
+  const seguimientos = await seguimientosPendientes(token, perfil);
 
   return {
     estado: 200,
@@ -216,6 +302,7 @@ async function accionPanel(token, perfil) {
       tareas,
       actividad,
       respuestas,
+      seguimientos,
     },
   };
 }
@@ -716,6 +803,8 @@ const PRIVADAS = {
   "fotos.portada": (token, perfil, cuerpo) => accionFotoPortada(token, perfil, cuerpo),
   "seleccion.enviar": (token, perfil, cuerpo) => accionEnviarSeleccion(token, perfil, cuerpo),
   "cliente.detalle": (token, perfil, cuerpo) => accionClienteDetalle(token, perfil, cuerpo),
+  "cliente.contactado": (token, perfil, cuerpo) => accionClienteContactado(token, perfil, cuerpo),
+  "inmuebles.redactar": (_t, perfil, cuerpo) => accionRedactar(perfil, cuerpo),
 };
 
 // ---------------------------------------------------------------------------

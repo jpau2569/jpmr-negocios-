@@ -250,6 +250,33 @@ async function vistaPanel() {
         ])))
     : el("div", { clase: "vacio", texto: "Cuando un cliente marque en su portal que un piso le interesa o quiere verlo, aparecerá aquí." });
 
+  const seguimientos = (datos.seguimientos || []).length
+    ? el("div", { clase: "lista" }, datos.seguimientos.map((sg) => {
+        const fila = el("div", { clase: "fila" });
+        const hecho = async () => {
+          try {
+            await api("cliente.contactado", { id: sg.cliente.id });
+            fila.remove();
+            toast(`Apuntado: vuelvo a avisarte de ${sg.cliente.nombre} si no contesta.`);
+          } catch (e) { toast(e.message); }
+        };
+        pintar(fila,
+          el("div", { style: "min-width:0" }, [
+            el("b", { texto: `⏰ ${[sg.cliente.nombre, sg.cliente.apellidos].filter(Boolean).join(" ")}` }),
+            el("div", { clase: "apunte", texto:
+              `${sg.enviados} ${sg.enviados === 1 ? "piso enviado" : "pisos enviados"} hace ${sg.dias} días · sin respuesta` }),
+          ]),
+          el("div", { clase: "acciones-fila" }, [
+            numeroWa(sg.cliente.telefono)
+              ? el("a", { clase: "btn fino wa", target: "_blank", rel: "noopener", texto: "Recordar",
+                  href: enlaceWa(sg.cliente.telefono, sg.mensaje), onclick: () => setTimeout(hecho, 400) })
+              : null,
+            el("button", { clase: "btn fino claro", type: "button", texto: "Hecho", title: "Ya le he escrito", onclick: hecho }),
+          ]));
+        return fila;
+      }))
+    : el("div", { clase: "vacio", texto: "Nadie pendiente. Cuando un cliente lleve 3 días sin contestar a lo que le mandaste, aparecerá aquí." });
+
   return el("div", {}, [
     pintarCabecera(`Hola, ${sesion.usuario.nombre}`, [
       el("button", { clase: "btn", type: "button", texto: "Añadir inmueble", onclick: () => abrirInmueble(null) }),
@@ -259,6 +286,7 @@ async function vistaPanel() {
     el("div", { clase: "columnas" }, [
       el("section", {}, [el("h3", { texto: "Últimos movimientos", style: "margin-bottom:12px" }), recientes]),
       el("div", {}, [
+        el("section", { style: "margin-bottom:20px" }, [el("h3", { texto: "Seguimientos de hoy", style: "margin-bottom:12px" }), seguimientos]),
         el("section", { style: "margin-bottom:20px" }, [el("h3", { texto: "Respuestas de clientes", style: "margin-bottom:12px" }), respuestas]),
         el("section", { style: "margin-bottom:20px" }, [el("h3", { texto: "Tareas pendientes", style: "margin-bottom:12px" }), tareas]),
         el("section", {}, [el("h3", { texto: "Actividad", style: "margin-bottom:12px" }), actividad]),
@@ -433,7 +461,9 @@ function zonaFotos(inm, alCambiar) {
   const entrada = el("input", { type: "file", accept: "image/jpeg,image/png,image/webp", multiple: true, hidden: true });
   const aviso = el("p", { clase: "aviso", hidden: true });
 
-  function pintar(actual) {
+  // Se llamaba «pintar» y tapaba al pintar() general: se llamaba a sí misma
+  // sin fin y la ficha de un inmueble ya guardado no llegaba a abrirse.
+  function pintarGaleria(actual) {
     const galeria = Array.isArray(actual.fotos) ? actual.fotos : [];
     pintar(caja, 
       el("div", { clase: "rejilla-fotos" }, [
@@ -469,7 +499,7 @@ function zonaFotos(inm, alCambiar) {
   async function cambiar(accion, datos) {
     try {
       const r = await api(accion, datos);
-      pintar(r.inmueble);
+      pintarGaleria(r.inmueble);
       alCambiar?.(r.inmueble);
     } catch (e) {
       mostrarAviso(aviso, e.message);
@@ -488,7 +518,7 @@ function zonaFotos(inm, alCambiar) {
         cargando(false);
         const r = await api("fotos.subir", { id: inm.id, ...foto });
         ultimo = r.inmueble;
-        pintar(r.inmueble);
+        pintarGaleria(r.inmueble);
         toast(`Foto ${i + 1} de ${archivos.length} subida.`);
       } catch (e) {
         cargando(false);
@@ -499,7 +529,7 @@ function zonaFotos(inm, alCambiar) {
     if (ultimo) alCambiar?.(ultimo);
   });
 
-  pintar(inm);
+  pintarGaleria(inm);
   return caja;
 }
 
@@ -541,8 +571,10 @@ function abrirInmueble(inm) {
 
   const aviso = el("p", { clase: "aviso", hidden: true });
 
+  const campos = { titulo, ciudad, zona, precio, habitaciones, banos, metros, descripcion, operacion, casillas };
   pintar(f, 
     el("h2", { texto: inm ? "Editar inmueble" : "Nuevo inmueble", style: "margin-bottom:18px" }),
+    altaRapida(campos, !inm),
     campo("Título comercial", titulo),
     el("div", { clase: "tres" }, [campo("Operación", operacion), campo("Precio (€)", precio), campo("Estado", estado)]),
     el("div", { clase: "dos" }, [campo("Ciudad", ciudad), campo("Zona o barrio", zona)]),
@@ -564,6 +596,10 @@ function abrirInmueble(inm) {
     aviso,
     el("div", { clase: "pie-ficha" }, [
       el("button", { clase: "btn claro", type: "button", texto: "Cancelar", onclick: () => d.close() }),
+      inm ? el("button", {
+        clase: "btn claro", type: "button", texto: "Tarjeta para WhatsApp",
+        onclick: () => tarjetaVisual(inm),
+      }) : null,
       inm && inm.slug ? el("button", {
         clase: "btn claro", type: "button", texto: "Compartir ficha",
         onclick: () => compartirFicha(inm),
@@ -597,7 +633,7 @@ function abrirInmueble(inm) {
     }
   }
 
-  d.showModal();
+  if (!d.open) d.showModal();
 }
 
 /* ---------- ficha de cliente ---------- */
@@ -858,6 +894,299 @@ async function copiar(texto) {
   } catch {
     toast("No se pudo copiar: selecciona el texto a mano.");
   }
+}
+
+/* ---------- 1. Alta rápida: notas o voz → ficha rellena ---------- */
+//  Pau escribe o dicta lo que sabe del piso y la ficha se rellena sola. En un
+//  inmueble nuevo se rellena todo; en uno existente solo lo que está vacío, y
+//  el anuncio nuevo se ofrece, no se impone.
+function altaRapida(c, nuevo) {
+  const notas = el("textarea", { clase: "notas-alta", placeholder:
+    "Ej.: piso 3 hab en El Llano, Gijón, 90 m², 2 baños, ascensor y terraza, 185.000 €" });
+  const aviso = el("p", { clase: "aviso", hidden: true });
+  const salida = el("div", {});
+  const Reconocer = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let escuchando = null;
+
+  const micro = Reconocer ? el("button", {
+    clase: "btn claro fino micro", type: "button", texto: "🎤 Dictar",
+    onclick: () => {
+      if (escuchando) { escuchando.stop(); return; }
+      const r = new Reconocer();
+      r.lang = "es-ES"; r.interimResults = true; r.continuous = true;
+      const base = notas.value ? notas.value.trim() + " " : "";
+      r.onresult = (ev) => {
+        notas.value = base + [...ev.results].map((x) => x[0].transcript).join(" ");
+      };
+      r.onend = () => { escuchando = null; micro.textContent = "🎤 Dictar"; micro.classList.remove("grabando"); };
+      r.onerror = (ev) => mostrarAviso(aviso, ev.error === "not-allowed"
+        ? "El navegador no deja usar el micrófono: dale permiso y vuelve a probar." : "No te he entendido; prueba otra vez.");
+      r.start();
+      escuchando = r;
+      micro.textContent = "■ Parar";
+      micro.classList.add("grabando");
+    },
+  }) : null;
+
+  const poner = (nodo, valor) => {
+    if (valor === undefined || valor === null || valor === "") return false;
+    if (!nuevo && String(nodo.value || "").trim()) return false;
+    nodo.value = valor;
+    nodo.classList.add("rellenado");
+    setTimeout(() => nodo.classList.remove("rellenado"), 2400);
+    return true;
+  };
+
+  async function rellenar() {
+    mostrarAviso(aviso, "");
+    try {
+      if (escuchando) escuchando.stop();
+      const { ficha: x, motor, aviso: nota } = await api("inmuebles.redactar", { notas: notas.value });
+      poner(c.titulo, x.titulo);
+      poner(c.ciudad, x.ciudad);
+      poner(c.zona, x.zona);
+      poner(c.precio, x.precio ? new Intl.NumberFormat("es-ES").format(x.precio) : "");
+      poner(c.habitaciones, x.habitaciones);
+      poner(c.banos, x.banos);
+      poner(c.metros, x.metros);
+      if (nuevo && x.operacion) c.operacion.value = x.operacion;
+      for (const id of x.caracteristicas || []) {
+        const casilla = c.casillas.querySelector(`input[value="${CSS.escape(id)}"]`);
+        if (casilla) casilla.checked = true;
+      }
+      const descripcionPuesta = poner(c.descripcion, x.descripcion);
+      pintar(salida,
+        el("div", { clase: "resultado-alta" }, [
+          el("b", { texto: motor === "ia" ? "✨ Ficha rellenada con IA" : "✓ Ficha rellenada" }),
+          el("span", { clase: "apunte", texto: " · revisa los campos marcados antes de guardar." }),
+          x.faltan?.length
+            ? el("p", { clase: "apunte", style: "margin-top:6px", texto: `Para que venda más, añade: ${x.faltan.join(", ")}.` })
+            : null,
+          !descripcionPuesta && x.descripcion
+            ? el("div", { style: "margin-top:10px" }, [
+                el("p", { clase: "apunte", texto: "Anuncio propuesto (la ficha ya tenía descripción):" }),
+                el("p", { clase: "anuncio-propuesto", texto: x.descripcion }),
+                el("button", { clase: "btn claro fino", type: "button", texto: "Usar este anuncio",
+                  onclick: () => { c.descripcion.value = x.descripcion; toast("Anuncio puesto en la descripción."); } }),
+              ])
+            : null,
+        ]));
+      if (nota) mostrarAviso(aviso, nota, true);
+    } catch (e) {
+      mostrarAviso(aviso, e.message);
+    }
+  }
+
+  return el("details", { clase: "alta-rapida", open: nuevo }, [
+    el("summary", { texto: nuevo ? "⚡ Alta rápida: escribe o dicta y se rellena sola" : "⚡ Completar con notas o voz" }),
+    el("div", { clase: "alta-cuerpo" }, [
+      notas,
+      el("div", { style: "display:flex;gap:8px;flex-wrap:wrap;margin-top:8px" }, [
+        micro,
+        el("button", { clase: "btn oro fino", type: "button", texto: "Rellenar ficha", onclick: rellenar }),
+      ]),
+      salida,
+      aviso,
+    ]),
+  ]);
+}
+
+/* ---------- 3. Tarjeta visual para WhatsApp, estados e Instagram ---------- */
+//  La dibuja el navegador en un <canvas>: foto de portada, precio, datos y la
+//  marca. Se comparte directamente (en el móvil abre WhatsApp con la imagen)
+//  o se descarga en PNG. Los datos son los de la ficha, nada más.
+const CONTACTO_WA = "663 26 38 42"; // = CONTACTO.whatsapp de lib/oportunidades.js
+
+const FORMATOS_TARJETA = {
+  publicacion: { nombre: "Publicación 4:5", ancho: 1080, alto: 1350, foto: 0.52 },
+  estado: { nombre: "Estado / historia 9:16", ancho: 1080, alto: 1920, foto: 0.58 },
+};
+
+function cargarImagen(src, anonimo = true) {
+  return new Promise((ok) => {
+    if (!src) return ok(null);
+    const img = new Image();
+    if (anonimo) img.crossOrigin = "anonymous";
+    img.onload = () => ok(img);
+    img.onerror = () => ok(null);
+    img.src = src;
+  });
+}
+
+function datosTarjeta(inm) {
+  const nombre = (id) => CATALOGO.caracteristicas.find((c) => c.id === id)?.nombre || id;
+  return {
+    precio: inm.precio ? euros(inm.precio) + (inm.operacion === "alquiler" ? "/mes" : "") : "Consultar precio",
+    titulo: String(inm.titulo || ""),
+    donde: [inm.zona, inm.ciudad].filter(Boolean).join(", "),
+    datos: [
+      inm.habitaciones ? `${inm.habitaciones} hab` : null,
+      inm.banos ? `${inm.banos} ${Number(inm.banos) === 1 ? "baño" : "baños"}` : null,
+      inm.metros ? `${inm.metros} m²` : null,
+      ...(inm.caracteristicas || []).slice(0, 3).map(nombre),
+    ].filter(Boolean),
+    operacion: inm.operacion === "alquiler" ? "EN ALQUILER" : "EN VENTA",
+  };
+}
+
+async function dibujarTarjeta(canvas, inm, formato) {
+  const F = FORMATOS_TARJETA[formato];
+  const W = F.ancho, H = F.alto, fotoH = Math.round(H * F.foto);
+  canvas.width = W; canvas.height = H;
+  const x = canvas.getContext("2d");
+  const d = datosTarjeta(inm);
+  const SERIF = "'Iowan Old Style', Georgia, 'Times New Roman', serif";
+  const SANS = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+  const ORO = "#D9B75F";
+
+  // Fondo: arriba el azul de la marca, abajo un azul noche liso para el texto
+  const FONDO = "#072C4A";
+  const fondo = x.createLinearGradient(0, 0, 0, fotoH);
+  fondo.addColorStop(0, "#0E4A79"); fondo.addColorStop(1, FONDO);
+  x.fillStyle = fondo; x.fillRect(0, 0, W, fotoH);
+  x.fillStyle = FONDO; x.fillRect(0, fotoH, W, H - fotoH);
+
+  // Foto (recorte tipo «cover»)
+  const [foto, logo] = await Promise.all([cargarImagen(inm.portada_url), cargarImagen("iconos/icono-192.png", false)]);
+  if (foto) {
+    const esc = Math.max(W / foto.width, fotoH / foto.height);
+    const w = foto.width * esc, h = foto.height * esc;
+    x.save(); x.beginPath(); x.rect(0, 0, W, fotoH); x.clip();
+    x.drawImage(foto, (W - w) / 2, (fotoH - h) / 2, w, h);
+    x.restore();
+  } else if (logo) {
+    x.globalAlpha = 0.18;
+    x.drawImage(logo, W / 2 - 220, fotoH / 2 - 220, 440, 440);
+    x.globalAlpha = 1;
+  }
+  const velo = x.createLinearGradient(0, fotoH * 0.6, 0, fotoH + 1);
+  velo.addColorStop(0, "rgba(7,44,74,0)"); velo.addColorStop(1, "rgba(7,44,74,1)");
+  x.fillStyle = velo; x.fillRect(0, 0, W, fotoH + 1);
+
+  // Etiqueta de operación y logo
+  x.font = `700 34px ${SANS}`;
+  const et = d.operacion, etW = x.measureText(et).width + 56;
+  redondeado(x, 48, 48, etW, 68, 34); x.fillStyle = ORO; x.fill();
+  x.fillStyle = "#2A2410"; x.textBaseline = "middle"; x.fillText(et, 76, 83);
+  if (logo) {
+    x.save(); redondeado(x, W - 48 - 120, 40, 120, 120, 28); x.clip();
+    x.drawImage(logo, W - 48 - 120, 40, 120, 120); x.restore();
+  }
+
+  // Texto
+  let y = fotoH + 30;
+  x.textBaseline = "top";
+  x.fillStyle = ORO; x.font = `600 ${formato === "estado" ? 118 : 108}px ${SERIF}`;
+  x.fillText(d.precio, 64, y); y += formato === "estado" ? 150 : 136;
+  x.fillStyle = "#FFFFFF"; x.font = `600 52px ${SANS}`;
+  for (const linea of partirLineas(x, d.titulo, W - 128).slice(0, 2)) { x.fillText(linea, 64, y); y += 64; }
+  if (d.donde) {
+    x.fillStyle = "rgba(255,255,255,.72)"; x.font = `400 38px ${SANS}`;
+    x.fillText("⌖ " + d.donde, 64, y + 6); y += 70;
+  }
+  // Pastillas de datos (las que quepan antes del pie)
+  y += 14;
+  let px = 64;
+  const pieY = H - 150;
+  x.font = `600 34px ${SANS}`;
+  for (const t of d.datos) {
+    const w = x.measureText(t).width + 48;
+    if (px + w > W - 64) { px = 64; y += 78; }
+    if (y + 62 > pieY - 24) break;
+    redondeado(x, px, y, w, 62, 31);
+    x.fillStyle = "rgba(255,255,255,.08)"; x.fill();
+    x.strokeStyle = "rgba(217,183,95,.55)"; x.lineWidth = 2; x.stroke();
+    x.fillStyle = "#FFFFFF"; x.textBaseline = "middle"; x.fillText(t, px + 24, y + 32); x.textBaseline = "top";
+    px += w + 14;
+  }
+
+  // Pie con la marca y el contacto
+  x.fillStyle = "rgba(217,183,95,.9)"; x.fillRect(64, pieY, W - 128, 3);
+  x.fillStyle = "#FFFFFF"; x.font = `600 40px ${SERIF}`; x.textBaseline = "middle";
+  x.fillText("Oportunidades", 64, pieY + 58);
+  x.fillStyle = ORO; x.fillText("Únicas", 64 + x.measureText("Oportunidades ").width, pieY + 58);
+  x.font = `600 34px ${SANS}`; x.fillStyle = "#FFFFFF"; x.textAlign = "right";
+  x.fillText(`WhatsApp ${CONTACTO_WA}`, W - 64, pieY + 58);
+  x.textAlign = "left";
+  return !!foto || !inm.portada_url; // false = la foto no se pudo usar
+}
+
+function redondeado(x, px, py, w, h, r) {
+  x.beginPath();
+  x.moveTo(px + r, py); x.arcTo(px + w, py, px + w, py + h, r); x.arcTo(px + w, py + h, px, py + h, r);
+  x.arcTo(px, py + h, px, py, r); x.arcTo(px, py, px + w, py, r); x.closePath();
+}
+
+function partirLineas(x, texto, ancho) {
+  const palabras = String(texto).split(/\s+/), lineas = [];
+  let actual = "";
+  for (const p of palabras) {
+    const prueba = actual ? actual + " " + p : p;
+    if (x.measureText(prueba).width > ancho && actual) { lineas.push(actual); actual = p; } else actual = prueba;
+  }
+  if (actual) lineas.push(actual);
+  if (lineas.length > 2) lineas[1] = lineas[1].replace(/\s*\S*$/, "") + "…";
+  return lineas;
+}
+
+async function tarjetaVisual(inm) {
+  const d = $("ficha");
+  const f = $("form-ficha");
+  const canvas = el("canvas", { clase: "lienzo-tarjeta" });
+  const aviso = el("p", { clase: "aviso", hidden: true });
+  let formato = "publicacion";
+  const enlace = inm.slug ? `${location.origin}/p/${inm.slug}` : "";
+  const texto = [`${inm.titulo} · ${datosTarjeta(inm).precio}`, enlace].filter(Boolean).join("\n");
+
+  const pintarFormato = async () => {
+    const fotoOk = await dibujarTarjeta(canvas, inm, formato);
+    mostrarAviso(aviso, fotoOk ? "" : "No he podido usar la foto de portada (¿enlace externo?). Sube la foto desde la ficha y saldrá en la tarjeta.");
+  };
+  const archivo = () => new Promise((ok) => canvas.toBlob((b) => ok(b ? new File([b],
+    `${(inm.referencia || inm.slug || "inmueble").toString().toLowerCase()}-${formato}.png`, { type: "image/png" }) : null), "image/png"));
+
+  const chips = el("div", { clase: "estilos" }, Object.entries(FORMATOS_TARJETA).map(([id, F], n) => el("button", {
+    type: "button", clase: "chip" + (n === 0 ? " activo" : ""), texto: F.nombre,
+    onclick: (ev) => {
+      chips.querySelectorAll(".chip").forEach((c) => c.classList.remove("activo"));
+      ev.currentTarget.classList.add("activo");
+      formato = id; pintarFormato();
+    },
+  })));
+
+  async function compartir() {
+    let fichero;
+    try { fichero = await archivo(); } catch { fichero = null; }
+    if (!fichero) return mostrarAviso(aviso, "No se pudo preparar la imagen. Prueba a descargarla.");
+    if (navigator.canShare?.({ files: [fichero] })) {
+      try { await navigator.share({ files: [fichero], text: texto }); } catch { /* cancelado */ }
+    } else {
+      descargar(fichero);
+      toast("Este navegador no comparte imágenes: la he descargado. Adjúntala en WhatsApp.");
+    }
+  }
+  function descargar(fichero) {
+    const a = el("a", { href: URL.createObjectURL(fichero), download: fichero.name });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+
+  pintar(f,
+    el("h2", { texto: "Tarjeta para WhatsApp", style: "margin-bottom:6px" }),
+    el("p", { clase: "apunte", style: "margin-bottom:12px", texto:
+      "Para mandar a un cliente, subir a tus estados o a Instagram. Solo lleva los datos de la ficha." }),
+    chips,
+    el("div", { clase: "marco-tarjeta" }, [canvas]),
+    aviso,
+    el("div", { clase: "pie-ficha" }, [
+      el("button", { clase: "btn claro", type: "button", texto: "Volver a la ficha", onclick: () => abrirInmueble(inm) }),
+      el("button", { clase: "btn claro", type: "button", texto: "Descargar PNG",
+        onclick: async () => { const a = await archivo().catch(() => null); a ? descargar(a) : mostrarAviso(aviso, "No se pudo preparar la imagen."); } }),
+      el("button", { clase: "btn wa", type: "button", texto: "Compartir por WhatsApp", onclick: compartir }),
+    ])
+  );
+  if (!d.open) d.showModal();
+  await pintarFormato();
 }
 
 /* ---------- WhatsApp ---------- */
