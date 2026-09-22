@@ -368,6 +368,20 @@ if (chromium) {
   await pagina.locator('#acciones button[data-modulo="reservas"]').click();
   await pagina.fill("#nombre", "Reserva de prueba");
   await pagina.fill("#telefono", "600111222");
+
+  // La Viña cierra los martes, así que el día por defecto (hoy) unas veces vale
+  // y otras no. Se elige a propósito un día cerrado y otro abierto: así el test
+  // no depende de cuándo se ejecute y de paso comprueba las dos ramas.
+  const proximo = (diaSemana) => {
+    const d = new Date();
+    d.setDate(d.getDate() + ((diaSemana - d.getDay() + 7) % 7 || 7));
+    return d.toISOString().slice(0, 10);
+  };
+  await pagina.fill("#fecha", proximo(2)); // martes: cerrado
+  check("un día de cierre no deja pedir la reserva",
+    await pagina.locator('#modal-cuerpo button[type="submit"]').isDisabled());
+  await pagina.fill("#fecha", proximo(4)); // jueves: abierto
+
   await pagina.locator('#modal-cuerpo button[type="submit"]').click();
   await pagina.waitForSelector("#modal-titulo:has-text('Reserva preparada')");
   check("la reserva da referencia propia", /RES-\d{8}-[A-Z0-9]{4}/.test(await pagina.textContent("#modal-cuerpo")));
