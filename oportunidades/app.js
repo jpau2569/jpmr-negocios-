@@ -555,7 +555,12 @@ function abrirInmueble(inm) {
   const ciudad = entrada("ciudad", v.ciudad, { required: true, maxlength: 60 });
   const zona = entrada("zona", v.zona, { maxlength: 80 });
   const precio = entrada("precio", v.precio, { inputmode: "decimal", placeholder: "185.000" });
-  const referencia = entrada("referencia", v.referencia, { placeholder: "se genera sola", maxlength: 24 });
+  // La referencia es la calle y el número: es lo que va en los WhatsApp para
+  // que el cliente sepa de qué piso se le habla. Los códigos antiguos
+  // («OU-2026-0001») se dejan vacíos para que se ponga la calle.
+  const refAntigua = /^OU-\d{4}-\d{4}$/.test(v.referencia || "");
+  const referencia = entrada("referencia", refAntigua ? "" : v.referencia,
+    { placeholder: "Ej.: Uría 12, 3ºB", maxlength: 40 });
   const habitaciones = entrada("habitaciones", v.habitaciones, { type: "number", min: "0", max: "60" });
   const banos = entrada("banos", v.banos, { type: "number", min: "0", max: "40" });
   const metros = entrada("metros", v.metros, { type: "number", min: "0" });
@@ -579,6 +584,13 @@ function abrirInmueble(inm) {
   const aviso = el("p", { clase: "aviso", hidden: true });
 
   const campos = { titulo, ciudad, zona, precio, habitaciones, banos, metros, descripcion, operacion, casillas };
+  // Si escribes la dirección y la referencia está vacía, se propone «calle y
+  // número» (lo de antes de la primera coma que lleve un número).
+  direccion.addEventListener("change", () => {
+    if (referencia.value.trim()) return;
+    const trozo = direccion.value.split(",").map((t) => t.trim()).find((t) => /\d/.test(t));
+    if (trozo) { referencia.value = trozo.slice(0, 40); referencia.classList.add("rellenado"); }
+  });
   pintar(f, 
     el("h2", { texto: inm ? "Editar inmueble" : "Nuevo inmueble", style: "margin-bottom:18px" }),
     altaRapida(campos, !inm),
@@ -587,7 +599,7 @@ function abrirInmueble(inm) {
     el("div", { clase: "dos" }, [campo("Ciudad", ciudad), campo("Zona o barrio", zona)]),
     el("div", { clase: "tres" }, [campo("Habitaciones", habitaciones), campo("Baños", banos), campo("Metros", metros)]),
     campo("Dirección exacta (privada, nunca se publica)", direccion),
-    campo("Referencia interna", referencia),
+    campo("Referencia: calle y número (va en los WhatsApp)", referencia),
     el("p", { clase: "apunte", texto: "Características", style: "margin-bottom:8px" }),
     casillas,
     campo("Descripción", descripcion),
@@ -623,7 +635,7 @@ function abrirInmueble(inm) {
   async function guardar() {
     const datos = {
       titulo: titulo.value, ciudad: ciudad.value, zona: zona.value, precio: precio.value,
-      referencia: referencia.value, habitaciones: habitaciones.value, banos: banos.value,
+      referencia: referencia.value || (refAntigua ? v.referencia : ""), habitaciones: habitaciones.value, banos: banos.value,
       metros: metros.value, direccion_privada: direccion.value, descripcion: descripcion.value,
       portada_url: portada.value, video_url: video.value,
       operacion: operacion.value, estado: estado.value,
@@ -788,8 +800,10 @@ async function enviarSeleccion(ids) {
 //  monta el servidor (api/oportunidades-ficha.js).
 function compartirFicha(inm) {
   const enlace = `${location.origin}/p/${inm.slug}`;
+  const refCalle = inm.referencia && !/^OU-\d{4}-\d{4}$/.test(inm.referencia) ? inm.referencia : null;
   const mensaje = [
     `${inm.titulo}`,
+    refCalle ? `📍 ${refCalle}` : null,
     [inm.habitaciones ? `${inm.habitaciones} hab` : null, inm.metros ? `${inm.metros} m²` : null,
      [inm.zona, inm.ciudad].filter(Boolean).join(", ")].filter(Boolean).join(" · "),
     euros(inm.precio) + (inm.operacion === "alquiler" ? "/mes" : ""),
@@ -1215,7 +1229,8 @@ async function tarjetaVisual(inm) {
   const aviso = el("p", { clase: "aviso", hidden: true });
   let formato = "publicacion";
   const enlace = inm.slug ? `${location.origin}/p/${inm.slug}` : "";
-  const texto = [`${inm.titulo} · ${datosTarjeta(inm).precio}`, enlace].filter(Boolean).join("\n");
+  const refCalle = inm.referencia && !/^OU-\d{4}-\d{4}$/.test(inm.referencia) ? inm.referencia : null;
+  const texto = [`${inm.titulo} · ${datosTarjeta(inm).precio}`, refCalle ? `📍 ${refCalle}` : null, enlace].filter(Boolean).join("\n");
 
   const pintarFormato = async () => {
     const fotoOk = await dibujarTarjeta(canvas, inm, formato);

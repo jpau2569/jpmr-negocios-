@@ -696,6 +696,32 @@ await handler({ method: "POST", headers: { authorization: "Bearer tok-1" },
 check("IA sin ficha → reintenta y cae al asistente local sin error", res.r.statusCode === 200 && res.r.body.motor === "local" && res.r.body.ficha.precio === 95000);
 delete process.env.ANTHROPIC_API_KEY;
 
+// ---------------------------------------------------------------------------
+console.log("\n— referencia = calle y número —");
+// ---------------------------------------------------------------------------
+check("la referencia admite calle y número tal cual", referencia("Uría 12, 3ºB") === "Uría 12, 3ºB");
+check("se limpian espacios de más", referencia("  C/  Uría   12 ") === "C/ Uría 12");
+check("los símbolos raros se quitan", referencia("Uría <b>12</b>") === "Uría b12/b");
+const conRef = mensajesWhatsapp({
+  cliente: { nombre: "Lucía" }, base: "https://ej.com", firma: { agente: "Pau" },
+  inmuebles: [{ titulo: "Ático", precio: 289000, slug: "atico", referencia: "Uría 12, 3ºB" }],
+});
+check("el WhatsApp completo lleva la calle", conRef.completo.includes("📍 Uría 12, 3ºB"));
+check("el corto también", conRef.corto.includes("📍 Uría 12, 3ºB"));
+check("el de usted como «Referencia:»", conRef.formal.includes("Referencia: Uría 12, 3ºB"));
+check("un código automático antiguo no se manda",
+  !mensajesWhatsapp({ cliente: { nombre: "A" }, inmuebles: [{ titulo: "B", referencia: "OU-2026-0001" }] }).completo.includes("OU-2026"));
+simula([
+  ["/rest/v1/ou_usuarios", { datos: [PERFIL] }],
+  ["/rest/v1/ou_inmuebles?select=id&", { datos: [] }],
+  ["/rest/v1/ou_inmuebles", { estado: 409, datos: { message: 'duplicate key value violates unique constraint "ou_inmuebles_referencia_key"' } }],
+]);
+res = mockRes();
+await handler({ method: "POST", headers: { authorization: "Bearer tok-1" },
+  body: { accion: "inmuebles.guardar", inmueble: { titulo: "Piso", ciudad: "Oviedo", referencia: "Uría 12" } } }, res);
+check("dos pisos con la misma calle → aviso claro, no error raro",
+  res.r.statusCode === 409 && res.r.body.error.includes("Uría 12, 3ºB"), JSON.stringify(res.r.body));
+
 // El comprobador de instalación
 delete process.env.SUPABASE_URL;
 res = mockRes();
@@ -964,6 +990,9 @@ if (chromium) {
 
   /* --- El comprobador de instalación --- */
   await pagina.goto(BASE + "index.html", { waitUntil: "networkidle" });
+  check("la pantalla de acceso firma como PAU. M.R.",
+    (await pagina.textContent(".tarjeta-acceso .apunte")).includes("PAU. M.R.") &&
+    !(await pagina.textContent(".tarjeta-acceso")).includes("Castresana"));
   await pagina.waitForSelector("#logo-acceso canvas", { timeout: 15000 }).catch(() => {});
   check("la pantalla de acceso muestra el logo 3D", (await pagina.locator("#logo-acceso canvas").count()) === 1);
   const iconos = await pagina.evaluate(async () => {
@@ -1033,6 +1062,10 @@ if (chromium) {
   /* Alta rápida */
   await app.locator("button:has-text('Añadir inmueble')").first().click();
   await app.waitForSelector(".alta-rapida[open]");
+  await app.fill("#form-ficha [name=direccion_privada]", "C/ Uría 12, 3ºB, Oviedo");
+  await app.locator("#form-ficha [name=direccion_privada]").dispatchEvent("change");
+  check("al poner la dirección, la referencia se propone con calle y número",
+    (await app.locator("#form-ficha [name=referencia]").inputValue()) === "C/ Uría 12");
   await app.fill(".notas-alta", "Piso 3 hab en El Llano, Gijón. 185k. 2 baños, 90 m2, ascensor y terraza");
   await app.locator("button:has-text('Rellenar ficha')").click();
   await app.waitForSelector(".resultado-alta");

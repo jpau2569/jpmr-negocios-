@@ -176,6 +176,18 @@ con la imagen y el enlace de la ficha; en ordenador se descarga el PNG. La
 dibuja el navegador (canvas); las fotos del almacén de Supabase se pueden usar
 porque se sirven con CORS abierto.
 
+## Referencia = calle y número
+
+La **referencia** de cada inmueble es su calle y número («Uría 12, 3ºB»): es
+como Pau identifica el piso, y va en todos los WhatsApp (📍 en los estilos
+completo y corto, «Referencia:» en el de usted), en *Compartir ficha* y en el
+texto de la tarjeta. Si se escribe la dirección exacta y la referencia está
+vacía, se propone sola (lo anterior a la primera coma que lleve número). Los
+códigos automáticos antiguos (`OU-2026-0001`) no se mandan. Como la referencia
+es única, dos pisos del mismo portal necesitan planta o letra: si no, avisa.
+Ojo: la referencia sí la ven los clientes (va en el mensaje y en la ficha
+pública); la dirección exacta completa sigue sin publicarse.
+
 ## 18 fotos y un vídeo por piso
 
 Hasta **18 fotos** por inmueble (`MAX_FOTOS`); si eliges más de las que caben,

@@ -353,6 +353,7 @@ async function accionInmuebleGuardar(token, perfil, cuerpo) {
 
   const id = texto(cuerpo.id, 40);
   let guardado;
+  try {
   if (id) {
     const filas = await tabla("ou_inmuebles", `?id=eq.${id}&select=${CAMPOS_INMUEBLE}`, {
       metodo: "PATCH",
@@ -370,6 +371,13 @@ async function accionInmuebleGuardar(token, perfil, cuerpo) {
       prefer: "return=representation",
     });
     guardado = filas[0];
+  }
+  } catch (e) {
+    // La referencia es única: dos pisos del mismo portal necesitan la planta.
+    if (e.status === 409 || /duplicate|ou_inmuebles_referencia/i.test(String(e.message))) {
+      return { estado: 409, cuerpo: { error: `Ya tienes otro inmueble con la referencia «${inmueble.referencia}». Añade la planta o la letra (por ejemplo «${inmueble.referencia}, 3ºB»).` } };
+    }
+    throw e;
   }
 
   await apuntar(token, perfil, {
@@ -466,7 +474,7 @@ async function accionEnviarSeleccion(token, perfil, cuerpo) {
 
   const inmuebles = await tabla(
     "ou_inmuebles",
-    `?id=in.(${ids.join(",")})&select=id,titulo,operacion,metros,habitaciones,precio,zona,ciudad,slug,publico,estado,video_url`,
+    `?id=in.(${ids.join(",")})&select=id,titulo,referencia,operacion,metros,habitaciones,precio,zona,ciudad,slug,publico,estado,video_url`,
     { token }
   );
 
