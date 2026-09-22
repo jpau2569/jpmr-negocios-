@@ -38,6 +38,14 @@ function el(etiqueta, props = {}, hijos = []) {
   return nodo;
 }
 
+// Igual que en app.js: `replaceChildren()` del navegador escribe «null» cuando
+// le llega uno, y aquí se pinta con `condición ? el(...) : null`.
+function pintar(nodo, ...hijos) {
+  nodo.replaceChildren(
+    ...hijos.flat().filter((h) => h !== null && h !== undefined && h !== false)
+  );
+}
+
 const euros = (n) =>
   n === null || n === undefined
     ? "Consultar"
@@ -115,7 +123,7 @@ function pintarInmueble(inm) {
 async function abrir() {
   const token = tokenDelEnlace();
   if (!token || token.length < 24) {
-    $("contenido").replaceChildren(
+    pintar($("contenido"), 
       el("div", { clase: "vacio" }, [
         el("b", { texto: "Este enlace no está completo" }),
         el("p", { clase: "apunte", style: "margin-top:6px", texto: "Copia el enlace entero del mensaje que te enviamos, o pídenos uno nuevo." }),
@@ -132,13 +140,13 @@ async function abrir() {
       ? "Este es el inmueble que hemos preparado para ti. Dinos qué te parece."
       : `Estos son los ${datos.inmuebles.length} inmuebles que hemos preparado para ti. Dinos cuáles te interesan.`;
 
-    $("contenido").replaceChildren(
+    pintar($("contenido"), 
       ...(datos.inmuebles.length
         ? datos.inmuebles.map(pintarInmueble)
         : [el("div", { clase: "vacio", texto: "Todavía no hay inmuebles en tu selección. Te avisamos en cuanto tengamos algo que encaje." })])
     );
   } catch (e) {
-    $("contenido").replaceChildren(
+    pintar($("contenido"), 
       el("div", { clase: "vacio" }, [
         el("b", { texto: "No hemos podido abrir tu selección" }),
         el("p", { clase: "apunte", style: "margin-top:6px", texto: e.message }),
