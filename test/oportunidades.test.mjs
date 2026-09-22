@@ -670,7 +670,8 @@ if (chromium) {
 
   const RAIZ = new URL("..", import.meta.url).pathname;
   const MIME = {
-    ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+    ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".png": "image/png",
+    ".webmanifest": "application/manifest+json",
     ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8",
   };
 
@@ -754,14 +755,33 @@ if (chromium) {
   await new Promise((ok) => servidor.listen(8131, ok));
   const BASE = "http://127.0.0.1:8131/oportunidades/";
 
-  const navegador = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+  const navegador = await chromium.launch({
+    executablePath: "/opt/pw-browsers/chromium",
+    args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+  });
   const contexto = await navegador.newContext({ viewport: { width: 1100, height: 900 } });
+  // Three.js del logo 3D se sirve desde node_modules: el test no depende de la red.
+  await contexto.route("https://unpkg.com/three@0.169.0/**", async (ruta) => {
+    const archivo = ruta.request().url().split("three@0.169.0/")[1];
+    ruta.fulfill({ contentType: "text/javascript", body: await readFile(join(RAIZ, "node_modules/three", archivo)) });
+  });
   const pagina = await contexto.newPage();
   const errores = [];
   pagina.on("pageerror", (e) => errores.push(String(e)));
 
   /* --- El comprobador de instalación --- */
   await pagina.goto(BASE + "index.html", { waitUntil: "networkidle" });
+  await pagina.waitForSelector("#logo-acceso canvas", { timeout: 15000 }).catch(() => {});
+  check("la pantalla de acceso muestra el logo 3D", (await pagina.locator("#logo-acceso canvas").count()) === 1);
+  const iconos = await pagina.evaluate(async () => {
+    const m = await (await fetch(document.querySelector('link[rel=manifest]').href)).json();
+    const urls = [...m.icons.map((i) => new URL(i.src, location.href).href),
+      document.querySelector('link[rel=apple-touch-icon]').href, document.querySelector('link[rel=icon]').href];
+    const estados = await Promise.all(urls.map((u) => fetch(u).then((r) => r.ok && r.headers.get("content-type")?.includes("png"))));
+    return { nombre: m.name, maskable: m.icons.some((i) => i.purpose === "maskable"), todos: estados.every(Boolean), n: urls.length };
+  });
+  check("la app es instalable: manifiesto con nombre e icono maskable", iconos.nombre === "Oportunidades Únicas" && iconos.maskable);
+  check("todos los iconos existen y son PNG", iconos.todos && iconos.n === 5, JSON.stringify(iconos));
   await pagina.locator("#btn-comprobar").click();
   await pagina.waitForSelector("#diagnostico .paso");
 
@@ -794,6 +814,7 @@ if (chromium) {
 
   /* --- WhatsApp pro: con sesión iniciada --- */
   const ctxApp = await navegador.newContext({ viewport: { width: 390, height: 844 } });
+  await ctxApp.route("https://unpkg.com/**", (ruta) => ruta.abort());
   await ctxApp.addInitScript(() => localStorage.setItem("ou_sesion_v1",
     JSON.stringify({ token: "tok", usuario: { id: "u-1", nombre: "Pau", rol: "admin" } })));
   const app = await ctxApp.newPage();
@@ -802,6 +823,8 @@ if (chromium) {
   await app.waitForSelector("text=Respuestas de clientes");
   const panelTxt = await app.textContent("main");
   check("el panel enseña lo que han contestado los clientes", panelTxt.includes("Lucía quiere visitarlo"));
+  check("la barra lateral lleva el icono de la marca",
+    await app.locator(".marca .sigla-logo img").evaluate((i) => i.complete && i.naturalWidth === 64));
   const hrefContestar = await app.locator("a:has-text('Contestar')").first().getAttribute("href");
   check("«Contestar» abre el WhatsApp del cliente con 34 y el texto puesto",
     hrefContestar.startsWith("https://wa.me/34600111222?text=Hola%20Luc"), hrefContestar);

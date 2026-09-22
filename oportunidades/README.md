@@ -149,6 +149,18 @@ bien?»). Antes se guardaban en `ou_respuestas` pero no se enseñaban en ningún
 
 Todo esto no cambia la base de datos: usa las tablas que ya había.
 
+## Logo 3D e instalar en el móvil
+
+La marca es una **casa dorada con una gema tallada dentro** (el inmueble y la
+oportunidad única), hecha con geometría propia en Three.js: `logo3d.js`. En la
+pantalla de acceso se ve viva —flota, la gema gira y se inclina hacia el dedo—
+y se apaga al entrar para no gastar batería. Sin WebGL se queda la sigla «OU».
+
+Los iconos de `iconos/` salen de ese mismo logo:
+`node oportunidades/herramientas/generar-iconos.mjs` (Playwright, sin red).
+Con `manifest.webmanifest` la app se instala: en Android, *Instalar app*; en
+iPhone, Safari → Compartir → *Añadir a pantalla de inicio*.
+
 ## Lo que falta (siguiente fase)
 - Tareas y analítica con pantalla propia (los datos ya se guardan).
 - Asistente de redacción con Claude, reutilizando `ANTHROPIC_API_KEY`.
