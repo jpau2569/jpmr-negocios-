@@ -57,6 +57,42 @@ page.on("console", (m) => { if (m.type() === "error") errores.push(m.text()); })
 let ultimoCuerpo = null;
 await page.route("**/api/profe", (ruta) => {
   ultimoCuerpo = JSON.parse(ruta.request().postData() || "{}");
+  const responde = (datos) => ruta.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(datos) });
+  if (ultimoCuerpo.modo === "leccion") {
+    return responde({
+      reply: "Te he hecho los apuntes del tema 2.",
+      leccion: {
+        resumen: "La materia es todo lo que tiene masa y ocupa un volumen. Se presenta en tres estados.",
+        apuntes: [
+          { titulo: "Propiedades de la materia", puntos: ["Masa: cantidad de materia (kg)", "Volumen: espacio que ocupa (m³)"] },
+          { titulo: "Estados", puntos: ["Sólido", "Líquido", "Gaseoso"] }
+        ],
+        conceptos: [
+          { termino: "Masa", definicion: "Cantidad de materia de un cuerpo" },
+          { termino: "Volumen", definicion: "Espacio que ocupa un cuerpo" }
+        ]
+      }
+    });
+  }
+  if (ultimoCuerpo.modo === "examen") {
+    return responde({
+      reply: "¡Vamos allá!",
+      examen: {
+        titulo: "Examen de prueba · La materia",
+        test: [
+          { pregunta: "¿En qué se mide la masa?", opciones: ["kg", "m³", "°C", "s"], correcta: 0 },
+          { pregunta: "¿Cuál NO es un estado de la materia?", opciones: ["Sólido", "Líquido", "Elástico", "Gaseoso"], correcta: 2 }
+        ],
+        desarrollo: [{ pregunta: "Explica qué es el volumen y pon un ejemplo.", puntos: 2, criterios: "Espacio que ocupa un cuerpo; ejemplo correcto." }]
+      }
+    });
+  }
+  if (ultimoCuerpo.modo === "corregir") {
+    return responde({
+      reply: "Buen trabajo.",
+      correccion: { correcciones: [{ nota: 6, bien: "La definición es correcta.", mejorar: "Falta un ejemplo.", modelo: "Es el espacio que ocupa un cuerpo; por ejemplo, un litro de agua ocupa 1 dm³." }] }
+    });
+  }
   if (ultimoCuerpo.imagen) {
     return ruta.fulfill({
       status: 200,
@@ -105,6 +141,7 @@ check("la app pinta la pantalla de hoy", await page.locator(".hero .saludo").isV
 check("arranca con las asignaturas de ESO puestas",
   (await page.evaluate(() => JSON.parse(localStorage.getItem("nicer-estudia:v1")).asignaturas.length)) > 5);
 check("la barra inferior tiene las 5 secciones", (await page.locator("#nav button").count()) === 5);
+check("el curso por defecto es 2º de ESO", (await page.locator("#sub-cabecera").textContent()).includes("2º ESO"));
 
 console.log("\n📚 Deberes");
 await page.click('[data-accion="ir"][data-vista="agenda"]').catch(() => {});
@@ -261,8 +298,8 @@ check("el esquema queda con su asignatura",
     return e.esquemas.length === 1 && e.esquemas[0].asignaturaId === mates.id;
   }));
 
-console.log("\n📓 Apuntes");
-await page.click('[data-accion="sub"][data-sub="apuntes"]');
+console.log("\n📓 Notas sueltas");
+await page.click('[data-accion="sub"][data-sub="lecciones"]');
 await page.click('[data-accion="nuevo-apunte"]');
 await page.fill("#f-titulo", "Tema 2 — la célula");
 await page.fill("#f-texto", "La célula es la unidad más pequeña de los seres vivos.");
@@ -342,6 +379,93 @@ check("el horario queda puesto", await page.evaluate(() => {
 }));
 check("y la asignatura que faltaba se añade", await page.evaluate(() =>
   JSON.parse(localStorage.getItem("nicer-estudia:v1")).asignaturas.some((a) => a.nombre === "Religión")));
+
+console.log("\n📘 Libros");
+await page.click('#nav button[data-vista="estudiar"]');
+await page.click('[data-accion="sub"][data-sub="lecciones"]');
+await page.click('[data-accion="nuevo-libro"]');
+await page.fill("#f-titulo", "Física y Química 2º ESO");
+await page.selectOption('select[name="asignatura"]', { label: "Física y Química" });
+await page.fill("#f-editorial", "Anaya");
+await page.click("#dlg-aceptar");
+check("se puede añadir un libro a mano", (await page.locator("main").textContent()).includes("Física y Química 2º ESO"));
+
+console.log("\n📖 Lección: resumen y apuntes");
+await page.click('[data-accion="nueva-leccion"]');
+await page.fill("#f-titulo", "Tema 2 — La materia");
+await page.selectOption('select[name="asignatura"]', { label: "Física y Química" });
+await page.selectOption('select[name="libro"]', { index: 1 });
+await page.fill("#f-texto", "La materia es todo lo que tiene masa y ocupa volumen. Estados: sólido, líquido y gaseoso.");
+await page.setInputFiles("#f-fotos", {
+  name: "pagina.png", mimeType: "image/png",
+  buffer: await leer(new URL("../nicer-estudia/icono-512.png", import.meta.url))
+});
+await page.click("#dlg-aceptar");
+await page.waitForSelector(".conceptos");
+check("al guardarla, Clara la resume sola", ultimoCuerpo?.modo === "leccion");
+check("le llegan el texto, la foto de la página y el libro",
+  ultimoCuerpo.leccion.texto.includes("masa") && ultimoCuerpo.imagenes?.length === 1
+  && ultimoCuerpo.imagenes[0].media_type === "image/jpeg" && ultimoCuerpo.leccion.libro === "Física y Química 2º ESO");
+check("se ven el resumen, los apuntes y los conceptos",
+  (await page.locator("main").textContent()).includes("tres estados")
+  && (await page.locator(".apartado").count()) === 2 && (await page.locator(".conceptos dt").count()) === 2);
+check("queda marcada como resumida", (await page.locator("main").textContent()).includes("Resumida"));
+check("la lección se guarda con su libro y sin la foto", await page.evaluate(() => {
+  const e = JSON.parse(localStorage.getItem("nicer-estudia:v1"));
+  const l = e.lecciones[0];
+  return l.libroId && l.resumida && l.apuntes.length === 2 && !JSON.stringify(e).includes("base64");
+}));
+
+await page.click('[data-accion="tarjetas-leccion"]');
+await page.click("#dlg-aceptar");
+check("los conceptos se convierten en tarjetas de repaso", await page.evaluate(() =>
+  JSON.parse(localStorage.getItem("nicer-estudia:v1")).tarjetas.some((t) => t.pregunta === "¿Qué es «Masa»?")));
+await page.click('[data-accion="tarjetas-leccion"]');
+check("y no se duplican si se pulsa dos veces", (await page.locator("#dlg-cuerpo").textContent()).includes("ya estaban"));
+await page.click("#dlg-aceptar");
+
+await page.click('[data-accion="esquema-leccion"]');
+check("los apuntes se convierten en esquema sin gastar internet", await page.evaluate(() =>
+  JSON.parse(localStorage.getItem("nicer-estudia:v1")).esquemas.some((e) => e.titulo === "Tema 2 — La materia")));
+
+console.log("\n🧪 Examen de prueba de la lección");
+await page.click('[data-accion="sub"][data-sub="lecciones"]');
+await page.click('[data-accion="abrir-leccion"]');
+await page.click('[data-accion="examen-leccion"]');
+await page.waitForSelector(".opcion");
+check("Clara prepara el examen con la lección", ultimoCuerpo?.modo === "examen" && ultimoCuerpo.contenido.includes("La materia"));
+await page.click(".opcion >> nth=0");          // bien (kg)
+await page.click('[data-accion="siguiente-pregunta"]');
+await page.click(".opcion >> nth=0");          // mal (Sólido)
+await page.click('[data-accion="siguiente-pregunta"]');
+check("tras el test llega la parte de desarrollo", await page.locator(".respuesta-desarrollo").isVisible());
+await page.fill(".respuesta-desarrollo", "Es el espacio que ocupa un cuerpo.");
+await page.click('[data-accion="entregar-examen"]');
+await page.waitForSelector('.flash:has-text("Nota")');
+check("Clara corrige lo que ha escrito", ultimoCuerpo?.modo === "corregir"
+  && ultimoCuerpo.preguntas[0].respuesta.includes("espacio"));
+check("la nota junta test y desarrollo (1 + 1,2 de 4 puntos = 5,5)",
+  (await page.locator(".flash .pastilla").first().textContent()).includes("5.5"));
+check("enseña la respuesta de 10", (await page.locator(".modelo").first().textContent()).includes("Respuesta de 10"));
+check("el examen queda en el historial con su nota", await page.evaluate(() =>
+  JSON.parse(localStorage.getItem("nicer-estudia:v1")).tests.some((t) => t.nota === 5.5)));
+await page.click('[data-accion="cerrar-test"]');
+
+console.log("\n📝 Examen con sus lecciones");
+await page.click('#nav button[data-vista="agenda"]');
+await page.click('[data-accion="nuevo-examen"]');
+await page.fill("#f-titulo", "Examen tema 2");
+await page.selectOption('select[name="asignatura"]', { label: "Física y Química" });
+await page.fill("#f-fecha", new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10));
+await page.check('input[name="lecciones"]');
+await page.click("#dlg-aceptar");
+check("el examen guarda qué lecciones entran", await page.evaluate(() =>
+  JSON.parse(localStorage.getItem("nicer-estudia:v1")).examenes.some((e) => e.titulo === "Examen tema 2" && e.leccionIds.length === 1)));
+await page.locator('.tarjeta:has-text("Examen tema 2") [data-accion="examen-prueba"]').click();
+await page.waitForSelector(".opcion");
+check("su examen de prueba se hace con esas lecciones",
+  ultimoCuerpo?.modo === "examen" && ultimoCuerpo.contenido.includes("Propiedades de la materia"));
+await page.click('[data-accion="cerrar-test"]');
 
 console.log("\n🎧 Sonido de fondo");
 await page.click('#nav button[data-vista="yo"]');

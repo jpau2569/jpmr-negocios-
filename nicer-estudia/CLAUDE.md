@@ -5,7 +5,7 @@ Las reglas generales del repositorio están en el `CLAUDE.md` de la raíz.
 
 ## Para quién es
 
-Nicer, hijo de Pau, alumno de ESO en el Colegio Lastra (Mieres, Asturias).
+Nicer, hijo de Pau, alumno de 2º de ESO en el Colegio Lastra (Mieres, Asturias), curso 26/27.
 No es una app de productividad para adultos. Todo se juzga con una pregunta:
 **¿esto hace que un chaval de 12-14 años la abra mañana otra vez?**
 
@@ -13,7 +13,8 @@ Los cuatro problemas que existe para resolver, en este orden:
 
 1. Se le olvidan los deberes → agenda, prioridad, tareas que se repiten y mochila de mañana
 2. Le cuesta arrancar y se distrae → concentración, sonido de fondo, planta, racha, "solo 5 minutos"
-3. Estudia y se le olvida → tarjetas con repaso espaciado, tests y esquemas
+3. Estudia y se le olvida → lecciones resumidas con apuntes, tarjetas con repaso espaciado,
+   tests, esquemas y examen de prueba de lo que entra
 4. Hay cosas que no entiende → Clara (escrita, hablada o con una foto)
 
 Si una idea nueva no ataca uno de esos cuatro, probablemente sobra.
@@ -47,6 +48,14 @@ Se sirve por HTTP, no con `file://`.
   prometa lo que no puede hacer).
 - **El horario leído de una foto se enseña antes de ponerlo** y solo cambia
   los días que salen en la foto.
+- **Los apuntes salen de SU lección**: Clara no añade temas que no estén en lo
+  que él metió, y el examen de prueba se hace solo con el contenido de sus
+  lecciones (si no hay ninguna, lo dice).
+- **Las fotos de las páginas no se guardan**: se reducen en el móvil, se
+  mandan a Clara una vez y se quedan en memoria solo hasta que la lección se
+  resume. Lo que se guarda es el texto: resumen, apuntes y conceptos.
+- **Lo que no necesita internet no lo usa**: tarjetas y esquema de una
+  lección salen de sus apuntes en el propio móvil (`lecciones.js`).
 - **Todo lo que escribe el alumno pasa por `escapa()`** antes de ir al HTML.
 - **La lista de "qué toca ahora" no pasa de 5** y el repaso diario tiene tope.
 - **El sonido de fondo se genera en el móvil** (`ambiente.js`), no se descarga:
@@ -63,7 +72,7 @@ Se sirve por HTTP, no con `file://`.
 ## Separación por capas
 
 `utiles.js` → `datos.js` / `repaso.js` / `cuestionario.js` / `esquema.js` /
-`ambiente.js` / `calendario.js` → `interfaz.js` → `app.js`
+`ambiente.js` / `calendario.js` / `lecciones.js` → `interfaz.js` → `app.js`
 
 `voz.js` (dictado y lectura en voz alta) y `foto.js` (reducir la foto en el
 móvil) tocan el navegador, pero su lógica pura (`idiomaDe`, `limpiaParaLeer`,

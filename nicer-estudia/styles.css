@@ -328,6 +328,38 @@ input[type="range"] { min-height: 32px; padding: 0; accent-color: var(--azul); }
 .escribiendo i:nth-child(3) { animation-delay: .3s; }
 @keyframes late { 0%, 60%, 100% { opacity: .3 } 30% { opacity: 1 } }
 
+/* ── Lecciones ─────────────────────────────────────────────────── */
+.grupo-materia { margin-top: 14px; }
+.grupo-materia h3 {
+  display: flex; align-items: center; gap: 8px;
+  font-size: .8rem; text-transform: uppercase; letter-spacing: .07em; color: var(--tinta-2); margin-bottom: 6px;
+}
+.leccion-fila { display: flex; align-items: center; gap: 10px; padding: 12px; }
+.leccion-fila + .leccion-fila { margin-top: 8px; }
+.leccion-fila .cuerpo { flex: 1; min-width: 0; }
+.leccion-fila .qué { font-weight: 650; word-break: break-word; }
+.leccion-fila .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.texto-leccion { white-space: pre-wrap; font-size: .95rem; line-height: 1.6; margin-top: 6px; word-break: break-word; }
+.apartado + .apartado { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--borde); }
+.apartado-titulo { font-weight: 700; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.apartado ul { margin: 6px 0 0; padding-left: 20px; list-style: disc; }
+.apartado li { margin: 3px 0; font-size: .94rem; }
+.conceptos { margin: 8px 0 0; }
+.conceptos dt { font-weight: 700; margin-top: 8px; }
+.conceptos dd { margin: 2px 0 0; color: var(--tinta-2); font-size: .92rem; }
+.acciones-leccion { display: grid; gap: 8px; margin-top: 12px; }
+.modelo {
+  margin-top: 6px; padding: 8px 10px; border-radius: 10px; font-size: .88rem;
+  background: var(--verde-suave); border: 1px solid color-mix(in srgb, var(--verde) 25%, transparent);
+}
+.lista-marcar { display: grid; gap: 4px; max-height: 220px; overflow: auto; padding: 4px 2px; }
+.marcar {
+  display: flex; align-items: center; gap: 10px; margin: 0; min-height: 44px;
+  font-size: .92rem; font-weight: 500; color: var(--tinta);
+}
+.marcar input { width: 22px; height: 22px; min-height: 0; flex: none; }
+.marcar small { color: var(--tinta-2); }
+
 /* ── Clara ─────────────────────────────────────────────────────── */
 .cabeza-clara { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
 .cabeza-clara .nombre { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }

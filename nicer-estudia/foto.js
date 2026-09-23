@@ -46,13 +46,15 @@ function aLienzo(imagen, maximo) {
   return lienzo;
 }
 
-/** Devuelve `{ media_type, data, miniatura }` o lanza un error legible. */
-export async function preparaFoto(archivo) {
+/** Devuelve `{ media_type, data, miniatura }` o lanza un error legible.
+    Las páginas de una lección van algo más pequeñas (1400 px, 72 %) para que
+    seis quepan juntas en una petición y el texto siga leyéndose bien. */
+export async function preparaFoto(archivo, { lado = LADO_MAXIMO, calidad = 0.8 } = {}) {
   if (!archivo || !/^image\//.test(archivo.type || '')) {
     throw new Error('Eso no parece una foto.');
   }
   const imagen = await decodifica(archivo);
-  const grande = aLienzo(imagen, LADO_MAXIMO).toDataURL('image/jpeg', 0.8);
+  const grande = aLienzo(imagen, lado).toDataURL('image/jpeg', calidad);
   const pequena = aLienzo(imagen, LADO_MINIATURA).toDataURL('image/jpeg', 0.7);
   imagen.close?.();
   return { media_type: 'image/jpeg', data: grande.split(',')[1], miniatura: pequena };

@@ -14,6 +14,7 @@ import { crearAmbiente, AMBIENTES } from './ambiente.js';
 import * as Voz from './voz.js';
 import { preparaFoto } from './foto.js';
 import { icsExamen } from './calendario.js';
+import * as L from './lecciones.js';
 
 /* ── Estado ─────────────────────────────────────────────────────── */
 let estado = D.cargar();
@@ -33,6 +34,11 @@ const ctx = {
   horarioPropuesto: null,   // horario leído de una foto, pendiente de confirmar
   fotoPendiente: null,      // foto elegida y reducida, aún sin mandar
   borrador: '',             // lo escrito en la caja, para no perderlo al repintar
+  leccionAbierta: null,     // lección que se está leyendo en Estudiar → Lecciones
+  filtroAsig: '',           // asignatura elegida en la lista de lecciones
+  resumiendo: null,         // lección que Clara está resumiendo ahora mismo
+  preparandoExamen: false,
+  fotosLeccion: {},         // fotos de páginas en memoria (no se guardan), por lección
   dictando: false,
   puedeDictar: Voz.puedeDictar(),
   puedeLeer: Voz.puedeLeer(),
@@ -133,7 +139,18 @@ function pide({ titulo, html, aceptar = 'Guardar' }) {
     };
     const ok = () => {
       const datos = {};
-      $('#dlg-cuerpo').querySelectorAll('[name]').forEach((c) => { datos[c.name] = c.value; });
+      $('#dlg-cuerpo').querySelectorAll('[name]').forEach((c) => {
+        // Las casillas marcadas se juntan en una lista (lecciones de un
+        // examen); los archivos se pasan tal cual (fotos de una lección).
+        if (c.type === 'checkbox') {
+          datos[c.name] = datos[c.name] || [];
+          if (c.checked) datos[c.name].push(c.value);
+        } else if (c.type === 'file') {
+          datos[c.name] = Array.from(c.files || []);
+        } else {
+          datos[c.name] = c.value;
+        }
+      });
       cierra(datos);
     };
     const no = (e) => { e?.preventDefault?.(); cierra(null); };
@@ -199,7 +216,8 @@ const acciones = {
     estado.examenes.push({
       id: id('ex'), titulo: (d.titulo || 'Examen').trim().slice(0, 120),
       asignaturaId: d.asignatura || null, fecha: d.fecha,
-      temas: (d.temas || '').trim().slice(0, 500), nota: null
+      temas: (d.temas || '').trim().slice(0, 500), nota: null,
+      leccionIds: Array.isArray(d.lecciones) ? d.lecciones : []
     });
     persiste(); render();
   },
@@ -242,8 +260,10 @@ const acciones = {
   'siguiente-pregunta': () => {
     if (!ctx.test) return;
     if (ctx.test.i + 1 < ctx.test.preguntas.length) { ctx.test.i += 1; render(); return; }
+    if (ctx.test.desarrollo.length) { ctx.test.fase = 'desarrollo'; render(); window.scrollTo({ top: 0 }); return; }
     terminaTest();
   },
+  'entregar-examen': () => entregaExamen(),
   'cerrar-test': () => { ctx.test = null; render(); },
 
   /* Esquemas */
@@ -522,8 +542,254 @@ const acciones = {
     render();
     enfocaCaja();
   },
-  'calendario-examen': (el) => llevaAlCalendario(el.dataset.id)
+  'calendario-examen': (el) => llevaAlCalendario(el.dataset.id),
+
+  /* Libros */
+  'nuevo-libro': async () => {
+    const d = await pide({ titulo: 'Añadir un libro', html: UI.formLibro(estado) });
+    if (!d || !d.titulo?.trim()) return;
+    estado.libros.push({
+      id: id('li'), titulo: d.titulo.trim().slice(0, 120),
+      asignaturaId: d.asignatura || null, editorial: (d.editorial || '').trim().slice(0, 60)
+    });
+    persiste(); render();
+  },
+  'borrar-libro': async (el) => {
+    if (!(await confirma('¿Borrar este libro? Sus lecciones se quedan, pero sin libro.'))) return;
+    estado.libros = estado.libros.filter((l) => l.id !== el.dataset.id);
+    estado = D.normaliza(estado);
+    persiste(); render();
+  },
+
+  /* Lecciones */
+  'filtro-asig': (el) => { ctx.filtroAsig = el.dataset.id || ''; render(); },
+  'nueva-leccion': () => editaLeccion(null),
+  'editar-leccion': (el) => editaLeccion(estado.lecciones.find((l) => l.id === el.dataset.id)),
+  'abrir-leccion': (el) => { ctx.leccionAbierta = el.dataset.id; render(); window.scrollTo({ top: 0 }); },
+  'cerrar-leccion': () => { ctx.leccionAbierta = null; Voz.calla(); render(); },
+  'borrar-leccion': async (el) => {
+    if (!(await confirma('¿Borrar esta lección y sus apuntes?'))) return;
+    estado.lecciones = estado.lecciones.filter((l) => l.id !== el.dataset.id);
+    estado = D.normaliza(estado); // la quita también de los exámenes
+    delete ctx.fotosLeccion[el.dataset.id];
+    ctx.leccionAbierta = null;
+    persiste(); render();
+  },
+  'resumir-leccion': (el) => resumeLeccion(el.dataset.id),
+  'escuchar-resumen': (el) => {
+    const l = estado.lecciones.find((x) => x.id === el.dataset.id);
+    if (l?.resumen) Voz.lee(l.resumen, Voz.idiomaDe(l.resumen));
+  },
+  'tarjetas-leccion': (el) => {
+    const l = estado.lecciones.find((x) => x.id === el.dataset.id);
+    if (!l) return;
+    const idioma = Voz.idiomaDe(l.conceptos.map((c) => c.definicion).join(' '));
+    // No se duplican: si ya hay una tarjeta con la misma pregunta, se salta.
+    const existentes = new Set(estado.tarjetas.map((t) => t.pregunta));
+    const nuevas = L.tarjetasDeLeccion(l, ctx.hoy, idioma).filter((t) => !existentes.has(t.pregunta));
+    for (const t of nuevas) estado.tarjetas.push({ id: id('tj'), ...t });
+    persiste();
+    avisa(nuevas.length
+      ? `${plural(nuevas.length, 'tarjeta añadida', 'tarjetas añadidas')} al repaso. Ya te tocan hoy.`
+      : 'Las tarjetas de esta lección ya estaban en tu repaso.');
+    render();
+  },
+  'esquema-leccion': (el) => {
+    const l = estado.lecciones.find((x) => x.id === el.dataset.id);
+    const esquema = l && L.esquemaDeLeccion(l);
+    if (!esquema) return;
+    estado.esquemas.push({ id: id('es'), asignaturaId: l.asignaturaId, ...esquema, fecha: ctx.hoy });
+    persiste();
+    ctx.leccionAbierta = null;
+    ctx.sub = 'esquemas';
+    render();
+    window.scrollTo({ top: 0 });
+  },
+  'examen-leccion': (el) => {
+    const l = estado.lecciones.find((x) => x.id === el.dataset.id);
+    if (!l) return;
+    preparaExamen({
+      titulo: l.titulo,
+      asignaturaId: l.asignaturaId,
+      lecciones: [l],
+      origen: { accion: 'examen-leccion', id: l.id }
+    });
+  },
+  'examen-prueba': (el) => {
+    const e = estado.examenes.find((x) => x.id === el.dataset.id);
+    if (!e) return;
+    preparaExamen({
+      titulo: e.titulo,
+      asignaturaId: e.asignaturaId,
+      temas: e.temas,
+      lecciones: L.leccionesDeExamen(estado, e),
+      origen: { accion: 'examen-prueba', id: e.id }
+    });
+  }
 };
+
+/* ── Lecciones ──────────────────────────────────────────────────── */
+async function editaLeccion(leccion) {
+  const d = await pide({
+    titulo: leccion ? 'Editar lección' : 'Nueva lección',
+    html: UI.formLeccion(estado, leccion),
+    aceptar: leccion ? 'Guardar' : 'Guardar y resumir'
+  });
+  if (!d) return;
+  const fotos = (d.fotos || []).slice(0, L.MAX_FOTOS_LECCION);
+  const texto = (d.texto || '').trim().slice(0, L.MAX_TEXTO_LECCION);
+  if (!leccion && !texto && !fotos.length) {
+    return avisa('Mete el texto de la lección o haz fotos a las páginas del libro.');
+  }
+  const datos = {
+    titulo: (d.titulo || '').trim().slice(0, 120) || `Lección del ${ctx.hoy}`,
+    asignaturaId: d.asignatura || null,
+    libroId: d.libro || null,
+    texto
+  };
+  let actual = leccion;
+  if (actual) {
+    Object.assign(actual, datos);
+  } else {
+    actual = { id: id('le'), ...datos, resumen: '', apuntes: [], conceptos: [], fecha: ctx.hoy, resumida: null };
+    estado.lecciones.push(actual);
+  }
+  estado = D.normaliza(estado);
+  persiste();
+  ctx.sub = 'lecciones';
+  ctx.leccionAbierta = actual.id;
+
+  if (fotos.length) {
+    try {
+      ctx.fotosLeccion[actual.id] = await Promise.all(
+        fotos.map((f) => preparaFoto(f, { lado: 1400, calidad: 0.72 })));
+    } catch (e) {
+      render();
+      return avisa(`No he podido abrir alguna foto: ${e.message}`);
+    }
+  }
+  render();
+  window.scrollTo({ top: 0 });
+  // Una lección nueva se resume sola: es para lo que la ha metido.
+  if (!leccion || fotos.length) resumeLeccion(actual.id);
+}
+
+async function resumeLeccion(idLeccion) {
+  const l = estado.lecciones.find((x) => x.id === idLeccion);
+  if (!l || ctx.resumiendo) return;
+  const fotos = ctx.fotosLeccion[l.id] || [];
+  if (!l.texto && !fotos.length) return;
+  ctx.resumiendo = l.id;
+  render();
+  try {
+    const datos = await llamaClara('leccion', {
+      leccion: {
+        titulo: l.titulo,
+        asignatura: D.nombreAsignatura(estado, l.asignaturaId),
+        libro: D.libro(estado, l.libroId)?.titulo || '',
+        texto: l.texto
+      },
+      imagenes: fotos.map((f) => ({ media_type: f.media_type, data: f.data }))
+    });
+    const material = L.leccionDeIA(datos.leccion);
+    if (!material) throw new Error(datos.reply || 'Clara no ha devuelto los apuntes.');
+    const guardada = estado.lecciones.find((x) => x.id === idLeccion);
+    if (guardada) {
+      Object.assign(guardada, material, { resumida: ctx.hoy });
+      delete ctx.fotosLeccion[idLeccion]; // ya cumplieron su función
+      marcaActividad();
+      persiste();
+      celebra();
+    }
+  } catch (e) {
+    avisa(`No he podido resumir la lección: ${e.message} Puedes volver a intentarlo desde la propia lección.`);
+  } finally {
+    ctx.resumiendo = null;
+    render();
+  }
+}
+
+/* Examen de prueba: Clara lo prepara con el contenido de las lecciones. Sin
+   conexión, cae a un test con sus tarjetas de esa asignatura, que es mejor
+   que nada y no depende de nadie. */
+async function preparaExamen({ titulo, asignaturaId, temas = '', lecciones = [], origen }) {
+  if (ctx.preparandoExamen) return;
+  ctx.preparandoExamen = true;
+  ctx.leccionAbierta = null;
+  ctx.vista = 'estudiar';
+  ctx.sub = 'test';
+  ctx.test = { titulo, preguntas: [], respuestas: [], desarrollo: [], respuestasDes: [], i: 0, fase: 'corrigiendo', preparando: true };
+  render();
+  try {
+    const datos = await llamaClara('examen', {
+      examen: { titulo, asignatura: D.nombreAsignatura(estado, asignaturaId), temas },
+      contenido: L.contenidoDeLecciones(lecciones)
+    });
+    const examen = L.examenDeIA(datos.examen, asignaturaId);
+    if (!examen) throw new Error('Clara no ha devuelto el examen.');
+    empiezaTest(examen.test, `Examen de prueba · ${titulo}`, { desarrollo: examen.desarrollo, origen, asignaturaId });
+    if (!lecciones.length) avisa('Este examen está hecho con lo que se da en 2º de ESO de ese tema, no con tus apuntes. Mete las lecciones para que se parezca más al de verdad.');
+  } catch (e) {
+    const propias = estado.tarjetas.filter((t) => !asignaturaId || t.asignaturaId === asignaturaId);
+    const preguntas = Q.generaDesdeTarjetas(propias.length >= Q.MIN_TARJETAS ? propias : estado.tarjetas, { cuantas: 8 });
+    if (preguntas.length) {
+      empiezaTest(preguntas, `Test de repaso · ${titulo}`, { origen });
+      avisa(`Clara no ha podido preparar el examen (${e.message}). Te pongo un test con tus tarjetas mientras tanto.`);
+    } else {
+      ctx.test = null;
+      render();
+      avisa(`Clara no ha podido preparar el examen: ${e.message}`);
+    }
+  } finally {
+    ctx.preparandoExamen = false;
+  }
+}
+
+/* Las respuestas de desarrollo las corrige Clara con los criterios que ella
+   misma puso. Si no hay conexión, se enseña qué debía incluir cada una. */
+async function entregaExamen() {
+  const t = ctx.test;
+  if (!t || t.fase !== 'desarrollo') return;
+  t.fase = 'corrigiendo';
+  render();
+  let correccion = null;
+  try {
+    const datos = await llamaClara('corregir', {
+      preguntas: t.desarrollo.map((p, i) => ({ pregunta: p.pregunta, criterios: p.criterios, respuesta: t.respuestasDes[i] || '' }))
+    });
+    correccion = L.correccionDeIA(datos.correccion, t.desarrollo.length);
+  } catch { /* se queda sin corrección: el resultado lo explica */ }
+  terminaTest(correccion);
+}
+
+/** Llamada a Clara en un modo de trabajo, con tiempo máximo: resumir seis
+    páginas puede tardar, pero nunca dejar la pantalla colgada. */
+async function llamaClara(modo, cuerpo, espera = 75000) {
+  const corte = new AbortController();
+  const alarma = setTimeout(() => corte.abort(), espera);
+  try {
+    const res = await fetch('/api/profe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: corte.signal,
+      body: JSON.stringify({
+        modo, ...cuerpo,
+        curso: estado.alumno.curso,
+        nombre: estado.alumno.nombre,
+        asignaturas: estado.asignaturas.map((x) => x.nombre)
+      })
+    });
+    const datos = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(datos.error || `Error ${res.status}.`);
+    return datos;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Ha tardado demasiado.');
+    if (!navigator.onLine) throw new Error('No hay conexión.');
+    throw e;
+  } finally {
+    clearTimeout(alarma);
+  }
+}
 
 function enfocaCaja() {
   const caja = $('#profe-texto');
@@ -557,26 +823,51 @@ async function llevaAlCalendario(idExamen) {
 }
 
 /* ── Test ───────────────────────────────────────────────────────── */
-function empiezaTest(preguntas, titulo) {
+function empiezaTest(preguntas, titulo, { desarrollo = [], origen = null, asignaturaId = null } = {}) {
   ctx.test = {
     titulo,
     preguntas,
     respuestas: preguntas.map(() => null),
+    desarrollo,
+    respuestasDes: desarrollo.map(() => ''),
+    correccion: null,
+    origen,
+    asignaturaId,
     i: 0,
+    // Un examen sin parte tipo test empieza directamente por el desarrollo.
+    fase: preguntas.length ? 'test' : 'desarrollo',
     terminado: false,
     resultado: null
   };
+  ctx.vista = 'estudiar';
   ctx.sub = 'test';
   render();
+  window.scrollTo({ top: 0 });
 }
 
 /* Al terminar, lo fallado no se queda en un número: vuelve al repaso. Esa es
    la diferencia entre un test que entretiene y uno que sirve. */
-function terminaTest() {
+function terminaTest(correccion = null) {
   const t = ctx.test;
   if (!t) return;
   const resultado = Q.corrige(t.preguntas, t.respuestas);
+  if (t.desarrollo.length) {
+    // Con desarrollo corregido, la nota es la del examen entero; si Clara no
+    // pudo corregir, la nota es solo la del test (y la pantalla lo dice).
+    if (correccion) resultado.nota = L.notaFinal(resultado, t.desarrollo, correccion.map((c) => c.nota));
+    t.correccion = correccion;
+    // Lo que se hizo mal en el desarrollo también vuelve al repaso.
+    (correccion || []).forEach((c, i) => {
+      if (c.nota < 5 && c.modelo) {
+        estado.tarjetas.push({
+          id: id('tj'),
+          ...R.nuevaTarjeta({ pregunta: t.desarrollo[i].pregunta, respuesta: c.modelo, asignaturaId: t.asignaturaId, origen: 'ia' }, ctx.hoy)
+        });
+      }
+    });
+  }
   t.resultado = resultado;
+  t.fase = 'terminado';
   t.terminado = true;
 
   for (const fallada of resultado.falladas) {
@@ -598,7 +889,7 @@ function terminaTest() {
 
   estado.tests.push({
     id: id('te'),
-    asignaturaId: t.preguntas[0]?.asignaturaId || null,
+    asignaturaId: t.asignaturaId || t.preguntas[0]?.asignaturaId || null,
     titulo: t.titulo,
     aciertos: resultado.aciertos,
     total: resultado.total,
@@ -606,7 +897,7 @@ function terminaTest() {
     fecha: ctx.hoy
   });
 
-  ctx.hechasHoy += resultado.total;
+  ctx.hechasHoy += resultado.total + t.desarrollo.length;
   marcaActividad();
   if (resultado.nota >= 5) { tono(660, 0.12); tono(880, 0.18, 0.12); }
   persiste();
@@ -903,6 +1194,9 @@ async function preguntaAlProfe() {
 
 document.addEventListener('input', (ev) => {
   if (ev.target?.id === 'profe-texto') ctx.borrador = ev.target.value;
+  if (ev.target?.classList?.contains('respuesta-desarrollo') && ctx.test) {
+    ctx.test.respuestasDes[Number(ev.target.dataset.i)] = ev.target.value;
+  }
 });
 
 document.addEventListener('change', async (ev) => {

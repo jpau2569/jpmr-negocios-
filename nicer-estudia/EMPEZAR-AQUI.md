@@ -31,7 +31,35 @@ horas: es para no llevarte sustos y para que lo que estudies se te quede.
 - **Al llegar a casa**: abre **Hoy**. Lo que pone ahí es lo que toca. Nada más.
   Le das a *Empezar 25 minutos* y no piensas en el resto.
 
-## 4. Las tarjetas (esto es lo que más sube las notas)
+## 4. Tus lecciones: resumen y apuntes en un minuto
+
+En **Estudiar → Lecciones**:
+
+1. Primero, en **Mis libros**, apunta tus libros de texto (si te falta alguna
+   asignatura, añádela en Yo → Asignaturas).
+2. Dale a **📖 Meter la lección que estoy estudiando**: pon qué tema es, de qué
+   asignatura y libro, y **hazle fotos a las páginas** (hasta 6) o pega el
+   texto.
+3. Clara te hace el **resumen**, los **apuntes** por apartados y los
+   **conceptos clave**. Puedes escuchar el resumen con 🔊.
+4. Con un toque, los conceptos se convierten en **tarjetas de repaso** y los
+   apuntes en un **esquema**.
+
+Truco: mete cada lección el mismo día que la dais en clase. El día antes del
+examen ya lo tienes todo hecho.
+
+## 5. El examen de prueba (antes del de verdad)
+
+En cada lección, y en cada examen de la Agenda, tienes **🧪 Examen de prueba**.
+Clara te pone un examen como los de 2º: una parte tipo test y 2 o 3 preguntas
+para contestar con tus palabras. Cuando lo entregas, te corrige cada respuesta:
+qué tienes bien, qué te falta y cómo sería la respuesta de 10.
+
+Cuando apuntes un examen en la Agenda, **marca qué lecciones entran**: así el
+examen de prueba sale justo de eso. Hazlo 2-3 días antes del de verdad; lo que
+falles vuelve solo a tus tarjetas.
+
+## 6. Las tarjetas (esto es lo que más sube las notas)
 
 Una tarjeta es una pregunta y su respuesta. Leer los apuntes cinco veces
 funciona mucho peor que hacerte la pregunta a ti mismo una vez.
@@ -45,7 +73,7 @@ Luego, cada día, la app te saca solo las que tocan. Si la sabes, tarda más en
 volver; si fallas, vuelve mañana. Cinco minutos al día y llegas al examen con
 la mitad del trabajo hecho.
 
-## 5. Ponte a prueba con un test
+## 7. Ponte a prueba con un test
 
 En **Estudiar → Test** tienes dos formas de saber si de verdad te lo sabes:
 
@@ -59,7 +87,7 @@ así que no tienes que apuntar nada.
 Regla útil: haz el test dos días antes del examen, no la noche de antes. Te da
 tiempo a arreglar lo que salga mal.
 
-## 6. El esquema del tema
+## 8. El esquema del tema
 
 Antes de ponerte a memorizar, pídele al Profe: «hazme un esquema de la Edad
 Media». Te lo dibuja como un mapa con el título en el centro y las ramas
@@ -68,13 +96,13 @@ PNG** para pegarlo en los apuntes o mandarlo al grupo de clase.
 
 Ver el tema entero de un vistazo hace que luego todo lo demás se agarre mejor.
 
-## 7. Sonido de fondo
+## 9. Sonido de fondo
 
 Si el silencio te distrae, en la pantalla de concentración tienes lluvia,
 cafetería, biblioteca o mar. El sonido lo fabrica el propio móvil, así que no
 gasta datos y funciona sin cobertura.
 
-## 8. Clara, tu profe
+## 10. Clara, tu profe
 
 Es la misma Clara que ayuda a tu padre, pero contigo hace de profesora. Le
 puedes preguntar lo que no entiendas las veces que haga falta, sin cortarte:
@@ -92,7 +120,7 @@ Dos cosas que tienes que saber:
 - **A veces se equivoca.** Si algo no te cuadra con lo que dijo tu profesor de
   clase, manda tu profesor de clase.
 
-## 9. Si algo va mal de verdad
+## 11. Si algo va mal de verdad
 
 Si alguna vez estás mal (alguien te hace la vida imposible, te sientes muy
 triste, algo en casa), eso no se lo cuentes a una app: díselo a tu padre, a tu

@@ -23,6 +23,12 @@
 //    [[TEST]]     → preguntas de opción múltiple para autoevaluarse
 //    [[ESQUEMA]]  → el tema en ramas, que la app dibuja como mapa
 //    [[HORARIO]]  → el horario semanal leído de una foto
+//
+//  Además del chat, tres modos de trabajo (campo `modo` de la petición):
+//    leccion  → resume una lección (texto o hasta 6 fotos de páginas) en
+//               resumen, apuntes y conceptos clave        → [[LECCION]]
+//    examen   → examen de prueba de las lecciones que entran → [[EXAMEN]]
+//    corregir → corrige las preguntas de desarrollo          → [[CORRECCION]]
 // ============================================================================
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -39,6 +45,51 @@ const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
 // Vercel corta las peticiones de más de 4,5 MB. La app ya reduce la foto a
 // 1600 px (unos 300-600 KB), así que esto solo frena lo que no viene de ella.
 const MAX_IMAGEN_B64 = 3_500_000;
+const MAX_FOTOS_LECCION = 6;
+const MAX_TOTAL_B64 = 3_800_000; // todas las páginas juntas, por debajo de los 4,5 MB
+const MODOS = ["chat", "leccion", "examen", "corregir"];
+
+/* Instrucciones de cada modo de trabajo. Van en un bloque de sistema aparte
+   del principal para que el prompt de Clara (el largo) siga en caché. */
+const INSTRUCCIONES_MODO = {
+  leccion: `## Modo lección: resumen y apuntes
+Te paso una lección que está estudiando (escrita o en fotos de las páginas del libro). Tu
+trabajo es dejarle el mejor material de estudio posible, fiel a SU lección: no añadas temas
+que no salen en ella ni te inventes datos. Si una foto no se lee, dilo en tu respuesta.
+Escribe una o dos líneas para él ("Te he hecho los apuntes del tema 3…") y después el bloque:
+[[LECCION]]
+{"resumen":"…","apuntes":[{"titulo":"…","puntos":["…","…"]}],"conceptos":[{"termino":"…","definicion":"…"}]}
+[[/LECCION]]
+- resumen: 5-8 frases claras, lo esencial de la lección, a su nivel.
+- apuntes: 3-8 apartados siguiendo el orden de la lección; cada uno con 2-6 puntos cortos
+  (una línea), con los datos, fechas, fórmulas y ejemplos que de verdad entran.
+- conceptos: 5-12 términos clave con una definición de una línea, con sus palabras.
+Si la lección está en inglés (asignaturas bilingües), los apuntes van en inglés.`,
+
+  examen: `## Modo examen de prueba
+Hazle un examen de prueba como los de verdad de 2º de ESO, SOLO con lo que sale en el
+contenido de sus lecciones que te paso. Escribe una línea de ánimo y después el bloque:
+[[EXAMEN]]
+{"titulo":"…","test":[{"pregunta":"…","opciones":["…","…","…","…"],"correcta":0}],"desarrollo":[{"pregunta":"…","puntos":2,"criterios":"…"}]}
+[[/EXAMEN]]
+- test: 6-8 preguntas de opción múltiple, 4 opciones creíbles, "correcta" es el índice (desde 0).
+- desarrollo: 2-3 preguntas para contestar con sus palabras (definir, explicar, comparar,
+  resolver un problema). "puntos" entre 1 y 4. "criterios": lo que tiene que aparecer en una
+  respuesta de 10, para corregirla después (él no lo ve hasta el final).
+- Mezcla lo fácil con lo que más cuesta, y reparte las preguntas entre todas las lecciones.`,
+
+  corregir: `## Modo corregir
+Corrige sus respuestas de desarrollo como una profesora justa y cariñosa: valora lo que
+está bien aunque esté mal escrito, y di en concreto qué falta. Usa los criterios de cada
+pregunta. Escribe una línea de valoración general y después el bloque, con una corrección por
+pregunta y en el mismo orden:
+[[CORRECCION]]
+{"correcciones":[{"nota":7,"bien":"…","mejorar":"…","modelo":"…"}]}
+[[/CORRECCION]]
+- nota: de 0 a 10 (se admiten decimales). Una respuesta en blanco es 0.
+- bien: lo que ha hecho bien (una frase). mejorar: lo que le falta o sobra (una frase).
+- modelo: la respuesta de 10, corta, para que la aprenda.`
+};
 
 function systemPrompt({ nombre, curso, asignaturas, buscador }) {
   const materias = asignaturas.length ? asignaturas.join(", ") : "las asignaturas de su curso";
@@ -191,10 +242,23 @@ export function separaBloques(bruto) {
   texto = conHorario.texto;
   const horario = horarioValido(conHorario.datos);
 
+  // Material de los modos de trabajo: aquí solo se comprueba que sea un
+  // objeto; la app lo valida campo a campo con lecciones.js antes de usarlo.
+  const objeto = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : null);
+  const conLeccion = extraeBloque(texto, "LECCION");
+  texto = conLeccion.texto;
+  const conExamen = extraeBloque(texto, "EXAMEN");
+  texto = conExamen.texto;
+  const conCorreccion = extraeBloque(texto, "CORRECCION");
+  texto = conCorreccion.texto;
+
   return {
     visible: texto.trim(),
     tarjetas,
     horario,
+    leccion: objeto(conLeccion.datos),
+    examen: objeto(conExamen.datos),
+    correccion: objeto(conCorreccion.datos),
     test: preguntas.length ? preguntas : [],
     esquema: ramas.length
       ? {
@@ -247,6 +311,60 @@ export function imagenValida(imagen) {
   return { media_type: tipo, data: datos };
 }
 
+/** Varias fotos (páginas de una lección): válidas, como mucho 6 y sin pasar
+    del total que cabe en una petición de Vercel. */
+export function imagenesValidas(imagenes) {
+  const salida = [];
+  let total = 0;
+  for (const bruta of Array.isArray(imagenes) ? imagenes : []) {
+    const foto = imagenValida(bruta);
+    if (!foto) continue;
+    if (total + foto.data.length > MAX_TOTAL_B64 || salida.length >= MAX_FOTOS_LECCION) break;
+    total += foto.data.length;
+    salida.push(foto);
+  }
+  return salida;
+}
+
+const bloqueImagen = (f) => ({ type: "image", source: { type: "base64", media_type: f.media_type, data: f.data } });
+const corta = (v, n) => String(v ?? "").slice(0, n);
+
+/** El único mensaje de un modo de trabajo. Devuelve null si falta lo básico. */
+export function mensajeDeModo(modo, cuerpo) {
+  if (modo === "leccion") {
+    const l = cuerpo.leccion || {};
+    const fotos = imagenesValidas(cuerpo.imagenes);
+    const textoLeccion = corta(l.texto, 30000).trim();
+    if (!fotos.length && !textoLeccion) return null;
+    const cabecera = `Esta es mi lección de ${corta(l.asignatura, 60) || "clase"}`
+      + (l.libro ? ` (libro: ${corta(l.libro, 120)})` : "")
+      + ` titulada «${corta(l.titulo, 120) || "sin título"}».`
+      + (fotos.length ? ` Te mando ${fotos.length} foto(s) de las páginas.` : "")
+      + (textoLeccion ? `\n\nTexto de la lección:\n${textoLeccion}` : "")
+      + "\n\nHazme el resumen, los apuntes y los conceptos clave.";
+    return { role: "user", content: [...fotos.map(bloqueImagen), { type: "text", text: cabecera }] };
+  }
+  if (modo === "examen") {
+    const e = cuerpo.examen || {};
+    const contenido = corta(cuerpo.contenido, 16000).trim();
+    const texto = `Hazme un examen de prueba de ${corta(e.asignatura, 60) || "mi asignatura"}: «${corta(e.titulo, 120) || "examen"}».`
+      + (e.temas ? ` Entra: ${corta(e.temas, 500)}.` : "")
+      + (contenido
+        ? `\n\nEste es el contenido de mis lecciones (usa solo esto):\n${contenido}`
+        : "\n\nNo tengo las lecciones metidas en la app: hazlo con lo que se da en 2º de ESO de ese tema, y avísame de que no es con mis apuntes.");
+    return { role: "user", content: texto };
+  }
+  if (modo === "corregir") {
+    const preguntas = (Array.isArray(cuerpo.preguntas) ? cuerpo.preguntas : []).slice(0, 4);
+    if (!preguntas.length) return null;
+    const texto = "Corrígeme estas respuestas de desarrollo:\n\n" + preguntas.map((p, i) =>
+      `${i + 1}. Pregunta: ${corta(p.pregunta, 400)}\n   Criterios: ${corta(p.criterios, 800)}\n   Mi respuesta: ${corta(p.respuesta, 3000).trim() || "(en blanco)"}`
+    ).join("\n\n");
+    return { role: "user", content: texto };
+  }
+  return null;
+}
+
 const HERRAMIENTA_BUSCAR = {
   name: "buscar_web",
   description:
@@ -279,8 +397,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "La petición no es JSON válido." });
   }
   const { mensajes, curso, nombre, asignaturas, imagen } = cuerpo;
+  const modo = MODOS.includes(cuerpo.modo) ? cuerpo.modo : "chat";
 
-  const history = (Array.isArray(mensajes) ? mensajes : [])
+  const history = modo !== "chat" ? [] : (Array.isArray(mensajes) ? mensajes : [])
     .filter((m) => (m?.role === "user" || m?.role === "profe" || m?.role === "assistant")
       && typeof m.content === "string" && m.content.trim())
     .slice(-MAX_HISTORY)
@@ -289,12 +408,22 @@ export default async function handler(req, res) {
       content: m.content.slice(0, 4000),
     }));
 
+  if (modo !== "chat") {
+    const mensaje = mensajeDeModo(modo, cuerpo);
+    if (!mensaje) {
+      return res.status(400).json({ error: modo === "leccion"
+        ? "Mete el texto de la lección o alguna foto de las páginas."
+        : "Faltan datos para hacerlo." });
+    }
+    history.push(mensaje);
+  }
+
   if (!history.length || history[0].role !== "user") {
     return res.status(400).json({ error: "La conversación tiene que empezar con una pregunta." });
   }
 
   // La foto va delante del texto en el último mensaje del alumno.
-  const foto = imagenValida(imagen);
+  const foto = modo === "chat" ? imagenValida(imagen) : null;
   const ultimo = history[history.length - 1];
   if (foto && ultimo.role === "user") {
     ultimo.content = [
@@ -306,7 +435,7 @@ export default async function handler(req, res) {
   const buscador = Boolean(process.env.GEMINI_API_KEY);
   const system = systemPrompt({
     nombre: String(nombre || "Nicer").slice(0, 40),
-    curso: String(curso || "1º ESO").slice(0, 40),
+    curso: String(curso || "2º ESO").slice(0, 40),
     asignaturas: (Array.isArray(asignaturas) ? asignaturas : []).slice(0, 20).map((a) => String(a).slice(0, 60)),
     buscador,
   });
@@ -315,14 +444,16 @@ export default async function handler(req, res) {
     model: MODEL,
     max_tokens: MAX_TOKENS,
     thinking: { type: "adaptive" },
-    // Es un chat con un chaval: rapidez antes que exhaustividad.
-    output_config: { effort: "medium" },
+    // Es un chat con un chaval: rapidez antes que exhaustividad. Corregir es
+    // lo más sencillo y lo que más impaciencia da, así que va en "low".
+    output_config: { effort: modo === "corregir" ? "low" : "medium" },
     system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
     messages: history,
   };
+  if (INSTRUCCIONES_MODO[modo]) peticion.system.push({ type: "text", text: INSTRUCCIONES_MODO[modo] });
   // Sin clave de Gemini no se ofrece la herramienta: así Clara no promete
-  // buscar algo que luego no puede.
-  if (buscador) peticion.tools = [HERRAMIENTA_BUSCAR];
+  // buscar algo que luego no puede. En los modos de trabajo no hace falta.
+  if (buscador && modo === "chat") peticion.tools = [HERRAMIENTA_BUSCAR];
 
   try {
     const client = new Anthropic();
@@ -356,18 +487,18 @@ export default async function handler(req, res) {
     if (respuesta.stop_reason === "refusal") {
       return res.status(200).json({
         reply: "Eso no te lo puedo contestar yo. Si es algo del cole, pregúntamelo de otra manera; si es otra cosa, mejor háblalo con tu padre.",
-        tarjetas: [], test: [], esquema: null, horario: null, busquedas,
+        tarjetas: [], test: [], esquema: null, horario: null, leccion: null, examen: null, correccion: null, busquedas, modo,
       });
     }
 
-    const { visible, tarjetas, test, esquema, horario } = separaBloques(textoDe(respuesta.content));
+    const { visible, tarjetas, test, esquema, horario, leccion, examen, correccion } = separaBloques(textoDe(respuesta.content));
     const reply = visible
       || (respuesta.stop_reason === "tool_use"
         ? "He buscado bastante y no he llegado a una respuesta clara. ¿Me lo preguntas de otra forma?"
         : "No he sabido responder a eso. ¿Me lo cuentas de otra manera?");
 
     res.setHeader("Cache-Control", "no-store");
-    return res.status(200).json({ reply, tarjetas, test, esquema, horario, busquedas });
+    return res.status(200).json({ reply, tarjetas, test, esquema, horario, leccion, examen, correccion, busquedas, modo });
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError) {
       return res.status(500).json({ error: "La clave ANTHROPIC_API_KEY no es válida." });

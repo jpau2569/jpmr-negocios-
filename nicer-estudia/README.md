@@ -7,7 +7,7 @@ concentración con sonido de fondo y **Clara**, la profesora de IA: explica
 dudas escritas, habladas o con una foto, busca información para los trabajos
 citando la fuente, lee el horario de una foto y prepara el material.
 
-Pensada para un alumno de 1º-2º de ESO que usa el móvil y el PC de casa.
+Pensada para un alumno de 2º de ESO (curso por defecto; se cambia en Ajustes) que usa el móvil y el PC de casa.
 **Todos los datos viven en el dispositivo** (`localStorage`): no hay cuenta,
 no hay servidor de datos y no sale nada del móvil. Lo único que sale a
 internet es lo que se le manda a Clara: la pregunta y, si él quiere, una foto
@@ -52,6 +52,36 @@ menor acaben en siete servidores:
 Lo que **no** se ha copiado, a propósito: cuentas de usuario, sincronización
 en la nube y bloqueo de otras apps (una web no puede bloquear el móvil; en su
 lugar se cuenta cuántas veces se sale, que es honesto y funciona parecido).
+
+## Lecciones, libros y examen de prueba (versión 4.0)
+
+La pestaña **Estudiar → Lecciones** es el cuaderno de todas sus materias:
+
+1. **Mis libros**: añade a mano sus libros de texto por asignatura (y en Yo →
+   Asignaturas, las asignaturas que falten).
+2. **Meter la lección que estoy estudiando**: título, asignatura, libro y el
+   contenido — escrito, pegado o con **hasta 6 fotos de las páginas** (se
+   reducen en el móvil a 1400 px JPEG 72 % para que quepan juntas en una
+   petición; no se guardan).
+3. Al guardarla, **Clara la resume sola**: resumen, apuntes por apartados y
+   conceptos clave (modo `leccion` de `/api/profe`, bloque `[[LECCION]]`).
+4. Desde la lección, **sin gastar internet**: los conceptos se convierten en
+   tarjetas de repaso (sin duplicarse) y los apuntes en esquema
+   (`lecciones.js`).
+5. **Examen de prueba** de una lección, o de un examen de la Agenda con las
+   lecciones que se marcaron al apuntarlo (si no se marcó ninguna, se usan las
+   resumidas de esa asignatura). Como uno de verdad de 2º de ESO: parte tipo
+   test (se corrige sola) y 2-3 preguntas de desarrollo que **corrige Clara**
+   con criterios, nota por pregunta, qué está bien, qué falta y la respuesta
+   de 10. La nota final pesa el desarrollo como en un examen real (cada
+   pregunta de desarrollo vale sus puntos; cada una de test, 1).
+6. Lo fallado vuelve al repaso: las preguntas de test falladas y las de
+   desarrollo por debajo de 5 (con la respuesta de 10 como respuesta de la
+   tarjeta).
+
+Sin conexión, el examen de prueba cae a un test con sus tarjetas de esa
+asignatura; si Clara no puede corregir el desarrollo, la nota es solo la del
+test y se enseña qué debía incluir cada respuesta.
 
 ## Clara, la profe (versión 3.0)
 
@@ -109,6 +139,8 @@ Cada capa solo conoce a la de debajo:
 - `voz.js` — dictado y lectura en voz alta (español e inglés)
 - `foto.js` — reduce la foto en el móvil antes de mandársela a Clara
 - `calendario.js` — el examen y su plan como archivo `.ics` con avisos
+- `lecciones.js` — validar lo que devuelve Clara, lección → tarjetas y
+  esquema, contenido para el examen, examen de prueba y nota final (puro)
 - `clara.jpg` — la cara de Clara (192 px, recortada de `../clara-rostro.jpg`)
 - `interfaz.js` — render puro: recibe estado, devuelve HTML
 - `app.js` — estado, eventos, temporizador, Profe y PWA
@@ -121,7 +153,10 @@ Cada capa solo conoce a la de debajo:
 ## El backend de Clara
 
 `POST /api/profe` con `{ mensajes, curso, nombre, asignaturas, imagen? }`
-devuelve `{ reply, tarjetas, test, esquema, horario, busquedas }`. Necesita
+devuelve `{ reply, tarjetas, test, esquema, horario, busquedas }`. Con
+`modo: "leccion" | "examen" | "corregir"` hace el trabajo de ese modo (cada uno
+con sus instrucciones en un bloque de sistema aparte, para que el prompt de
+Clara siga en caché) y devuelve `leccion`, `examen` o `correccion`. Necesita
 `ANTHROPIC_API_KEY` en Vercel; `GEMINI_API_KEY` es opcional (sin ella, Clara
 no busca en Internet). Tope de 8000 tokens por respuesta: con los 1200 de la
 primera versión, un test de diez preguntas podía cortarse a medias y perderse.
@@ -143,6 +178,9 @@ backend extrae y devuelve aparte; el alumno nunca ve el bloque:
 | `[[TEST]]` | Un test de opción múltiple, con lo fallado volviendo al repaso |
 | `[[ESQUEMA]]` | Un mapa del tema, dibujado por `esquema.js` |
 | `[[HORARIO]]` | El horario semanal leído de una foto, para confirmar y poner |
+| `[[LECCION]]` | Resumen, apuntes y conceptos de una lección (modo `leccion`) |
+| `[[EXAMEN]]` | Examen de prueba: parte tipo test + desarrollo con criterios (modo `examen`) |
+| `[[CORRECCION]]` | Nota, lo bueno, lo que falta y la respuesta de 10 por pregunta (modo `corregir`) |
 
 Si el JSON viene roto o una pregunta no cuadra (opciones vacías, índice de
 respuesta fuera de rango), esa pieza se descarta y el resto sigue: nunca se

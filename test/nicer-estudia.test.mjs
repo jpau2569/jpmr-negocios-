@@ -12,7 +12,8 @@ import * as UI from "../nicer-estudia/interfaz.js";
 import * as Q from "../nicer-estudia/cuestionario.js";
 import { dibujaEsquema, esquemaDeIA, parteTexto } from "../nicer-estudia/esquema.js";
 import * as A from "../nicer-estudia/ambiente.js";
-import profe, { separaTarjetas, separaBloques, imagenValida } from "../api/_profe.js";
+import profe, { separaTarjetas, separaBloques, imagenValida, imagenesValidas, mensajeDeModo } from "../api/_profe.js";
+import * as L from "../nicer-estudia/lecciones.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { icsExamen, escapaIcs, doblaLinea } from "../nicer-estudia/calendario.js";
 import { idiomaDe, limpiaParaLeer } from "../nicer-estudia/voz.js";
@@ -202,6 +203,15 @@ console.log("\n🤖 API del Profe");
   check("solo se aceptan fotos JPEG, PNG o WebP", imagenValida({ media_type: "image/gif", data: "QUJD" }) === null);
   check("una foto con datos raros se ignora", imagenValida({ media_type: "image/jpeg", data: "<script>" }) === null);
   check("una foto enorme se ignora", imagenValida({ media_type: "image/jpeg", data: "A".repeat(4_000_000) }) === null);
+  check("como mucho 6 páginas por lección", imagenesValidas(Array(10).fill({ media_type: "image/jpeg", data: "QUJD" })).length === 6);
+  check("y sin pasar del tamaño que cabe en Vercel",
+    imagenesValidas(Array(3).fill({ media_type: "image/jpeg", data: "A".repeat(1_500_000) })).length === 2);
+  const examenMsg = mensajeDeModo("examen", { examen: { titulo: "Tema 2", asignatura: "FyQ" }, contenido: "" });
+  check("sin lecciones, el examen avisa de que no es con sus apuntes", examenMsg.content.includes("No tengo las lecciones"));
+  check("un modo sin datos no genera mensaje", mensajeDeModo("corregir", { preguntas: [] }) === null);
+  const bloques = separaBloques('Listo.\n[[EXAMEN]]{"titulo":"t","test":[],"desarrollo":[]}[[/EXAMEN]]\n[[CORRECCION]][1,2][[/CORRECCION]]');
+  check("el examen del modo examen llega aparte", bloques.examen?.titulo === "t" && bloques.visible === "Listo.");
+  check("un bloque que no es un objeto se descarta", bloques.correccion === null);
 }
 
 console.log("\n🤖 Clara por dentro (Claude y Gemini simulados)");
@@ -271,6 +281,38 @@ console.log("\n🤖 Clara por dentro (Claude y Gemini simulados)");
   check("con su tipo y en base64", contenido[0].source.media_type === "image/jpeg" && contenido[0].source.type === "base64");
   check("sin clave de Gemini no se ofrece el buscador", !peticiones[0].tools);
   check("y el prompt no promete buscar", !peticiones[0].system[0].text.includes("buscar_web"));
+
+  // Modos de trabajo: lección con fotos, sin buscador y con sus instrucciones.
+  process.env.GEMINI_API_KEY = "clave-de-prueba";
+  peticiones.length = 0;
+  Anthropic.Messages.prototype.create = async function (p) {
+    peticiones.push(JSON.parse(JSON.stringify(p)));
+    return { stop_reason: "end_turn", content: [{ type: "text", text: 'Hecho.\n[[LECCION]]{"resumen":"r","apuntes":[{"titulo":"t","puntos":["p"]}],"conceptos":[]}[[/LECCION]]' }] };
+  };
+  const r4 = resFalsa();
+  await profe({ method: "POST", body: {
+    modo: "leccion",
+    leccion: { titulo: "Tema 2", asignatura: "Física y Química", texto: "La materia…" },
+    imagenes: [{ media_type: "image/jpeg", data: "QUJD" }, { media_type: "image/jpeg", data: "REVG" }]
+  } }, r4);
+  check("resumir una lección devuelve los apuntes aparte", r4.body.leccion?.resumen === "r" && r4.body.reply === "Hecho.");
+  const pideLeccion = peticiones[0];
+  check("las fotos de las páginas van delante del texto",
+    pideLeccion.messages[0].content.filter((b) => b.type === "image").length === 2 && pideLeccion.messages[0].content.at(-1).type === "text");
+  check("con las instrucciones de su modo en un bloque aparte (el de Clara sigue en caché)",
+    pideLeccion.system.length === 2 && pideLeccion.system[1].text.includes("[[LECCION]]") && pideLeccion.system[0].cache_control);
+  check("en los modos de trabajo no se ofrece el buscador", !pideLeccion.tools);
+
+  const r5 = resFalsa();
+  await profe({ method: "POST", body: { modo: "leccion", leccion: { titulo: "vacía" } } }, r5);
+  check("una lección sin texto ni fotos se rechaza con un mensaje claro", r5.code === 400 && r5.body.error.includes("foto"));
+
+  peticiones.length = 0;
+  const r6 = resFalsa();
+  await profe({ method: "POST", body: { modo: "corregir", preguntas: [{ pregunta: "Define masa", criterios: "materia", respuesta: "" }] } }, r6);
+  check("corregir va con esfuerzo bajo, que es lo que más impaciencia da", peticiones[0].output_config.effort === "low");
+  check("una respuesta en blanco se le dice a Clara como tal", peticiones[0].messages[0].content.includes("(en blanco)"));
+  delete process.env.GEMINI_API_KEY;
 
   // Rechazo del modelo: respuesta amable, sin romper la app.
   Anthropic.Messages.prototype.create = async () => ({ stop_reason: "refusal", content: [] });
@@ -427,6 +469,96 @@ console.log("\n💬 Conversación guardada");
   check("y guardar no revienta", D.guardarChat([{ rol: "user", texto: "hola" }]) === false);
   check("las tarjetas guardan su idioma", D.normaliza({ tarjetas: [{ pregunta: "dog", respuesta: "perro", idioma: "en" }] }).tarjetas[0].idioma === "en");
   check("sin idioma, español", D.normaliza({ tarjetas: [{ pregunta: "p", respuesta: "r" }] }).tarjetas[0].idioma === "es");
+}
+
+
+console.log("\n🎓 2º de ESO");
+{
+  check("el curso por defecto es 2º ESO", D.estadoInicial().alumno.curso === "2º ESO");
+  check("los datos guardados con 1º ESO de fábrica pasan a 2º", D.normaliza({ version: 2, alumno: { curso: "1º ESO" } }).alumno.curso === "2º ESO");
+  check("un curso puesto a mano se respeta", D.normaliza({ version: 2, alumno: { curso: "3º ESO" } }).alumno.curso === "3º ESO");
+  check("y la migración solo ocurre una vez", D.normaliza({ version: 3, alumno: { curso: "1º ESO" } }).alumno.curso === "1º ESO");
+}
+
+console.log("\n📘 Libros y lecciones");
+{
+  const e = D.normaliza({
+    asignaturas: [{ id: "a1", nombre: "Física y Química", color: "#0f6f7a" }, { id: "a2", nombre: "Inglés", color: "#5b3fa8" }],
+    libros: [{ id: "l1", asignaturaId: "a1", titulo: "FyQ 2º ESO", editorial: "Anaya" }, { id: "l2", titulo: "" }],
+    lecciones: [
+      { id: "x1", asignaturaId: "a1", libroId: "l1", titulo: "Tema 1", fecha: "2026-09-10" },
+      { id: "x2", asignaturaId: "a1", libroId: "borrado", titulo: "Tema 2", fecha: "2026-09-20" },
+      { id: "x3", asignaturaId: "a2", titulo: "Unit 1", fecha: "2026-09-15" }
+    ],
+    examenes: [{ titulo: "Ex", fecha: "2026-10-01", leccionIds: ["x1", "fantasma"] }]
+  });
+  check("un libro sin título se descarta", e.libros.length === 1);
+  check("una lección con un libro que ya no existe se queda sin libro", e.lecciones.find((l) => l.id === "x2").libroId === null);
+  check("un examen solo guarda lecciones que existen", JSON.stringify(e.examenes[0].leccionIds) === '["x1"]');
+  const grupos = D.leccionesPorAsignatura(e);
+  check("las lecciones se agrupan por asignatura", grupos.length === 2 && grupos[0].lecciones.length === 2);
+  check("y lo más reciente va arriba", grupos[0].lecciones[0].id === "x2");
+  check("se pueden filtrar por asignatura", D.leccionesPorAsignatura(e, "a2")[0].lecciones[0].titulo === "Unit 1");
+  check("libros de una asignatura", D.librosDe(e, "a1").length === 1 && D.libro(e, "l1").editorial === "Anaya");
+}
+
+console.log("\n✨ Motor de lecciones");
+{
+  const bruto = {
+    resumen: "La materia tiene masa y volumen.",
+    apuntes: [{ titulo: "Propiedades", puntos: ["Masa", "Volumen", ""] }, { titulo: "", puntos: ["x"] }, { titulo: "Vacío", puntos: [] }],
+    conceptos: [{ termino: "Masa", definicion: "Cantidad de materia" }, { termino: "Sin definición" }]
+  };
+  const m = L.leccionDeIA(bruto);
+  check("se queda solo con los apartados y conceptos completos", m.apuntes.length === 1 && m.apuntes[0].puntos.length === 2 && m.conceptos.length === 1);
+  check("una respuesta vacía no se guarda", L.leccionDeIA({ resumen: "", apuntes: [] }) === null);
+
+  const leccion = { id: "x1", asignaturaId: "a1", titulo: "Tema 2 — La materia", ...m };
+  const tarjetas = L.tarjetasDeLeccion(leccion, HOY);
+  check("cada concepto es una tarjeta", tarjetas.length === 1 && tarjetas[0].pregunta === "¿Qué es «Masa»?");
+  check("la tarjeta es de su asignatura y toca hoy", tarjetas[0].asignaturaId === "a1" && tarjetas[0].proximo === HOY);
+  check("en inglés, la pregunta va en inglés", L.tarjetasDeLeccion(leccion, HOY, "en")[0].pregunta.startsWith("What is"));
+  const esquema = L.esquemaDeLeccion(leccion);
+  check("los apuntes se convierten en esquema", esquema.titulo === "Tema 2 — La materia" && esquema.ramas[0].titulo === "Propiedades");
+  check("sin apuntes no hay esquema", L.esquemaDeLeccion({ titulo: "t", apuntes: [] }) === null);
+
+  const larga = { titulo: "Larga", texto: "x".repeat(20000) };
+  const corta = { titulo: "Corta", resumen: "Resumen corto", apuntes: [] };
+  const contenido = L.contenidoDeLecciones([larga, corta], 5000);
+  check("el contenido para el examen cabe en el límite", contenido.length <= 5100);
+  check("y ninguna lección se queda fuera por la larga", contenido.includes("Resumen corto"));
+  check("una lección sin resumir entra con su texto", L.textoDeLeccion({ titulo: "T", texto: "texto original" }).includes("texto original"));
+
+  const estado = D.normaliza({
+    asignaturas: [{ id: "a1", nombre: "FyQ", color: "#0f6f7a" }],
+    lecciones: [{ id: "x1", asignaturaId: "a1", titulo: "T1", resumen: "r" }, { id: "x2", asignaturaId: "a1", titulo: "T2" }]
+  });
+  check("un examen usa las lecciones que eligió", L.leccionesDeExamen(estado, { leccionIds: ["x2"] })[0].id === "x2");
+  check("si no eligió, las resumidas de su asignatura", L.leccionesDeExamen(estado, { asignaturaId: "a1", leccionIds: [] }).map((l) => l.id).join() === "x1");
+}
+
+console.log("\n🧪 Examen de prueba");
+{
+  const ex = L.examenDeIA({
+    titulo: "Examen de prueba",
+    test: [{ pregunta: "¿Unidad de masa?", opciones: ["kg", "m"], correcta: 0 }, { pregunta: "rota", opciones: ["a"], correcta: 0 }],
+    desarrollo: [{ pregunta: "Explica el volumen", puntos: 9, criterios: "espacio" }, { pregunta: "" }]
+  }, "a1");
+  check("del examen de Clara solo pasa lo válido", ex.test.length === 1 && ex.desarrollo.length === 1);
+  check("los puntos de desarrollo se acotan (1 a 4)", ex.desarrollo[0].puntos === 4);
+  check("las preguntas quedan con su asignatura", ex.test[0].asignaturaId === "a1");
+  check("un examen vacío no se usa", L.examenDeIA({ test: [], desarrollo: [] }) === null);
+
+  const corr = L.correccionDeIA({ correcciones: [{ nota: 12, bien: "b", mejorar: "m", modelo: "mod" }] }, 1);
+  check("la corrección se valida y la nota se acota a 10", corr[0].nota === 10 && corr[0].modelo === "mod");
+  check("si faltan correcciones, no se usa a medias", L.correccionDeIA({ correcciones: [] }, 2) === null);
+
+  const des = [{ puntos: 2 }];
+  check("nota final: 1 de 2 en test + 6 en desarrollo de 2 puntos = 5,5",
+    L.notaFinal({ aciertos: 1, total: 2 }, des, [6]) === 5.5);
+  check("todo bien es un 10", L.notaFinal({ aciertos: 2, total: 2 }, des, [10]) === 10);
+  check("sin desarrollo es la nota del test", L.notaFinal({ aciertos: 3, total: 4 }, [], []) === 7.5);
+  check("un examen vacío es un 0, no un error", L.notaFinal({}, [], []) === 0);
 }
 
 console.log("\n🔎 Búsqueda de asignatura (la usa el Profe al crear tarjetas)");

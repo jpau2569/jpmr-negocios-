@@ -1,12 +1,12 @@
 /* ═══════════════════════════════════════════════════════════════════
    NICER ESTUDIA — service worker
    La app tiene que abrirse en el recreo, en el autobús y en el pasillo
-   del colegio: sin cobertura todo funciona menos el Profe, que necesita
+   del colegio: sin cobertura todo funciona menos Clara, que necesita
    internet y por eso nunca se cachea.
    Al tocar cualquier .js: añádelo a RECURSOS y sube VERSION.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'nicer-v3.0.0';
+const VERSION = 'nicer-v4.0.0';
 const CASCO = `${VERSION}-casco`;
 
 const RECURSOS = [
@@ -24,6 +24,7 @@ const RECURSOS = [
   './voz.js',
   './foto.js',
   './calendario.js',
+  './lecciones.js',
   './interfaz.js',
   './manifest.json',
   './icono.svg',

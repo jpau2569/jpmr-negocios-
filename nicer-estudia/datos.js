@@ -6,11 +6,12 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import { aISO, sumaDias, diasEntre, diaSemana, id, esISO, limita, horaAMinutos, normalizaTexto } from './utiles.js';
+import { MAX_TEXTO_LECCION } from './lecciones.js';
 
 export const CLAVE = 'nicer-estudia:v1';
 export const CLAVE_CHAT = 'nicer-estudia:chat';
 const MAX_CHAT = 40;
-export const VERSION_DATOS = 2;
+export const VERSION_DATOS = 3;
 
 /* Asignaturas de arranque para 1º-2º de ESO. Es una lista EDITABLE de
    partida, no el horario oficial del Colegio Lastra: en cuanto Nicer tenga
@@ -35,7 +36,7 @@ export const REPETICIONES = ['no', 'diaria', 'semanal'];
 export function estadoInicial() {
   return {
     version: VERSION_DATOS,
-    alumno: { nombre: 'Nicer', curso: '1º ESO', centro: 'Colegio Lastra · Mieres' },
+    alumno: { nombre: 'Nicer', curso: '2º ESO', centro: 'Colegio Lastra · Mieres' },
     ajustes: {
       pomodoro: 25,          // minutos de concentración
       descanso: 5,
@@ -56,6 +57,8 @@ export function estadoInicial() {
     apuntes: [],             // { id, asignaturaId, titulo, texto, fecha }
     esquemas: [],            // { id, asignaturaId, titulo, ramas, fecha }
     tests: [],               // { id, asignaturaId, titulo, nota, aciertos, total, fecha }
+    libros: [],              // { id, asignaturaId, titulo, editorial }
+    lecciones: [],           // { id, asignaturaId, libroId, titulo, texto, resumen, apuntes, conceptos, fecha, resumida }
     racha: { dias: 0, mejor: 0, ultimoDia: null },
     creado: aISO()
   };
@@ -70,6 +73,9 @@ export function normaliza(bruto) {
   if (!bruto || typeof bruto !== 'object') return base;
 
   const alumno = { ...base.alumno, ...(bruto.alumno || {}) };
+  // Hasta la versión 2 el curso por defecto era 1º ESO; Nicer empieza 2º en
+  // el 26/27. Solo se cambia si seguía el valor de fábrica y solo una vez.
+  if ((Number(bruto.version) || 1) < 3 && alumno.curso === '1º ESO') alumno.curso = '2º ESO';
   const ajustes = {
     pomodoro: limita(bruto.ajustes?.pomodoro ?? base.ajustes.pomodoro, 5, 60),
     descanso: limita(bruto.ajustes?.descanso ?? base.ajustes.descanso, 1, 30),
@@ -119,6 +125,7 @@ export function normaliza(bruto) {
     titulo: String(e.titulo || 'Examen').slice(0, 120),
     fecha: esISO(e.fecha) ? e.fecha : aISO(),
     temas: String(e.temas || '').slice(0, 500),
+    leccionIds: lista(e.leccionIds).map(String).slice(0, 20),
     nota: e.nota === null || e.nota === undefined || e.nota === '' ? null : limita(e.nota, 0, 10)
   }));
 
@@ -182,6 +189,35 @@ export function normaliza(bruto) {
     fecha: esISO(t.fecha) ? t.fecha : aISO()
   }));
 
+  const libros = lista(bruto.libros).map((l) => ({
+    id: l.id || id('li'),
+    asignaturaId: deAsignatura(l.asignaturaId),
+    titulo: String(l.titulo || '').trim().slice(0, 120),
+    editorial: String(l.editorial || '').trim().slice(0, 60)
+  })).filter((l) => l.titulo);
+  const librosValidos = new Set(libros.map((l) => l.id));
+
+  const lecciones = lista(bruto.lecciones).map((l) => ({
+    id: l.id || id('le'),
+    asignaturaId: deAsignatura(l.asignaturaId),
+    libroId: librosValidos.has(l.libroId) ? l.libroId : null,
+    titulo: String(l.titulo || 'Lección').trim().slice(0, 120),
+    texto: String(l.texto || '').slice(0, MAX_TEXTO_LECCION),
+    resumen: String(l.resumen || '').slice(0, 2500),
+    apuntes: lista(l.apuntes).map((a) => ({
+      titulo: String(a?.titulo || '').slice(0, 100),
+      puntos: lista(a?.puntos).map((p) => String(p).slice(0, 300)).filter(Boolean).slice(0, 8)
+    })).filter((a) => a.titulo && a.puntos.length).slice(0, 10),
+    conceptos: lista(l.conceptos).map((c) => ({
+      termino: String(c?.termino || '').slice(0, 120),
+      definicion: String(c?.definicion || '').slice(0, 400)
+    })).filter((c) => c.termino && c.definicion).slice(0, 15),
+    fecha: esISO(l.fecha) ? l.fecha : aISO(),
+    resumida: esISO(l.resumida) ? l.resumida : null
+  }));
+  const leccionesValidas = new Set(lecciones.map((l) => l.id));
+  for (const e of examenes) e.leccionIds = e.leccionIds.filter((x) => leccionesValidas.has(x));
+
   const racha = {
     dias: Math.max(0, Number(bruto.racha?.dias) || 0),
     mejor: Math.max(0, Number(bruto.racha?.mejor) || 0),
@@ -192,7 +228,7 @@ export function normaliza(bruto) {
   return {
     version: VERSION_DATOS,
     alumno, ajustes, asignaturas, horario, tareas, examenes, tarjetas,
-    sesiones, notas, apuntes, esquemas, tests, racha,
+    sesiones, notas, apuntes, esquemas, tests, libros, lecciones, racha,
     creado: esISO(bruto.creado) ? bruto.creado : base.creado
   };
 }
@@ -423,6 +459,26 @@ export function aplicaHorario(estado, horario) {
     });
   }
   return { estado: normaliza(nuevo), creadas, clases };
+}
+
+export const librosDe = (estado, asignaturaId = null) =>
+  (estado.libros || []).filter((l) => !asignaturaId || l.asignaturaId === asignaturaId);
+
+export const libro = (estado, libroId) => (estado.libros || []).find((l) => l.id === libroId) || null;
+
+/** Lecciones agrupadas por asignatura, en el orden de la lista de asignaturas
+    y con lo más reciente arriba. Las que no tienen asignatura van al final. */
+export function leccionesPorAsignatura(estado, asignaturaId = null) {
+  const todas = (estado.lecciones || [])
+    .filter((l) => !asignaturaId || l.asignaturaId === asignaturaId)
+    .slice()
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const grupos = estado.asignaturas
+    .map((a) => ({ asignatura: a, lecciones: todas.filter((l) => l.asignaturaId === a.id) }))
+    .filter((g) => g.lecciones.length);
+  const sueltas = todas.filter((l) => !l.asignaturaId);
+  if (sueltas.length) grupos.push({ asignatura: null, lecciones: sueltas });
+  return grupos;
 }
 
 /** Busca una asignatura por nombre aproximado (lo usa el Profe IA al crear

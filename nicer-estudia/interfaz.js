@@ -11,6 +11,7 @@ import * as R from './repaso.js';
 import * as Q from './cuestionario.js';
 import { dibujaEsquema } from './esquema.js';
 import { AMBIENTES } from './ambiente.js';
+import * as L from './lecciones.js';
 
 const pct = (n) => `${Math.round(n * 100)}%`;
 
@@ -193,6 +194,9 @@ function tarjetaExamen(estado, e, hoy) {
       <button class="mini fantasma" data-accion="ver-plan" data-id="${e.id}">Ver plan completo</button>
       <button class="mini" data-accion="calendario-examen" data-id="${e.id}">📅 Avisos en el móvil</button>
     </div>
+    <button class="principal ancho" style="margin-top:8px" data-accion="examen-prueba" data-id="${e.id}">
+      🧪 Examen de prueba${(e.leccionIds || []).length ? ` · ${plural(e.leccionIds.length, 'lección', 'lecciones')}` : ''}
+    </button>
   </div>`;
 }
 
@@ -242,19 +246,21 @@ export function vistaPlan(estado, examen, hoy) {
    todo lo demás. */
 
 const SUBS = [
+  { id: 'lecciones', nombre: 'Lecciones' },
   { id: 'tarjetas', nombre: 'Tarjetas' },
   { id: 'test', nombre: 'Test' },
-  { id: 'esquemas', nombre: 'Esquemas' },
-  { id: 'apuntes', nombre: 'Apuntes' }
+  { id: 'esquemas', nombre: 'Esquemas' }
 ];
 
 export function vistaEstudiar(estado, ctx) {
-  const sub = SUBS.some((x) => x.id === ctx.sub) ? ctx.sub : 'tarjetas';
+  // 'apuntes' era una pestaña propia: ahora las notas sueltas van en Lecciones.
+  const pedida = ctx.sub === 'apuntes' ? 'lecciones' : ctx.sub;
+  const sub = SUBS.some((x) => x.id === pedida) ? pedida : 'tarjetas';
   const contadores = {
     tarjetas: R.colaDeHoy(estado.tarjetas, ctx.hoy, estado.ajustes.tarjetasPorDia).length,
     test: 0,
     esquemas: (estado.esquemas || []).length,
-    apuntes: (estado.apuntes || []).length
+    lecciones: (estado.lecciones || []).length
   };
 
   const pestanas = `<div class="pestanas" role="tablist">
@@ -262,7 +268,7 @@ export function vistaEstudiar(estado, ctx) {
       ${x.id === sub ? 'aria-selected="true"' : ''}>${x.nombre}${contadores[x.id] ? ` <span class="cuenta">${contadores[x.id]}</span>` : ''}</button>`).join('')}
   </div>`;
 
-  const pintor = { tarjetas: subTarjetas, test: subTest, esquemas: subEsquemas, apuntes: subApuntes }[sub];
+  const pintor = { lecciones: subLecciones, tarjetas: subTarjetas, test: subTest, esquemas: subEsquemas }[sub];
   return pestanas + pintor(estado, ctx);
 }
 
@@ -336,18 +342,187 @@ function subTarjetas(estado, ctx) {
     </details>` : ''}`;
 }
 
+/* ── Lecciones y libros ───────────────────────────────────────────
+   Sus apuntes de todas las materias, ordenados como en la mochila:
+   asignatura → libro → lección. */
+
+function estadoLeccion(l, ctx) {
+  if (ctx.resumiendo === l.id) return '<span class="pastilla ambar">Clara la está leyendo…</span>';
+  return l.resumida
+    ? '<span class="pastilla verde">✓ Resumida</span>'
+    : '<span class="pastilla gris">Sin resumir</span>';
+}
+
+function subLecciones(estado, ctx) {
+  if (ctx.leccionAbierta) {
+    const abierta = (estado.lecciones || []).find((l) => l.id === ctx.leccionAbierta);
+    if (abierta) return vistaLeccion(estado, abierta, ctx);
+  }
+  const filtro = ctx.filtroAsig || '';
+  const grupos = D.leccionesPorAsignatura(estado, filtro || null);
+  const conLecciones = new Set((estado.lecciones || []).map((l) => l.asignaturaId).filter(Boolean));
+  const libros = estado.libros || [];
+
+  return `<section class="seccion">
+    <header><h2>Mis lecciones</h2><span class="extra">${plural((estado.lecciones || []).length, 'lección', 'lecciones')}</span></header>
+    <button class="principal ancho grande" data-accion="nueva-leccion">📖 Meter la lección que estoy estudiando</button>
+    <p style="font-size:.82rem;color:var(--tinta-2);margin-top:6px">
+      Escríbela, pégala o hazle fotos a las páginas del libro. Clara te hace el resumen, los apuntes
+      y los conceptos clave, y de ahí salen tarjetas, esquema y examen de prueba.
+    </p>
+    ${conLecciones.size > 1 ? `<div class="chips" style="margin-top:10px">
+      <button class="chip${!filtro ? ' chip--activo' : ''}" data-accion="filtro-asig" data-id="">Todas</button>
+      ${estado.asignaturas.filter((a) => conLecciones.has(a.id)).map((a) => `<button class="chip${filtro === a.id ? ' chip--activo' : ''}"
+        data-accion="filtro-asig" data-id="${a.id}">${escapa(a.nombre)}</button>`).join('')}
+    </div>` : ''}
+    ${grupos.length ? grupos.map((g) => `<div class="grupo-materia">
+      <h3>${g.asignatura ? `${puntoColor(estado, g.asignatura.id)} ${escapa(g.asignatura.nombre)}` : 'Sin asignatura'}</h3>
+      ${g.lecciones.map((l) => `<div class="tarjeta leccion-fila">
+        <div class="cuerpo">
+          <div class="qué">${escapa(l.titulo)}</div>
+          <div class="meta">
+            ${l.libroId ? `<span style="font-size:.8rem;color:var(--tinta-2)">📘 ${escapa(D.libro(estado, l.libroId)?.titulo || '')}</span>` : ''}
+            ${estadoLeccion(l, ctx)}
+          </div>
+        </div>
+        <button class="mini principal" data-accion="abrir-leccion" data-id="${l.id}">Abrir</button>
+      </div>`).join('')}
+    </div>`).join('')
+      : `<div class="vacio" style="margin-top:10px">Todavía no has metido ninguna lección.<br /><br />
+          Empieza por la que tengas más cerca del examen.</div>`}
+  </section>
+
+  <section class="seccion">
+    <header><h2>Mis libros</h2><span class="extra">${plural(libros.length, 'libro', 'libros')}</span></header>
+    <div class="tarjeta">
+      ${libros.length ? `<ul class="mochila">${estado.asignaturas
+        .map((a) => ({ a, suyos: libros.filter((l) => l.asignaturaId === a.id) }))
+        .concat([{ a: null, suyos: libros.filter((l) => !l.asignaturaId) }])
+        .filter((x) => x.suyos.length)
+        .map(({ a, suyos }) => suyos.map((l) => `<li>
+          ${a ? puntoColor(estado, a.id) : '<span class="punto" style="background:var(--borde)"></span>'}
+          <span><strong>${escapa(l.titulo)}</strong>
+            <span style="color:var(--tinta-2);font-size:.82rem"> · ${escapa(a?.nombre || 'Sin asignatura')}${l.editorial ? ` · ${escapa(l.editorial)}` : ''}</span></span>
+          <button class="borrar" style="margin-left:auto" data-accion="borrar-libro" data-id="${l.id}" aria-label="Borrar libro">✕</button>
+        </li>`).join('')).join('')}</ul>`
+        : '<p style="color:var(--tinta-2);font-size:.88rem">Apunta tus libros de texto: así cada lección sabe de qué libro sale.</p>'}
+      <button class="mini" style="margin-top:10px" data-accion="nuevo-libro">+ Añadir un libro</button>
+      <p style="font-size:.8rem;color:var(--tinta-2);margin-top:8px">¿Te falta una asignatura? Añádela en Yo → Asignaturas.</p>
+    </div>
+  </section>
+
+  ${subApuntes(estado, ctx)}`;
+}
+
+function vistaLeccion(estado, l, ctx) {
+  const asignatura = D.asignatura(estado, l.asignaturaId);
+  const libroL = D.libro(estado, l.libroId);
+  const resumiendo = ctx.resumiendo === l.id;
+  const fotosEnMemoria = (ctx.fotosLeccion?.[l.id] || []).length;
+  const puedeResumir = Boolean(l.texto) || fotosEnMemoria > 0;
+
+  return `<section class="seccion">
+    <button class="mini fantasma" data-accion="cerrar-leccion">← Mis lecciones</button>
+    <div class="tarjeta" style="margin-top:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        ${asignatura ? puntoColor(estado, asignatura.id) : ''}
+        <span style="font-size:.84rem;color:var(--tinta-2)">${escapa(asignatura?.nombre || 'Sin asignatura')}${libroL ? ` · 📘 ${escapa(libroL.titulo)}` : ''}</span>
+      </div>
+      <h2 style="font-size:1.2rem;margin-top:6px">${escapa(l.titulo)}</h2>
+      <div style="margin-top:6px">${estadoLeccion(l, ctx)}</div>
+    </div>
+
+    ${resumiendo ? `<div class="tarjeta flash" style="margin-top:10px">
+        <span class="escribiendo" style="align-self:center"><i></i><i></i><i></i></span>
+        <p>Clara está leyendo tu lección y haciéndote los apuntes.<br />Tarda unos segundos.</p>
+      </div>`
+      : !l.resumida ? `<div class="tarjeta" style="margin-top:10px">
+        <p style="font-size:.92rem">${puedeResumir
+          ? 'Lista para que Clara te haga el resumen, los apuntes y los conceptos clave.'
+          : 'No queda el texto ni las fotos de esta lección. Ábrela en «Editar» y vuelve a meter el texto o las fotos.'}</p>
+        <button class="principal ancho grande" style="margin-top:10px" data-accion="resumir-leccion" data-id="${l.id}"${puedeResumir ? '' : ' disabled'}>
+          ✨ Resumir y hacer apuntes
+        </button>
+        ${fotosEnMemoria ? `<p style="font-size:.8rem;color:var(--tinta-2);margin-top:6px">${plural(fotosEnMemoria, 'foto lista', 'fotos listas')} para mandar.</p>` : ''}
+      </div>` : ''}
+
+    ${l.resumen ? `<div class="tarjeta" style="margin-top:10px">
+      <div style="display:flex;align-items:center;gap:8px"><h3>Resumen</h3>
+        ${ctx.puedeLeer ? `<button class="mini fantasma" style="margin-left:auto" data-accion="escuchar-resumen" data-id="${l.id}">🔊 Escuchar</button>` : ''}
+      </div>
+      <p class="texto-leccion">${escapa(l.resumen)}</p>
+    </div>` : ''}
+
+    ${l.apuntes?.length ? `<div class="tarjeta" style="margin-top:10px">
+      <h3>Apuntes</h3>
+      ${l.apuntes.map((a) => `<div class="apartado">
+        <div class="apartado-titulo">${escapa(a.titulo)}</div>
+        <ul>${a.puntos.map((p) => `<li>${escapa(p)}</li>`).join('')}</ul>
+      </div>`).join('')}
+    </div>` : ''}
+
+    ${l.conceptos?.length ? `<div class="tarjeta" style="margin-top:10px">
+      <h3>Conceptos clave</h3>
+      <dl class="conceptos">${l.conceptos.map((c) => `<dt>${escapa(c.termino)}</dt><dd>${escapa(c.definicion)}</dd>`).join('')}</dl>
+    </div>` : ''}
+
+    ${l.resumida ? `<div class="acciones-leccion">
+      <button class="principal" data-accion="examen-leccion" data-id="${l.id}">🧪 Examen de prueba</button>
+      ${l.conceptos?.length ? `<button data-accion="tarjetas-leccion" data-id="${l.id}">🃏 ${plural(l.conceptos.length, 'tarjeta', 'tarjetas')} de repaso</button>` : ''}
+      ${l.apuntes?.length ? `<button data-accion="esquema-leccion" data-id="${l.id}">🗺️ Esquema</button>` : ''}
+    </div>` : ''}
+
+    ${l.texto ? `<details style="margin-top:12px"><summary style="cursor:pointer;color:var(--tinta-2);font-size:.86rem">Texto original</summary>
+      <div class="tarjeta texto-leccion" style="margin-top:8px">${escapa(l.texto)}</div></details>` : ''}
+
+    <div class="fila" style="margin-top:12px">
+      <button class="mini" data-accion="editar-leccion" data-id="${l.id}">✏️ Editar</button>
+      ${l.resumida && puedeResumir ? `<button class="mini" data-accion="resumir-leccion" data-id="${l.id}">🔁 Volver a resumir</button>` : ''}
+      <button class="mini peligro" data-accion="borrar-leccion" data-id="${l.id}">Borrar</button>
+    </div>
+  </section>`;
+}
+
 /* ── Test (idea tomada de Cuestia, pero con SUS tarjetas y sin cuenta) ── */
 function subTest(estado, ctx) {
   const t = ctx.test;
   const historial = (estado.tests || []).slice(-5).reverse();
 
+  if (t && t.fase === 'corrigiendo') {
+    return `<section class="seccion"><div class="tarjeta flash">
+      <span class="escribiendo" style="align-self:center"><i></i><i></i><i></i></span>
+      <p>${t.preparando ? 'Clara está preparando tu examen de prueba con tus lecciones…' : 'Clara está corrigiendo tus respuestas…'}</p>
+    </div></section>`;
+  }
+
+  if (t && t.fase === 'desarrollo') {
+    return `<section class="seccion">
+      <header><h2>Preguntas de desarrollo</h2><span class="extra">${escapa(t.titulo)}</span></header>
+      <p style="font-size:.86rem;color:var(--tinta-2);margin-bottom:10px">
+        Contesta con tus palabras, como en el examen. No hace falta que sea perfecto: Clara te dirá qué falta.
+      </p>
+      ${t.desarrollo.map((p, i) => `<div class="tarjeta" style="margin-top:10px">
+        <div style="font-weight:650">${i + 1}. ${escapa(p.pregunta)}
+          <span class="pastilla gris">${plural(p.puntos, 'punto', 'puntos')}</span></div>
+        <textarea class="respuesta-desarrollo" data-i="${i}" rows="5" placeholder="Tu respuesta…" style="margin-top:8px">${escapa(t.respuestasDes[i] || '')}</textarea>
+      </div>`).join('')}
+      <button class="principal ancho grande" style="margin-top:12px" data-accion="entregar-examen">Entregar el examen</button>
+      <button class="fantasma ancho mini" style="margin-top:8px" data-accion="cerrar-test">Dejarlo para luego</button>
+    </section>`;
+  }
+
   if (t && t.terminado) {
     const { resultado } = t;
+    const conDesarrollo = t.desarrollo?.length > 0;
     return `<section class="seccion">
       <div class="tarjeta flash">
         <div class="pastilla ${resultado.nota >= 5 ? 'verde' : 'roja'}" style="align-self:center">Nota ${resultado.nota}</div>
-        <div class="pregunta">${resultado.aciertos} de ${resultado.total} bien</div>
+        <div class="pregunta">${conDesarrollo
+          ? `Test: ${resultado.aciertos} de ${resultado.total} bien`
+          : `${resultado.aciertos} de ${resultado.total} bien`}</div>
         <p style="color:var(--tinta-2);font-size:.92rem">${escapa(Q.comentario(resultado))}</p>
+        ${conDesarrollo && !t.correccion ? `<p style="font-size:.84rem;color:var(--ambar)">
+          Clara no ha podido corregir el desarrollo (¿sin conexión?). La nota es solo del test; abajo tienes qué debía incluir cada respuesta.</p>` : ''}
         ${resultado.falladas.length ? `<p style="font-size:.86rem;color:var(--tinta-2)">
           Lo que fallaste vuelve al repaso de mañana automáticamente.</p>` : ''}
       </div>
@@ -358,9 +533,25 @@ function subTest(estado, ctx) {
           <div style="color:var(--verde);font-size:.88rem">${escapa(p.opciones[p.correcta])}</div>
         </li>`).join('')}</ul>
       </div>` : ''}
+      ${conDesarrollo ? `<div class="tarjeta" style="margin-top:10px">
+        <h3 style="margin-bottom:8px">Desarrollo</h3>
+        ${t.desarrollo.map((p, i) => {
+          const c = t.correccion?.[i];
+          return `<div class="apartado">
+            <div class="apartado-titulo">${i + 1}. ${escapa(p.pregunta)}
+              ${c ? `<span class="pastilla ${c.nota >= 5 ? 'verde' : 'roja'}">${c.nota}</span>` : ''}</div>
+            <div style="font-size:.86rem;color:var(--tinta-2);white-space:pre-wrap">Tu respuesta: ${escapa(t.respuestasDes[i] || '(en blanco)')}</div>
+            ${c ? `${c.bien ? `<div style="font-size:.88rem;margin-top:4px">👍 ${escapa(c.bien)}</div>` : ''}
+              ${c.mejorar ? `<div style="font-size:.88rem;margin-top:2px">🔧 ${escapa(c.mejorar)}</div>` : ''}
+              ${c.modelo ? `<div class="modelo">Respuesta de 10: ${escapa(c.modelo)}</div>` : ''}`
+              : p.criterios ? `<div class="modelo">Debía incluir: ${escapa(p.criterios)}</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>` : ''}
       <div class="fila" style="margin-top:10px">
         <button data-accion="cerrar-test">Cerrar</button>
-        <button class="principal" data-accion="test-tarjetas">Otro test</button>
+        ${t.origen ? `<button class="principal" data-accion="${t.origen.accion}" data-id="${t.origen.id}">Otro examen</button>`
+          : '<button class="principal" data-accion="test-tarjetas">Otro test</button>'}
       </div>
     </section>`;
   }
@@ -452,8 +643,8 @@ function subEsquemas(estado, ctx) {
 function subApuntes(estado, ctx) {
   const apuntes = D.apuntesDe(estado);
   return `<section class="seccion">
-    <header><h2>Apuntes</h2><span class="extra">${apuntes.length}</span></header>
-    <button class="principal ancho" data-accion="nuevo-apunte">+ Escribir un apunte</button>
+    <header><h2>Notas sueltas</h2><span class="extra">${apuntes.length}</span></header>
+    <button class="ancho" data-accion="nuevo-apunte">+ Escribir una nota</button>
     ${apuntes.length ? apuntes.map((n) => `<div class="tarjeta" style="margin-top:10px">
       <div style="display:flex;align-items:center;gap:8px">
         ${puntoColor(estado, n.asignaturaId)}
@@ -468,9 +659,8 @@ function subApuntes(estado, ctx) {
       </div>
     </div>`).join('')
       : `<div class="vacio" style="margin-top:10px">
-          Aquí van los apuntes que quieras tener siempre a mano: lo que dictó el profe,
-          lo que entra en el examen, cómo se hace ese tipo de ejercicio.<br /><br />
-          Luego, con un botón, el Profe los convierte en tarjetas.
+          Lo que quieras tener a mano y no es una lección: lo que dictó el profe,
+          cómo se hace un tipo de ejercicio, un aviso del tutor…
         </div>`}
   </section>`;
 }
@@ -796,7 +986,36 @@ export const formExamen = (estado, hoy) => `
   <div class="campo"><label for="f-fecha">Día del examen</label>
     <input id="f-fecha" name="fecha" type="date" value="${hoy}" /></div>
   <div class="campo"><label for="f-temas">¿Qué entra? (opcional)</label>
-    <textarea id="f-temas" name="temas" placeholder="Páginas, temas, apuntes…"></textarea></div>`;
+    <textarea id="f-temas" name="temas" placeholder="Páginas, temas, apuntes…"></textarea></div>
+  ${(estado.lecciones || []).length ? `<div class="campo"><label>Lecciones que entran (para el examen de prueba)</label>
+    <div class="lista-marcar">${D.leccionesPorAsignatura(estado).map((g) => g.lecciones.map((l) => `<label class="marcar">
+      <input type="checkbox" name="lecciones" value="${l.id}" />
+      <span>${escapa(l.titulo)} <small>· ${escapa(g.asignatura?.nombre || 'Sin asignatura')}</small></span>
+    </label>`).join('')).join('')}</div></div>` : ''}`;
+
+export const formLibro = (estado) => `
+  <div class="campo"><label for="f-titulo">Título del libro</label>
+    <input id="f-titulo" name="titulo" placeholder="Ej.: Física y Química 2º ESO" /></div>
+  <div class="campo"><label for="f-asig">Asignatura</label>${selectorAsignatura(estado)}</div>
+  <div class="campo"><label for="f-editorial">Editorial (opcional)</label>
+    <input id="f-editorial" name="editorial" placeholder="Ej.: Anaya, SM, Santillana…" /></div>`;
+
+export function formLeccion(estado, leccion = null) {
+  const libros = estado.libros || [];
+  return `
+  <div class="campo"><label for="f-titulo">¿Qué lección es?</label>
+    <input id="f-titulo" name="titulo" value="${escapa(leccion?.titulo || '')}" placeholder="Ej.: Tema 3 — Las fuerzas" /></div>
+  <div class="campo"><label for="f-asig">Asignatura</label>${selectorAsignatura(estado, leccion?.asignaturaId || '')}</div>
+  <div class="campo"><label for="f-libro">Libro</label>
+    <select id="f-libro" name="libro"><option value="">— Sin libro —</option>
+      ${libros.map((l) => `<option value="${l.id}"${l.id === leccion?.libroId ? ' selected' : ''}>${escapa(l.titulo)} · ${escapa(D.nombreAsignatura(estado, l.asignaturaId))}</option>`).join('')}
+    </select></div>
+  <div class="campo"><label for="f-fotos">📷 Fotos de las páginas (hasta ${L.MAX_FOTOS_LECCION})</label>
+    <input id="f-fotos" name="fotos" type="file" accept="image/*" multiple /></div>
+  <div class="campo"><label for="f-texto">…o escribe / pega el texto de la lección</label>
+    <textarea id="f-texto" name="texto" rows="8" placeholder="Puedes pegar el tema entero, o lo que has copiado en clase">${escapa(leccion?.texto || '')}</textarea></div>
+  <p style="font-size:.8rem;color:var(--tinta-2)">Las fotos se reducen en el móvil y solo se mandan a Clara para hacer los apuntes; no se guardan.</p>`;
+}
 
 export const formTarjeta = (estado) => `
   <div class="campo"><label for="f-preg">Pregunta</label>
