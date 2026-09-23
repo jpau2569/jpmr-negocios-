@@ -67,6 +67,14 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 /* ── Estructura ────────────────────────────────────────────────── */
 .app { max-width: 620px; margin: 0 auto; padding: 0 14px; }
+/* Un enlace pegado o una palabra larguísima no puede empujar la pantalla
+   hacia el lado: se parte donde haga falta. */
+.app, dialog, .foco { overflow-wrap: anywhere; }
+.cuerpo, .texto, .paso .cuerpo, .tarea .cuerpo { min-width: 0; }
+/* En el PC hay sitio: la columna crece un poco para leer apuntes a gusto. */
+@media (min-width: 960px) {
+  .app { max-width: 760px; }
+}
 
 .cabecera {
   position: sticky; top: 0; z-index: 20;
@@ -218,11 +226,17 @@ label { display: block; font-size: .8rem; font-weight: 600; color: var(--tinta-2
 /* ── Listas de tareas ──────────────────────────────────────────── */
 .tarea { display: flex; gap: 11px; align-items: flex-start; padding: 11px 0; }
 .tarea + .tarea { border-top: 1px solid var(--borde); }
+/* La casilla se ve de 26 px pero se pulsa en 44: el dedo no apunta fino. */
 .tarea .marca {
-  flex: none; width: 26px; height: 26px; min-height: 26px; padding: 0;
-  border-radius: 8px; border: 2px solid var(--borde); background: transparent;
+  flex: none; width: 44px; height: 44px; min-height: 44px; padding: 0; margin: -9px -9px -9px -9px;
+  border: 0; background: transparent; position: relative; color: var(--papel); font-size: .9rem;
 }
-.tarea.hecha .marca { background: var(--verde); border-color: var(--verde); color: var(--papel); }
+.tarea .marca::before {
+  content: ""; position: absolute; inset: 9px; border-radius: 8px;
+  border: 2px solid var(--borde); z-index: -1;
+}
+.tarea .marca { z-index: 0; }
+.tarea.hecha .marca::before { background: var(--verde); border-color: var(--verde); }
 .tarea.hecha .qué { text-decoration: line-through; color: var(--tinta-2); }
 .tarea .cuerpo { flex: 1; min-width: 0; }
 .tarea .qué { font-weight: 600; font-size: .95rem; word-break: break-word; }
@@ -245,11 +259,13 @@ label { display: block; font-size: .8rem; font-weight: 600; color: var(--tinta-2
 /* ── Pestañas de Estudiar ──────────────────────────────────────── */
 .pestanas {
   display: flex; gap: 4px; margin: 14px 0 4px; padding: 4px;
+  overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
   background: color-mix(in srgb, var(--borde) 45%, transparent);
   border-radius: 12px;
 }
+.pestanas::-webkit-scrollbar { display: none; }
 .pestanas button {
-  flex: 1; min-height: 40px; padding: 0 6px;
+  flex: 1 0 auto; min-height: 44px; padding: 0 8px; white-space: nowrap;
   border: 0; background: transparent; color: var(--tinta-2);
   font-size: .84rem; font-weight: 600; border-radius: 9px;
 }
@@ -424,3 +440,17 @@ dialog h2 { padding: 16px 16px 0; }
 .oculto { display: none !important; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 @media (min-width: 560px) { .rejilla { grid-template-columns: repeat(4, 1fr); } }
+
+/* Móviles estrechos (320-360 px): las cuatro pestañas de Estudiar tienen que
+   caber sin deslizar, o la última no la encuentra nadie. */
+@media (max-width: 360px) {
+  .pestanas { gap: 0; padding: 3px; }
+  .pestanas button { padding: 0 3px; font-size: .72rem; letter-spacing: -.01em; }
+  .pestanas .cuenta { min-width: 14px; padding: 0 3px; margin-left: 1px; font-size: .6rem; line-height: 14px; }
+}
+
+.atajos { font-size: .78rem; color: var(--tinta-2); text-align: center; margin-top: 8px; }
+kbd {
+  font: inherit; font-size: .74rem; padding: 1px 6px; border-radius: 5px;
+  border: 1px solid var(--borde); background: var(--tarjeta); color: var(--tinta);
+}

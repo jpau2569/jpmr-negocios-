@@ -110,6 +110,26 @@ la tarde anterior) y cada paso del plan de estudio (aviso a las 17:00 de su
 día). En iPhone se abre directo en Calendario; en Android se abre con el
 calendario del móvil o se comparte si el navegador lo permite.
 
+## Móvil y PC (versión 4.1)
+
+- **Los datos no se sincronizan solos** (no hay cuenta ni servidor: son de un
+  menor). Para pasarlos del móvil al PC o al revés: Yo → **Guardar / enviar
+  copia** (en el móvil se comparte por WhatsApp, correo o Drive) y en el otro
+  aparato Yo → **Abrir una copia** eligiendo el archivo. Antes de sustituir
+  nada dice qué trae la copia y qué hay ahora.
+- La app pide al navegador **almacenamiento persistente**
+  (`navigator.storage.persist`) para que no borre los datos si el móvil anda
+  justo de espacio.
+- En el PC la columna se ensancha a 760 px y hay **atajos de teclado**
+  (`atajoTeclado` en `repaso.js`): en tarjetas, espacio enseña la respuesta y
+  1 / 2 es no la sabía / la sabía; en un test, 1-4 eligen y Enter sigue.
+- **Hoy** propone resumir la última lección metida sin resumir y, a 3 días o
+  menos de un examen, el botón directo al examen de prueba.
+- Nada se sale de la pantalla aunque se pegue un enlace larguísimo
+  (`overflow-wrap: anywhere`), y las cuatro pestañas de Estudiar caben a
+  320 px. Lo vigila `herramientas/auditoria-visual.mjs` (4 anchos × 2 temas ×
+  9 pantallas), que tiene que terminar en «SIN PROBLEMAS».
+
 ## Cómo se abre
 
 Necesita servirse por HTTP (usa módulos ES y service worker); con `file://`

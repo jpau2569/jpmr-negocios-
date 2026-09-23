@@ -142,6 +142,13 @@ funciona saber que se nota.
 
 ---
 
-**Copia de seguridad**: todo se guarda solo en tu móvil. Si lo cambias o
-borras el navegador, se pierde. Una vez al trimestre: **Yo → Descargar copia**
-y se la mandas a tu padre por WhatsApp.
+**Móvil y ordenador**: la app funciona en los dos, pero cada uno guarda sus
+propios datos. Para pasar lo que tienes del móvil al PC (o al revés): en el
+que tiene los datos, **Yo → Guardar / enviar copia** y mándatela por WhatsApp
+o correo; en el otro, **Yo → Abrir una copia** y elige ese archivo.
+
+En el ordenador puedes repasar con el teclado: **espacio** para ver la
+respuesta, **1** si no la sabías y **2** si la sabías.
+
+**Copia de seguridad**: una vez al trimestre, **Yo → Guardar / enviar copia**
+y mándasela a tu padre. Si cambias de móvil, no pierdes nada.

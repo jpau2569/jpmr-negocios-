@@ -106,7 +106,10 @@ export function vistaHoy(estado, ctx) {
   const cola = R.colaDeHoy(estado.tarjetas, hoy, estado.ajustes.tarjetasPorDia);
   const minutos = D.minutosDelDia(estado, hoy);
   const objetivo = estado.ajustes.objetivoDiario;
-  const plan = R.planDelDia({ tareas, examenes, tarjetasHoy: cola.length, minutosHechos: minutos, objetivo }, hoy);
+  const leccionesPendientes = (estado.lecciones || [])
+    .filter((l) => !l.resumida && l.texto)
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const plan = R.planDelDia({ tareas, examenes, tarjetasHoy: cola.length, minutosHechos: minutos, objetivo, leccionesPendientes }, hoy);
   const m = D.mochila(estado, hoy);
 
   const saludo = minutos >= objetivo
@@ -147,7 +150,10 @@ export function vistaHoy(estado, ctx) {
           <div class="qué">${escapa(p.titulo)}</div>
           <div class="por">${escapa(p.aviso)}</div>
         </div>
-        ${p.tipo === 'repaso' ? '<button class="mini principal" data-accion="ir" data-vista="estudiar">Repasar</button>' : ''}
+        ${p.tipo === 'repaso' ? '<button class="mini principal" data-accion="ir-tarjetas">Repasar</button>' : ''}
+        ${p.tipo === 'leccion' ? `<button class="mini principal" data-accion="abrir-leccion" data-id="${p.ref}">Abrir</button>` : ''}
+        ${p.tipo === 'examen' && (examenes.find((e) => e.id === p.ref)?.dias ?? 99) <= 3
+          ? `<button class="mini principal" data-accion="examen-prueba" data-id="${p.ref}">🧪 Prueba</button>` : ''}
         ${p.tipo === 'tarea' || p.tipo === 'atrasada' ? `<button class="mini" data-accion="alternar-tarea" data-id="${p.ref}">Hecha</button>` : ''}
       </div>`).join('')}</div>`
       : '<div class="vacio">Nada pendiente. Si tienes deberes, apúntalos en Agenda.</div>'}
@@ -303,7 +309,8 @@ function subTarjetas(estado, ctx) {
                 <button class="peligro" data-accion="fallo">No la sabía</button>
                 <button class="principal" data-accion="acierto">La sabía</button>
               </div>`
-            : '<button class="principal ancho grande" style="margin-top:10px" data-accion="ver-respuesta">Ver la respuesta</button>'}`
+            : '<button class="principal ancho grande" style="margin-top:10px" data-accion="ver-respuesta">Ver la respuesta</button>'}
+          ${ctx.teclado ? '<p class="atajos">Teclado: <kbd>espacio</kbd> ver respuesta · <kbd>1</kbd> no la sabía · <kbd>2</kbd> la sabía</p>' : ''}`
         : '';
 
   return `
@@ -575,6 +582,7 @@ function subTest(estado, ctx) {
           }).join('')}
         </div>
       </div>
+      ${ctx.teclado ? '<p class="atajos">Teclado: <kbd>1</kbd>-<kbd>4</kbd> eligen · <kbd>Enter</kbd> siguiente</p>' : ''}
       ${contestada ? `<button class="principal ancho" style="margin-top:10px" data-accion="siguiente-pregunta">
         ${t.i + 1 < t.preguntas.length ? 'Siguiente' : 'Ver la nota'}</button>` : ''}
       <button class="fantasma ancho mini" style="margin-top:8px" data-accion="cerrar-test">Dejarlo para luego</button>
@@ -944,13 +952,20 @@ export function vistaYo(estado, ctx) {
     <header><h2>Copia de seguridad</h2></header>
     <div class="tarjeta">
       <p style="font-size:.86rem;color:var(--tinta-2)">
-        Los datos viven solo en este dispositivo. Si cambias de móvil o borras el navegador, se pierden:
-        descarga una copia de vez en cuando.
+        Tus datos viven solo en este aparato: el móvil y el PC tienen cada uno los suyos.
+        Con la copia los pasas de uno a otro, y si cambias de móvil no pierdes nada.
       </p>
+      <p style="font-size:.84rem;margin-top:8px">Aquí tienes: <strong>${escapa(D.resumenDatos(estado))}</strong>.</p>
       <div class="fila" style="margin-top:10px">
-        <button data-accion="exportar">Descargar copia</button>
-        <button data-accion="importar">Restaurar copia</button>
+        <button data-accion="exportar">📤 Guardar / enviar copia</button>
+        <button data-accion="importar">📥 Abrir una copia</button>
       </div>
+      <details style="margin-top:10px"><summary style="cursor:pointer;color:var(--tinta-2);font-size:.84rem">¿Cómo paso mis datos al PC (o al móvil)?</summary>
+        <ol style="font-size:.86rem;padding-left:20px;margin:8px 0 0;line-height:1.6">
+          <li>En el aparato que tiene los datos: <strong>Guardar / enviar copia</strong> y mándatela (WhatsApp, correo o Drive).</li>
+          <li>En el otro, abre la app → Yo → <strong>Abrir una copia</strong> y elige ese archivo.</li>
+        </ol>
+      </details>
       ${instalable ? '<button class="principal ancho" style="margin-top:10px" data-accion="instalar">Instalar en la pantalla de inicio</button>' : ''}
       <button class="peligro ancho" style="margin-top:10px" data-accion="borrar-todo">Borrar todo y empezar de cero</button>
     </div>
@@ -1058,9 +1073,13 @@ export const formApunte = (estado, apunte = null) => `
     <textarea id="f-texto" name="texto" rows="10" placeholder="Lo que dictó el profe, lo que entra en el examen, cómo se hace ese ejercicio…">${escapa(apunte?.texto || '')}</textarea></div>`;
 
 export const formImportar = () => `
-  <div class="campo"><label for="f-copia">Pega aquí el contenido del archivo de copia</label>
-    <textarea id="f-copia" name="copia" rows="8" placeholder='{"version":1,…}'></textarea></div>
-  <p style="font-size:.82rem;color:var(--tinta-2)">Esto sustituye todos los datos actuales.</p>`;
+  <div class="campo"><label for="f-archivo">Elige el archivo de copia (nicer-estudia-….json)</label>
+    <input id="f-archivo" name="archivo" type="file" accept=".json,application/json" /></div>
+  <details><summary style="cursor:pointer;color:var(--tinta-2);font-size:.84rem">…o pega el contenido</summary>
+    <div class="campo" style="margin-top:8px">
+      <textarea id="f-copia" name="copia" rows="6" placeholder='{"version":3,…}'></textarea></div>
+  </details>
+  <p style="font-size:.82rem;color:var(--tinta-2);margin-top:8px">Antes de cambiar nada te digo qué trae la copia.</p>`;
 
 /* ── Texto del parte semanal (para WhatsApp) ────────────────────── */
 

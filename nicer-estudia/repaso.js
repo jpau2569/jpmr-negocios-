@@ -176,7 +176,7 @@ export function parteSemanal(estado, hoy = aISO()) {
    El corazón de la pantalla "Hoy": una lista corta y ordenada. Primero lo
    que se entrega antes, después el examen más cercano, después el repaso.
    Nunca más de cinco cosas: una lista larga no se empieza. */
-export function planDelDia({ tareas, examenes, tarjetasHoy, minutosHechos, objetivo }, hoy = aISO()) {
+export function planDelDia({ tareas, examenes, tarjetasHoy, minutosHechos, objetivo, leccionesPendientes = [] }, hoy = aISO()) {
   const bloques = [];
 
   for (const t of tareas.filter((x) => x.dias < 0).slice(0, 2)) {
@@ -194,6 +194,12 @@ export function planDelDia({ tareas, examenes, tarjetasHoy, minutosHechos, objet
       bloques.push({ tipo: 'examen', titulo: `Repasar ${examen.titulo}`, ref: examen.id, aviso: `Examen ${examen.dias === 1 ? 'mañana' : `en ${examen.dias} días`}`, prioridad: 2 });
     }
   }
+  // Una lección metida y sin resumir es trabajo a medias: un toque y Clara
+  // le hace los apuntes. Solo la más reciente, para no llenar la lista.
+  const pendiente = leccionesPendientes[0];
+  if (pendiente) {
+    bloques.push({ tipo: 'leccion', titulo: `Resumir «${pendiente.titulo}»`, ref: pendiente.id, aviso: 'Clara te hace los apuntes en un momento', prioridad: 3 });
+  }
   if (tarjetasHoy > 0) {
     bloques.push({ tipo: 'repaso', titulo: `Repasar ${plural(tarjetasHoy, 'tarjeta', 'tarjetas')}`, ref: null, aviso: 'Cinco minutos y listo', prioridad: 3 });
   }
@@ -201,4 +207,24 @@ export function planDelDia({ tareas, examenes, tarjetasHoy, minutosHechos, objet
     bloques.push({ tipo: 'libre', titulo: 'Adelanta algo del próximo examen', ref: null, aviso: 'No hay nada urgente hoy', prioridad: 4 });
   }
   return bloques.sort((a, b) => a.prioridad - b.prioridad).slice(0, 5);
+}
+
+/* Atajos en el PC, para repasar sin ratón: espacio enseña la respuesta,
+   1 «no la sabía», 2 «la sabía»; en un test, 1-4 eligen y Enter sigue.
+   Nunca mientras escribe en una caja ni con un diálogo abierto. */
+export function atajoTeclado(tecla, estadoPantalla) {
+  const { vista, sub, tarjeta, respuestaVisible, test } = estadoPantalla;
+  if (vista !== 'estudiar') return null;
+  if (sub === 'tarjetas' && tarjeta) {
+    if ((tecla === ' ' || tecla === 'Enter') && !respuestaVisible) return 'ver-respuesta';
+    if (respuestaVisible && tecla === '1') return 'fallo';
+    if (respuestaVisible && tecla === '2') return 'acierto';
+  }
+  if (sub === 'test' && test && test.fase === 'test' && !test.terminado) {
+    const contestada = test.respuestas[test.i] !== null && test.respuestas[test.i] !== undefined;
+    const n = Number(tecla);
+    if (!contestada && n >= 1 && n <= (test.preguntas[test.i]?.opciones.length || 0)) return `responder:${n - 1}`;
+    if (contestada && tecla === 'Enter') return 'siguiente-pregunta';
+  }
+  return null;
 }

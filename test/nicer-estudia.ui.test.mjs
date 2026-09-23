@@ -467,6 +467,54 @@ check("su examen de prueba se hace con esas lecciones",
   ultimoCuerpo?.modo === "examen" && ultimoCuerpo.contenido.includes("Propiedades de la materia"));
 await page.click('[data-accion="cerrar-test"]');
 
+console.log("\n🧭 Hoy conecta con lo nuevo");
+await page.evaluate(() => {
+  const clave = "nicer-estudia:v1";
+  const e = JSON.parse(localStorage.getItem(clave));
+  e.lecciones.push({ id: "pend1", titulo: "Tema 5 — Pendiente", texto: "Texto por resumir", fecha: new Date().toISOString().slice(0, 10), resumida: null, apuntes: [], conceptos: [], resumen: "" });
+  localStorage.setItem(clave, JSON.stringify(e));
+});
+await page.goto(`http://localhost:${PORT}/app.html`, { waitUntil: "networkidle" });
+check("«Hoy» avisa de la lección sin resumir", (await page.locator(".paso.leccion").textContent()).includes("Tema 5"));
+await page.click('.paso.leccion [data-accion="abrir-leccion"]');
+check("y lleva directo a ella", await page.locator('[data-accion="resumir-leccion"]').first().isVisible());
+
+console.log("\n⌨️  Atajos de teclado (PC)");
+await page.click('[data-accion="sub"][data-sub="tarjetas"]');
+if (await page.locator(".flash .pregunta").count() && await page.locator('[data-accion="ver-respuesta"]').count()) {
+  check("en el PC se enseñan los atajos", await page.locator(".atajos").isVisible());
+  await page.keyboard.press(" ");
+  check("espacio enseña la respuesta", await page.locator(".flash .respuesta").isVisible());
+  const antes = await page.locator(".flash .pregunta").textContent();
+  await page.keyboard.press("2");
+  check("2 la da por sabida y pasa a la siguiente",
+    !(await page.locator(".flash .respuesta").count()) || (await page.locator(".flash .pregunta").textContent()) !== antes);
+} else {
+  check("hay tarjetas para probar los atajos", false);
+}
+
+console.log("\n🔁 Pasar los datos al PC (copia de ida y vuelta)");
+await page.click('#nav button[data-vista="yo"]');
+check("dice qué datos hay en este aparato", (await page.locator("main").textContent()).includes("lecciones"));
+const antesCopia = await page.evaluate(() => localStorage.getItem("nicer-estudia:v1"));
+const [copia] = await Promise.all([page.waitForEvent("download"), page.click('[data-accion="exportar"]')]);
+check("la copia se guarda como archivo", copia.suggestedFilename().startsWith("nicer-estudia-"));
+const rutaCopia = await copia.path();
+await page.evaluate(() => { const e = JSON.parse(localStorage.getItem("nicer-estudia:v1")); e.lecciones = []; localStorage.setItem("nicer-estudia:v1", JSON.stringify(e)); });
+await page.reload({ waitUntil: "networkidle" });
+await page.click('#nav button[data-vista="yo"]');
+await page.click('[data-accion="importar"]');
+await page.setInputFiles("#f-archivo", rutaCopia);
+await page.click("#dlg-aceptar");
+await page.waitForSelector('#dlg-cuerpo:has-text("La copia trae")');
+check("antes de sustituir, dice qué trae la copia y qué hay ahora",
+  (await page.locator("#dlg-cuerpo").textContent()).includes("Sustituye lo que hay ahora"));
+await page.click("#dlg-aceptar");
+await page.waitForSelector('#dlg-cuerpo:has-text("Copia abierta")');
+await page.click("#dlg-aceptar");
+check("y todo vuelve tal cual", await page.evaluate((antes) =>
+  JSON.parse(localStorage.getItem("nicer-estudia:v1")).lecciones.length === JSON.parse(antes).lecciones.length, antesCopia));
+
 console.log("\n🎧 Sonido de fondo");
 await page.click('#nav button[data-vista="yo"]');
 await page.click('.chip >> nth=1');
@@ -484,6 +532,29 @@ check("los botones se pueden pulsar con el dedo", pequenos === 0, `${pequenos} b
 await page.emulateMedia({ colorScheme: "dark" });
 const fondo = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 check("el tema oscuro pinta el fondo", fondo === "rgb(13, 16, 20)", fondo);
+
+console.log("\n🖥️  PC");
+await page.emulateMedia({ colorScheme: "light" });
+await page.setViewportSize({ width: 1366, height: 768 });
+for (const v of ["hoy", "agenda", "estudiar", "profe", "yo"]) {
+  await page.goto(`http://localhost:${PORT}/app.html?vista=${v}`, { waitUntil: "networkidle" });
+  const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  check(`a 1366 px «${v}» se ve sin desbordes`, sobra <= 0, `sobran ${sobra}px`);
+}
+check("en el PC la columna se ensancha para leer", await page.evaluate(() => document.querySelector(".app").getBoundingClientRect().width > 700));
+
+console.log("\n📴 Sin conexión");
+await page.evaluate(() => navigator.serviceWorker.ready);
+await page.reload({ waitUntil: "networkidle" }); // ya controlada por el service worker
+await page.context().setOffline(true);
+const erroresAntes = errores.length;
+await page.reload({ waitUntil: "domcontentloaded" });
+await page.waitForSelector("main .seccion");
+check("sin internet la app abre igual", await page.locator("#nav").isVisible());
+await page.click('#nav button[data-vista="estudiar"]');
+check("y se puede estudiar", await page.locator(".pestanas").isVisible());
+await page.context().setOffline(false);
+errores.splice(erroresAntes); // los fallos de red esperados al estar sin conexión no cuentan
 
 console.log("\n🧹 Consola");
 check("ni un error de JavaScript", errores.length === 0, errores.join(" | "));

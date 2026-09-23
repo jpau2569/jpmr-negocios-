@@ -42,6 +42,8 @@ const ctx = {
   dictando: false,
   puedeDictar: Voz.puedeDictar(),
   puedeLeer: Voz.puedeLeer(),
+  // Con ratón y teclado (PC) se enseñan los atajos; en el móvil no estorban.
+  teclado: typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches,
   pensando: false,
   error: null,
   instalable: false
@@ -423,23 +425,40 @@ const acciones = {
       aceptar: 'Cerrar'
     });
   },
-  exportar: () => {
-    const blob = new Blob([D.exportar(estado)], { type: 'application/json' });
+  /* En el móvil la copia se comparte (WhatsApp, correo, Drive) para
+     abrirla en el PC; donde no se pueda compartir un archivo, se descarga. */
+  exportar: async () => {
+    const nombre = `nicer-estudia-${ctx.hoy}.json`;
+    const archivo = new File([D.exportar(estado)], nombre, { type: 'application/json' });
+    if (navigator.canShare?.({ files: [archivo] })) {
+      try { await navigator.share({ files: [archivo], title: 'Copia de Nicer Estudia' }); return; } catch (e) {
+        if (e?.name === 'AbortError') return; // lo canceló él
+      }
+    }
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `nicer-estudia-${ctx.hoy}.json`;
+    a.href = URL.createObjectURL(archivo);
+    a.download = nombre;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   },
   importar: async () => {
-    const d = await pide({ titulo: 'Restaurar copia', html: UI.formImportar(), aceptar: 'Restaurar' });
-    if (!d || !d.copia?.trim()) return;
-    const r = D.importar(d.copia);
-    if (!r.ok) return avisa(`No se pudo leer la copia: ${r.error}`);
+    const d = await pide({ titulo: 'Abrir una copia', html: UI.formImportar(), aceptar: 'Abrir' });
+    if (!d) return;
+    let texto = (d.copia || '').trim();
+    if (d.archivo?.[0]) {
+      try { texto = await d.archivo[0].text(); } catch { return avisa('No he podido leer ese archivo.'); }
+    }
+    if (!texto) return;
+    const r = D.importar(texto);
+    if (!r.ok) return avisa(`Ese archivo no es una copia de Nicer Estudia (${r.error}).`);
+    const ok = await confirma(`La copia trae: ${D.resumenDatos(r.estado)}.<br /><br />`
+      + `Sustituye lo que hay ahora en este aparato: ${D.resumenDatos(estado)}.`);
+    if (!ok) return;
     estado = r.estado;
     persiste(); render();
-    avisa('Copia restaurada.');
+    avisa('Copia abierta. Ya tienes aquí todo lo de la copia.');
   },
+  'ir-tarjetas': () => { ctx.sub = 'tarjetas'; irA('estudiar'); },
   'borrar-todo': async () => {
     if (!(await confirma('Se borra TODO: deberes, exámenes, tarjetas, notas y horario. No hay vuelta atrás.'))) return;
     estado = D.estadoInicial();
@@ -565,7 +584,11 @@ const acciones = {
   'filtro-asig': (el) => { ctx.filtroAsig = el.dataset.id || ''; render(); },
   'nueva-leccion': () => editaLeccion(null),
   'editar-leccion': (el) => editaLeccion(estado.lecciones.find((l) => l.id === el.dataset.id)),
-  'abrir-leccion': (el) => { ctx.leccionAbierta = el.dataset.id; render(); window.scrollTo({ top: 0 }); },
+  'abrir-leccion': (el) => {
+    ctx.leccionAbierta = el.dataset.id;
+    ctx.sub = 'lecciones';
+    irA('estudiar'); // también desde «Hoy»
+  },
   'cerrar-leccion': () => { ctx.leccionAbierta = null; Voz.calla(); render(); },
   'borrar-leccion': async (el) => {
     if (!(await confirma('¿Borrar esta lección y sus apuntes?'))) return;
@@ -1214,6 +1237,20 @@ document.addEventListener('change', async (ev) => {
   enfocaCaja();
 });
 
+/* Atajos en el PC: la lógica vive en repaso.js (atajoTeclado). */
+document.addEventListener('keydown', (ev) => {
+  if (dlg.open || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+  if (ev.target?.closest?.('input, textarea, select')) return;
+  const orden = R.atajoTeclado(ev.key, {
+    vista: ctx.vista, sub: ctx.sub, tarjeta: ctx.tarjetaActual,
+    respuestaVisible: ctx.respuestaVisible, test: ctx.test
+  });
+  if (!orden) return;
+  ev.preventDefault();
+  const [accion, valor] = orden.split(':');
+  acciones[accion]?.({ dataset: { i: valor } });
+});
+
 /* Enter envía, Mayús+Enter hace salto de línea. */
 document.addEventListener('keydown', (ev) => {
   if (ev.target?.id === 'profe-texto' && ev.key === 'Enter' && !ev.shiftKey) {
@@ -1230,6 +1267,12 @@ window.addEventListener('beforeinstallprompt', (ev) => {
   ctx.instalable = true;
   if (ctx.vista === 'yo') render();
 });
+
+/* Sin esto, Chrome y Safari pueden borrar los datos de una web si el móvil
+   anda justo de espacio. Con él, solo se borran si él lo decide. */
+if (navigator.storage?.persist) {
+  navigator.storage.persisted?.().then((ya) => { if (!ya) navigator.storage.persist().catch(() => {}); }).catch(() => {});
+}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

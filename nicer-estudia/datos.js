@@ -270,6 +270,21 @@ export function guardar(estado) {
 
 export const exportar = (estado) => JSON.stringify(estado, null, 2);
 
+/** Lo que hay en unos datos, en una frase: se enseña antes de restaurar una
+    copia para que se sepa qué se va a poner (y qué se va a quitar). */
+export function resumenDatos(estado) {
+  const n = (lista) => (Array.isArray(lista) ? lista.length : 0);
+  const partes = [
+    [n(estado.lecciones), 'lección', 'lecciones'],
+    [n(estado.tarjetas), 'tarjeta', 'tarjetas'],
+    [n(estado.examenes), 'examen', 'exámenes'],
+    [n(estado.tareas), 'deber', 'deberes'],
+    [n(estado.libros), 'libro', 'libros'],
+    [n(estado.notas), 'nota', 'notas']
+  ].filter(([c]) => c > 0).map(([c, uno, muchos]) => `${c} ${c === 1 ? uno : muchos}`);
+  return partes.length ? partes.join(', ') : 'nada todavía';
+}
+
 /* La conversación con Clara se guarda aparte del estado: no hace falta en la
    copia de seguridad y así un chat largo no engorda los datos importantes.
    Las fotos no se guardan (solo se marca que la hubo): ocupan mucho y ya

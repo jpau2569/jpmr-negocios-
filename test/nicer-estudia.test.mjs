@@ -561,6 +561,32 @@ console.log("\n🧪 Examen de prueba");
   check("un examen vacío es un 0, no un error", L.notaFinal({}, [], []) === 0);
 }
 
+
+console.log("\n🧭 Hoy, copia y teclado");
+{
+  const plan = R.planDelDia({ tareas: [], examenes: [], tarjetasHoy: 0, minutosHechos: 0, objetivo: 45,
+    leccionesPendientes: [{ id: "x9", titulo: "Tema 4" }] }, HOY);
+  check("una lección sin resumir aparece en «qué toca ahora»", plan.some((p) => p.tipo === "leccion" && p.ref === "x9"));
+  check("y ya no se propone «adelantar algo» porque hay tarea", !plan.some((p) => p.tipo === "libre"));
+
+  check("el resumen de los datos cuenta lo que hay",
+    D.resumenDatos(D.normaliza({ tarjetas: [{ pregunta: "p", respuesta: "r" }], lecciones: [{ titulo: "T" }, { titulo: "U" }] })) === "2 lecciones, 1 tarjeta");
+  check("y sin datos lo dice", D.resumenDatos(D.estadoInicial()) === "nada todavía");
+
+  const tarjeta = { id: "c1" };
+  const base = { vista: "estudiar", sub: "tarjetas", tarjeta, respuestaVisible: false, test: null };
+  check("espacio enseña la respuesta", R.atajoTeclado(" ", base) === "ver-respuesta");
+  check("1 y 2 solo valen con la respuesta a la vista", R.atajoTeclado("2", base) === null
+    && R.atajoTeclado("2", { ...base, respuestaVisible: true }) === "acierto"
+    && R.atajoTeclado("1", { ...base, respuestaVisible: true }) === "fallo");
+  const test = { fase: "test", terminado: false, i: 0, respuestas: [null], preguntas: [{ opciones: ["a", "b", "c", "d"] }] };
+  check("en un test, 1-4 eligen opción", R.atajoTeclado("3", { vista: "estudiar", sub: "test", test }) === "responder:2");
+  check("una tecla de más no hace nada", R.atajoTeclado("7", { vista: "estudiar", sub: "test", test }) === null);
+  check("Enter pasa de pregunta cuando ya contestó",
+    R.atajoTeclado("Enter", { vista: "estudiar", sub: "test", test: { ...test, respuestas: [1] } }) === "siguiente-pregunta");
+  check("fuera de Estudiar, las teclas no hacen nada", R.atajoTeclado(" ", { ...base, vista: "hoy" }) === null);
+}
+
 console.log("\n🔎 Búsqueda de asignatura (la usa el Profe al crear tarjetas)");
 {
   const e = D.normaliza({ asignaturas: [{ id: "a1", nombre: "Biología y Geología", color: "#2f7d4f" }] });

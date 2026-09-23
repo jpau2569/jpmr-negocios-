@@ -96,6 +96,15 @@ muñeco animado.
 Objetivos táctiles de 44 px como mínimo, contraste de texto por encima de
 4.5:1 en los dos temas, y cero desborde horizontal desde 320 px.
 
+Todo el texto del alumno puede traer un enlace o una palabra larguísima: por
+eso `.app` lleva `overflow-wrap: anywhere` y los hijos flexibles `min-width: 0`.
+No lo quites. Tras tocar una pantalla, pasa
+`node nicer-estudia/herramientas/auditoria-visual.mjs` (4 anchos × 2 temas ×
+9 pantallas): tiene que decir «SIN PROBLEMAS».
+
+Móvil y PC tienen cada uno sus datos (no hay sincronización, a propósito): la
+forma de pasarlos es la copia (Yo → Guardar / enviar copia → Abrir una copia).
+
 ## Tono de los textos
 
 Español de España, de tú, corto y directo. Como un hermano mayor que ya pasó
