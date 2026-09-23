@@ -8,6 +8,8 @@
 import { aISO, sumaDias, diasEntre, diaSemana, id, esISO, limita, horaAMinutos, normalizaTexto } from './utiles.js';
 
 export const CLAVE = 'nicer-estudia:v1';
+export const CLAVE_CHAT = 'nicer-estudia:chat';
+const MAX_CHAT = 40;
 export const VERSION_DATOS = 2;
 
 /* Asignaturas de arranque para 1º-2º de ESO. Es una lista EDITABLE de
@@ -130,6 +132,7 @@ export function normaliza(bruto) {
     aciertos: Math.max(0, Number(c.aciertos) || 0),
     fallos: Math.max(0, Number(c.fallos) || 0),
     origen: c.origen === 'ia' ? 'ia' : 'mano',
+    idioma: c.idioma === 'en' ? 'en' : 'es',
     creada: esISO(c.creada) ? c.creada : aISO()
   })).filter((c) => c.pregunta && c.respuesta);
 
@@ -230,6 +233,38 @@ export function guardar(estado) {
 }
 
 export const exportar = (estado) => JSON.stringify(estado, null, 2);
+
+/* La conversación con Clara se guarda aparte del estado: no hace falta en la
+   copia de seguridad y así un chat largo no engorda los datos importantes.
+   Las fotos no se guardan (solo se marca que la hubo): ocupan mucho y ya
+   cumplieron su función. */
+export function cargarChat() {
+  const a = almacen();
+  if (!a) return [];
+  try {
+    const lista = JSON.parse(a.getItem(CLAVE_CHAT) || '[]');
+    return (Array.isArray(lista) ? lista : [])
+      .filter((m) => (m?.rol === 'user' || m?.rol === 'profe') && typeof m.texto === 'string')
+      .slice(-MAX_CHAT)
+      .map((m) => ({ rol: m.rol, texto: m.texto.slice(0, 8000), foto: Boolean(m.foto), buscado: Boolean(m.buscado) }));
+  } catch {
+    return [];
+  }
+}
+
+export function guardarChat(chat) {
+  const a = almacen();
+  if (!a) return false;
+  try {
+    const ligero = (chat || []).slice(-MAX_CHAT).map((m) => ({
+      rol: m.rol, texto: m.texto, foto: Boolean(m.foto), buscado: Boolean(m.buscado)
+    }));
+    a.setItem(CLAVE_CHAT, JSON.stringify(ligero));
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** Importa una copia de seguridad. Devuelve `{ ok, estado, error }`. */
 export function importar(texto) {
@@ -353,6 +388,41 @@ export function progresoTests(estado, hoy = aISO(), dias = 7) {
   const recientes = todos.filter((t) => t.fecha >= desde);
   const media = (lista) => (lista.length ? lista.reduce((t, x) => t + x.nota, 0) / lista.length : null);
   return { hechos: todos.length, semana: recientes.length, media: media(recientes), mediaTotal: media(todos) };
+}
+
+const COLORES_NUEVAS = ['#1a6a90', '#b4472c', '#5b3fa8', '#8a6a1f', '#2f7d4f', '#0f6f7a', '#a03060', '#6d4c9f'];
+
+/**
+ * Pone el horario que Clara ha leído de una foto. Solo toca los días que
+ * vienen en la foto (los demás se quedan como estaban) y crea las asignaturas
+ * que no existían. Pura: devuelve un estado nuevo y el resumen de lo hecho.
+ */
+export function aplicaHorario(estado, horario) {
+  const nuevo = normaliza(JSON.parse(JSON.stringify(estado)));
+  const creadas = [];
+  let clases = 0;
+  const dias = horario?.dias || {};
+
+  for (const [dia, lista] of Object.entries(dias)) {
+    const d = Number(dia);
+    if (!(d >= 1 && d <= 7) || !Array.isArray(lista)) continue;
+    nuevo.horario[d] = lista.map((c) => {
+      let asignatura = buscaAsignatura(nuevo, c.asignatura);
+      if (!asignatura) {
+        asignatura = {
+          id: id('as'),
+          nombre: String(c.asignatura).slice(0, 60),
+          color: COLORES_NUEVAS[creadas.length % COLORES_NUEVAS.length],
+          profe: ''
+        };
+        nuevo.asignaturas.push(asignatura);
+        creadas.push(asignatura.nombre);
+      }
+      clases += 1;
+      return { id: id('cl'), asignaturaId: asignatura.id, hora: c.hora || '' };
+    });
+  }
+  return { estado: normaliza(nuevo), creadas, clases };
 }
 
 /** Busca una asignatura por nombre aproximado (lo usa el Profe IA al crear

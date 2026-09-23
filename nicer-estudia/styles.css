@@ -328,6 +328,36 @@ input[type="range"] { min-height: 32px; padding: 0; accent-color: var(--azul); }
 .escribiendo i:nth-child(3) { animation-delay: .3s; }
 @keyframes late { 0%, 60%, 100% { opacity: .3 } 30% { opacity: 1 } }
 
+/* ── Clara ─────────────────────────────────────────────────────── */
+.cabeza-clara { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.cabeza-clara .nombre { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+.cabeza-clara .rol { font-size: .8rem; color: var(--tinta-2); }
+.avatar {
+  width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: none;
+  border: 2px solid color-mix(in srgb, var(--azul) 35%, var(--borde));
+}
+.pie-burbuja { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; white-space: normal; }
+.pie-burbuja .mini { min-height: 32px; }
+.foto-chat { display: block; max-width: 160px; border-radius: 10px; margin-bottom: 6px; }
+.caja-escribir { margin-top: 12px; }
+.foto-pendiente {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  padding: 6px 8px; border: 1px solid var(--borde); border-radius: 12px; font-size: .84rem; color: var(--tinta-2);
+}
+.foto-pendiente img { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; }
+.foto-pendiente .borrar { margin-left: auto; }
+.fila-escribir { margin-top: 8px; }
+.fila-escribir > .icono { flex: 0 0 52px; }
+button.icono { padding: 0; font-size: 1.25rem; min-width: 52px; }
+button.icono.grabando {
+  background: var(--rojo-suave); border-color: var(--rojo);
+  animation: late 1.2s infinite;
+}
+.horario-leido { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin-top: 8px; font-size: .84rem; }
+.horario-leido .hora { color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.nav .cara { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; opacity: .75; }
+.nav button[aria-current="page"] .cara { opacity: 1; outline: 2px solid var(--azul); outline-offset: 1px; }
+
 /* ── Yo / ajustes ──────────────────────────────────────────────── */
 .rejilla { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .dato { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 12px; }

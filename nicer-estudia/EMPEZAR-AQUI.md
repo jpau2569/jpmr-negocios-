@@ -13,8 +13,10 @@ horas: es para no llevarte sustos y para que lo que estudies se te quede.
 ## 2. El primer día (10 minutos, una sola vez)
 
 - **Yo → Asignaturas**: quita las que no tengas y añade las que falten.
-- **Yo → Horario**: pon las clases de lunes a viernes. Con esto la app te dice
-  cada tarde qué meter en la mochila para mañana.
+- **Tu horario, con una foto**: ve a **Clara → 🗓️ Foto de mi horario**, hazle
+  una foto al horario del cole y Clara te lo pone en la app (antes te lo
+  enseña para que lo revises). Con esto la app te dice cada tarde qué meter en
+  la mochila para mañana. Si prefieres a mano: **Yo → Horario**.
 - **Yo → Ajustes**: pon tu curso y, si 25 minutos seguidos se te hacen largos,
   bájalo a 15. Es mejor 15 minutos de verdad que 25 mirando el techo.
 
@@ -23,8 +25,9 @@ horas: es para no llevarte sustos y para que lo que estudies se te quede.
 - **Al salir de clase**: Agenda → *Apuntar deberes*. Ahí mismo, en el pasillo.
   Es el único momento en el que te acuerdas de todo.
 - **En cuanto sepas la fecha de un examen**: Agenda → *Apuntar examen*.
-  La app te reparte sola el estudio en varios días. No hace falta que pienses
-  cuándo empezar: te lo dice.
+  La app te reparte sola el estudio en varios días. Dale a **📅 Avisos en el
+  móvil** y tu calendario te avisará cada día que toque estudiar, aunque no
+  abras la app.
 - **Al llegar a casa**: abre **Hoy**. Lo que pone ahí es lo que toca. Nada más.
   Le das a *Empezar 25 minutos* y no piensas en el resto.
 
@@ -71,14 +74,21 @@ Si el silencio te distrae, en la pantalla de concentración tienes lluvia,
 cafetería, biblioteca o mar. El sonido lo fabrica el propio móvil, así que no
 gasta datos y funciona sin cobertura.
 
-## 8. El Profe
+## 8. Clara, tu profe
 
-Es un profesor de IA. Le puedes preguntar lo que no entiendas las veces que
-haga falta, sin cortarte.
+Es la misma Clara que ayuda a tu padre, pero contigo hace de profesora. Le
+puedes preguntar lo que no entiendas las veces que haga falta, sin cortarte:
+
+- **Escribiendo**, o **hablando** con el 🎤 si te da pereza teclear.
+- **Con una foto 📷** del ejercicio, del libro o de tus apuntes.
+- **Para trabajos**: busca información en Internet y te dice de dónde la saca,
+  para que pongas la fuente (y no copies).
+- **Para inglés**: dale a *Practicar inglés* y te habla en inglés sencillo.
+  Con 🔊 Escuchar oyes sus respuestas y tus tarjetas de inglés con buen acento.
 
 Dos cosas que tienes que saber:
-- **No te va a dar los deberes hechos.** Te explica cómo se hacen y te pide
-  que lo intentes tú. Es aposta.
+- **No te va a dar los deberes hechos** ni a escribirte los trabajos. Te
+  explica cómo se hacen y te pide que lo intentes tú. Es aposta.
 - **A veces se equivoca.** Si algo no te cuadra con lo que dijo tu profesor de
   clase, manda tu profesor de clase.
 

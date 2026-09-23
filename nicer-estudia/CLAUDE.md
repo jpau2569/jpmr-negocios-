@@ -14,7 +14,7 @@ Los cuatro problemas que existe para resolver, en este orden:
 1. Se le olvidan los deberes → agenda, prioridad, tareas que se repiten y mochila de mañana
 2. Le cuesta arrancar y se distrae → concentración, sonido de fondo, planta, racha, "solo 5 minutos"
 3. Estudia y se le olvida → tarjetas con repaso espaciado, tests y esquemas
-4. Hay cosas que no entiende → el Profe
+4. Hay cosas que no entiende → Clara (escrita, hablada o con una foto)
 
 Si una idea nueva no ataca uno de esos cuatro, probablemente sobra.
 
@@ -28,15 +28,25 @@ Se sirve por HTTP, no con `file://`.
 ## Reglas que no se rompen
 
 - **Los datos son de un menor y no salen del dispositivo.** Nada de cuentas,
-  analítica, cookies ni sincronización en la nube. Lo único que viaja es la
-  pregunta que se escribe al Profe.
+  analítica, cookies ni sincronización en la nube. Lo único que viaja es lo
+  que él decide mandarle a Clara: la pregunta y, si quiere, una foto (que se
+  reduce antes en el móvil y la app no guarda).
 - **La clave de la API nunca en el navegador.** El Profe va por
   `../api/_profe.js` (URL `/api/profe`, a través del enrutador `api/[ruta].js`)
   con `ANTHROPIC_API_KEY` en el servidor. No lo conviertas en una función
   suelta: el plan Hobby de Vercel solo admite 12.
-- **El Profe no da los deberes hechos** y **no hace de psicólogo**: ante algo
-  serio, manda a un adulto y recuerda el 024 y el 116 111. Está en el prompt
-  de `api/_profe.js`; no lo suavices.
+- **Clara es la de Pau, pero con un solo sombrero: el de profesora.** Se queda
+  con su voz, su calidez y el buscador (`buscarConGemini`, importado de
+  `api/_clara.js`); **no** se lleva la memoria de Pau, su cartera ni el modo
+  psicóloga. No conectes la pestaña de Nicer con `clara.html`.
+- **Clara no da los deberes hechos** (ni escribe los trabajos) y **no hace de
+  psicóloga**: ante algo serio, manda a un adulto y recuerda el 024 y el
+  116 111. Está en el prompt de `api/_profe.js`; no lo suavices.
+- **Lo que busca en Internet lo cita**, y la app lo marca con «Ha buscado en
+  internet». Sin `GEMINI_API_KEY` no se le ofrece el buscador (para que no
+  prometa lo que no puede hacer).
+- **El horario leído de una foto se enseña antes de ponerlo** y solo cambia
+  los días que salen en la foto.
 - **Todo lo que escribe el alumno pasa por `escapa()`** antes de ir al HTML.
 - **La lista de "qué toca ahora" no pasa de 5** y el repaso diario tiene tope.
 - **El sonido de fondo se genera en el móvil** (`ambiente.js`), no se descarga:
@@ -53,9 +63,13 @@ Se sirve por HTTP, no con `file://`.
 ## Separación por capas
 
 `utiles.js` → `datos.js` / `repaso.js` / `cuestionario.js` / `esquema.js` /
-`ambiente.js` → `interfaz.js` → `app.js`
+`ambiente.js` / `calendario.js` → `interfaz.js` → `app.js`
 
-Los cinco módulos del medio son **funciones puras** (el azar y la fecha entran
+`voz.js` (dictado y lectura en voz alta) y `foto.js` (reducir la foto en el
+móvil) tocan el navegador, pero su lógica pura (`idiomaDe`, `limpiaParaLeer`,
+`medidas`) se prueba en Node.
+
+Los módulos del medio son **funciones puras** (el azar y la fecha entran
 por parámetro): por eso se pueden probar en Node sin navegador. No metas
 `localStorage` ni DOM en ellos.
 

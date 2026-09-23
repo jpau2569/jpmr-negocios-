@@ -189,7 +189,10 @@ function tarjetaExamen(estado, e, hoy) {
     ${foco ? `<div class="aviso-caja" style="margin-top:10px">
       <strong>${escapa(foco.foco)}</strong> · ${escapa(foco.detalle)}
     </div>` : ''}
-    <button class="mini fantasma" style="margin-top:10px" data-accion="ver-plan" data-id="${e.id}">Ver plan completo</button>
+    <div class="fila" style="margin-top:10px">
+      <button class="mini fantasma" data-accion="ver-plan" data-id="${e.id}">Ver plan completo</button>
+      <button class="mini" data-accion="calendario-examen" data-id="${e.id}">📅 Avisos en el móvil</button>
+    </div>
   </div>`;
 }
 
@@ -286,6 +289,8 @@ function subTarjetas(estado, ctx) {
             <div class="pastilla gris" style="align-self:center">${escapa(D.nombreAsignatura(estado, tarjetaActual.asignaturaId))} · caja ${tarjetaActual.caja}</div>
             <div class="pregunta">${escapa(tarjetaActual.pregunta)}</div>
             ${respuestaVisible ? `<div class="respuesta">${escapa(tarjetaActual.respuesta)}</div>` : ''}
+            ${ctx.puedeLeer ? `<button class="mini fantasma" style="align-self:center" data-accion="escuchar-tarjeta"
+              aria-label="Escuchar">🔊 ${tarjetaActual.idioma === 'en' ? 'Listen' : 'Escuchar'}</button>` : ''}
           </div>
           ${respuestaVisible
             ? `<div class="fila" style="margin-top:10px">
@@ -472,23 +477,82 @@ function subApuntes(estado, ctx) {
 
 /* ── Vista: PROFE ───────────────────────────────────────────────── */
 
-export function vistaProfe(estado, ctx) {
-  const { chat, pensando, error, propuestas } = ctx;
+/* ── Vista: CLARA ──────────────────────────────────────────────
+   La pestaña de dudas es Clara, la misma asistente de su padre con el
+   sombrero de profesora. Se le puede escribir, hablar o mandar una foto. */
+
+const DIAS_HORARIO = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+export const SUGERENCIAS = [
+  { id: 'duda', texto: '🤔 No entiendo algo', rellena: 'No entiendo ' },
+  { id: 'ejercicio', texto: '📷 Foto de un ejercicio', foto: true, rellena: '¿Me ayudas con este ejercicio? No me des la solución, explícame cómo se hace.' },
+  { id: 'horario', texto: '🗓️ Foto de mi horario', foto: true, rellena: 'Esta es la foto de mi horario de clases. ¿Me lo pones en la app?' },
+  { id: 'test', texto: '🧪 Ponme un test', rellena: 'Ponme un test del tema ' },
+  { id: 'esquema', texto: '🗺️ Hazme un esquema', rellena: 'Hazme un esquema de ' },
+  { id: 'trabajo', texto: '🔍 Busca info para un trabajo', rellena: 'Tengo que hacer un trabajo sobre ' },
+  { id: 'ingles', texto: '🇬🇧 Practicar inglés', rellena: "Let's practise English. Ask me simple questions about my day and correct my mistakes." }
+];
+
+function burbujaClara(m, i, ctx) {
+  // Sin saltos de línea en la plantilla: la burbuja respeta los espacios
+  // (white-space: pre-wrap) y cada salto dejaba un hueco en blanco.
+  const pie = [
+    m.buscado ? '<span class="pastilla gris">🔍 Ha buscado en internet</span>' : '',
+    ctx.puedeLeer ? `<button class="mini fantasma" data-accion="escuchar" data-i="${i}" aria-label="Escuchar la respuesta">🔊 Escuchar</button>` : ''
+  ].join('');
+  return `<div class="burbuja profe">${escapa(m.texto)}${pie ? `<div class="pie-burbuja">${pie}</div>` : ''}</div>`;
+}
+
+function burbujaAlumno(m) {
+  const foto = m.miniatura
+    ? `<img class="foto-chat" src="${m.miniatura}" alt="Foto enviada" />`
+    : m.foto ? '<span class="pastilla gris">📷 Foto</span>' : '';
+  return `<div class="burbuja yo">${foto}${m.texto ? escapa(m.texto) : ''}</div>`;
+}
+
+function propuestaHorario(horario) {
+  const dias = Object.entries(horario.dias || {}).filter(([, l]) => l.length);
+  return `<div class="aviso-caja" style="margin-top:12px">
+    <strong>He leído tu horario.</strong> Revísalo antes de ponerlo:
+    <div class="horario-leido">
+      ${dias.map(([d, lista]) => `<div><strong>${DIAS_HORARIO[d] || d}</strong>
+        ${lista.map((c) => `<div>${c.hora ? `<span class="hora">${escapa(c.hora)}</span> ` : ''}${escapa(c.asignatura)}</div>`).join('')}
+      </div>`).join('')}
+    </div>
+    <p style="font-size:.8rem;color:var(--tinta-2);margin-top:6px">Solo cambia los días que salen en la foto.</p>
+    <div class="fila" style="margin-top:8px">
+      <button class="mini fantasma" data-accion="descartar-horario">No está bien</button>
+      <button class="mini principal" data-accion="aplicar-horario">Poner este horario</button>
+    </div>
+  </div>`;
+}
+
+export function vistaClara(estado, ctx) {
+  const { chat, pensando, error, propuestas, fotoPendiente, dictando } = ctx;
   return `
   <section class="seccion">
-    <header><h2>Profe</h2><span class="extra">${escapa(estado.alumno.curso)}</span></header>
-    <div class="tarjeta" style="padding:12px">
+    <div class="tarjeta cabeza-clara">
+      <img class="avatar" src="clara.jpg" alt="Clara" width="52" height="52" />
+      <div>
+        <div class="nombre">Clara</div>
+        <div class="rol">Tu profe · ${escapa(estado.alumno.curso)}</div>
+      </div>
+      ${chat.length ? '<button class="mini fantasma" style="margin-left:auto" data-accion="limpiar-chat">Nueva charla</button>' : ''}
+    </div>
+
+    <div class="tarjeta" style="padding:12px;margin-top:10px">
       <div class="chat" id="chat">
-        ${chat.length ? chat.map((m) => `<div class="burbuja ${m.rol === 'user' ? 'yo' : 'profe'}">${escapa(m.texto)}</div>`).join('')
-          : `<div class="burbuja profe">Hola, ${escapa(estado.alumno.nombre)}. Soy tu profe de guardia.
+        ${chat.length ? chat.map((m, i) => (m.rol === 'user' ? burbujaAlumno(m) : burbujaClara(m, i, ctx))).join('')
+          : `<div class="burbuja profe">¡Hola, ${escapa(estado.alumno.nombre)}! Soy Clara, tu profe.
 
-Pregúntame lo que no entiendas de clase y te lo explico paso a paso. Si son deberes, no te doy la solución hecha: te llevo hasta ella.
+Pregúntame lo que no entiendas y te lo explico paso a paso, las veces que haga falta. Si son deberes, no te doy la solución hecha: te llevo hasta ella.
 
-Y te preparo material del tema que me digas:
-· «hazme tarjetas de la célula»
-· «ponme un test del tema 2»
-· «hazme un esquema de la Edad Media»</div>`}
-        ${pensando ? '<div class="burbuja profe"><span class="escribiendo"><i></i><i></i><i></i></span></div>' : ''}
+Puedes escribirme, hablarme 🎤 o mandarme una foto 📷 del ejercicio, del libro o de tu horario.</div>
+          <div class="chips" style="margin-top:4px">
+            ${SUGERENCIAS.map((x) => `<button class="chip" data-accion="sugerencia" data-id="${x.id}">${x.texto}</button>`).join('')}
+          </div>`}
+        ${pensando ? `<div class="burbuja profe"><span class="escribiendo"><i></i><i></i><i></i></span>
+          ${pensando === 'foto' ? ' <span style="font-size:.82rem;color:var(--tinta-2)">Mirando la foto…</span>' : ''}</div>` : ''}
         ${error ? `<div class="burbuja error">${escapa(error)}</div>` : ''}
       </div>
       ${propuestas?.length ? `<div class="aviso-caja" style="margin-top:12px">
@@ -512,19 +576,33 @@ Y te preparo material del tema que me digas:
           <button class="mini principal" data-accion="guardar-esquema">Guardarlo</button>
         </div>
       </div>` : ''}
-      <div style="margin-top:12px">
-        <textarea id="profe-texto" placeholder="Ej.: no entiendo las ecuaciones de primer grado" rows="2"></textarea>
-        <div class="fila" style="margin-top:8px">
-          <button class="fantasma" data-accion="limpiar-chat">Borrar</button>
-          <button class="principal" data-accion="preguntar"${pensando ? ' disabled' : ''}>Preguntar</button>
+      ${ctx.horarioPropuesto ? propuestaHorario(ctx.horarioPropuesto) : ''}
+
+      <div class="caja-escribir">
+        ${fotoPendiente ? `<div class="foto-pendiente">
+          <img src="${fotoPendiente.miniatura}" alt="Foto para Clara" />
+          <span>Foto lista para mandar</span>
+          <button class="borrar" data-accion="quitar-foto" aria-label="Quitar la foto">✕</button>
+        </div>` : ''}
+        <textarea id="profe-texto" rows="2" placeholder="${dictando ? 'Te escucho…' : 'Escribe tu duda, o dale al micro'}"></textarea>
+        <div class="fila fila-escribir">
+          <button class="icono" data-accion="elegir-foto" aria-label="Mandar una foto" title="Mandar una foto">📷</button>
+          ${ctx.puedeDictar ? `<button class="icono${dictando ? ' grabando' : ''}" data-accion="dictar"
+            aria-label="${dictando ? 'Parar de escuchar' : 'Hablar en vez de escribir'}" title="Hablar">🎤</button>` : ''}
+          <button class="principal" data-accion="preguntar"${pensando ? ' disabled' : ''}>Enviar</button>
         </div>
+        <input type="file" id="foto-input" accept="image/*" hidden />
       </div>
     </div>
     <p style="font-size:.78rem;color:var(--tinta-2);margin-top:8px">
-      El Profe usa internet. Si no hay conexión, el resto de la app sigue funcionando igual.
+      Clara necesita internet; el resto de la app funciona sin él. Las fotos se reducen en el móvil y
+      solo se le mandan a Clara para contestarte: la app no las guarda.
     </p>
   </section>`;
 }
+
+/** Nombre antiguo, para no romper nada que lo use. */
+export const vistaProfe = vistaClara;
 
 /* ── Vista: YO ──────────────────────────────────────────────────── */
 
@@ -725,7 +803,12 @@ export const formTarjeta = (estado) => `
     <textarea id="f-preg" name="pregunta" placeholder="Ej.: ¿qué es una célula procariota?"></textarea></div>
   <div class="campo"><label for="f-resp">Respuesta</label>
     <textarea id="f-resp" name="respuesta" placeholder="Corta y en tus palabras"></textarea></div>
-  <div class="campo"><label for="f-asig">Asignatura</label>${selectorAsignatura(estado)}</div>`;
+  <div class="campo"><label for="f-asig">Asignatura</label>${selectorAsignatura(estado)}</div>
+  <div class="campo"><label for="f-idioma">Idioma (para oírla en voz alta)</label>
+    <select id="f-idioma" name="idioma">
+      <option value="es">Español</option>
+      <option value="en">Inglés</option>
+    </select></div>`;
 
 export const formAsignatura = () => `
   <div class="campo"><label for="f-nombre">Nombre</label>

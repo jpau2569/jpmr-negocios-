@@ -11,6 +11,9 @@ import * as UI from './interfaz.js';
 import * as Q from './cuestionario.js';
 import { dibujaEsquema, esquemaDeIA } from './esquema.js';
 import { crearAmbiente, AMBIENTES } from './ambiente.js';
+import * as Voz from './voz.js';
+import { preparaFoto } from './foto.js';
+import { icsExamen } from './calendario.js';
 
 /* ── Estado ─────────────────────────────────────────────────────── */
 let estado = D.cargar();
@@ -23,14 +26,22 @@ const ctx = {
   respuestaVisible: false,
   hechasHoy: 0,
   test: null,               // test en marcha
-  chat: [],
-  propuestas: [],           // tarjetas que ofrece el Profe
+  chat: D.cargarChat(),      // la charla con Clara sobrevive a cerrar la app
+  propuestas: [],           // tarjetas que ofrece Clara
   testPropuesto: [],
   esquemaPropuesto: null,
+  horarioPropuesto: null,   // horario leído de una foto, pendiente de confirmar
+  fotoPendiente: null,      // foto elegida y reducida, aún sin mandar
+  borrador: '',             // lo escrito en la caja, para no perderlo al repintar
+  dictando: false,
+  puedeDictar: Voz.puedeDictar(),
+  puedeLeer: Voz.puedeLeer(),
   pensando: false,
   error: null,
   instalable: false
 };
+
+let pararDictado = null;
 
 const fondo = crearAmbiente();
 
@@ -83,6 +94,8 @@ function render() {
   if (ctx.vista === 'profe') {
     const caja = $('#chat');
     if (caja) caja.scrollTop = caja.scrollHeight;
+    const texto = $('#profe-texto');
+    if (texto) texto.value = ctx.borrador;
   }
 }
 
@@ -94,6 +107,7 @@ function marcaAviso(sel, valor) {
 }
 
 function irA(nombre) {
+  if (nombre !== ctx.vista) Voz.calla();
   ctx.vista = nombre;
   ctx.respuestaVisible = false;
   render();
@@ -319,7 +333,8 @@ const acciones = {
     if (!d || !d.pregunta?.trim() || !d.respuesta?.trim()) return;
     estado.tarjetas.push({
       id: id('tj'),
-      ...R.nuevaTarjeta({ pregunta: d.pregunta, respuesta: d.respuesta, asignaturaId: d.asignatura || null }, ctx.hoy)
+      ...R.nuevaTarjeta({ pregunta: d.pregunta, respuesta: d.respuesta, asignaturaId: d.asignatura || null }, ctx.hoy),
+      idioma: d.idioma === 'en' ? 'en' : 'es'
     });
     persiste(); render();
   },
@@ -423,7 +438,11 @@ const acciones = {
   /* Profe */
   preguntar: () => preguntaAlProfe(),
   'limpiar-chat': () => {
+    Voz.calla();
     ctx.chat = [];
+    D.guardarChat([]);
+    ctx.horarioPropuesto = null;
+    ctx.fotoPendiente = null;
     ctx.propuestas = [];
     ctx.testPropuesto = [];
     ctx.esquemaPropuesto = null;
@@ -435,7 +454,8 @@ const acciones = {
       const asig = p.asignatura ? D.buscaAsignatura(estado, p.asignatura) : null;
       estado.tarjetas.push({
         id: id('tj'),
-        ...R.nuevaTarjeta({ pregunta: p.pregunta, respuesta: p.respuesta, asignaturaId: asig?.id || null, origen: 'ia' }, ctx.hoy)
+        ...R.nuevaTarjeta({ pregunta: p.pregunta, respuesta: p.respuesta, asignaturaId: asig?.id || null, origen: 'ia' }, ctx.hoy),
+        idioma: p.idioma === 'en' ? 'en' : 'es'
       });
     }
     const cuantas = ctx.propuestas.length;
@@ -445,8 +465,96 @@ const acciones = {
     irA('estudiar');
     avisa(`${plural(cuantas, 'tarjeta añadida', 'tarjetas añadidas')}. Ya te tocan hoy.`);
   },
-  'descartar-tarjetas': () => { ctx.propuestas = []; render(); }
+  'descartar-tarjetas': () => { ctx.propuestas = []; render(); },
+
+  /* Clara: sugerencias, foto, voz y horario */
+  sugerencia: (el) => {
+    const s = UI.SUGERENCIAS.find((x) => x.id === el.dataset.id);
+    if (!s) return;
+    ctx.borrador = s.rellena;
+    render();
+    if (s.foto) $('#foto-input')?.click();
+    else enfocaCaja();
+  },
+  'elegir-foto': () => $('#foto-input')?.click(),
+  'quitar-foto': () => { ctx.fotoPendiente = null; render(); },
+  dictar: () => {
+    if (ctx.dictando) { pararDictado?.(); return; }
+    Voz.calla();
+    const antes = ctx.borrador ? ctx.borrador.trim() + ' ' : '';
+    pararDictado = Voz.dicta({
+      alTexto: (t) => {
+        ctx.borrador = antes + t;
+        const caja = $('#profe-texto');
+        if (caja) caja.value = ctx.borrador;
+      },
+      alTerminar: () => { ctx.dictando = false; pararDictado = null; render(); enfocaCaja(); },
+      alError: (motivo) => { ctx.error = motivo; }
+    });
+    if (!pararDictado) { avisa('Este navegador no deja dictar. Prueba con Chrome.'); return; }
+    ctx.dictando = true;
+    ctx.error = null;
+    render();
+  },
+  escuchar: (el) => {
+    const m = ctx.chat[Number(el.dataset.i)];
+    if (m) Voz.lee(m.texto, Voz.idiomaDe(m.texto));
+  },
+  'escuchar-tarjeta': () => {
+    const t = ctx.tarjetaActual;
+    if (!t) return;
+    Voz.lee(ctx.respuestaVisible ? `${t.pregunta}. ${t.respuesta}` : t.pregunta, t.idioma);
+  },
+  'aplicar-horario': () => {
+    if (!ctx.horarioPropuesto) return;
+    const r = D.aplicaHorario(estado, ctx.horarioPropuesto);
+    estado = r.estado;
+    ctx.horarioPropuesto = null;
+    persiste();
+    render();
+    avisa(`Horario puesto: ${plural(r.clases, 'clase', 'clases')}.`
+      + (r.creadas.length ? ` He añadido ${r.creadas.join(', ')} a tus asignaturas.` : '')
+      + ' Desde mañana, la mochila ya sabe qué toca.');
+  },
+  'descartar-horario': () => {
+    ctx.horarioPropuesto = null;
+    ctx.borrador = 'El horario no está bien: ';
+    render();
+    enfocaCaja();
+  },
+  'calendario-examen': (el) => llevaAlCalendario(el.dataset.id)
 };
+
+function enfocaCaja() {
+  const caja = $('#profe-texto');
+  if (!caja) return;
+  caja.focus();
+  caja.setSelectionRange(caja.value.length, caja.value.length);
+}
+
+/* El .ics se comparte como archivo cuando el móvil sabe (así se abre directo
+   en el calendario); si no, se descarga. */
+async function llevaAlCalendario(idExamen) {
+  const examen = estado.examenes.find((x) => x.id === idExamen);
+  if (!examen) return;
+  const ics = icsExamen({
+    examen,
+    plan: R.planExamen(examen, ctx.hoy),
+    asignatura: D.nombreAsignatura(estado, examen.asignaturaId),
+    sello: new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '')
+  });
+  const nombre = `examen-${examen.titulo.toLowerCase().replace(/[^a-z0-9]+/gi, '-').slice(0, 30)}.ics`;
+  const archivo = new File([ics], nombre, { type: 'text/calendar' });
+  if (navigator.canShare?.({ files: [archivo] })) {
+    try { await navigator.share({ files: [archivo], title: examen.titulo }); return; } catch { /* cancelado: se descarga */ }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(archivo);
+  a.download = nombre;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  avisa('Descargado. Ábrelo y dale a «Añadir» en tu calendario: te avisará la tarde antes del examen y cada día del plan a las 17:00.');
+}
 
 /* ── Test ───────────────────────────────────────────────────────── */
 function empiezaTest(preguntas, titulo) {
@@ -728,18 +836,24 @@ function tono(frecuencia, duracion = 0.16, retraso = 0) {
 const pitido = () => { tono(660); tono(880, 0.2, 0.18); };
 const celebra = () => tono(880, 0.09);
 
-/* ── Profe ──────────────────────────────────────────────────────── */
+/* ── Clara ──────────────────────────────────────────────────────── */
 async function preguntaAlProfe() {
   const caja = $('#profe-texto');
-  const texto = (caja?.value || '').trim();
+  const foto = ctx.fotoPendiente;
+  const texto = ((caja?.value ?? ctx.borrador) || '').trim() || (foto ? 'Mira esta foto.' : '');
   if (!texto || ctx.pensando) return;
 
-  ctx.chat.push({ rol: 'user', texto });
-  ctx.pensando = true;
+  pararDictado?.();
+  Voz.calla();
+  ctx.chat.push({ rol: 'user', texto, foto: Boolean(foto), miniatura: foto?.miniatura || null });
+  ctx.borrador = '';
+  ctx.fotoPendiente = null;
+  ctx.pensando = foto ? 'foto' : true;
   ctx.error = null;
   ctx.propuestas = [];
   ctx.testPropuesto = [];
   ctx.esquemaPropuesto = null;
+  ctx.horarioPropuesto = null;
   render();
 
   try {
@@ -747,7 +861,13 @@ async function preguntaAlProfe() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        mensajes: ctx.chat.slice(-16).map((m) => ({ role: m.rol, content: m.texto })),
+        // Las fotos anteriores no se reenvían (gastan mucho): Clara ya las
+        // describió en su respuesta, así que basta con decir que las hubo.
+        mensajes: ctx.chat.slice(-16).map((m) => ({
+          role: m.rol,
+          content: (m.foto && m !== ctx.chat.at(-1) ? '[Te mandé una foto] ' : '') + m.texto
+        })),
+        imagen: foto ? { media_type: foto.media_type, data: foto.data } : undefined,
         curso: estado.alumno.curso,
         nombre: estado.alumno.nombre,
         asignaturas: estado.asignaturas.map((a) => a.nombre)
@@ -755,7 +875,7 @@ async function preguntaAlProfe() {
     });
     const datos = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(datos.error || `Error ${res.status}`);
-    ctx.chat.push({ rol: 'profe', texto: datos.reply || 'No he sabido responder a eso.' });
+    ctx.chat.push({ rol: 'profe', texto: datos.reply || 'No he sabido responder a eso.', buscado: datos.busquedas > 0 });
     ctx.propuestas = Array.isArray(datos.tarjetas) ? datos.tarjetas.slice(0, 20) : [];
     const asigTest = datos.esquema?.asignatura ? D.buscaAsignatura(estado, datos.esquema.asignatura) : null;
     ctx.testPropuesto = Q.preguntasDeIA(datos.test, asigTest?.id || null);
@@ -765,15 +885,40 @@ async function preguntaAlProfe() {
           return validado ? { ...validado, asignatura: datos.esquema.asignatura || '' } : null;
         })()
       : null;
+    ctx.horarioPropuesto = datos.horario?.dias ? datos.horario : null;
   } catch (e) {
     ctx.error = navigator.onLine
-      ? `El Profe no ha podido responder: ${e.message}`
-      : 'Sin conexión. El Profe necesita internet; el resto de la app funciona igual.';
+      ? `Clara no ha podido responder: ${e.message}`
+      : 'Sin conexión. Clara necesita internet; el resto de la app funciona igual.';
+    // Si falla, la foto y el texto no se pierden: vuelven a la caja.
+    const enviado = ctx.chat.pop();
+    ctx.borrador = enviado?.texto === 'Mira esta foto.' ? '' : (enviado?.texto || '');
+    if (foto) ctx.fotoPendiente = foto;
   } finally {
     ctx.pensando = false;
+    D.guardarChat(ctx.chat);
     render();
   }
 }
+
+document.addEventListener('input', (ev) => {
+  if (ev.target?.id === 'profe-texto') ctx.borrador = ev.target.value;
+});
+
+document.addEventListener('change', async (ev) => {
+  if (ev.target?.id !== 'foto-input') return;
+  const archivo = ev.target.files?.[0];
+  ev.target.value = ''; // para poder elegir la misma foto otra vez
+  if (!archivo) return;
+  try {
+    ctx.fotoPendiente = await preparaFoto(archivo);
+    ctx.error = null;
+  } catch (e) {
+    ctx.error = `No he podido abrir la foto: ${e.message}`;
+  }
+  render();
+  enfocaCaja();
+});
 
 /* Enter envía, Mayús+Enter hace salto de línea. */
 document.addEventListener('keydown', (ev) => {

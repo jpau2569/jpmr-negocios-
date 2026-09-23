@@ -12,7 +12,11 @@ import * as UI from "../nicer-estudia/interfaz.js";
 import * as Q from "../nicer-estudia/cuestionario.js";
 import { dibujaEsquema, esquemaDeIA, parteTexto } from "../nicer-estudia/esquema.js";
 import * as A from "../nicer-estudia/ambiente.js";
-import { separaTarjetas, separaBloques } from "../api/_profe.js";
+import profe, { separaTarjetas, separaBloques, imagenValida } from "../api/_profe.js";
+import Anthropic from "@anthropic-ai/sdk";
+import { icsExamen, escapaIcs, doblaLinea } from "../nicer-estudia/calendario.js";
+import { idiomaDe, limpiaParaLeer } from "../nicer-estudia/voz.js";
+import { medidas } from "../nicer-estudia/foto.js";
 
 let pasados = 0, fallados = 0;
 const check = (nombre, cond, detalle = "") => {
@@ -186,7 +190,100 @@ console.log("\n🤖 API del Profe");
   check("una pregunta sin opciones se cae",
     separaBloques('x [[TEST]]{"preguntas":[{"pregunta":"p","opciones":[],"correcta":0}]}[[/TEST]]').test.length === 0);
   check("un esquema vacío no llega", separaBloques('x [[ESQUEMA]]{"titulo":"t","ramas":[]}[[/ESQUEMA]]').esquema === null);
+
+  const conHorario = separaBloques(`Veo tu horario.
+[[HORARIO]]{"dias":{"1":[{"hora":"8:15","asignatura":"Matemáticas"},{"hora":"xx","asignatura":"Inglés"}],"3":[{"hora":"09:10","asignatura":""}]}}[[/HORARIO]]`);
+  check("el horario de la foto llega separado", conHorario.horario?.dias?.[1]?.length === 2);
+  check("las horas se normalizan y las ilegibles se vacían",
+    conHorario.horario.dias[1][0].hora === "08:15" && conHorario.horario.dias[1][1].hora === "");
+  check("un día sin clases válidas no aparece", !conHorario.horario.dias[3]);
+  check("las tarjetas de inglés llegan marcadas",
+    separaBloques('x [[TARJETAS]][{"pregunta":"dog","respuesta":"perro","idioma":"en"}][[/TARJETAS]]').tarjetas[0].idioma === "en");
+  check("solo se aceptan fotos JPEG, PNG o WebP", imagenValida({ media_type: "image/gif", data: "QUJD" }) === null);
+  check("una foto con datos raros se ignora", imagenValida({ media_type: "image/jpeg", data: "<script>" }) === null);
+  check("una foto enorme se ignora", imagenValida({ media_type: "image/jpeg", data: "A".repeat(4_000_000) }) === null);
 }
+
+console.log("\n🤖 Clara por dentro (Claude y Gemini simulados)");
+{
+  const original = Anthropic.Messages.prototype.create;
+  const fetchOriginal = globalThis.fetch;
+  const claves = { a: process.env.ANTHROPIC_API_KEY, g: process.env.GEMINI_API_KEY };
+  const peticiones = [];
+  const resFalsa = () => {
+    const r = { code: 200, body: null, headers: {} };
+    r.status = (c) => { r.code = c; return r; };
+    r.json = (b) => { r.body = b; return r; };
+    r.setHeader = (k, v) => { r.headers[k] = v; };
+    return r;
+  };
+  process.env.ANTHROPIC_API_KEY = "clave-de-prueba";
+  process.env.GEMINI_API_KEY = "clave-de-prueba";
+
+  // Gemini simulado: devuelve un resumen con su fuente.
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    candidates: [{ content: { parts: [{ text: "La Revolución Industrial empezó en Inglaterra hacia 1760." }] },
+      groundingMetadata: { groundingChunks: [{ web: { title: "Historia", uri: "https://ejemplo.es" } }] } }]
+  }), { status: 200, headers: { "content-type": "application/json" } });
+
+  // Claude simulado: primero pide buscar, luego contesta con la fuente.
+  Anthropic.Messages.prototype.create = async function (p) {
+    peticiones.push(JSON.parse(JSON.stringify(p)));
+    if (peticiones.length === 1) {
+      return { stop_reason: "tool_use", content: [
+        { type: "thinking", thinking: "", signature: "s" },
+        { type: "tool_use", id: "tu_1", name: "buscar_web", input: { consulta: "Revolución Industrial inicio" } }
+      ] };
+    }
+    return { stop_reason: "end_turn", content: [{ type: "text", text: "Empezó en Inglaterra hacia 1760 (fuente: Historia)." }] };
+  };
+
+  const r1 = resFalsa();
+  await profe({ method: "POST", body: {
+    mensajes: [{ role: "user", content: "¿Cuándo empezó la Revolución Industrial? Es para un trabajo." }],
+    curso: "1º ESO", nombre: "Nicer", asignaturas: ["Geografía e Historia"]
+  } }, r1);
+  check("Clara responde después de buscar", r1.code === 200 && r1.body.reply.includes("1760"));
+  check("avisa de que ha buscado en internet", r1.body.busquedas === 1);
+  check("con clave de Gemini se le ofrece el buscador", peticiones[0].tools?.[0]?.name === "buscar_web");
+  const segunda = peticiones[1]?.messages || [];
+  check("devuelve el turno entero (con el razonamiento) antes del resultado",
+    segunda.at(-2)?.role === "assistant" && segunda.at(-2).content[0].type === "thinking");
+  check("el resultado de la búsqueda vuelve como tool_result",
+    segunda.at(-1)?.content?.[0]?.type === "tool_result" && segunda.at(-1).content[0].tool_use_id === "tu_1");
+  check("el tope de tokens ya no corta un test largo", peticiones[0].max_tokens >= 4000);
+  check("el prompt es el de Clara", peticiones[0].system[0].text.startsWith("Eres CLARA"));
+
+  // Foto: va delante del texto en el último mensaje, y sin Gemini no hay buscador.
+  delete process.env.GEMINI_API_KEY;
+  peticiones.length = 0;
+  Anthropic.Messages.prototype.create = async function (p) {
+    peticiones.push(JSON.parse(JSON.stringify(p)));
+    return { stop_reason: "end_turn", content: [{ type: "text", text: "Veo el ejercicio 4 de fracciones." }] };
+  };
+  const r2 = resFalsa();
+  await profe({ method: "POST", body: {
+    mensajes: [{ role: "user", content: "¿Me ayudas con esto?" }],
+    imagen: { media_type: "image/jpeg", data: "QUJDRA==" }
+  } }, r2);
+  const contenido = peticiones[0].messages.at(-1).content;
+  check("la foto va delante del texto", Array.isArray(contenido) && contenido[0].type === "image" && contenido[1].type === "text");
+  check("con su tipo y en base64", contenido[0].source.media_type === "image/jpeg" && contenido[0].source.type === "base64");
+  check("sin clave de Gemini no se ofrece el buscador", !peticiones[0].tools);
+  check("y el prompt no promete buscar", !peticiones[0].system[0].text.includes("buscar_web"));
+
+  // Rechazo del modelo: respuesta amable, sin romper la app.
+  Anthropic.Messages.prototype.create = async () => ({ stop_reason: "refusal", content: [] });
+  const r3 = resFalsa();
+  await profe({ method: "POST", body: { mensajes: [{ role: "user", content: "algo raro" }] } }, r3);
+  check("si el modelo se niega, contesta con cariño y sin error", r3.code === 200 && r3.body.reply.length > 20);
+
+  Anthropic.Messages.prototype.create = original;
+  globalThis.fetch = fetchOriginal;
+  if (claves.a === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = claves.a;
+  if (claves.g === undefined) delete process.env.GEMINI_API_KEY; else process.env.GEMINI_API_KEY = claves.g;
+}
+
 
 console.log("\n📝 Cuestionarios");
 {
@@ -273,6 +370,63 @@ console.log("\n❗ Prioridad");
     ]
   });
   check("lo prioritario del mismo día va primero", D.pendientes(e, HOY)[0].id === "a");
+}
+
+
+console.log("\n📅 Exámenes al calendario (.ics)");
+{
+  const examen = { id: "ex1", titulo: "Tema 2, la célula", fecha: "2026-10-05", temas: "Págs. 24-39; y apuntes" };
+  const plan = R.planExamen(examen, "2026-09-23");
+  const ics = icsExamen({ examen, plan, asignatura: "Biología y Geología" });
+  const eventos = ics.match(/BEGIN:VEVENT/g) || [];
+  check("un evento para el examen y uno por cada paso del plan",
+    eventos.length === 1 + plan.filter((p) => p.dias > 0).length);
+  check("el examen avisa la tarde anterior", ics.includes("TRIGGER:-PT7H"));
+  check("cada paso del plan avisa a las 17:00", ics.includes("TRIGGER:PT17H"));
+  check("es un día completo con la fecha del examen", ics.includes("DTSTART;VALUE=DATE:20261005"));
+  check("las líneas terminan en CRLF, como pide el formato", ics.includes("\r\n") && !/[^\r]\n/.test(ics));
+  check("comas y puntos y coma van escapados", escapaIcs("a, b; c") === ["a", ", b", "; c"].join(String.fromCharCode(92)));
+  const larga = doblaLinea("SUMMARY:" + "ñ".repeat(80));
+  check("las líneas largas se doblan a 75 octetos",
+    larga.split("\r\n").every((l) => new TextEncoder().encode(l).length <= 75));
+  check("un examen sin plan sigue saliendo", (icsExamen({ examen, plan: [] }).match(/BEGIN:VEVENT/g) || []).length === 1);
+}
+
+console.log("\n🎤 Voz");
+{
+  check("reconoce una respuesta en inglés", idiomaDe("What did you do at the weekend? Tell me in English.") === "en");
+  check("y una en español", idiomaDe("Muy bien, ahora dime qué es una fracción") === "es");
+  check("no lee emojis ni asteriscos", limpiaParaLeer("**Bien** 🎉 hecho") === "Bien hecho");
+}
+
+console.log("\n📷 Fotos");
+{
+  check("una foto grande se reduce a 1600 px por el lado mayor",
+    JSON.stringify(medidas(4000, 3000)) === JSON.stringify({ ancho: 1600, alto: 1200 }));
+  check("una foto pequeña no se agranda", medidas(800, 600).ancho === 800);
+  check("la foto vertical conserva la proporción", medidas(3000, 4000).alto === 1600);
+}
+
+console.log("\n🗓️  Horario desde una foto");
+{
+  const e = D.normaliza({
+    asignaturas: [{ id: "a1", nombre: "Matemáticas", color: "#12628a" }],
+    horario: { 2: [{ id: "c1", asignaturaId: "a1", hora: "10:00" }] }
+  });
+  const r = D.aplicaHorario(e, { dias: { 1: [{ hora: "08:15", asignatura: "Mates" }, { hora: "09:10", asignatura: "Religión" }] } });
+  check("reconoce las asignaturas que ya tiene", r.estado.horario[1][0].asignaturaId === "a1");
+  check("crea las que no tenía", r.creadas.length === 1 && r.creadas[0] === "Religión");
+  check("no toca los días que no salen en la foto", r.estado.horario[2].length === 1);
+  check("no modifica el estado original", (e.horario[1] || []).length === 0);
+  check("cuenta las clases puestas", r.clases === 2);
+}
+
+console.log("\n💬 Conversación guardada");
+{
+  check("sin almacenamiento (Node), el chat empieza vacío", Array.isArray(D.cargarChat()) && D.cargarChat().length === 0);
+  check("y guardar no revienta", D.guardarChat([{ rol: "user", texto: "hola" }]) === false);
+  check("las tarjetas guardan su idioma", D.normaliza({ tarjetas: [{ pregunta: "dog", respuesta: "perro", idioma: "en" }] }).tarjetas[0].idioma === "en");
+  check("sin idioma, español", D.normaliza({ tarjetas: [{ pregunta: "p", respuesta: "r" }] }).tarjetas[0].idioma === "es");
 }
 
 console.log("\n🔎 Búsqueda de asignatura (la usa el Profe al crear tarjetas)");

@@ -1,14 +1,17 @@
 # Nicer Estudia
 
-App de estudio para el curso 26/27: agenda de deberes y exámenes, repaso
-espaciado con tarjetas, tests de autoevaluación, esquemas visuales, apuntes,
-modo concentración con sonido de fondo y un profesor de IA que explica dudas
-y prepara el material.
+App de estudio para el curso 26/27: agenda de deberes y exámenes (con avisos
+en el calendario del móvil), repaso espaciado con tarjetas que se pueden
+escuchar, tests de autoevaluación, esquemas visuales, apuntes, modo
+concentración con sonido de fondo y **Clara**, la profesora de IA: explica
+dudas escritas, habladas o con una foto, busca información para los trabajos
+citando la fuente, lee el horario de una foto y prepara el material.
 
 Pensada para un alumno de 1º-2º de ESO que usa el móvil y el PC de casa.
 **Todos los datos viven en el dispositivo** (`localStorage`): no hay cuenta,
 no hay servidor de datos y no sale nada del móvil. Lo único que sale a
-internet es la pregunta que se le escribe al Profe.
+internet es lo que se le manda a Clara: la pregunta y, si él quiere, una foto
+reducida en el propio móvil que la app no guarda.
 
 ## Por qué está hecha así
 
@@ -50,6 +53,33 @@ Lo que **no** se ha copiado, a propósito: cuentas de usuario, sincronización
 en la nube y bloqueo de otras apps (una web no puede bloquear el móvil; en su
 lugar se cuenta cuántas veces se sale, que es honesto y funciona parecido).
 
+## Clara, la profe (versión 3.0)
+
+La pestaña de dudas es **Clara**, la misma asistente de Pau con un solo
+sombrero: el de profesora de un alumno de ESO de un colegio bilingüe.
+
+| Qué hace | Cómo |
+|---|---|
+| Explica dudas sin dar los deberes hechos | Prompt de `api/_profe.js` (regla de oro) |
+| **Foto** de un ejercicio, del libro o de los apuntes | `foto.js` la reduce a 1600 px JPEG en el móvil; va delante del texto en el último mensaje |
+| **Horario desde una foto** | Clara devuelve `[[HORARIO]]`; la app lo enseña, y al confirmar `aplicaHorario()` lo pone y crea las asignaturas que falten |
+| **Busca información** para trabajos, citando la fuente | Herramienta `buscar_web` con `buscarConGemini` (el mismo buscador de la Clara de Pau). Solo si hay `GEMINI_API_KEY` |
+| **Hablar** en vez de escribir y **escuchar** sus respuestas | `voz.js` (Web Speech API del navegador); detecta si la respuesta está en inglés para leerla con acento inglés |
+| La charla **no se pierde** al cerrar la app | `cargarChat` / `guardarChat` (sin fotos, solo la marca de que la hubo) |
+
+Lo que la Clara de Nicer **no** tiene, a propósito: la memoria de Pau, su
+cartera de pisos y el modo psicóloga. Ante algo serio manda a un adulto y
+recuerda el 024 y el 116 111.
+
+## Exámenes al calendario del móvil
+
+Una web no puede mandar avisos con la app cerrada sin un servidor de
+notificaciones; el calendario del teléfono sí. El botón **📅 Avisos en el
+móvil** de cada examen genera un `.ics` (`calendario.js`) con el examen (aviso
+la tarde anterior) y cada paso del plan de estudio (aviso a las 17:00 de su
+día). En iPhone se abre directo en Calendario; en Android se abre con el
+calendario del móvil o se comparte si el navegador lo permite.
+
 ## Cómo se abre
 
 Necesita servirse por HTTP (usa módulos ES y service worker); con `file://`
@@ -76,18 +106,25 @@ Cada capa solo conoce a la de debajo:
 - `cuestionario.js` — tests: generación desde tarjetas, corrección y nota
 - `esquema.js` — el mapa del tema dibujado como SVG
 - `ambiente.js` — sonido de fondo generado (ruido filtrado), sin archivos
+- `voz.js` — dictado y lectura en voz alta (español e inglés)
+- `foto.js` — reduce la foto en el móvil antes de mandársela a Clara
+- `calendario.js` — el examen y su plan como archivo `.ics` con avisos
+- `clara.jpg` — la cara de Clara (192 px, recortada de `../clara-rostro.jpg`)
 - `interfaz.js` — render puro: recibe estado, devuelve HTML
 - `app.js` — estado, eventos, temporizador, Profe y PWA
 - `manifest.json` + `service-worker.js` — instalable y sin conexión
 - `herramientas/generar-iconos.mjs` — regenera los PNG de los iconos
-- `../api/_profe.js` — backend del Profe (Claude), servido en `/api/profe` por el
+- `../api/_profe.js` — backend de Clara (Claude), servido en `/api/profe` por el
   enrutador único `api/[ruta].js` (el plan Hobby de Vercel admite 12 funciones);
   la clave nunca toca el navegador
 
-## El Profe
+## El backend de Clara
 
-`POST /api/profe` con `{ mensajes, curso, nombre, asignaturas }` devuelve
-`{ reply, tarjetas, test, esquema }`. Necesita `ANTHROPIC_API_KEY` en Vercel.
+`POST /api/profe` con `{ mensajes, curso, nombre, asignaturas, imagen? }`
+devuelve `{ reply, tarjetas, test, esquema, horario, busquedas }`. Necesita
+`ANTHROPIC_API_KEY` en Vercel; `GEMINI_API_KEY` es opcional (sin ella, Clara
+no busca en Internet). Tope de 8000 tokens por respuesta: con los 1200 de la
+primera versión, un test de diez preguntas podía cortarse a medias y perderse.
 
 Dos reglas del prompt que no se tocan, porque al otro lado hay un menor:
 
@@ -105,6 +142,7 @@ backend extrae y devuelve aparte; el alumno nunca ve el bloque:
 | `[[TARJETAS]]` | Tarjetas de repaso espaciado |
 | `[[TEST]]` | Un test de opción múltiple, con lo fallado volviendo al repaso |
 | `[[ESQUEMA]]` | Un mapa del tema, dibujado por `esquema.js` |
+| `[[HORARIO]]` | El horario semanal leído de una foto, para confirmar y poner |
 
 Si el JSON viene roto o una pregunta no cuadra (opciones vacías, índice de
 respuesta fuera de rango), esa pieza se descarta y el resto sigue: nunca se

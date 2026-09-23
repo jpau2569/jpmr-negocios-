@@ -4,6 +4,8 @@
 //  Ejecutar con: node test/nicer-estudia.ui.test.mjs
 //  No llama a la API real: /api/profe se intercepta y responde en local.
 //  Verifica el recorrido completo: apuntar deberes (con prioridad y repetición),
+//  exámenes al calendario (.ics), Clara (sugerencias, búsqueda, escuchar, foto
+//  del horario y charla que se conserva al recargar),
 //  marcarlos, crear y repasar tarjetas, hacer un test, guardar un esquema y un
 //  apunte, el modo concentración con sonido de fondo, el Profe con su material,
 //  la persistencia al recargar y que a 360 px no hay desborde horizontal.
@@ -50,11 +52,30 @@ const errores = [];
 page.on("pageerror", (e) => errores.push(String(e)));
 page.on("console", (m) => { if (m.type() === "error") errores.push(m.text()); });
 
-// El Profe responde en local, con su bloque de tarjetas.
-await page.route("**/api/profe", (ruta) => ruta.fulfill({
+// Clara responde en local. Si le llega una foto, contesta con un horario
+// leído; si no, con tarjetas, test y esquema.
+let ultimoCuerpo = null;
+await page.route("**/api/profe", (ruta) => {
+  ultimoCuerpo = JSON.parse(ruta.request().postData() || "{}");
+  if (ultimoCuerpo.imagen) {
+    return ruta.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        reply: "Veo tu horario de 1º ESO. Te lo he preparado, revísalo antes de ponerlo.",
+        busquedas: 0,
+        horario: { dias: {
+          1: [{ hora: "08:15", asignatura: "Matemáticas" }, { hora: "09:10", asignatura: "Religión" }],
+          2: [{ hora: "08:15", asignatura: "Inglés" }]
+        } }
+      })
+    });
+  }
+  return ruta.fulfill({
   status: 200,
   contentType: "application/json",
   body: JSON.stringify({
+    busquedas: 1,
     reply: "Una ecuación de primer grado es una balanza: lo que haces a un lado, al otro. ¿Lo probamos con 2x + 3 = 9?",
     tarjetas: [
       { pregunta: "¿Qué es despejar la x?", respuesta: "Dejar la x sola en un lado", asignatura: "Matemáticas" },
@@ -74,7 +95,8 @@ await page.route("**/api/profe", (ruta) => ruta.fulfill({
       ]
     }
   })
-}));
+  });
+});
 
 await page.goto(`http://localhost:${PORT}/app.html`, { waitUntil: "networkidle" });
 
@@ -136,6 +158,16 @@ check("el plan reparte el estudio en varios días",
   (await page.locator("#dlg-cuerpo .paso").count()) === 5);
 await page.click("#dlg-cancelar");
 
+const [descarga] = await Promise.all([
+  page.waitForEvent("download"),
+  page.click('[data-accion="calendario-examen"]')
+]);
+const ics = await (await import("node:fs/promises")).readFile(await descarga.path(), "utf8");
+check("el examen se lleva al calendario del móvil como .ics", descarga.suggestedFilename().endsWith(".ics"));
+check("con el examen y los pasos del plan, con avisos",
+  ics.includes("BEGIN:VCALENDAR") && (ics.match(/BEGIN:VEVENT/g) || []).length === 5 && ics.includes("VALARM"));
+await page.click("#dlg-aceptar"); // el aviso de «ábrelo en tu calendario»
+
 console.log("\n🃏 Tarjetas");
 await page.click('#nav button[data-vista="estudiar"]');
 await page.click('[data-accion="nueva-tarjeta"]');
@@ -152,12 +184,31 @@ check("tras acertar, el repaso de hoy queda hecho",
 check("la tarjeta se guarda en la caja 1",
   (await page.evaluate(() => JSON.parse(localStorage.getItem("nicer-estudia:v1")).tarjetas[0].caja)) === 1);
 
-console.log("\n🤖 Profe");
+await page.click('[data-accion="nueva-tarjeta"]');
+await page.fill("#f-preg", "How do you say «perro» in English?");
+await page.fill("#f-resp", "Dog");
+await page.selectOption('select[name="idioma"]', "en");
+await page.click("#dlg-aceptar");
+check("una tarjeta de inglés se escucha en inglés",
+  (await page.locator('[data-accion="escuchar-tarjeta"]').textContent()).includes("Listen"));
+check("y se guarda con su idioma",
+  await page.evaluate(() => JSON.parse(localStorage.getItem("nicer-estudia:v1")).tarjetas.some((t) => t.idioma === "en")));
+await page.click('[data-accion="ver-respuesta"]');
+await page.click('[data-accion="acierto"]');
+
+console.log("\n👩‍🏫 Clara");
 await page.click('#nav button[data-vista="profe"]');
+check("la pestaña es Clara, con su cara", await page.locator(".cabeza-clara img.avatar").isVisible()
+  && (await page.locator(".cabeza-clara .nombre").textContent()) === "Clara");
+check("propone por dónde empezar", (await page.locator('[data-accion="sugerencia"]').count()) >= 6);
+await page.click('[data-accion="sugerencia"][data-id="test"]');
+check("una sugerencia deja la frase empezada", (await page.inputValue("#profe-texto")).startsWith("Ponme un test"));
 await page.fill("#profe-texto", "no entiendo las ecuaciones de primer grado");
 await page.click('[data-accion="preguntar"]');
-await page.waitForSelector(".burbuja.profe");
-check("el Profe contesta", (await page.locator(".burbuja.profe").last().textContent()).includes("balanza"));
+await page.waitForSelector('.burbuja.profe:has-text("balanza")');
+check("Clara contesta", (await page.locator(".burbuja.profe").last().textContent()).includes("balanza"));
+check("dice cuándo ha buscado en internet", await page.locator('.burbuja.profe:has-text("Ha buscado en internet")').isVisible());
+check("y su respuesta se puede escuchar", (await page.locator('[data-accion="escuchar"]').count()) >= 1);
 check("ofrece guardar las tarjetas que ha hecho",
   await page.locator('[data-accion="guardar-tarjetas"]').isVisible());
 await page.click('[data-accion="guardar-tarjetas"]');
@@ -261,6 +312,36 @@ await page.evaluate(() => {
 await page.reload({ waitUntil: "networkidle" });
 check("la mochila de mañana dice qué asignatura toca",
   (await page.locator(".mochila").first().textContent()).includes("Matemáticas"));
+
+await page.click('#nav button[data-vista="profe"]');
+check("la charla con Clara sigue ahí al volver a abrir la app",
+  (await page.locator(".burbuja.yo").count()) >= 1 && (await page.locator('.burbuja.profe:has-text("balanza")').count()) >= 1);
+
+console.log("\n📷 Foto del horario");
+const { readFile: leer } = await import("node:fs/promises");
+await page.setInputFiles("#foto-input", {
+  name: "horario.png",
+  mimeType: "image/png",
+  buffer: await leer(new URL("../nicer-estudia/icono-512.png", import.meta.url))
+});
+await page.waitForSelector(".foto-pendiente img");
+check("la foto se prepara antes de mandarla", await page.locator(".foto-pendiente").isVisible());
+await page.click('[data-accion="preguntar"]');
+await page.waitForSelector('[data-accion="aplicar-horario"]');
+check("la foto viaja reducida y en JPEG",
+  ultimoCuerpo?.imagen?.media_type === "image/jpeg" && ultimoCuerpo.imagen.data.length > 500);
+check("sin reenviar la foto original", !JSON.stringify(ultimoCuerpo.mensajes).includes("data:image"));
+check("en el chat se ve la miniatura", await page.locator(".burbuja.yo img.foto-chat").last().isVisible());
+check("Clara enseña el horario leído antes de ponerlo",
+  (await page.locator(".horario-leido").textContent()).includes("Religión"));
+await page.click('[data-accion="aplicar-horario"]');
+await page.click("#dlg-aceptar");
+check("el horario queda puesto", await page.evaluate(() => {
+  const e = JSON.parse(localStorage.getItem("nicer-estudia:v1"));
+  return e.horario[1].length === 2 && e.horario[2].length === 1;
+}));
+check("y la asignatura que faltaba se añade", await page.evaluate(() =>
+  JSON.parse(localStorage.getItem("nicer-estudia:v1")).asignaturas.some((a) => a.nombre === "Religión")));
 
 console.log("\n🎧 Sonido de fondo");
 await page.click('#nav button[data-vista="yo"]');
