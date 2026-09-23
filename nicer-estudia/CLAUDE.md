@@ -31,10 +31,12 @@ Se sirve por HTTP, no con `file://`.
   analítica, cookies ni sincronización en la nube. Lo único que viaja es la
   pregunta que se escribe al Profe.
 - **La clave de la API nunca en el navegador.** El Profe va por
-  `../api/profe.js` con `ANTHROPIC_API_KEY` en el servidor.
+  `../api/_profe.js` (URL `/api/profe`, a través del enrutador `api/[ruta].js`)
+  con `ANTHROPIC_API_KEY` en el servidor. No lo conviertas en una función
+  suelta: el plan Hobby de Vercel solo admite 12.
 - **El Profe no da los deberes hechos** y **no hace de psicólogo**: ante algo
   serio, manda a un adulto y recuerda el 024 y el 116 111. Está en el prompt
-  de `api/profe.js`; no lo suavices.
+  de `api/_profe.js`; no lo suavices.
 - **Todo lo que escribe el alumno pasa por `escapa()`** antes de ir al HTML.
 - **La lista de "qué toca ahora" no pasa de 5** y el repaso diario tiene tope.
 - **El sonido de fondo se genera en el móvil** (`ambiente.js`), no se descarga:

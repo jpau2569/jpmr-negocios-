@@ -1,0 +1,213 @@
+-- ============================================================================
+--  PULSO LOCAL AI — pruebas de aislamiento (RLS)
+-- ----------------------------------------------------------------------------
+--  El multi-tenant no es una promesa comercial: o se demuestra, o no existe.
+--  Este archivo comprueba contra un Postgres real que:
+--    · el público lee la carta publicada de un negocio vigente
+--    · el público NO alcanza un solo dato personal
+--    · el público NO ve nada de un negocio con la demo caducada
+--    · un miembro del negocio A no ve nada del negocio B
+--
+--  Uso:  psql -d <base> -f sql/99_pruebas_rls.sql
+--  Cualquier comprobación que falle detiene la ejecución con un error.
+--
+--  Nota sobre "permiso denegado": para las tablas de datos personales el
+--  público se queda fuera DOS VECES — primero por el GRANT (02_rls.sql revoca
+--  todo a anon) y después por RLS. Que salte el primero es lo correcto: no
+--  llega ni a evaluarse la política.
+-- ============================================================================
+
+\set ON_ERROR_STOP on
+\set QUIET on
+-- Los resultados no interesan; lo que se lee son los avisos de cada assert.
+\o /dev/null
+
+create or replace function assert(condicion boolean, descripcion text)
+returns void language plpgsql as $$
+begin
+  if condicion then
+    raise notice '  OK      %', descripcion;
+  else
+    raise exception 'FALLA: %', descripcion;
+  end if;
+end $$;
+
+-- Para lo que el público no debe alcanzar: vale que RLS devuelva 0 filas o
+-- que el GRANT lo corte antes. Lo que NO vale es que devuelva datos.
+create or replace function assert_sin_datos(consulta text, descripcion text)
+returns void language plpgsql as $$
+declare n bigint;
+begin
+  execute consulta into n;
+  if n = 0 then
+    raise notice '  OK      % (0 filas)', descripcion;
+  else
+    raise exception 'FALLA: % — ha devuelto % filas', descripcion, n;
+  end if;
+exception when insufficient_privilege then
+  raise notice '  OK      % (permiso denegado antes de RLS)', descripcion;
+end $$;
+
+-- --- Actores de prueba -------------------------------------------------------
+insert into auth.users (id, email) values
+  ('11111111-1111-4111-8111-111111111111', 'duena.taberna@ejemplo.test'),
+  ('22222222-2222-4222-8222-222222222222', 'dueno.vina@ejemplo.test')
+on conflict do nothing;
+
+insert into business_members (business_id, profile_id, role)
+select b.id, '11111111-1111-4111-8111-111111111111', 'owner'
+  from businesses b where b.slug = 'thewhitebar-mieres'
+on conflict do nothing;
+
+insert into business_members (business_id, profile_id, role)
+select b.id, '22222222-2222-4222-8222-222222222222', 'owner'
+  from businesses b where b.slug = 'la-vina-cenera'
+on conflict do nothing;
+
+-- Un dato personal en cada negocio, para comprobar que no se filtra.
+delete from reservations; delete from feedback;
+insert into reservations (business_id, name, phone, service_date, service_time, party_size)
+select b.id, 'Cliente de prueba', '600000000', current_date, '21:00', 4
+  from businesses b where b.slug = 'thewhitebar-mieres';
+insert into feedback (business_id, rating, comment)
+select b.id, 2, 'Comentario privado de prueba'
+  from businesses b where b.slug = 'thewhitebar-mieres';
+
+\echo ''
+\echo '=== 1. EL PÚBLICO (rol anon) ==='
+set role anon;
+
+select assert((select count(*) from menu_items i join businesses b on b.id = i.business_id
+               where b.slug = 'thewhitebar-mieres') > 30,
+  've la carta publicada de La Taberna');
+
+select assert((select count(*) from daily_menus m join businesses b on b.id = m.business_id
+               where b.slug = 'thewhitebar-mieres' and m.service_date = current_date) = 1,
+  've el menú del día publicado');
+
+select assert((select count(*) from businesses where sector = 'hosteleria') = 2,
+  've los dos negocios de hosteleria vigentes');
+select assert((select count(*) from businesses) >= 2,
+  'y los de otros sectores que haya, que tambien son publicos');
+
+select assert((select count(*) from menu_item_allergens) > 0,
+  've los alérgenos declarados de los platos visibles');
+
+select assert_sin_datos('select count(*) from reservations',      'NO alcanza las reservas');
+select assert_sin_datos('select count(*) from feedback',          'NO alcanza el feedback');
+select assert_sin_datos('select count(*) from leads',             'NO alcanza los contactos captados');
+select assert_sin_datos('select count(*) from consent_records',   'NO alcanza los consentimientos');
+select assert_sin_datos('select count(*) from group_requests',    'NO alcanza las peticiones de grupo');
+select assert_sin_datos('select count(*) from qr_codes',          'NO alcanza los QR del negocio');
+select assert_sin_datos('select count(*) from analytics_events',  'NO alcanza la analítica');
+select assert_sin_datos('select count(*) from ai_knowledge_entries', 'NO alcanza la base del asistente');
+select assert_sin_datos('select count(*) from subscriptions',     'NO alcanza lo comercial');
+
+reset role;
+
+\echo ''
+\echo '=== 2. DEMO DE 7 DÍAS CADUCADA ==='
+
+update businesses set status = 'expired', trial_ends_at = now() - interval '1 day'
+where slug = 'thewhitebar-mieres';
+
+set role anon;
+select assert((select count(*) from menu_items i join businesses b on b.id = i.business_id
+               where b.slug = 'thewhitebar-mieres') = 0,
+  'caducada la demo, el público NO ve la carta');
+select assert((select count(*) from businesses where slug = 'thewhitebar-mieres') = 0,
+  'caducada la demo, el negocio no aparece');
+select assert((select count(*) from businesses where slug = 'la-vina-cenera') = 1,
+  'pero el otro negocio sigue visible');
+reset role;
+
+update businesses set status = 'trial', trial_ends_at = now() + interval '7 days'
+where slug = 'thewhitebar-mieres';
+
+set role anon;
+select assert((select count(*) from businesses where slug = 'thewhitebar-mieres') = 1,
+  'reactivado el trial, el negocio vuelve a verse');
+reset role;
+
+\echo ''
+\echo '=== 3. AISLAMIENTO ENTRE NEGOCIOS ==='
+
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+
+select assert((select count(*) from reservations) = 1,
+  'la dueña de La Taberna ve SU reserva');
+select assert((select count(*) from feedback) = 1,
+  'la dueña de La Taberna ve SU feedback');
+select assert((select count(*) from qr_codes) = 5,
+  'la dueña de La Taberna ve SUS 5 QR');
+select assert((select count(*) from qr_codes q join businesses b on b.id = q.business_id
+               where b.slug = 'la-vina-cenera') = 0,
+  'la dueña de La Taberna NO ve los QR de La Viña');
+
+set request.jwt.claim.sub = '22222222-2222-4222-8222-222222222222';
+
+select assert((select count(*) from reservations) = 0,
+  'el dueño de La Viña NO ve las reservas de La Taberna');
+select assert((select count(*) from feedback) = 0,
+  'el dueño de La Viña NO ve el feedback de La Taberna');
+select assert((select count(*) from qr_codes) = 4,
+  'el dueño de La Viña ve SOLO sus 4 QR');
+select assert((select count(*) from businesses b
+               where b.slug = 'thewhitebar-mieres'
+                 and can_at_least(b.id, 'staff')) = 0,
+  'el dueño de La Viña NO tiene permiso de edición sobre La Taberna');
+
+reset role;
+reset request.jwt.claim.sub;
+
+\echo ''
+\echo '=== 4. HONESTIDAD DEL CONTENIDO ==='
+
+select assert((select count(*) from menu_items i join businesses b on b.id = i.business_id
+               where b.slug = 'thewhitebar-mieres' and i.is_demo) = 30,
+  'los 30 platos sin confirmar están marcados is_demo');
+select assert((select count(*) from menu_items i join businesses b on b.id = i.business_id
+               where b.slug = 'thewhitebar-mieres' and not i.is_demo) = 14,
+  'los 14 platos ya confirmados NO están marcados is_demo');
+select assert((select count(*) from daily_menus where is_demo) >= 1,
+  'el menú del día de muestra está marcado como muestra');
+select assert((select count(*) from business_settings s join businesses b on b.id = s.business_id
+               where b.sector = 'hosteleria' and s.review_url is not null) = 0,
+  'ninguna review_url inventada: sin enlace oficial, no hay botón de Google');
+-- Y la que SÍ hay tiene que ser un dominio de Google, no una URL cualquiera.
+select assert((select count(*) from business_settings
+               where review_url is not null
+                 and review_url !~ '^https://(maps\.app\.goo\.gl|g\.page|search\.google\.com|www\.google\.com)/') = 0,
+  'las review_url cargadas son enlaces de Google, no de cualquier sitio');
+-- "Siempre a ambos al móvil, no al fijo": los dos WhatsApp son móviles
+-- españoles (34 + 6 o 7 + 8 cifras), y ningún fijo del local se cuela.
+select assert((select count(*) from business_settings where whatsapp is not null
+                 and whatsapp !~ '^34[67][0-9]{8}$') = 0,
+  'todos los WhatsApp cargados son móviles españoles');
+select assert((select count(*) from business_settings
+               where phone like '%984253352%' or phone like '%985426690%'
+                  or whatsapp like '%984253352%' or whatsapp like '%985426690%') = 0,
+  'ningún fijo del local se usa como teléfono principal ni como WhatsApp');
+select assert((select count(*) from business_settings s join businesses b on b.id = s.business_id
+               where b.sector = 'hosteleria' and s.phone_alt is not null) = 2,
+  'los dos fijos siguen ahí como segunda opción de contacto');
+select assert((select whatsapp from business_settings s join businesses b on b.id = s.business_id
+               where b.slug = 'thewhitebar-mieres') = '34684650516',
+  'La Taberna usa su móvil 684 65 05 16');
+select assert((select whatsapp from business_settings s join businesses b on b.id = s.business_id
+               where b.slug = 'la-vina-cenera') = '34620583770',
+  'La Viña usa su móvil 620 58 37 70');
+
+select assert((select count(*) from business_settings where opening_hours = '[]'::jsonb) = 0,
+  'los dos horarios están confirmados y cargados');
+select assert((select opening_hours -> 2 ->> 'ranges' from business_settings s
+               join businesses b on b.id = s.business_id where b.slug = 'la-vina-cenera') = '[]',
+  'La Viña cierra los martes');
+select assert((select count(*) from business_settings s join businesses b on b.id = s.business_id
+               where b.sector = 'hosteleria' and jsonb_array_length(s.pending_notes) > 0) = 2,
+  'los dos negocios declaran lo que les falta por confirmar');
+
+\o
+\echo ''
+\echo '=== TODAS LAS COMPROBACIONES PASAN ==='

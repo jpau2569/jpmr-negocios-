@@ -31,7 +31,7 @@ escaparate3d/
    ha marcado**, con título, precio, referencia y enlace de cada uno. Nada de
    "hola, quiero información".
 
-El correo va a `asesoriacastresana@gmail.com` y el WhatsApp al móvil que se
+El correo va a `inmobiliariacastresana@gmail.com` y el WhatsApp al móvil que se
 configure. Si además hay Supabase configurado, el contacto se registra en el CRM
 por `/api/lead` (origen `escaparate3d`) sin molestar al cliente.
 
@@ -59,7 +59,7 @@ girando desde el principio y `?secs=6` marca el ritmo. Con
 ## Contacto configurado
 
 Todo vive en el bloque `CONFIG` de `index.html` (arriba del `<script type="module">`):
-WhatsApp **672 77 57 21**, correo **asesoriacastresana@gmail.com**, teléfono
+WhatsApp **672 77 57 21**, correo **inmobiliariacastresana@gmail.com**, teléfono
 985 21 04 68, dirección y horario de la oficina. Para cambiar el móvil, esa línea:
 
 ```js

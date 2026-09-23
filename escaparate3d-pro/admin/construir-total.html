@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b0f14">
+<title>Construir Total · Escaparate 3D</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="../css/base.css">
+<style>
+  .panel { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: start; }
+  @media (max-width: 980px) { .panel { grid-template-columns: 1fr; } }
+  .bloque-admin { border: 1px solid var(--color-borde); border-radius: var(--radio); padding: .9rem; background: var(--color-superficie); }
+  .bloque-admin summary { cursor: pointer; }
+  #lateral { position: sticky; top: 5rem; display: grid; gap: .9rem; }
+  .barra { height: 10px; border-radius: 999px; background: var(--color-superficie-2); overflow: hidden; }
+  .barra-relleno { height: 100%; background: var(--color-acento); transition: width .2s ease; }
+  #vista-previa { width: 100%; height: 46vh; border: 1px solid var(--color-borde); border-radius: var(--radio); background: var(--color-fondo); }
+</style>
+</head>
+<body>
+
+<header id="cabecera">
+  <div id="marca">
+    <div id="marca-texto">
+      <div id="marca-nombre">Construir Total</div>
+      <div id="marca-eslogan" class="pequeno tenue">De la demo a la aplicación real del negocio</div>
+    </div>
+  </div>
+  <div class="botonera">
+    <a class="boton chico" href="../demos.html">Demos</a>
+    <a class="boton chico" href="./">Panel del negocio</a>
+    <a class="boton chico" href="../index.html">Ver la web</a>
+  </div>
+</header>
+
+<main class="contenedor" style="padding-block:1.5rem">
+  <p class="tenue" style="max-width:70ch">
+    Aquí se monta el despliegue definitivo de un cliente: sus datos reales, los módulos que
+    ha contratado, dónde caen de verdad los pedidos y las reservas, y el paquete listo para subir.
+    Mientras el semáforo de la derecha tenga cosas sin marcar, eso sigue siendo una demo.
+  </p>
+
+  <label class="campo" for="plantilla" style="max-width:420px">
+    <span>Partir de</span>
+    <select id="plantilla"></select>
+  </label>
+
+  <div class="panel" style="margin-top:1.2rem">
+    <form id="formulario" class="formulario" autocomplete="off"></form>
+
+    <aside id="lateral">
+      <div class="bloque-admin">
+        <strong>Requisitos de producción</strong>
+        <div id="semaforo" style="margin-top:.6rem"></div>
+      </div>
+      <iframe id="vista-previa" src="../index.html" title="Vista previa" loading="lazy"></iframe>
+      <p class="pequeno tenue">
+        La vista previa usa el borrador guardado en este navegador. Pulsa «Ver la vista previa»
+        después de cambiar algo.
+      </p>
+    </aside>
+  </div>
+</main>
+
+<div id="aviso" role="status" hidden></div>
+
+<script type="module" src="construir.js"></script>
+</body>
+</html>

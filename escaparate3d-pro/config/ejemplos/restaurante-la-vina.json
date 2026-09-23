@@ -1,0 +1,231 @@
+{
+  "version": 1,
+  "id": "la-vina",
+  "sector": "restaurante",
+  "nombre": "Restaurante La Viña",
+  "eslogan": "Cocina asturiana desde 1962, en el Valle de Cuna y Cenera",
+  "logoUrl": "",
+  "demo": {
+    "activa": true,
+    "aviso": "Demo comercial. El contacto y las especialidades salen de fichas públicas del restaurante; la carta completa, los precios, las zonas de reparto y los turnos son de muestra y los confirma el restaurante antes de publicar."
+  },
+  "verificacion": {
+    "verificado": false,
+    "fuente": "Fichas públicas del negocio (Facebook, cylex, qdq, listae) consultadas el 2026-09-09.",
+    "confirmado": [
+      "Dirección: Ctra. de Cenera, 1 · 33615 Cenera, Mieres (Asturias)",
+      "Teléfono: 985 42 66 90",
+      "Página de Facebook",
+      "Especialidades citadas: lechazo al horno, lacón con cachelos, cordero a la estaca, callos caseros, casadielles",
+      "Instagram: @restaurantelavinacenera (facilitado por Pau)",
+      "Ficha de TripAdvisor (facilitada por Pau)",
+      "Localidad: CENERA (confirmado por Pau, que es de allí). La ficha de TripAdvisor la lista bajo Casaviedra, pero la dirección buena es Ctra. de Cenera, 1 · 33615 Cenera, Mieres.",
+      "Horario: lunes y de miércoles a domingo, 12:00-02:00. Martes cerrado.",
+      "Correo: Restaurantelagarlavina@gmail.com",
+      "Servicios: consumo en el local, terraza y recogida en el establecimiento.",
+      "Abierto desde 1962, en el Valle de Cuna y Cenera."
+    ],
+    "pendiente": [
+      "Carta completa y precios reales (aquí van precios de muestra).",
+      "WhatsApp del restaurante, si lo tienen (el correo y el teléfono ya están).",
+      "Confirmar si hacen reparto a domicilio: en su ficha solo consta recogida en el establecimiento.",
+      "Turnos y aforo reales para las reservas.",
+      "Fotos propias de los platos y del comedor."
+    ]
+  },
+  "colores": {
+    "fondo": "#140e0b",
+    "acento": "#d98324",
+    "acento2": "#8fbf6a",
+    "texto": "#f7f0e8"
+  },
+  "contacto": {
+    "telefono": "+34985426690",
+    "telefonoTexto": "985 42 66 90",
+    "whatsapp": "",
+    "email": "Restaurantelagarlavina@gmail.com",
+    "direccion": "Ctra. de Cenera, 1 · 33615 Cenera, Mieres (Asturias)",
+    "horario": "Lun y Mié-Dom 12:00-02:00 · Martes cerrado",
+    "mapaLat": null,
+    "mapaLng": null
+  },
+  "redes": {
+    "web": "",
+    "instagram": "https://www.instagram.com/restaurantelavinacenera/",
+    "facebook": "https://www.facebook.com/p/Restaurante-La-Vi%C3%B1a-Cenera-100076182274701/",
+    "tiktok": "",
+    "googleBusiness": "",
+    "tripadvisor": "https://www.tripadvisor.es/Restaurant_Review-g21305928-d10392942-Reviews-La_Vina_Restaurante-Casaviedra_Mieres_Municipality_Asturias.html"
+  },
+  "modulos": {
+    "pedidosDomicilio": true,
+    "reservas": true,
+    "qrMesas": true,
+    "catalogoInmuebles": false,
+    "valoracionGratis": false,
+    "pedirDemo": true
+  },
+  "datos": {
+    "modo": "local",
+    "api": {
+      "lead": "/api/lead",
+      "pedido": "",
+      "reserva": ""
+    },
+    "firebase": {
+      "apiKey": "",
+      "authDomain": "",
+      "projectId": "",
+      "coleccionPedidos": "pedidos",
+      "coleccionReservas": "reservas",
+      "coleccionConfig": "negocios"
+    }
+  },
+  "carta": {
+    "preciosEjemplo": true,
+    "moneda": "€",
+    "aviso": "Precios de muestra. La carta y los precios reales los pone el restaurante desde el panel.",
+    "categorias": [
+      {
+        "id": "casa",
+        "nombre": "Especialidades de la casa",
+        "platos": [
+          {
+            "id": "c1",
+            "nombre": "Lechazo al horno",
+            "descripcion": "Asado lento, la especialidad más citada de la casa.",
+            "precio": 24,
+            "foto": "",
+            "destacado": true,
+            "confirmado": true,
+            "alergenos": []
+          },
+          {
+            "id": "c2",
+            "nombre": "Cordero a la estaca",
+            "descripcion": "A la brasa, servido a la mesa.",
+            "precio": 26,
+            "foto": "",
+            "destacado": true,
+            "confirmado": true,
+            "alergenos": []
+          },
+          {
+            "id": "c3",
+            "nombre": "Lacón con cachelos",
+            "descripcion": "Con patata cocida y pimentón.",
+            "precio": 16,
+            "foto": "",
+            "destacado": true,
+            "confirmado": true,
+            "alergenos": []
+          },
+          {
+            "id": "c4",
+            "nombre": "Callos caseros",
+            "descripcion": "Guisados en casa, del día.",
+            "precio": 14,
+            "foto": "",
+            "destacado": true,
+            "confirmado": true,
+            "alergenos": [
+              "gluten"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "picar",
+        "nombre": "Para picar",
+        "platos": [
+          {
+            "id": "p1",
+            "nombre": "Tabla de quesos asturianos",
+            "descripcion": "Plato de muestra: lo confirma el restaurante.",
+            "precio": 12,
+            "foto": "",
+            "destacado": false,
+            "confirmado": false,
+            "alergenos": [
+              "lácteos"
+            ]
+          },
+          {
+            "id": "p2",
+            "nombre": "Chorizo a la sidra",
+            "descripcion": "Plato de muestra: lo confirma el restaurante.",
+            "precio": 9,
+            "foto": "",
+            "destacado": false,
+            "confirmado": false,
+            "alergenos": []
+          }
+        ]
+      },
+      {
+        "id": "postres",
+        "nombre": "Postres",
+        "platos": [
+          {
+            "id": "d1",
+            "nombre": "Casadielles",
+            "descripcion": "Postre asturiano citado en la carta de la casa.",
+            "precio": 5,
+            "foto": "",
+            "destacado": true,
+            "confirmado": true,
+            "alergenos": [
+              "gluten",
+              "frutos secos"
+            ]
+          },
+          {
+            "id": "d2",
+            "nombre": "Arroz con leche",
+            "descripcion": "Postre de muestra: lo confirma el restaurante.",
+            "precio": 5,
+            "foto": "",
+            "destacado": false,
+            "confirmado": false,
+            "alergenos": [
+              "lácteos"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "pedidos": {
+    "recogidaEnLocal": true,
+    "pedidoMinimo": 0,
+    "zonasReparto": [],
+    "formasPago": [
+      "Efectivo al recoger",
+      "Tarjeta en el local"
+    ],
+    "avisoLegal": "En su ficha pública solo consta recogida en el establecimiento, así que aquí el pedido se prepara para recoger. Si hacen reparto, se activa en un minuto desde el panel."
+  },
+  "reservas": {
+    "maxComensales": 20,
+    "antelacionDias": 30,
+    "diasCerrado": [
+      2
+    ],
+    "turnos": [
+      "13:00",
+      "13:30",
+      "14:00",
+      "14:30",
+      "15:00",
+      "20:30",
+      "21:00",
+      "21:30"
+    ],
+    "aviso": "Los martes cierran. Para grupos o celebraciones, mejor llamar al 985 42 66 90."
+  },
+  "qr": {
+    "mesas": 14,
+    "prefijoMesa": "Mesa",
+    "destino": "carta"
+  }
+}

@@ -8,9 +8,9 @@
 //  y el streaming SSE con retención del marcador.
 // ============================================================================
 
-import handler, { separarHotlead } from "../api/castebot.js";
-import informe from "../api/castebot-informe.js";
-import panelLeads from "../api/castebot-leads.js";
+import handler, { separarHotlead } from "../api/_castebot.js";
+import informe from "../api/_castebot-informe.js";
+import panelLeads from "../api/_castebot-leads.js";
 
 let pasados = 0;
 let fallados = 0;

@@ -1,34 +1,8 @@
 {
   "functions": {
-    "api/clara.js": {
-      "maxDuration": 60
-    },
-    "api/castebot.js": {
+    "api/[ruta].js": {
       "maxDuration": 60,
-      "includeFiles": "agentes/**"
-    },
-    "api/castebot-informe.js": {
-      "maxDuration": 60,
-      "includeFiles": "agentes/**"
-    },
-    "api/escaparate.js": {
-      "maxDuration": 30
-    },
-    "api/foto.js": {
-      "maxDuration": 15
-    },
-    "api/fotos.js": {
-      "maxDuration": 20
-    },
-    "api/briefing.js": {
-      "maxDuration": 60
-    },
-    "api/profe.js": {
-      "maxDuration": 60
-    },
-    "api/tiempo.js": {
-      "maxDuration": 30,
-      "includeFiles": "sol-niebla-agua/api/**"
+      "includeFiles": "{agentes/**,sol-niebla-agua/api/**,chivato/datos/**}"
     }
   },
   "crons": [
@@ -39,6 +13,12 @@
     {
       "path": "/api/castebot-informe",
       "schedule": "0 7 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/p/:slug",
+      "destination": "/api/oportunidades-ficha?slug=:slug"
     }
   ]
 }

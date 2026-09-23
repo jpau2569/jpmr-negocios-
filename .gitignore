@@ -3,3 +3,19 @@ node_modules/
 .env
 fotos-faciles/build/
 fotos-faciles/dist/
+chivato/fotos-calibracion/
+
+# PostgreSQL desechable de las pruebas de Pulso Local AI
+/var/tmp/plai-pg
+
+# Next.js de Pulso Local AI
+pulso-local-ai/.next/
+pulso-local-ai/node_modules/
+pulso-local-ai/tsconfig.tsbuildinfo
+
+# Salida de tsc dentro de pulso-local-ai: si aparece un .js junto a su .ts es
+# que alguien compiló sin outDir. No debe commitearse nunca.
+pulso-local-ai/**/*.js.map
+pulso-local-ai/tsconfig.tsbuildinfo
+# Compilaciones temporales de los tests (dentro del proyecto para que resuelvan node_modules)
+pulso-local-ai/.test-build-*/

@@ -80,7 +80,9 @@ Cada capa solo conoce a la de debajo:
 - `app.js` — estado, eventos, temporizador, Profe y PWA
 - `manifest.json` + `service-worker.js` — instalable y sin conexión
 - `herramientas/generar-iconos.mjs` — regenera los PNG de los iconos
-- `../api/profe.js` — backend del Profe (Claude); la clave nunca toca el navegador
+- `../api/_profe.js` — backend del Profe (Claude), servido en `/api/profe` por el
+  enrutador único `api/[ruta].js` (el plan Hobby de Vercel admite 12 funciones);
+  la clave nunca toca el navegador
 
 ## El Profe
 

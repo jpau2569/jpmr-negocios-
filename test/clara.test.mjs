@@ -8,11 +8,11 @@
 //  SSE y el briefing diario.
 // ============================================================================
 
-import handler, { buscarConGemini, calcular } from "../api/clara.js";
-import briefing from "../api/briefing.js";
-import memoria from "../api/memoria.js";
-import lead from "../api/lead.js";
-import leads from "../api/leads.js";
+import handler, { buscarConGemini, calcular } from "../api/_clara.js";
+import briefing from "../api/_briefing.js";
+import memoria from "../api/_memoria.js";
+import lead from "../api/_lead.js";
+import leads from "../api/_leads.js";
 import { parsearInmuebles, resumenCartera } from "../lib/cartera.js";
 import { SKILLS_BASE, catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
 

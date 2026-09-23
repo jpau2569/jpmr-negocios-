@@ -1,0 +1,27 @@
+{
+  "id": "./",
+  "name": "Chivato AI — testigos del coche",
+  "short_name": "Chivato AI",
+  "description": "Haz una foto al cuadro de mandos y descubre qué testigo se ha encendido, qué significa, su gravedad y qué debes hacer.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#070d18",
+  "theme_color": "#070d18",
+  "lang": "es-ES",
+  "dir": "ltr",
+  "categories": ["utilities", "productivity", "travel"],
+  "icons": [
+    { "src": "icono-96.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
+    { "src": "icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icono-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Catálogo de testigos", "short_name": "Símbolos", "url": "./?vista=catalogo" },
+    { "name": "Historial", "short_name": "Historial", "url": "./?vista=historial" }
+  ]
+}

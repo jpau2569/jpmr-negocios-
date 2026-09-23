@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Oportunidades Únicas</title>
+<meta name="description" content="Gestión de inmuebles y clientes · PAU. M.R." />
+<meta name="theme-color" content="#0B3B60" />
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" type="image/png" sizes="32x32" href="iconos/favicon-32.png" />
+<link rel="apple-touch-icon" href="iconos/apple-touch-icon.png" />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Oportunidades" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.169.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.169.0/examples/jsm/"}}
+</script>
+<link rel="stylesheet" href="estilo.css" />
+</head>
+<body>
+
+<!-- ═══════════ Pantalla de acceso ═══════════ -->
+<section id="acceso" class="acceso" hidden>
+  <form class="tarjeta-acceso" id="form-acceso" autocomplete="on">
+    <div class="marca-grande" id="logo-acceso"><span class="sigla">OU</span></div>
+    <h1>Oportunidades Únicas</h1>
+    <p class="apunte">Gestión de inmuebles y clientes · PAU. M.R.</p>
+
+    <label class="campo">
+      <span>Correo</span>
+      <input type="email" id="email" autocomplete="username" required />
+    </label>
+    <label class="campo">
+      <span>Contraseña</span>
+      <input type="password" id="password" autocomplete="current-password" required />
+    </label>
+
+    <button class="btn ancho" type="submit" id="btn-entrar">Entrar</button>
+    <p class="aviso" id="aviso-acceso" hidden></p>
+    <p style="text-align:center;margin-top:18px">
+      <button type="button" id="btn-comprobar" class="enlace">¿No consigues entrar? Comprobar la instalación</button>
+    </p>
+    <div id="diagnostico" hidden></div>
+  </form>
+</section>
+
+<!-- ═══════════ Aplicación ═══════════ -->
+<div id="app" hidden>
+  <aside class="lateral">
+    <a class="marca" href="#/panel">
+      <span class="sigla sigla-logo"><img src="iconos/icono-64.png" alt="" width="40" height="40" /></span>
+      <b>Oportunidades<br /><em>Únicas</em></b>
+    </a>
+    <nav id="menu">
+      <a href="#/panel" data-ruta="panel"><span class="ico">◧</span> Inicio</a>
+      <a href="#/pisos" data-ruta="pisos"><span class="ico">⌂</span> Inmuebles</a>
+      <a href="#/clientes" data-ruta="clientes"><span class="ico">☺</span> Clientes</a>
+      <a href="#/actividad" data-ruta="actividad"><span class="ico">≡</span> Actividad</a>
+    </nav>
+    <div class="usuario">
+      <b id="usuario-nombre"></b>
+      <span id="usuario-rol"></span>
+      <button class="btn fino" type="button" id="btn-salir">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <main id="vista" aria-live="polite"></main>
+</div>
+
+<div id="cargando" class="cargando">Cargando…</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- ═══════════ Ventana de edición ═══════════ -->
+<dialog id="ficha">
+  <form method="dialog" id="form-ficha"></form>
+</dialog>
+
+<script type="module" src="app.js"></script>
+<script type="module">
+  // Logo 3D en la pantalla de acceso. Si no hay WebGL o no carga Three.js, se
+  // queda la sigla «OU» de siempre. Se apaga al entrar para no gastar batería.
+  const acceso = document.getElementById("acceso");
+  let logo = null;
+  async function encender() {
+    if (logo || acceso.hidden) return;
+    try {
+      const { montarLogo } = await import("./logo3d.js");
+      logo = await montarLogo(document.getElementById("logo-acceso"), { tamano: 150 });
+    } catch { logo = null; }
+  }
+  new MutationObserver(() => {
+    if (acceso.hidden && logo) { logo.parar(); logo = null; }
+    else encender();
+  }).observe(acceso, { attributes: true, attributeFilter: ["hidden"] });
+  encender();
+</script>
+</body>
+</html>

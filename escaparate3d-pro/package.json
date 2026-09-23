@@ -1,0 +1,6 @@
+{
+  "name": "escaparate3d-pro",
+  "private": true,
+  "type": "module",
+  "description": "Escaparate 3D Pro — despliegue independiente por cliente. Sin dependencias: la escena 3D usa Three.js por CDN y los endpoints solo usan fetch."
+}

@@ -12,7 +12,7 @@ import * as UI from "../nicer-estudia/interfaz.js";
 import * as Q from "../nicer-estudia/cuestionario.js";
 import { dibujaEsquema, esquemaDeIA, parteTexto } from "../nicer-estudia/esquema.js";
 import * as A from "../nicer-estudia/ambiente.js";
-import { separaTarjetas, separaBloques } from "../api/profe.js";
+import { separaTarjetas, separaBloques } from "../api/_profe.js";
 
 let pasados = 0, fallados = 0;
 const check = (nombre, cond, detalle = "") => {

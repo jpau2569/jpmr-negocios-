@@ -48,7 +48,10 @@ Intentamos publicar en **Vercel**, pero:
 4. Al entrar, comprobar que aparece el equipo `pau-ia-projectos-55s-projects` y los proyectos de siempre.
 5. Luego: **Add New → Project → importar `jpmr-negocios-` → Deploy**.
 6. En **Settings → Environment Variables**, añadir las 2 claves de arriba y **Redeploy**.
-7. Clara viva en: `https://jpmr-negocios.vercel.app/clara.html`
+7. Clara viva en la URL que dé Vercel al terminar, en `/clara.html`.
+   ⚠️ `jpmr-negocios.vercel.app` era un nombre de ejemplo de este documento:
+   a fecha de hoy **este repositorio todavía no está desplegado** y esa
+   dirección no existe. La real la asigna Vercel al crear el proyecto.
 
 ### 🅱️ Recuperar el 2FA de GitHub
 Si el MacBook tiene la app de códigos (Google Authenticator/Authy), los códigos de recuperación, o la app de GitHub con sesión abierta, se usa eso para pasar la verificación. Si no, usar el enlace **"Inicia la recuperación de autenticación de dos factores"** (verifica por correo). Una vez dentro de GitHub, Vercel funciona normal.

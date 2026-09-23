@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "id": "inmobiliaria-ejemplo",
+  "sector": "inmobiliaria",
+  "nombre": "Fincas Ejemplo",
+  "eslogan": "Tu próxima casa, sin sustos",
+  "logoUrl": "",
+  "demo": {
+    "activa": true,
+    "aviso": "Datos de ejemplo inventados para enseñar el producto. Ningún inmueble de este archivo es real."
+  },
+  "colores": {
+    "fondo": "#0b0f14",
+    "acento": "#3b82f6",
+    "acento2": "#22c55e",
+    "texto": "#e8eef6"
+  },
+  "contacto": {
+    "telefono": "+34000000000",
+    "telefonoTexto": "000 00 00 00",
+    "whatsapp": "",
+    "email": "hola@fincasejemplo.example",
+    "direccion": "Avenida de Ejemplo, 22 · 33000 Ciudad (Asturias)",
+    "horario": "L-V 10:00-14:00 y 16:30-19:30",
+    "mapaLat": null,
+    "mapaLng": null
+  },
+  "redes": {
+    "web": "https://fincasejemplo.example",
+    "instagram": "https://instagram.com/fincasejemplo",
+    "facebook": "",
+    "tiktok": "",
+    "googleBusiness": ""
+  },
+  "modulos": {
+    "pedidosDomicilio": false,
+    "reservas": false,
+    "qrMesas": false,
+    "catalogoInmuebles": true,
+    "valoracionGratis": true,
+    "pedirDemo": true
+  },
+  "datos": {
+    "modo": "local",
+    "api": { "lead": "/api/lead", "pedido": "", "reserva": "" },
+    "firebase": {
+      "apiKey": "",
+      "authDomain": "",
+      "projectId": "",
+      "coleccionPedidos": "pedidos",
+      "coleccionReservas": "reservas",
+      "coleccionConfig": "negocios"
+    }
+  },
+  "inmuebles": {
+    "origenes": [],
+    "maxTarjetas3D": 20,
+    "maxEnMensaje": 10,
+    "respaldo": [
+      { "referencia": "EJ-001", "titulo": "Piso reformado de 3 habitaciones", "operacion": "venta", "zona": "Ciudad Ejemplo", "precio": 145000, "superficieConstruida": 92, "habitaciones": 3, "banos": 2, "foto": "", "url": "" },
+      { "referencia": "EJ-002", "titulo": "Ático con terraza y vistas", "operacion": "venta", "zona": "Ciudad Ejemplo", "precio": 210000, "superficieConstruida": 78, "habitaciones": 2, "banos": 1, "foto": "", "url": "" },
+      { "referencia": "EJ-003", "titulo": "Estudio céntrico en alquiler", "operacion": "alquiler", "zona": "Ciudad Ejemplo", "precio": 480, "superficieConstruida": 40, "habitaciones": 1, "banos": 1, "foto": "", "url": "" }
+    ]
+  },
+  "valoracion": {
+    "titulo": "¿Cuánto vale tu casa?",
+    "texto": "Te decimos un rango orientativo hoy y una valoración firmada tras visitarla. Sin compromiso.",
+    "preguntarDireccion": true
+  }
+}

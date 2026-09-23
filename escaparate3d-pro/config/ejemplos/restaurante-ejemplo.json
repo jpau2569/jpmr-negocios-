@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "id": "restaurante-ejemplo",
+  "sector": "restaurante",
+  "nombre": "Casa Ejemplo",
+  "eslogan": "Cocina de siempre, a fuego lento",
+  "logoUrl": "",
+  "demo": {
+    "activa": true,
+    "aviso": "Datos de ejemplo inventados para enseñar el producto. Ningún dato de este archivo corresponde a un negocio real."
+  },
+  "colores": {
+    "fondo": "#120d0a",
+    "acento": "#e0803a",
+    "acento2": "#7fb069",
+    "texto": "#f6efe8"
+  },
+  "contacto": {
+    "telefono": "+34000000000",
+    "telefonoTexto": "000 00 00 00",
+    "whatsapp": "",
+    "email": "hola@casaejemplo.example",
+    "direccion": "Calle de Ejemplo, 1 · 33000 Ciudad (Asturias)",
+    "horario": "M-D 13:00-16:30 y 20:00-23:30 · lunes cerrado",
+    "mapaLat": null,
+    "mapaLng": null
+  },
+  "redes": {
+    "web": "https://casaejemplo.example",
+    "instagram": "https://instagram.com/casaejemplo",
+    "facebook": "",
+    "tiktok": "",
+    "googleBusiness": ""
+  },
+  "modulos": {
+    "pedidosDomicilio": true,
+    "reservas": true,
+    "qrMesas": true,
+    "catalogoInmuebles": false,
+    "valoracionGratis": false,
+    "pedirDemo": true
+  },
+  "datos": {
+    "modo": "local",
+    "api": { "lead": "/api/lead", "pedido": "", "reserva": "" },
+    "firebase": {
+      "apiKey": "",
+      "authDomain": "",
+      "projectId": "",
+      "coleccionPedidos": "pedidos",
+      "coleccionReservas": "reservas",
+      "coleccionConfig": "negocios"
+    }
+  },
+  "carta": {
+    "preciosEjemplo": true,
+    "moneda": "€",
+    "categorias": [
+      {
+        "id": "entrantes",
+        "nombre": "Para empezar",
+        "platos": [
+          { "id": "e1", "nombre": "Croquetas de la casa", "descripcion": "Seis unidades, masa cremosa.", "precio": 9.5, "foto": "", "destacado": true, "alergenos": ["gluten", "lácteos"] },
+          { "id": "e2", "nombre": "Ensalada de la huerta", "descripcion": "Tomate de temporada y ventresca.", "precio": 11, "foto": "", "destacado": false, "alergenos": ["pescado"] }
+        ]
+      },
+      {
+        "id": "principales",
+        "nombre": "Principales",
+        "platos": [
+          { "id": "p1", "nombre": "Guiso del día", "descripcion": "Cambia cada jornada, pregunta en sala.", "precio": 14, "foto": "", "destacado": true, "alergenos": [] },
+          { "id": "p2", "nombre": "Pescado del puerto", "descripcion": "A la plancha, con patata panadera.", "precio": 19.5, "foto": "", "destacado": false, "alergenos": ["pescado"] }
+        ]
+      },
+      {
+        "id": "postres",
+        "nombre": "Postres",
+        "platos": [
+          { "id": "d1", "nombre": "Tarta casera", "descripcion": "La que salga ese día del horno.", "precio": 5.5, "foto": "", "destacado": false, "alergenos": ["gluten", "huevo", "lácteos"] }
+        ]
+      }
+    ]
+  },
+  "pedidos": {
+    "recogidaEnLocal": true,
+    "pedidoMinimo": 15,
+    "zonasReparto": [
+      { "nombre": "Casco urbano", "coste": 2, "minimo": 15 },
+      { "nombre": "Alrededores (5 km)", "coste": 4, "minimo": 25 }
+    ],
+    "formasPago": ["Efectivo al recibir", "Tarjeta al repartidor", "Bizum"],
+    "avisoLegal": "Los pedidos se confirman por teléfono antes de salir de cocina."
+  },
+  "reservas": {
+    "maxComensales": 12,
+    "antelacionDias": 30,
+    "diasCerrado": [1],
+    "turnos": ["13:00", "13:30", "14:00", "14:30", "20:30", "21:00", "21:30", "22:00"],
+    "aviso": "Para grupos de más de 12 personas, llámanos y lo organizamos."
+  },
+  "qr": {
+    "mesas": 12,
+    "prefijoMesa": "Mesa",
+    "destino": "carta"
+  }
+}

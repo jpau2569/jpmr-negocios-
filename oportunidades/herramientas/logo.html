@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Logo 3D · Oportunidades Únicas</title>
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.169.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.169.0/examples/jsm/"}}
+</script>
+<style>
+  html,body{margin:0;background:#F6F7F9;font-family:system-ui,sans-serif}
+  body.icono{background:#0B3B60}
+  #lienzo{display:grid;place-items:center;min-height:100vh}
+</style>
+</head>
+<body>
+<div id="lienzo"><div id="logo"></div></div>
+<script type="module">
+  // ?modo=icono&tamano=1024 → plano fijo para fotografiar el icono.
+  import { montarLogo } from "../logo3d.js";
+  const q = new URLSearchParams(location.search);
+  const modo = q.get("modo") || "insignia";
+  const tamano = Number(q.get("tamano")) || 360;
+  if (modo === "icono") document.body.classList.add("icono");
+  const r = await montarLogo(document.getElementById("logo"), { modo, tamano, animar: modo !== "icono" });
+  document.body.dataset.listo = r ? "si" : "sin-webgl";
+</script>
+</body>
+</html>

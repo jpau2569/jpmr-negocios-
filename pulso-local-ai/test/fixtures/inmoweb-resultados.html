@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!--
+  HTML de muestra con la estructura de una web Inmoweb (la que usa Asesoría
+  Castresana). NO es una captura de la web real: está reconstruido a partir de
+  la estructura documentada en lib/cartera/parseo.ts, con casos incómodos
+  metidos a propósito para que el lector no se luzca con datos fáciles:
+
+    · PIS0210  ficha completa y normal
+    · CHA0044  precio con separador de miles, título con acentos y "del Camín"
+    · LOC0007  local SIN precio (a consultar) y sin habitaciones
+    · GAR0031  garaje: el tipo NO se puede confundir con un piso
+    · PIS0210  repetida al final, para comprobar que no se duplica
+    · una imagen de logo antes de la foto buena, para que no la coja
+-->
+<html lang="es">
+<head><meta charset="utf-8"><title>Resultados</title></head>
+<body>
+<header><img src="/img/logo-agencia.svg" alt="logo"></header>
+
+<div class="listado">
+
+  <div class="venta" data-url="/piso-en-oviedo-con-ascensor-es1616045.html" title="Oviedo" id="1762095" data-ref="PIS0210">
+    <a href="/piso-en-oviedo-con-ascensor-es1616045.html">
+      <img src="/img/icon-camara.png" alt="fotos">
+      <img src="https://fotos.apinmo.com/1234/1616045/piso-oviedo-01.jpg" alt="Piso en Oviedo">
+    </a>
+    <h3>Oviedo</h3>
+    <h4 class="subTitulo"><a title="Piso en Oviedo" href="/piso-en-oviedo-con-ascensor-es1616045.html">Piso en Oviedo</a></h4>
+    <p class="descripcion ocultar">Tu nuevo hogar en pleno centro, muy luminoso, exterior y con plaza de garaje incluida en el precio...</p>
+    <ul>
+      <li class="habitaciones"><span>Habitaciones:</span> 4</li>
+      <li class="banos"><span>Ba&ntilde;os:</span> 2</li>
+      <li class="supConstruida"><span>Sup. Construida:</span> 165 m&sup2;</li>
+    </ul>
+    <div class="precio"><p><span class="actual"> 780.000&euro; </span></p></div>
+  </div>
+
+  <div class="venta" data-url="/chalet-en-mieres-del-camin-es1616090.html" title="Mieres" id="1762100" data-ref="CHA0044">
+    <a href="/chalet-en-mieres-del-camin-es1616090.html">
+      <img src="https://fotos.apinmo.com/1234/1616090/chalet-mieres-01.jpg" alt="Chalet">
+    </a>
+    <h3>Mieres del Cam&iacute;n</h3>
+    <h4 class="subTitulo"><a title="Chalet en Mieres del Cam&iacute;n" href="/chalet-en-mieres-del-camin-es1616090.html">Chalet en Mieres del Cam&iacute;n</a></h4>
+    <p class="descripcion ocultar">Chalet independiente con finca de 1.200 m2, garaje para dos coches y or&iacute;entaci&oacute;n sur todo el d&iacute;a...</p>
+    <ul>
+      <li class="habitaciones"><span>Habitaciones:</span> 5</li>
+      <li class="banos"><span>Ba&ntilde;os:</span> 3</li>
+      <li class="supConstruida"><span>Sup. Construida:</span> 280 m&sup2;</li>
+    </ul>
+    <div class="precio"><p><span class="actual"> 1.250.000&euro; </span></p></div>
+  </div>
+
+  <div class="venta" data-url="/local-comercial-en-oviedo-es1616120.html" title="Oviedo" id="1762111" data-ref="LOC0007">
+    <a href="/local-comercial-en-oviedo-es1616120.html">
+      <img src="https://fotos.apinmo.com/1234/1616120/local-oviedo-01.jpg" alt="Local">
+    </a>
+    <h3>Oviedo</h3>
+    <h4 class="subTitulo"><a title="Local comercial en Oviedo" href="/local-comercial-en-oviedo-es1616120.html">Local comercial en Oviedo</a></h4>
+    <p class="descripcion ocultar">Local a pie de calle en zona de mucho paso, diáfano y con salida de humos ya instalada...</p>
+    <ul>
+      <li class="supConstruida"><span>Sup. Construida:</span> 95 m&sup2;</li>
+    </ul>
+    <div class="precio"><p><span class="actual">Consultar</span></p></div>
+  </div>
+
+  <div class="venta" data-url="/plaza-de-garaje-en-oviedo-es1616150.html" title="Oviedo" id="1762120" data-ref="GAR0031">
+    <a href="/plaza-de-garaje-en-oviedo-es1616150.html">
+      <img src="https://fotos.apinmo.com/1234/1616150/garaje-oviedo-01.jpg" alt="Garaje">
+    </a>
+    <h3>Oviedo</h3>
+    <h4 class="subTitulo"><a title="Plaza de garaje en Oviedo" href="/plaza-de-garaje-en-oviedo-es1616150.html">Plaza de garaje en Oviedo</a></h4>
+    <div class="precio"><p><span class="actual"> 18.500&euro; </span></p></div>
+  </div>
+
+  <div class="venta" data-url="/piso-en-oviedo-con-ascensor-es1616045.html" title="Oviedo" id="1762095" data-ref="PIS0210">
+    <a href="/piso-en-oviedo-con-ascensor-es1616045.html">Ver de nuevo el mismo piso</a>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "functions": {
+    "api/escaparate.js": { "maxDuration": 30 },
+    "api/foto.js": { "maxDuration": 15 }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "chivato-ai",
+  "private": true,
+  "type": "module",
+  "description": "PWA que identifica los testigos del cuadro de mandos a partir de una foto",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.111.0"
+  }
+}
