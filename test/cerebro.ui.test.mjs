@@ -248,11 +248,29 @@ check("campos rellenos en el formulario", (await page.inputValue("#pf-direccion"
 const piso1 = (await estado()).pisos.at(-1);
 check("lo inventado no entra en la ficha guardada", piso1.inventado === undefined && piso1.propNombre === "Luis Pérez García");
 check("el dictado viaja al servidor con la clave", lecturas.at(-1).accion === "ficha" && lecturas.at(-1).texto.includes("tercero B") && lecturas.at(-1).clave === "mi-clave");
+await page.fill("#pf-m2Utiles", "85.5");
+await page.locator("#pf-comunidad").evaluate((el) => { el.closest("details").open = true; });
+await page.fill("#pf-comunidad", "45.50");
+await page.waitForTimeout(600);
+check("decimales guardados tal cual (85,5 m² y 45,50 €)", (await estado()).pisos.at(-1).m2Utiles === 85.5 && (await estado()).pisos.at(-1).comunidad === 45.5);
+// Rellenar otra vez no machaca lo escrito: avisa del choque y deja elegir.
+await page.fill("#pf-precio", "250000");
+await page.waitForTimeout(500);
+await page.fill("#pf-dictado", "Otra vez los datos");
+await page.click("#pf-rellenar");
+await page.waitForSelector("[data-acepta]", { timeout: 5000 }).catch(() => {});
+check("Rellenar con Clara no cambia lo que Pau ya tenía y lo enseña", (await estado()).pisos.at(-1).precio === 250000 && (await page.textContent("#pf-estado")).includes("tú tenías «250000»"));
+await page.click('[data-acepta="precio"]');
+check("…y con un toque se acepta lo de Clara", (await estado()).pisos.at(-1).precio === 245000);
 await page.locator("#pf-lugarFirma").evaluate((el) => { el.closest("details").open = true; });
 await page.selectOption("#pf-lugarFirma", "Fuera de la oficina");
 await page.fill("#pf-precioMinimo", "230000");
 await firmar("#pf-firma");
-await page.click("#pf-guarda-firma");
+// Sin pulsar «Guardar firma»: al sacar el PDF la firma se guarda sola.
+const [capSinGuardar] = await Promise.all([page.waitForEvent("download"), page.click("#pf-captacion-desc")]);
+const pdfSinGuardar = (await readFile(await capSinGuardar.path())).toString("latin1");
+check("una firma sin guardar se guarda sola al sacar el PDF y sale en él", (await estado()).pisos.at(-1).firmaPropietario.startsWith("data:image/jpeg") && (pdfSinGuardar.match(/\/DCTDecode/g) || []).length >= 3);
+await page.reload();
 await page.waitForSelector("#pf-refirmar");
 check("firma del propietario guardada", (await estado()).pisos.at(-1).firmaPropietario.startsWith("data:image/jpeg"));
 const [cap] = await Promise.all([page.waitForEvent("download"), page.click("#pf-captacion-desc")]);

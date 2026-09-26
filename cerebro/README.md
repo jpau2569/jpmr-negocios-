@@ -23,7 +23,7 @@ La hizo el equipo de Clara:
 | `campos-piso.js` | Definición única de los más de 50 datos de un piso (grupos, tipos texto, número, opciones, sí/no y fecha). Genera el formulario, los PDF, el esquema de Claude (`esquemaFicha`) y `limpiaFicha`. Los campos `interno` (precio mínimo) nunca salen en un PDF. Incluye la referencia de zona (€/m² de oferta de idealista, agosto 2026, tomada de EstateScore AI; solo contexto). |
 | `dictado.js` | Dictado por voz con la Web Speech API (es-ES, en varias tandas); si no está disponible, se oculta. |
 | `importar.js` (IYAN) | Enlace `#importar=<base64url>` con el que Clara abre una valoración ya montada. `decodificaImportacion` sanea los datos y la app los pasa además por `normaliza`. |
-| `logo-castresana.jpg/.png` | Logo oficial (inmoweb), en JPEG sobre blanco para los PDF. |
+| `logo-castresana.jpg` | Logo oficial (inmoweb), en JPEG sobre blanco para los PDF. |
 | `app.js` | Pantallas y eventos. Navegación por `#ancla`; todo el texto pasa por `escapaHtml`. |
 | `service-worker.js` | Red primero y caché si no hay conexión. `/api` nunca se cachea. Al tocar un archivo, sube `VERSION`. |
 

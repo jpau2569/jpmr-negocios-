@@ -6,12 +6,12 @@
    Al tocar cualquier archivo de la lista: súbelo aquí y sube VERSION.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'cerebro-v2.0.0';
+const VERSION = 'cerebro-v2.0.1';
 const RECURSOS = [
   './', './index.html', './app.html', './styles.css', './app.js', './utiles.js', './datos.js',
   './calendario.js', './firma.js', './pdf.js', './documentos.js', './visitas.js', './operaciones.js',
   './operaciones-datos.js', './valoracion.js', './papeles.js', './campos-piso.js', './dictado.js', './importar.js',
-  './logo-castresana.jpg', './logo-castresana.png', './manifest.json', './icono.svg',
+  './logo-castresana.jpg', './manifest.json', './icono.svg',
   './icono-180.png', './icono-192.png', './icono-512.png', './icono-maskable-512.png',
 ];
 

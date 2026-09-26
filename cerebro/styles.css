@@ -121,7 +121,7 @@ button.tarjeta { display: block; width: 100%; text-align: left; cursor: pointer;
 
 label { display: block; font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
 label .opc { font-weight: 400; color: var(--suave); }
-input[type=text], input[type=tel], input[type=email], input[type=number], input[type=date], input[type=time], input[type=password], input[type=search], select, textarea {
+input[type=text], input[type=url], input[type=tel], input[type=email], input[type=number], input[type=date], input[type=time], input[type=password], input[type=search], select, textarea {
   width: 100%; min-height: 46px; padding: 10px 12px; border-radius: 10px;
   border: 1px solid var(--linea); background: var(--tarjeta);
 }

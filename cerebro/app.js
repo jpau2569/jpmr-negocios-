@@ -53,10 +53,29 @@ const vista = document.getElementById('vista');
 let firmaActual = null;
 // Hoja de visita a medias: se avisa antes de perderla (pestañas, atrás o recargar).
 let visitaSucia = false;
+// Firma del propietario dibujada y aún sin guardar: se avisa antes de perderla.
+let firmaPisoPendiente = null;
 let volviendo = false;
+// Guardado diferido (mientras se escribe) y, al cerrar la página, se vuelca lo pendiente.
+let temporizadorGuardado = null;
+function guardaLuego() {
+  clearTimeout(temporizadorGuardado);
+  temporizadorGuardado = setTimeout(() => { temporizadorGuardado = null; guardar(); }, 400);
+}
+window.addEventListener('pagehide', () => {
+  guardaFirmaPisoPendiente();
+  if (temporizadorGuardado) { clearTimeout(temporizadorGuardado); temporizadorGuardado = null; guardar(); }
+});
 window.addEventListener('beforeunload', (e) => { if (visitaSucia) { e.preventDefault(); e.returnValue = ''; } });
 
 /* ───────────────────────── utilidades de pantalla ───────────────────────── */
+
+/** Mensaje de error claro (sin «Failed to fetch»). */
+const mensajeError = (err, porDefecto) =>
+  err instanceof TypeError ? 'No hay conexión: esto necesita internet.' : (err?.message || porDefecto);
+
+/** Primera url https que haya en un texto (las notas de un comparable). */
+const urlDe = (texto) => String(texto || '').match(/https:\/\/[^\s<>"']+/)?.[0] || '';
 
 function guardar() {
   const r = guarda(estado);
@@ -125,6 +144,14 @@ function marcaPestana(nombre) {
 
 function pinta() {
   if (volviendo) { volviendo = false; return; }
+  if (firmaPisoPendiente && !location.hash.startsWith(`#piso/${firmaPisoPendiente}`)) {
+    if (!confirm('El propietario ha firmado pero la firma no está guardada. ¿Salir y perderla?')) {
+      volviendo = true;
+      history.back();
+      return;
+    }
+    firmaPisoPendiente = null;
+  }
   if (visitaSucia && !location.hash.startsWith('#nueva-visita')) {
     if (!confirm('Tienes una hoja de visita a medias. ¿Salir sin guardarla?')) {
       volviendo = true;
@@ -723,15 +750,13 @@ function pintaValoracion(id) {
     <button class="btn peligro ancho" id="val-borrar" style="margin-top:18px">Borrar valoración</button>`;
 
   const actual = () => estado.valoraciones.find((x) => x.id === id);
-  let tGuarda;
-  const guardaLuego = () => { clearTimeout(tGuarda); tGuarda = setTimeout(guardar, 400); };
 
   const pintaComparables = () => {
     const v = actual();
     document.getElementById('comparables').innerHTML = v.comparables.length ? v.comparables.map((c, i) => `
       <div class="tarjeta" data-comp="${i}">
         <div class="entre"><strong>Comparable ${i + 1}</strong><button class="btn" data-comp-borra="${i}" aria-label="Quitar comparable ${i + 1}" style="min-height:40px">🗑</button></div>
-        ${/^https:\/\//.test(c.notas || '') ? `<a class="peq" href="${h(c.notas)}" target="_blank" rel="noopener">Ver el anuncio</a>` : ''}
+        ${urlDe(c.notas) ? `<a class="peq" href="${h(urlDe(c.notas))}" target="_blank" rel="noopener">Ver el anuncio</a>` : ''}
         <label for="c-${i}-dir">Dirección / referencia</label><input id="c-${i}-dir" data-c="direccion" value="${h(c.direccion || '')}" />
         <label for="c-${i}-fuente">Fuente</label><select id="c-${i}-fuente" data-c="fuente">${FUENTES_COMPARABLE.map((f) => opcion(f.id, f.nombre, c.fuente || 'anuncio')).join('')}</select>
         <div class="dos"><div><label for="c-${i}-precio">Precio (€)</label><input id="c-${i}-precio" data-c="precio" type="number" inputmode="numeric" min="0" value="${h(c.precio ?? '')}" /></div>
@@ -835,7 +860,7 @@ function pintaValoracion(id) {
         aviso(`✅ ${elegidos.length} comparable(s) añadidos. Revísalos y ajusta si hace falta.`);
       });
     } catch (err) {
-      caja.innerHTML = `<div class="aviso mal">${h(err.message || 'No se pudo buscar.')} Puedes añadir los comparables a mano.</div>`;
+      caja.innerHTML = `<div class="aviso mal">${h(mensajeError(err, 'No se pudo buscar.'))} Puedes añadir los comparables a mano.</div>`;
     } finally {
       boton.disabled = false;
     }
@@ -860,7 +885,8 @@ function pintaValoracion(id) {
 
 function pintaPisos() {
   // Las fichas que se abrieron y se dejaron vacías no ensucian la lista.
-  const vacia = (p) => !CAMPOS_PISO.some((c) => p[c.id] !== undefined && p[c.id] !== '') && !p.notas;
+  const vacia = (p) => !CAMPOS_PISO.some((c) => !['operacion', 'fechaCaptacion'].includes(c.id) && p[c.id] !== undefined && p[c.id] !== '')
+    && !p.notas && !p.enlace && !p.firmaPropietario;
   if (estado.pisos.some(vacia)) { estado.pisos = estado.pisos.filter((p) => !vacia(p)); guardar(); }
   vista.innerHTML = `
     <h1>🏠 Pisos captados</h1>
@@ -960,8 +986,6 @@ function pintaPiso(id) {
     <button class="btn peligro ancho" id="pf-borrar" style="margin-top:22px">Borrar este piso</button>`;
 
   const actual = () => estado.pisos.find((x) => x.id === id);
-  let t;
-  const guardaLuego = () => { clearTimeout(t); t = setTimeout(guardar, 400); };
   const pintaConformidad = () => {
     const q = actual();
     document.getElementById('pf-conformidad').textContent = rellenaConformidad(q);
@@ -969,7 +993,8 @@ function pintaPiso(id) {
   const leeCampo = (el) => {
     const c = CAMPOS_PISO.find((x) => x.id === el.dataset.pf);
     const q = actual();
-    const limpio = limpiaFicha({ [c.id]: el.value });
+    const valor = el.type === 'number' ? (el.value === '' ? '' : el.valueAsNumber) : el.value;
+    const limpio = limpiaFicha({ [c.id]: valor });
     if (limpio[c.id] === undefined) delete q[c.id]; else q[c.id] = limpio[c.id];
   };
   vista.querySelectorAll('[data-pf]').forEach((el) => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => { leeCampo(el); pintaConformidad(); guardaLuego(); }));
@@ -998,31 +1023,43 @@ function pintaPiso(id) {
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(j.error || `El servidor respondió ${r.status}.`);
+      guardaFirmaPisoPendiente();
       const nueva = limpiaFicha(j.ficha || {});
       const q = actual();
-      const cambios = Object.keys(nueva).filter((k) => q[k] !== nueva[k]);
-      Object.assign(q, nueva);
+      // Solo se rellenan los huecos: lo que Pau ya escribió no se toca sin preguntar.
+      const lleno = (k) => q[k] !== undefined && q[k] !== '';
+      const choques = Object.keys(nueva).filter((k) => lleno(k) && q[k] !== nueva[k]);
+      const rellenos = Object.keys(nueva).filter((k) => !lleno(k));
+      for (const k of rellenos) q[k] = nueva[k];
       guardar();
       pintaPiso(id);
       const est = document.getElementById('pf-estado');
-      est.innerHTML = `<div class="aviso ok">He rellenado ${cambios.length} dato(s). <strong>Revísalos</strong> antes de imprimir.
+      const etiqueta = (k) => CAMPOS_PISO.find((c) => c.id === k)?.etiqueta || k;
+      est.innerHTML = `<div class="aviso ok">He rellenado ${rellenos.length} dato(s)${rellenos.length ? `: ${rellenos.map((k) => h(etiqueta(k))).join(', ')}` : ''}. <strong>Revísalos</strong> antes de imprimir.
+        ${choques.length ? `<br><strong>No he cambiado lo que ya tenías:</strong>${choques.map((k) => `<br><span class="peq">${h(etiqueta(k))}: tú tenías «${h(String(q[k]))}» y he entendido «${h(String(nueva[k]))}»</span> <button type="button" class="btn" data-acepta="${h(k)}" data-valor="${h(JSON.stringify(nueva[k]))}" style="min-height:36px;padding:4px 10px">Usar lo de Clara</button>`).join('')}` : ''}
         ${(j.dudas || []).length ? `<br><span class="peq">Dudas: ${j.dudas.map(h).join(' · ')}</span>` : ''}
         ${j.enlace && j.enlace.aviso ? `<br><span class="peq">${h(j.enlace.aviso)}</span>` : ''}</div>`;
+      est.querySelectorAll('[data-acepta]').forEach((b) => b.addEventListener('click', () => {
+        const k = b.dataset.acepta;
+        const limpio = limpiaFicha({ [k]: JSON.parse(b.dataset.valor) });
+        if (limpio[k] !== undefined) { actual()[k] = limpio[k]; guardar(); }
+        const input = document.getElementById(`pf-${k}`);
+        if (input) input.value = limpio[k] ?? '';
+        b.replaceWith(document.createTextNode('✓ cambiado'));
+      }));
     } catch (err) {
-      estadoEl.innerHTML = `<div class="aviso mal">${h(err.message || 'No se pudo rellenar.')} Puedes escribir los datos a mano.</div>`;
+      estadoEl.innerHTML = `<div class="aviso mal">${h(mensajeError(err, 'No se pudo rellenar.'))} Puedes escribir los datos a mano.</div>`;
     } finally {
       boton.disabled = false;
     }
   });
 
   if (!p.firmaPropietario) {
-    firmaActual = creaFirma(document.getElementById('pf-firma'));
+    firmaActual = creaFirma(document.getElementById('pf-firma'), { alCambiar: (n) => { firmaPisoPendiente = n ? id : null; } });
     document.getElementById('pf-limpia').addEventListener('click', () => firmaActual.limpia());
     document.getElementById('pf-guarda-firma').addEventListener('click', () => {
       if (firmaActual.vacia() || !firmaActual.suficiente()) { aviso('La firma está vacía o es demasiado corta.'); return; }
-      const f = firmaActual.aJpeg(600, 0.7);
-      Object.assign(actual(), { firmaPropietario: f.dataUrl, firmaPropietarioAncho: f.ancho, firmaPropietarioAlto: f.alto });
-      guardar();
+      guardaFirmaPisoPendiente(true);
       aviso('✅ Firma del propietario guardada.');
       pintaPiso(id);
     });
@@ -1036,12 +1073,17 @@ function pintaPiso(id) {
   }
 
   const pdfCap = async () => {
-    const l = await logo();
+    guardaFirmaPisoPendiente();
     const q = actual();
+    const faltan = [['propNombre', 'el nombre del propietario'], ['tipoEncargo', 'el tipo de encargo'], ['honorarios', 'los honorarios'], ['duracion', 'la duración']]
+      .filter(([k]) => !q[k]).map(([, t]) => t);
+    if (!q.firmaPropietario) faltan.push('la firma del propietario');
+    if (faltan.length && !confirm(`A la hoja de captación le falta: ${faltan.join(', ')}. ¿Crearla igualmente?`)) return null;
+    const l = await logo();
     return { bytes: pdfCaptacion(q, estado.ajustes, { logo: l, hoy: aISO() }), nombre: `${nombreArchivo(`Captacion-${nombrePiso(q)}`)}.pdf` };
   };
-  document.getElementById('pf-captacion').addEventListener('click', async () => { const { bytes, nombre } = await pdfCap(); comparte(bytes, nombre, 'application/pdf', 'Hoja de captación'); });
-  document.getElementById('pf-captacion-desc').addEventListener('click', async () => { const { bytes, nombre } = await pdfCap(); descarga(bytes, nombre, 'application/pdf'); });
+  document.getElementById('pf-captacion').addEventListener('click', async () => { const r = await pdfCap(); if (r) comparte(r.bytes, r.nombre, 'application/pdf', 'Hoja de captación'); });
+  document.getElementById('pf-captacion-desc').addEventListener('click', async () => { const r = await pdfCap(); if (r) descarga(r.bytes, r.nombre, 'application/pdf'); });
   document.getElementById('pf-valorar').addEventListener('click', () => {
     const q = actual();
     const extras = ['garaje', 'trastero', 'terraza', 'ascensor'].filter((k) => q[k] === 'Sí').map((k) => CAMPOS_PISO.find((c) => c.id === k).etiqueta.toLowerCase()).join(', ');
@@ -1058,6 +1100,20 @@ function pintaPiso(id) {
     guardar();
     ir('pisos');
   });
+}
+
+/** Si hay una firma del propietario dibujada y sin guardar, la guarda (si es válida). */
+function guardaFirmaPisoPendiente(forzar = false) {
+  const id = firmaPisoPendiente;
+  if (!id || !firmaActual) return false;
+  if (!forzar && (firmaActual.vacia() || !firmaActual.suficiente())) return false;
+  const p = estado.pisos.find((x) => x.id === id);
+  if (!p) return false;
+  const f = firmaActual.aJpeg(600, 0.7);
+  Object.assign(p, { firmaPropietario: f.dataUrl, firmaPropietarioAncho: f.ancho, firmaPropietarioAlto: f.alto });
+  firmaPisoPendiente = null;
+  guardar();
+  return true;
 }
 
 function rellenaConformidad(p) {
@@ -1217,7 +1273,7 @@ function pintaPapel(id) {
         ${l.vence ? '' : '<br>No he encontrado la fecha de vencimiento escrita: ponla tú.'}
         ${l.otras_fechas.length ? `<br><span class="peq">Otras fechas: ${l.otras_fechas.map((f) => `${h(f.que)} ${h(fechaCorta(f.fecha))}`).join(' · ')}</span>` : ''}</div>`;
     } catch (err) {
-      caja.innerHTML = `<div class="aviso mal">${h(err.message || 'No se pudo leer la foto.')} Puedes apuntarlo a mano.</div>`;
+      caja.innerHTML = `<div class="aviso mal">${h(mensajeError(err, 'No se pudo leer la foto.'))} Puedes apuntarlo a mano.</div>`;
     }
   });
 }
@@ -1284,9 +1340,8 @@ function pintaAjustes() {
     <button class="btn peligro ancho" id="aj-borrar-todo" style="margin-top:22px">Borrar todos los datos de este dispositivo</button>
     <p class="suave peq" style="margin-top:18px">Cerebro Útil Pau · hecho por Clara con NURIA, IYAN y NICER.</p>`;
 
-  let t;
   vista.querySelectorAll('[data-aj]').forEach((el) => el.addEventListener('input', () => {
-    estado.ajustes[el.dataset.aj] = el.value.slice(0, 4000);
+    estado.ajustes[el.dataset.aj] = el.value.slice(0, el.dataset.aj === 'encabezadoFirmas' ? 60 : 4000);
     if (['textoDeclaracion', 'textoRgpd'].includes(el.dataset.aj) && estado.ajustes.textosRevisados) {
       estado.ajustes.textosRevisados = false;
       document.getElementById('aj-revisados').checked = false;
@@ -1295,8 +1350,7 @@ function pintaAjustes() {
       estado.ajustes.textosCaptacionRevisados = false;
       document.getElementById('aj-capt-revisados').checked = false;
     }
-    clearTimeout(t);
-    t = setTimeout(guardar, 400);
+    guardaLuego();
   }));
   document.getElementById('aj-revisados').addEventListener('change', (e) => {
     if (e.target.checked && /\[[^\]]+\]/.test(estado.ajustes.textoRgpd + estado.ajustes.textoDeclaracion)) {
@@ -1326,6 +1380,7 @@ function pintaAjustes() {
   });
   if (estado.ajustes.firmaAgente) {
     document.getElementById('aj-refirmar').addEventListener('click', () => {
+      if (!confirm('¿Borrar tu firma guardada para firmar de nuevo?')) return;
       estado.ajustes.firmaAgente = '';
       guardar();
       pintaAjustes();

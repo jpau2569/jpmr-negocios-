@@ -36,9 +36,10 @@ function cabecera(doc, ajustes, titulo, subtitulo, logo) {
     const hueco = ANCHO - anchoTexto(titulo, 13, true) - 16;
     doc.texto(M, 50, partirTexto(ajustes.empresa || 'Asesoría Castresana', hueco, 15, true)[0] || '', { tam: 15, negrita: true, color: MARINO });
   }
+  const derecha = ANCHO - 170; // lo que deja libre el logo
   doc.texto(A4.ancho - M, 44, titulo, { tam: 13, negrita: true, color: MARINO, alinear: 'derecha' });
-  if (subtitulo) doc.texto(A4.ancho - M, 60, subtitulo, { tam: 9, color: GRIS, alinear: 'derecha' });
-  doc.texto(A4.ancho - M, 76, [ajustes.ciudad, ajustes.telefono && `Tel. ${ajustes.telefono}`, ajustes.web].filter(Boolean).join('  ·  '), { tam: 8, color: GRIS, alinear: 'derecha' });
+  if (subtitulo) doc.texto(A4.ancho - M, 60, partirTexto(subtitulo, derecha, 9)[0] || '', { tam: 9, color: GRIS, alinear: 'derecha' });
+  doc.texto(A4.ancho - M, 76, partirTexto([ajustes.ciudad, ajustes.telefono && `Tel. ${ajustes.telefono}`, ajustes.web].filter(Boolean).join('  ·  '), derecha, 8)[0] || '', { tam: 8, color: GRIS, alinear: 'derecha' });
   doc.rect(M, 90, ANCHO, 2.5, { relleno: DORADO });
 }
 
@@ -79,25 +80,33 @@ function escritor(doc, { textoPie, borrador, yInicial = 118 }) {
       for (const [etq, val] of pares) {
         if (val === undefined || val === null || val === '') continue;
         const lineas = partirTexto(String(val), ANCHO - colEtiqueta, 10.5, true);
-        e.cabe(lineas.length * 14.2 + 4);
-        doc.texto(M, e.y, etq, { tam: 9.5, color: GRIS });
-        for (const l of lineas) { doc.texto(M + colEtiqueta, e.y, l, { tam: 10.5, negrita: true }); e.y += 14.2; }
-        e.y += 4;
+        const etqs = partirTexto(String(etq), colEtiqueta - 8, 9.5);
+        const n = Math.max(lineas.length, etqs.length);
+        e.cabe(n * 14.2 + 4);
+        etqs.forEach((l, j) => doc.texto(M, e.y + j * 14.2, l, { tam: 9.5, color: GRIS }));
+        lineas.forEach((l, j) => doc.texto(M + colEtiqueta, e.y + j * 14.2, l, { tam: 10.5, negrita: true }));
+        e.y += n * 14.2 + 4;
       }
     },
     /** Rejilla de dos columnas para las fichas largas (datos del piso). */
     rejilla(pares) {
+      // Etiqueta y valor pueden ocupar varias líneas: nada se recorta.
       const col = ANCHO / 2;
+      const salto = 12;
       for (let i = 0; i < pares.length; i += 2) {
-        e.cabe(17);
-        [pares[i], pares[i + 1]].forEach((par, k) => {
-          if (!par) return;
-          const x = M + k * col;
-          doc.texto(x, e.y, par[0], { tam: 8.5, color: GRIS });
-          const valor = partirTexto(par[1], col - 112, 9.5, true)[0] || '';
-          doc.texto(x + 104, e.y, valor, { tam: 9.5, negrita: true });
+        const celdas = [pares[i], pares[i + 1]].map((par) => par && {
+          e: partirTexto(String(par[0]), 98, 8.5),
+          v: partirTexto(String(par[1]), col - 112, 9.5, true),
         });
-        e.y += 17;
+        const n = Math.max(...celdas.filter(Boolean).map((c) => Math.max(c.e.length, c.v.length)));
+        e.cabe(n * salto + 5);
+        celdas.forEach((c, k) => {
+          if (!c) return;
+          const x = M + k * col;
+          c.e.forEach((l, j) => doc.texto(x, e.y + j * salto, l, { tam: 8.5, color: GRIS }));
+          c.v.forEach((l, j) => doc.texto(x + 104, e.y + j * salto, l, { tam: 9.5, negrita: true }));
+        });
+        e.y += n * salto + 5;
       }
     },
     casilla(texto, marcada) {
@@ -118,7 +127,7 @@ function escritor(doc, { textoPie, borrador, yInicial = 118 }) {
     firmas(firmas, encabezado = ENCABEZADO_FIRMAS, nota = '') {
       const alto = 104;
       e.cabe(30 + alto + 34 + (nota ? 16 : 0));
-      doc.texto(M + ANCHO / 2, e.y, encabezado, { tam: 12, negrita: true, color: MARINO, alinear: 'centro' });
+      doc.texto(M + ANCHO / 2, e.y, partirTexto(String(encabezado).slice(0, 60), ANCHO, 12, true)[0] || '', { tam: 12, negrita: true, color: MARINO, alinear: 'centro' });
       doc.linea(M + ANCHO / 2 - 110, e.y + 6, M + ANCHO / 2 + 110, e.y + 6, { grosor: 1.2, color: DORADO });
       e.y += 26;
       const hueco = 16;
@@ -135,7 +144,7 @@ function escritor(doc, { textoPie, borrador, yInicial = 118 }) {
         doc.texto(x, e.y + alto + 20, partirTexto(f.nombre || '', ancho, 9, true)[0] || '', { tam: 9, negrita: true });
       });
       e.y += alto + 34;
-      if (nota) { doc.texto(M, e.y, nota, { tam: 8, color: GRIS }); e.y += 16; }
+      if (nota) { for (const l of partirTexto(nota, ANCHO, 8)) { doc.texto(M, e.y, l, { tam: 8, color: GRIS }); e.y += 11; } e.y += 5; }
     },
   };
   return e;
@@ -274,7 +283,7 @@ export function pdfValoracion(val, calculo, ajustes, hoy, opciones = {}) {
   const e = escritor(doc, { textoPie: `${ajustes.empresa} · ${ajustes.agente}`, borrador: false, yInicial: 126 });
 
   e.parrafo(s.direccion || 'Inmueble', { tam: 18, negrita: true, color: MARINO, interlineado: 1.15 });
-  if (val.propietario) { doc.texto(M, e.y, `Preparado para: ${val.propietario}`, { tam: 10, color: GRIS }); e.y += 16; }
+  if (val.propietario) { e.parrafo(`Preparado para: ${val.propietario}`, { tam: 10, color: GRIS }); e.y += 2; }
   e.y += 8;
   e.seccion('El inmueble');
   e.filas([
@@ -381,6 +390,7 @@ export function pdfValoracion(val, calculo, ajustes, hoy, opciones = {}) {
   e.seccion('Aviso importante');
   e.parrafo(AVISO_VALORACION, { tam: 9, color: GRIS });
   e.y += 16;
+  e.firmas([firmaAgente(ajustes)], ajustes.encabezadoFirmas || ENCABEZADO_FIRMAS);
   e.cabe(30);
   doc.texto(M, e.y, `${ajustes.agente} · ${ajustes.empresa}`, { tam: 10, negrita: true, color: MARINO });
   e.y += 14;

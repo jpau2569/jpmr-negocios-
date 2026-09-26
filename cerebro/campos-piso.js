@@ -59,8 +59,9 @@ export const CAMPOS_PISO = [
   { id: 'comunidad', etiqueta: 'Comunidad', tipo: 'numero', grupo: 'costes', unidad: '€/mes', min: 0 },
   { id: 'ibi', etiqueta: 'IBI', tipo: 'numero', grupo: 'costes', unidad: '€/año', min: 0 },
   { id: 'derrama', etiqueta: 'Derramas pendientes', tipo: 'texto', grupo: 'costes', max: 120 },
-  { id: 'cargas', etiqueta: 'Cargas / hipoteca pendiente', tipo: 'texto', grupo: 'costes', max: 120 },
-  { id: 'contratoAlquiler', etiqueta: 'Alquiler vigente (renta y vencimiento)', tipo: 'texto', grupo: 'costes', max: 120 },
+  // privado: situación del propietario o del inquilino; no sale en la hoja de visita.
+  { id: 'cargas', etiqueta: 'Cargas / hipoteca pendiente', tipo: 'texto', grupo: 'costes', max: 120, privado: true },
+  { id: 'contratoAlquiler', etiqueta: 'Alquiler vigente (renta y vencimiento)', tipo: 'texto', grupo: 'costes', max: 120, privado: true },
   { id: 'proteccionOficial', etiqueta: 'Vivienda protegida (VPO)', tipo: 'sino', grupo: 'costes' },
   { id: 'ocupacion', etiqueta: 'Situación', tipo: 'opciones', grupo: 'costes', opciones: ['Libre', 'Alquilado', 'Ocupado por el propietario', 'Otra'] },
   { id: 'disponibilidad', etiqueta: 'Disponibilidad', tipo: 'texto', grupo: 'costes', max: 60 },
@@ -87,16 +88,27 @@ export const CAMPOS_PISO = [
 
 /* Campos que describen el inmueble (sin datos del propietario ni del
    encargo): son los que salen en la hoja de visita. */
-export const CAMPOS_INMUEBLE = CAMPOS_PISO.filter((c) => !['propietario', 'encargo'].includes(c.grupo));
+export const CAMPOS_INMUEBLE = CAMPOS_PISO.filter((c) => !['propietario', 'encargo'].includes(c.grupo) && !c.interno && !c.privado);
 
 const SI = /^(s[ií]|si|yes|true|1)$/i;
 const NO = /^(no|false|0)$/i;
+
+/* Texto a número entendiendo el formato español y el de las casillas
+   numéricas: «85.5» y «85,5» → 85,5 · «120.000» y «1.234,5» → miles. */
+function aNumeroEs(v) {
+  let t = String(v).trim().replace(/[^\d.,-]/g, '');
+  if (!t) return NaN;
+  if (t.includes(',') && t.includes('.')) t = t.replace(/\./g, '').replace(',', '.');
+  else if (t.includes(',')) t = t.replace(',', '.');
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
+  return Number(t);
+}
 
 /** Normaliza un valor según su campo. Devuelve '' si no vale. */
 export function valorCampo(campo, v) {
   if (v === null || v === undefined) return '';
   if (campo.tipo === 'numero') {
-    const n = typeof v === 'number' ? v : Number(String(v).replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, ''));
+    const n = typeof v === 'number' ? v : aNumeroEs(v);
     if (!Number.isFinite(n)) return '';
     if (campo.min !== undefined && n < campo.min) return '';
     if (campo.maxNum !== undefined && n > campo.maxNum) return '';
