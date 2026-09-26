@@ -16,6 +16,7 @@ const RUTAS = {
   "castebot-informe": () => import("./_castebot-informe.js"),
   "castebot-leads": () => import("./_castebot-leads.js"),
   castebot: () => import("./_castebot.js"),
+  cerebro: () => import("./_cerebro.js"),
   chivato: () => import("./_chivato.js"),
   clara: () => import("./_clara.js"),
   escaparate: () => import("./_escaparate.js"),
