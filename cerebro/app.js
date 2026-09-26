@@ -31,6 +31,10 @@ if (!estado.ajustes.textoRgpd) estado.ajustes.textoRgpd = HOJA_VISITA_BORRADOR.r
 
 const vista = document.getElementById('vista');
 let firmaActual = null;
+// Hoja de visita a medias: se avisa antes de perderla (pestañas, atrás o recargar).
+let visitaSucia = false;
+let volviendo = false;
+window.addEventListener('beforeunload', (e) => { if (visitaSucia) { e.preventDefault(); e.returnValue = ''; } });
 
 /* ───────────────────────── utilidades de pantalla ───────────────────────── */
 
@@ -100,6 +104,15 @@ function marcaPestana(nombre) {
 /* ─────────────────────────────── router ─────────────────────────────── */
 
 function pinta() {
+  if (volviendo) { volviendo = false; return; }
+  if (visitaSucia && location.hash !== '#nueva-visita') {
+    if (!confirm('Tienes una hoja de visita a medias. ¿Salir sin guardarla?')) {
+      volviendo = true;
+      history.back();
+      return;
+    }
+    visitaSucia = false;
+  }
   firmaActual?.destruye();
   firmaActual = null;
   const [ruta, id] = (location.hash.slice(1) || 'hoy').split('/');
@@ -255,11 +268,19 @@ function pintaNuevaVisita() {
   ['v-fecha', 'v-hora', 'v-inmueble', 'v-nombre', 'v-dni'].forEach((id) => document.getElementById(id).addEventListener('input', pintaDeclaracion));
   pintaDeclaracion();
 
-  firmaActual = creaFirma(document.getElementById('v-firma'));
+  firmaActual = creaFirma(document.getElementById('v-firma'), { alCambiar: (n) => { if (n) visitaSucia = true; } });
   document.getElementById('v-limpia').addEventListener('click', () => firmaActual.limpia());
 
-  document.getElementById('form-visita').addEventListener('submit', (e) => {
+  const formVisita = document.getElementById('form-visita');
+  formVisita.addEventListener('input', () => { visitaSucia = true; });
+  let guardando = false;
+  formVisita.addEventListener('submit', (e) => {
     e.preventDefault();
+    if (guardando) return; // un doble toque no duplica la visita
+    if (!firmaActual.vacia() && !firmaActual.suficiente()) {
+      document.getElementById('v-errores').innerHTML = '<div class="aviso mal" role="alert">La firma es demasiado corta: pide al visitante que firme de nuevo.</div>';
+      return;
+    }
     const firma = firmaActual.vacia() ? null : firmaActual.aJpeg(600, 0.7);
     const visita = {
       id: nuevoId('vis'),
@@ -277,15 +298,22 @@ function pintaNuevaVisita() {
       document.getElementById('v-errores').scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
+    guardando = true;
     estado.visitas.push(limpiaVisita(visita));
-    if (!guardar()) { estado.visitas.pop(); return; }
+    if (!guardar()) { estado.visitas.pop(); guardando = false; return; }
+    visitaSucia = false;
     aviso('✅ Visita guardada. Ya puedes enviarle el PDF.');
     ir(`visita/${visita.id}`);
   });
 }
 
 function pdfDeVisita(v) {
-  return { bytes: pdfHojaVisita(v, estado.ajustes), nombre: `${nombreArchivo(`Hoja-visita-${v.inmueble}-${v.fecha}`)}.pdf` };
+  try {
+    return { bytes: pdfHojaVisita(v, estado.ajustes), nombre: `${nombreArchivo(`Hoja-visita-${v.inmueble}-${v.fecha}`)}.pdf` };
+  } catch {
+    aviso('No puedo crear el PDF: la firma guardada de esta visita está dañada.', 6000);
+    return null;
+  }
 }
 
 function pintaVisita(id) {
@@ -302,7 +330,7 @@ function pintaVisita(id) {
       ${v.visitante.email ? `<p>✉️ ${h(v.visitante.email)}</p>` : ''}
       ${v.observaciones ? `<p class="suave">${h(v.observaciones)}</p>` : ''}
       <p class="peq">${v.aceptaOfertas ? '✅ Acepta recibir otros inmuebles' : '— No quiere recibir otros inmuebles'}</p>
-      <img alt="Firma de ${h(v.visitante.nombre)}" src="${h(v.firma)}" style="max-width:100%;border:1px solid var(--linea);border-radius:10px;background:#fff;margin-top:8px" />
+      ${v.firma ? `<img alt="Firma de ${h(v.visitante.nombre)}" src="${h(v.firma)}" style="max-width:100%;border:1px solid var(--linea);border-radius:10px;background:#fff;margin-top:8px" />` : '<div class="aviso mal">La firma de esta visita no se puede leer.</div>'}
     </div>
     <div class="botones">
       <button class="btn principal" id="v-compartir">📤 Enviar el PDF</button>
@@ -313,12 +341,12 @@ function pintaVisita(id) {
     <button class="btn peligro ancho" id="v-borrar" style="margin-top:22px">Borrar esta visita</button>`;
 
   document.getElementById('v-compartir').addEventListener('click', () => {
-    const { bytes, nombre } = pdfDeVisita(v);
-    comparte(bytes, nombre, 'application/pdf', `Hoja de visita · ${v.inmueble}`);
+    const pdf = pdfDeVisita(v);
+    if (pdf) comparte(pdf.bytes, pdf.nombre, 'application/pdf', `Hoja de visita · ${v.inmueble}`);
   });
   document.getElementById('v-descargar').addEventListener('click', () => {
-    const { bytes, nombre } = pdfDeVisita(v);
-    descarga(bytes, nombre, 'application/pdf');
+    const pdf = pdfDeVisita(v);
+    if (pdf) descarga(pdf.bytes, pdf.nombre, 'application/pdf');
   });
   document.getElementById('v-borrar').addEventListener('click', () => {
     if (!confirm('¿Borrar esta hoja de visita? No se puede deshacer (si no tienes el PDF guardado).')) return;
@@ -339,7 +367,7 @@ function pintaOperaciones() {
     return `
       <a class="tarjeta" style="display:block;text-decoration:none;color:inherit" href="#operacion/${h(o.id)}">
         <div class="entre"><strong>${h(o.inmueble)}</strong><span class="chip dorado">${h(faseActual(o).titulo)}</span></div>
-        <div class="suave peq">${h(tipoOperacion(o.tipo).nombre)}${o.precio ? ' · ' + h(euros(o.precio)) : ''}</div>
+        <div class="suave peq">${h(tipoOperacion(o.tipo).nombre)}${o.precio ? ' · ' + h(euros(o.precio)) + (o.tipo === 'alquiler' ? '/mes' : '') : ''}</div>
         <div class="barra" aria-hidden="true"><i style="width:${p.porcentaje}%"></i></div>
         <div class="suave peq">${p.hechos}/${p.total} papeles${prox ? ` · Próximo: ${h(prox.nombre)} ${h(cuando(prox.fecha))}` : ''}</div>
       </a>`;
@@ -372,7 +400,7 @@ function pintaNuevaOperacion() {
       <label for="o-inmueble">Inmueble</label>
       <input id="o-inmueble" type="text" list="inmuebles" placeholder="Referencia o dirección" required />
       <datalist id="inmuebles">${inmueblesConocidos().map((i) => `<option value="${h(i)}"></option>`).join('')}</datalist>
-      <label for="o-precio">Precio <span class="opc">(€, opcional)</span></label>
+      <label for="o-precio" id="o-precio-et">Precio <span class="opc">(€, opcional)</span></label>
       <input id="o-precio" type="number" inputmode="numeric" min="0" step="100" />
       <h2 id="o-tit-a">Comprador</h2>
       <label for="o-a-nombre">Nombre</label><input id="o-a-nombre" type="text" />
@@ -394,11 +422,14 @@ function pintaNuevaOperacion() {
     const [a, b] = tipoOperacion(tipoSel.value).partes;
     document.getElementById('o-tit-a').textContent = a[0].toUpperCase() + a.slice(1);
     document.getElementById('o-tit-b').textContent = b[0].toUpperCase() + b.slice(1);
+    document.getElementById('o-precio-et').innerHTML = tipoSel.value === 'alquiler' ? 'Renta mensual <span class="opc">(€, opcional)</span>' : 'Precio <span class="opc">(€, opcional)</span>';
   };
   tipoSel.addEventListener('change', titulos);
   const val = (id) => document.getElementById(id).value;
+  let creando = false;
   document.getElementById('form-op').addEventListener('submit', (e) => {
     e.preventDefault();
+    if (creando) return; // un doble toque no duplica la operación
     const op = nuevaOperacion({
       id: nuevoId('op'), tipo: val('o-tipo'), inmueble: val('o-inmueble'), precio: val('o-precio'),
       parteA: { nombre: val('o-a-nombre'), telefono: val('o-a-tel'), email: val('o-a-email') },
@@ -407,8 +438,9 @@ function pintaNuevaOperacion() {
     });
     const v = validaOperacion(op);
     if (!v.ok) { document.getElementById('o-errores').innerHTML = `<div class="aviso mal" role="alert">${v.errores.map(h).join('<br>')}</div>`; return; }
+    creando = true;
     estado.operaciones.push(op);
-    if (!guardar()) return;
+    if (!guardar()) { estado.operaciones.pop(); creando = false; return; }
     ir(`operacion/${op.id}`);
   });
 }
@@ -433,7 +465,7 @@ function pintaOperacion(id) {
   vista.innerHTML = `
     <a href="#operaciones" class="suave">← Operaciones</a>
     <h1>${h(op.inmueble)}</h1>
-    <p class="suave">${h(tipoOperacion(op.tipo).nombre)}${op.precio ? ' · ' + h(euros(op.precio)) : ''}${op.cerrada ? ' · <strong>Cerrada</strong>' : ''}</p>
+    <p class="suave">${h(tipoOperacion(op.tipo).nombre)}${op.precio ? ' · ' + h(euros(op.precio)) + (op.tipo === 'alquiler' ? '/mes' : '') : ''}${op.cerrada ? ' · <strong>Cerrada</strong>' : ''}</p>
     <div class="tarjeta">
       ${parteHtml(a)}${parteHtml(b)}
       ${op.notaria ? `<p><span class="suave">Notaría:</span> ${h(op.notaria)}</p>` : ''}
@@ -473,13 +505,13 @@ function pintaOperacion(id) {
       <div class="tarjeta entre">
         <label class="check" style="margin:0"><input type="checkbox" data-fecha-hecha="${h(f.id)}" ${f.hecha ? 'checked' : ''} />
           <span><strong ${f.hecha ? 'style="text-decoration:line-through"' : ''}>${h(f.nombre)}</strong><br>
-          <span class="suave peq">${h(fechaCorta(f.fecha))}${f.hora ? ' · ' + h(f.hora) : ''} · ${h(cuando(f.fecha))} · aviso ${f.avisoDias} día(s) antes</span></span></label>
+          <span class="suave peq">${h(fechaCorta(f.fecha))}${f.hora ? ' · ' + h(f.hora) : ''} · ${h(cuando(f.fecha))} · aviso ${h(f.avisoDias)} día(s) antes</span></span></label>
         <button class="btn" data-fecha-borra="${h(f.id)}" aria-label="Borrar fecha" style="min-height:40px">🗑</button>
       </div>`).join('') : '<p class="suave">Sin fechas todavía.</p>'}
     <details class="tarjeta"><summary>＋ Añadir una fecha</summary>
       <form id="form-fecha" novalidate>
         <label for="f-nombre">Qué es</label><input id="f-nombre" type="text" list="nombres-fecha" placeholder="Firma en notaría, fin plazo arras…" />
-        <datalist id="nombres-fecha"><option value="Firma de arras"></option><option value="Fin del plazo de arras"></option><option value="Tasación"></option><option value="Entrega de la FEIN"></option><option value="Acta previa en notaría"></option><option value="Firma en notaría"></option><option value="Entrega de llaves"></option><option value="Pago del ITP (modelo 600)"></option><option value="Plusvalía municipal"></option></datalist>
+        <datalist id="nombres-fecha"><option value="Firma de arras"></option><option value="Fin del plazo de arras"></option><option value="Tasación"></option><option value="Entrega de la FEIN"></option><option value="Acta previa en notaría"></option><option value="Firma en notaría"></option><option value="Firma del contrato de alquiler"></option><option value="Entrega de llaves"></option><option value="Pago del ITP (modelo 600)"></option><option value="Plusvalía municipal"></option></datalist>
         <div class="dos"><div><label for="f-fecha">Fecha</label><input id="f-fecha" type="date" /></div>
           <div><label for="f-hora">Hora <span class="opc">(opcional)</span></label><input id="f-hora" type="time" /></div></div>
         <label for="f-aviso">Avisarme (días antes)</label><input id="f-aviso" type="number" min="0" max="60" value="1" />
@@ -505,7 +537,7 @@ function pintaOperacion(id) {
         <div class="botones">
           <button class="btn" data-copia="${i}">📋 Copiar</button>
           ${tel ? `<a class="btn" target="_blank" rel="noopener" href="https://wa.me/${tel}?text=${encodeURIComponent(m.texto)}">💬 WhatsApp</a>` : ''}
-          ${d.email ? `<a class="btn" href="mailto:${h(d.email)}?subject=${encodeURIComponent(op.inmueble)}&body=${encodeURIComponent(m.texto)}">✉️ Correo</a>` : ''}
+          ${d.email ? `<a class="btn" href="mailto:${encodeURIComponent(d.email)}?subject=${encodeURIComponent(op.inmueble)}&body=${encodeURIComponent(m.texto)}">✉️ Correo</a>` : ''}
         </div>
         ${/\[\w+\]/.test(m.texto) ? '<p class="suave peq">Lo que va entre [corchetes] falta en la ficha: complétalo antes de enviar.</p>' : ''}
       </details>`;
@@ -588,6 +620,8 @@ function pintaOperacion(id) {
 /* ───────────────────────────── VALORACIONES ───────────────────────────── */
 
 function pintaValoraciones() {
+  const vacias = (v) => !v.inmueble?.direccion && !v.inmueble?.m2 && !(v.comparables || []).length && !v.propietario && !v.comentario;
+  if (estado.valoraciones.some(vacias)) { estado.valoraciones = estado.valoraciones.filter((v) => !vacias(v)); guardar(); }
   const lista = [...estado.valoraciones].sort((a, b) => String(b.creada).localeCompare(String(a.creada)));
   vista.innerHTML = `
     <h1>📊 Valoraciones</h1>
@@ -801,8 +835,10 @@ function pintaPapel(id) {
   document.getElementById('pa-tipo').addEventListener('change', (e) => {
     if (nuevo) document.getElementById('pa-aviso').value = tipoPapel(e.target.value).aviso;
   });
+  let guardandoPapel = false;
   document.getElementById('form-papel').addEventListener('submit', (e) => {
     e.preventDefault();
+    if (guardandoPapel) return;
     const v = validaPapel({
       id: nuevo ? nuevoId('pa') : id,
       tipo: document.getElementById('pa-tipo').value, titulo: document.getElementById('pa-titulo').value,
@@ -810,9 +846,10 @@ function pintaPapel(id) {
       notas: document.getElementById('pa-notas').value,
     });
     if (!v.ok) { document.getElementById('pa-errores').innerHTML = `<div class="aviso mal" role="alert">${v.errores.map(h).join('<br>')}</div>`; return; }
+    guardandoPapel = true;
     if (nuevo) estado.papeles.push(v.papel);
     else estado.papeles = estado.papeles.map((x) => (x.id === id ? v.papel : x));
-    if (!guardar()) return;
+    if (!guardar()) { guardandoPapel = false; return; }
     aviso('✅ Guardado. Pulsa "Avisos al calendario" para que el móvil te avise.');
     ir('papeles');
   });
@@ -938,7 +975,7 @@ function pintaAjustes() {
     if (!confirm(`Esta copia trae ${r.resumen}. ¿Sustituir lo que hay en este dispositivo?`)) return;
     const clave = estado.ajustes.claveSync;
     estado = r.estado;
-    if (!estado.ajustes.claveSync) estado.ajustes.claveSync = clave;
+    estado.ajustes.claveSync = clave; // la clave es de este dispositivo, nunca la de la copia
     guardar();
     aviso('✅ Copia abierta.');
     pintaAjustes();

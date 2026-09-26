@@ -50,11 +50,15 @@ function byteCp1252(punto) {
   return EXTRAS_CP1252.get(punto) ?? INTERROGACION;
 }
 
-/* Texto → bytes CP1252. Se normaliza a NFC antes, para que una "á" escrita
+/* Texto → bytes CP1252. Se quitan los emojis y se normaliza a NFC antes, para que una "á" escrita
    como "a" + tilde combinable (pasa al copiar de algunos PDF o del Mac)
    acabe siendo la "á" de una pieza que sí existe en CP1252. */
 function aCp1252(texto) {
-  const limpio = String(texto ?? '').normalize('NFC');
+  // Los emojis no existen en Helvetica: se quitan (en vez de salir como "?").
+  // © y ® están en CP1252 y se conservan.
+  const limpio = String(texto ?? '').normalize('NFC')
+    .replace(/[\p{Extended_Pictographic}\u200D\uFE0F]/gu, (c) => (c.codePointAt(0) <= 0xff ? c : ''))
+    .replace(/ {2,}/g, ' ');
   const bytes = [];
   for (const caracter of limpio) bytes.push(byteCp1252(caracter.codePointAt(0)));
   return bytes;

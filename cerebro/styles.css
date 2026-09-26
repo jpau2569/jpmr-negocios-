@@ -11,7 +11,7 @@
   --suave: #5d6472;
   --linea: #e3dfd4;
   --marino: #10203a;
-  --dorado: #b8901c;
+  --dorado: #7d600c; /* 5,9:1 sobre blanco (WCAG AA) */
   --dorado-claro: #f3e7c2;
   --ok: #1f7a4d;
   --ok-fondo: #e3f3ea;
@@ -182,6 +182,8 @@ pre.mensaje { white-space: pre-wrap; font: inherit; background: var(--fondo); bo
 }
 .oculto { display: none !important; }
 a { color: var(--dorado); }
+/* Enlaces sueltos (volver, fuente, teléfono): zona táctil de 44 px. */
+a.suave, a.peq, .tarjeta a[href^="tel"], .aviso a { display: inline-flex; align-items: center; min-height: 44px; }
 
 @media (min-width: 900px) {
   main { padding-top: 24px; }

@@ -140,6 +140,17 @@ check("PDF de hoja de visita válido", t1.startsWith("%PDF-1.4") && t1.trimEnd()
 check("PDF lleva el nombre, el inmueble y el aviso de BORRADOR", t1.includes("Ana Garc\xeda") && t1.includes("Ur\xeda 12") && t1.includes("BORRADOR"));
 check("con textos revisados desaparece el BORRADOR", !texto(pdfHojaVisita(limpiaVisita(visita), { ...aj, textosRevisados: true })).includes("BORRADOR"));
 check("observaciones larguísimas no rompen el PDF", texto(pdfHojaVisita(limpiaVisita({ ...visita, observaciones: "palabra ".repeat(80) }), aj)).includes("%%EOF"));
+const largo = texto(pdfHojaVisita(limpiaVisita({ ...visita, observaciones: "Observación larga ".repeat(40), acompanantes: "Su pareja y su hermano" }), { ...aj, textoRgpd: aj.textoRgpd + " " + aj.textoRgpd }));
+check("hoja con textos largos pasa a 2 páginas (la firma no pisa el pie)", largo.includes("/Count 2"));
+const ys = [...largo.matchAll(/rg ([\d.]+) ([\d.]+) Td/g)].map((m) => Number(m[2]));
+// El pie está a 36 pt del borde inferior y el aviso de BORRADOR a 58: el contenido nunca baja de 80.
+const contenido = ys.filter((yy) => yy > 40 && Math.abs(yy - 57.89) > 0.5);
+check("ningún texto del contenido invade el pie ni el aviso de BORRADOR", ys.length > 20 && contenido.every((yy) => yy >= 70), String(Math.min(...contenido)));
+check("los emojis del cliente no salen como '?'", !texto(pdfHojaVisita(limpiaVisita({ ...visita, visitante: { ...visita.visitante, nombre: "Ana 😀 García" } }), aj)).includes("Ana ? Garc"));
+const malicioso = normaliza({ operaciones: [{ id: "o", inmueble: "x", fechas: [{ id: "f", nombre: "Firma", fecha: "2026-10-01", avisoDias: "<img src=x onerror=alert(1)>" }] }], visitas: [{ id: 7, firma: "javascript:alert(1)" }], valoraciones: [{ id: "v", comparables: null }] });
+check("copia manipulada: avisoDias numérico, firma vacía, ids en texto y listas sanas", malicioso.operaciones[0].fechas[0].avisoDias === 1 && malicioso.visitas[0].firma === "" && malicioso.visitas[0].id === "7" && Array.isArray(malicioso.valoraciones[0].comparables));
+check("mensaje de alquiler rellena la fecha de firma del contrato", mensajesPara({ ...alq, fechas: [{ id: "x", nombre: "Firma del contrato de alquiler", fecha: "2026-10-03", hora: "12:00" }] }, {}).some((m) => m.texto.includes("03/10/2026") && m.texto.includes("12:00")));
+check(".ics escapa el punto y coma", crearIcs([{ uid: "z", fecha: "2026-10-01", titulo: "Notaría; Uría" }]).includes("Notaría\\; Uría"));
 const pdf2 = texto(pdfValoracion({ inmueble: { direccion: "Uría 12", zona: "Centro" }, propietario: "Luis" }, cuatro, aj, "2026-09-26"));
 check("PDF de valoración con rango, comparables y aviso de no-tasación", pdf2.includes("INFORME DE VALORACI") && pdf2.includes("Pelayo 1") && pdf2.includes("AVISO IMPORTANTE") && pdf2.includes("Banco de Espa") && pdf2.includes("/Count 2"));
 check("PDF de valoración sin datos suficientes lo dice", texto(pdfValoracion({ inmueble: {} }, pocos, aj, "2026-09-26")).includes("No hay datos suficientes"));
@@ -160,6 +171,14 @@ process.env.ANTHROPIC_API_KEY = "sk-ant-test";
 rr = resMock();
 await cerebro({ method: "POST", body: { accion: "leer-documento", imagen: { media_type: "application/pdf", data: "aGVsbG8=" } } }, rr);
 check("tipo de archivo no admitido → 400", rr.r.code === 400);
+rr = resMock();
+await cerebro({ method: "POST", body: { accion: "leer-documento", imagen: { media_type: "image/jpeg", data: "aGVsbG8=" } } }, rr);
+check("sin Supabase ni CEREBRO_CLAVE → 503 (nunca queda abierto)", rr.r.code === 503 && rr.r.body.error.includes("CEREBRO_CLAVE"));
+process.env.CEREBRO_CLAVE = "propia";
+rr = resMock();
+await cerebro({ method: "POST", body: { accion: "leer-documento", clave: "otra", imagen: { media_type: "image/jpeg", data: "aGVsbG8=" } } }, rr);
+check("sin Supabase, con CEREBRO_CLAVE: clave mala → 401", rr.r.code === 401);
+delete process.env.CEREBRO_CLAVE;
 process.env.SUPABASE_URL = "https://test.supabase.co"; process.env.SUPABASE_ANON_KEY = "anon";
 const peticiones = [];
 globalThis.fetch = async (url, init) => {

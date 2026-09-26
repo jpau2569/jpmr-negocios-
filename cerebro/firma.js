@@ -8,6 +8,7 @@
 export function creaFirma(lienzo, { alCambiar } = {}) {
   const ctx = lienzo.getContext('2d');
   let trazos = 0;
+  let longitud = 0; // px de trazo dibujados (un toque suelto no es una firma)
   let dibujando = false;
   let ultimo = null;
 
@@ -48,6 +49,7 @@ export function creaFirma(lienzo, { alCambiar } = {}) {
     if (!dibujando) return;
     e.preventDefault();
     const p = punto(e);
+    longitud += Math.hypot(p.x - ultimo.x, p.y - ultimo.y);
     const medio = { x: (ultimo.x + p.x) / 2, y: (ultimo.y + p.y) / 2 };
     ctx.beginPath();
     ctx.moveTo(ultimo.x, ultimo.y);
@@ -71,12 +73,15 @@ export function creaFirma(lienzo, { alCambiar } = {}) {
 
   return {
     vacia: () => trazos === 0,
+    /** Una firma de verdad: al menos 60 px de trazo. */
+    suficiente: () => longitud >= 60,
     limpia() {
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, lienzo.width, lienzo.height);
       ctx.restore();
       trazos = 0;
+      longitud = 0;
       alCambiar?.(0);
     },
     /** { dataUrl, ancho, alto } — JPEG de `anchoSalida` px de ancho sobre fondo blanco. */

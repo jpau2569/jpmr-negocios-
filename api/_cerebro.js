@@ -7,13 +7,20 @@
 //  mismo formato, y se valida aquí: una fecha que no sea real se descarta.
 //  Nada se guarda en el servidor: la foto va y vuelve.
 //
-//  Protección: si hay memoria en la nube (Supabase), exige la clave de
-//  sincronización de Pau (la misma de la 🧠 de Clara) para que nadie más
-//  gaste su saldo de Anthropic.
+//  Protección: nunca queda abierto. Con memoria en la nube (Supabase) exige
+//  la clave de sincronización de Pau (la misma de la 🧠 de Clara); sin nube,
+//  exige la variable CEREBRO_CLAVE de Vercel. Así nadie más gasta su saldo.
 // ============================================================================
 
 import Anthropic from "@anthropic-ai/sdk";
+import { timingSafeEqual } from "node:crypto";
 import { nubeConfigurada, leerMemoria } from "../lib/memoria.js";
+
+function igualSeguro(a, b) {
+  const x = Buffer.from(String(a));
+  const y = Buffer.from(String(b));
+  return x.length === y.length && timingSafeEqual(x, y);
+}
 
 const MODEL = "claude-sonnet-5";
 const TIPOS = ["itv", "seguro-coche", "revision-coche", "seguro-hogar", "seguro-vida", "ibi", "dni", "carne", "pasaporte", "garantia", "recibo", "otro"];
@@ -68,8 +75,14 @@ export default async function handler(req, res) {
   if (!imagen || !IMAGENES.includes(imagen.media_type) || typeof imagen.data !== "string" || !imagen.data || imagen.data.length > MAX_B64 || !/^[A-Za-z0-9+/=]+$/.test(imagen.data)) {
     return res.status(400).json({ error: "Manda una foto JPG, PNG o WebP de menos de 3 MB." });
   }
-  if (nubeConfigurada()) {
-    const c = typeof clave === "string" ? clave.trim() : "";
+  const c = typeof clave === "string" ? clave.trim() : "";
+  if (!nubeConfigurada()) {
+    const propia = process.env.CEREBRO_CLAVE;
+    if (!propia) {
+      return res.status(503).json({ error: "La lectura con foto no está protegida todavía: configura Supabase o la variable CEREBRO_CLAVE en Vercel." });
+    }
+    if (!c || !igualSeguro(c, propia)) return res.status(401).json({ error: "Clave de sincronización incorrecta." });
+  } else {
     if (!c) return res.status(401).json({ error: "Escribe tu clave de sincronización en Ajustes para leer fotos." });
     try {
       await leerMemoria(c);

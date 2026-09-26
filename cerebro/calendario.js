@@ -9,7 +9,7 @@
 import { esISO, esHora, sumaDias } from './utiles.js';
 
 export function escapaIcs(texto) {
-  return String(texto ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  return String(texto ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
 }
 
 /* Las líneas del .ics no pueden pasar de 75 octetos: se parten con CRLF + espacio. */

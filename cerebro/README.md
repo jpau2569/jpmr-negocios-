@@ -26,7 +26,7 @@ La hizo el equipo de Clara:
 ## Backend
 `api/_cerebro.js` (en `/api/cerebro` a través de `api/[ruta].js`), acción `leer-documento`:
 - Recibe una foto JPEG, PNG o WebP de 3 MB como máximo. Claude la lee con la herramienta forzada `datos_documento` y `limpiaLectura` descarta las fechas imposibles.
-- Si hay Supabase, exige la clave de sincronización (se valida con `clara_memoria_lee`) para que nadie gaste el saldo de Anthropic.
+- Nunca queda abierto. Con Supabase exige la clave de sincronización (se valida con `clara_memoria_lee`); sin Supabase exige la variable `CEREBRO_CLAVE` de Vercel y, si no existe, responde 503. Así nadie gasta el saldo de Anthropic.
 - No guarda nada.
 
 ## Datos legales

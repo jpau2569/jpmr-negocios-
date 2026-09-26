@@ -7,6 +7,9 @@
    El estado se valida al cargar: una copia rota o antigua nunca rompe la app.
    ═══════════════════════════════════════════════════════════════════ */
 
+import { validaFecha } from './operaciones.js';
+import { esFirmaJpeg } from './visitas.js';
+
 export const CLAVE = 'cerebro_util_pau_v1';
 export const VERSION_DATOS = 1;
 
@@ -29,7 +32,9 @@ export function estadoVacio() {
   return { version: VERSION_DATOS, ajustes: { ...AJUSTES_BASE }, visitas: [], operaciones: [], valoraciones: [], papeles: [] };
 }
 
-const lista = (x) => (Array.isArray(x) ? x.filter((e) => e && typeof e === 'object' && e.id) : []);
+const lista = (x) => (Array.isArray(x) ? x.filter((e) => e && typeof e === 'object' && e.id) : []).map((e) => ({ ...e, id: String(e.id).slice(0, 80) }));
+const objeto = (x) => (x && typeof x === 'object' && !Array.isArray(x) ? x : {});
+const cadena = (x, n) => (typeof x === 'string' || typeof x === 'number' ? String(x).slice(0, n) : '');
 
 /** Acepta cualquier cosa y devuelve un estado válido (lo que no encaja se descarta). */
 export function normaliza(bruto) {
@@ -40,10 +45,45 @@ export function normaliza(bruto) {
     if (typeof AJUSTES_BASE[k] === 'boolean') e.ajustes[k] = typeof aj[k] === 'boolean' ? aj[k] : AJUSTES_BASE[k];
     else if (typeof aj[k] === 'string') e.ajustes[k] = aj[k].slice(0, 4000);
   }
-  e.visitas = lista(bruto.visitas);
-  e.operaciones = lista(bruto.operaciones).map((o) => ({ papeles: {}, fechas: [], partes: {}, ...o }));
-  e.valoraciones = lista(bruto.valoraciones).map((v) => ({ comparables: [], ...v }));
-  e.papeles = lista(bruto.papeles);
+  // Cada lista se rehace con la forma que espera la app: una copia antigua,
+  // rota o manipulada no puede romper una pantalla ni colar HTML.
+  e.visitas = lista(bruto.visitas).map((v) => {
+    const vis = objeto(v.visitante);
+    return {
+      ...v,
+      fecha: cadena(v.fecha, 10), hora: cadena(v.hora, 5), inmueble: cadena(v.inmueble, 120),
+      visitante: { nombre: cadena(vis.nombre, 80), dni: cadena(vis.dni, 20), telefono: cadena(vis.telefono, 20), email: cadena(vis.email, 80) },
+      acompanantes: cadena(v.acompanantes, 120), observaciones: cadena(v.observaciones, 600),
+      aceptaRgpd: v.aceptaRgpd === true, aceptaOfertas: v.aceptaOfertas === true,
+      firma: esFirmaJpeg(v.firma) ? v.firma : '',
+      firmaAncho: Number(v.firmaAncho) || 600, firmaAlto: Number(v.firmaAlto) || 200,
+    };
+  });
+  e.operaciones = lista(bruto.operaciones).map((o) => ({
+    ...o,
+    tipo: o.tipo === 'alquiler' ? 'alquiler' : 'compraventa',
+    inmueble: cadena(o.inmueble, 120),
+    precio: Number(o.precio) > 0 ? Number(o.precio) : null,
+    partes: Object.fromEntries(Object.entries(objeto(o.partes)).map(([k, p]) => [k, { nombre: cadena(objeto(p).nombre, 80), telefono: cadena(objeto(p).telefono, 20), email: cadena(objeto(p).email, 80) }])),
+    papeles: Object.fromEntries(Object.entries(objeto(o.papeles)).map(([k, v]) => [k, v === true])),
+    fechas: (Array.isArray(o.fechas) ? o.fechas : []).map((f) => ({ ...validaFecha(f).fecha, id: cadena(objeto(f).id, 80) || String(Math.random()).slice(2) })).filter((f) => f.fecha && f.nombre),
+    notas: cadena(o.notas, 1000), notaria: cadena(o.notaria, 80), banco: cadena(o.banco, 80),
+    cerrada: o.cerrada === true,
+  }));
+  e.valoraciones = lista(bruto.valoraciones).map((v) => ({
+    ...v,
+    inmueble: Object.fromEntries(Object.entries(objeto(v.inmueble)).map(([k, x]) => [k, k === 'm2' ? (Number(x) > 0 ? Number(x) : '') : cadena(x, 120)])),
+    propietario: cadena(v.propietario, 80), comentario: cadena(v.comentario, 1500), creada: cadena(v.creada, 10),
+    comparables: (Array.isArray(v.comparables) ? v.comparables : []).filter((c) => c && typeof c === 'object').map((c) => ({
+      id: cadena(c.id, 80) || String(Math.random()).slice(2), direccion: cadena(c.direccion, 120), fuente: cadena(c.fuente, 20),
+      precio: Number.isFinite(Number(c.precio)) && c.precio !== '' ? Number(c.precio) : '', m2: Number.isFinite(Number(c.m2)) && c.m2 !== '' ? Number(c.m2) : '',
+      ajuste: Number.isFinite(Number(c.ajuste)) && c.ajuste !== '' ? Number(c.ajuste) : '', notas: cadena(c.notas, 300),
+    })),
+  }));
+  e.papeles = lista(bruto.papeles).map((p) => ({
+    ...p, tipo: cadena(p.tipo, 20), titulo: cadena(p.titulo, 80), vence: cadena(p.vence, 10),
+    avisoDias: Number.isFinite(Number(p.avisoDias)) ? Math.max(0, Math.min(365, Math.round(Number(p.avisoDias)))) : 30, notas: cadena(p.notas, 300),
+  }));
   return e;
 }
 

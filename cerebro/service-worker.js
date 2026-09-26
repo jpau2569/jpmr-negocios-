@@ -6,7 +6,7 @@
    Al tocar cualquier archivo de la lista: súbelo aquí y sube VERSION.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'cerebro-v1.0.0';
+const VERSION = 'cerebro-v1.0.1';
 const RECURSOS = [
   './', './index.html', './app.html', './styles.css', './app.js', './utiles.js', './datos.js',
   './calendario.js', './firma.js', './pdf.js', './documentos.js', './visitas.js', './operaciones.js',
@@ -31,21 +31,32 @@ self.addEventListener('activate', (e) => {
   })());
 });
 
-// Red primero (así Pau siempre ve la última versión) y caché si no hay conexión.
+// Red primero (así Pau siempre ve la última versión), pero con tiempo máximo:
+// con una cobertura que ni conecta ni falla (sótanos, garajes) se abre la
+// copia guardada a los 3 segundos en vez de quedarse en blanco.
+const conTiempo = (promesa, ms) => Promise.race([promesa, new Promise((_, no) => setTimeout(() => no(new Error('lento')), ms))]);
+
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
   e.respondWith((async () => {
-    try {
-      const resp = await fetch(e.request);
+    const red = fetch(e.request).then((resp) => {
       if (resp.ok) {
         const copia = resp.clone();
         caches.open(VERSION).then((c) => c.put(e.request, copia)).catch(() => {});
       }
       return resp;
+    });
+    try {
+      return await conTiempo(red, 3000);
     } catch {
       const guardada = await caches.match(e.request, { ignoreSearch: true });
-      return guardada || (e.request.mode === 'navigate' ? caches.match('./app.html') : Response.error());
+      if (guardada) return guardada;
+      if (e.request.mode === 'navigate') {
+        const app = await caches.match('./app.html');
+        if (app) return app;
+      }
+      return red.catch(() => Response.error());
     }
   })());
 });

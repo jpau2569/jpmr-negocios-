@@ -17,11 +17,12 @@ const GRIS_CLARO = [225, 222, 214];
 const CREMA = [247, 245, 240];
 const M = 48; // margen
 const ANCHO = A4.ancho - 2 * M;
+const LIMITE = A4.alto - 80; // por encima del aviso de BORRADOR y del pie
 
 function cabecera(doc, ajustes, titulo, subtitulo) {
   doc.rect(0, 0, A4.ancho, 92, { relleno: MARINO });
   doc.rect(0, 92, A4.ancho, 4, { relleno: DORADO });
-  doc.texto(M, 40, ajustes.empresa || 'Asesoría Castresana', { tam: 15, negrita: true, color: [255, 255, 255] });
+  doc.texto(M, 40, partirTexto(ajustes.empresa || 'Asesoría Castresana', ANCHO - 210, 15, true)[0] || '', { tam: 15, negrita: true, color: [255, 255, 255] });
   doc.texto(M, 60, [ajustes.ciudad, ajustes.telefono && `Tel. ${ajustes.telefono}`, ajustes.web].filter(Boolean).join('  ·  '), { tam: 9, color: [215, 220, 230] });
   doc.texto(A4.ancho - M, 40, titulo, { tam: 13, negrita: true, color: DORADO, alinear: 'derecha' });
   if (subtitulo) doc.texto(A4.ancho - M, 60, subtitulo, { tam: 9, color: [215, 220, 230], alinear: 'derecha' });
@@ -67,8 +68,23 @@ export function pdfHojaVisita(visita, ajustes, ahora = new Date()) {
   const borrador = !ajustes.textosRevisados;
   cabecera(doc, ajustes, 'HOJA DE VISITA', `Registro ${String(visita.id || '').slice(-8).toUpperCase()}`);
 
+  const pieVisita = () => pie(doc, `Hoja de visita · ${visita.inmueble}`, borrador);
+  // Todo lo que se escribe respeta LIMITE: por debajo están el aviso de BORRADOR y el pie.
   let y = 130;
-  y = titulo(doc, y, 'Datos de la visita');
+  const cabe = (alto) => {
+    if (y + alto > LIMITE) { pieVisita(); doc.pagina(); y = 60; }
+  };
+  const seccion = (texto) => { cabe(40); y = titulo(doc, y, texto); };
+  const parrafo = (texto, opts) => {
+    const salto = opts.tam * (opts.interlineado || 1.35);
+    for (const linea of partirTexto(texto, ANCHO, opts.tam, opts.negrita)) {
+      cabe(salto);
+      if (linea) doc.texto(M, y, linea, opts);
+      y += salto;
+    }
+  };
+
+  seccion('Datos de la visita');
   y = filas(doc, y, [
     ['Fecha', `${fechaLarga(visita.fecha)}`],
     ['Hora', visita.hora],
@@ -76,7 +92,7 @@ export function pdfHojaVisita(visita, ajustes, ahora = new Date()) {
     ['Agente', ajustes.agente],
   ]);
   y += 6;
-  y = titulo(doc, y, 'Visitante');
+  seccion('Visitante');
   y = filas(doc, y, [
     ['Nombre', visita.visitante.nombre],
     ['DNI / NIE', visita.visitante.dni],
@@ -86,20 +102,21 @@ export function pdfHojaVisita(visita, ajustes, ahora = new Date()) {
   ]);
   if (visita.observaciones) {
     y += 6;
-    y = titulo(doc, y, 'Observaciones');
-    y = doc.parrafo(M, y, ANCHO, visita.observaciones, { tam: 10 });
+    seccion('Observaciones');
+    parrafo(visita.observaciones, { tam: 10 });
   }
 
   y += 10;
-  y = titulo(doc, y, 'Declaración');
-  y = doc.parrafo(M, y, ANCHO, declaracionDe(visita, ajustes), { tam: 10.5 });
+  seccion('Declaración');
+  parrafo(declaracionDe(visita, ajustes), { tam: 10.5 });
 
   if (ajustes.textoRgpd) {
     y += 8;
-    y = titulo(doc, y, 'Protección de datos');
-    y = doc.parrafo(M, y, ANCHO, ajustes.textoRgpd, { tam: 8, color: GRIS, interlineado: 1.3 });
+    seccion('Protección de datos');
+    parrafo(ajustes.textoRgpd, { tam: 8, color: GRIS, interlineado: 1.3 });
   }
   y += 6;
+  cabe(44);
   casilla(doc, y, visita.aceptaRgpd);
   doc.texto(M + 18, y, 'El visitante declara haber leído la información sobre protección de datos.', { tam: 9 });
   y += 18;
@@ -107,13 +124,9 @@ export function pdfHojaVisita(visita, ajustes, ahora = new Date()) {
   doc.texto(M + 18, y, visita.aceptaOfertas ? 'Acepta recibir información de otros inmuebles.' : 'No desea recibir información de otros inmuebles.', { tam: 9 });
   y += 22;
 
-  // Firma: si no cabe en la página, pasa a una segunda.
+  // Firma con su título y el nombre debajo: si no cabe entera, pasa a la página siguiente.
   const altoFirma = 110;
-  if (y + altoFirma + 60 > A4.alto) {
-    pie(doc, `Hoja de visita · ${visita.inmueble}`, borrador);
-    doc.pagina();
-    y = 60;
-  }
+  cabe(22 + altoFirma + 20);
   y = titulo(doc, y, 'Firma del visitante');
   doc.rect(M, y - 4, 260, altoFirma, { relleno: CREMA, borde: GRIS_CLARO });
   const ratio = (visita.firmaAncho || 600) / (visita.firmaAlto || 200);
@@ -138,8 +151,7 @@ export function pdfValoracion(val, calculo, ajustes, hoy) {
   const s = val.inmueble || {};
 
   let y = 135;
-  doc.texto(M, y, s.direccion || 'Inmueble', { tam: 18, negrita: true, color: MARINO });
-  y += 18;
+  y = doc.parrafo(M, y, ANCHO, s.direccion || 'Inmueble', { tam: 18, negrita: true, color: MARINO, interlineado: 1.15 }) - 20.7 + 18;
   if (val.propietario) { doc.texto(M, y, `Preparado para: ${val.propietario}`, { tam: 10, color: GRIS }); y += 16; }
   y += 8;
   y = titulo(doc, y, 'El inmueble');

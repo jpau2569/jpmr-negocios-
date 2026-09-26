@@ -79,7 +79,8 @@ await page.mouse.move(caja.x + 30, caja.y + 120);
 await page.mouse.down();
 for (let i = 1; i <= 12; i++) await page.mouse.move(caja.x + 30 + i * 22, caja.y + 120 - Math.sin(i / 2) * 50);
 await page.mouse.up();
-await page.click('#form-visita button[type="submit"]');
+// Doble toque rápido en "Guardar": no debe duplicar la visita.
+await page.evaluate(() => { const f = document.getElementById("form-visita"); f.requestSubmit(); f.requestSubmit(); });
 await page.waitForFunction(() => location.hash.startsWith("#visita/"));
 let e = await estado();
 check("visita guardada con firma JPEG", e.visitas.length === 1 && e.visitas[0].firma.startsWith("data:image/jpeg;base64,") && e.visitas[0].visitante.dni === "12345678Z");
@@ -92,6 +93,20 @@ await page.click('.pestanas button[data-ir="visitas"]');
 await page.waitForSelector("#busca-visita");
 await page.fill("#busca-visita", "garcia");
 check("buscador encuentra sin tildes", (await page.locator("#lista-visitas .tarjeta").count()) === 1);
+
+console.log("\n🛟 No perder trabajo");
+await page.goto(URL_APP + "#nueva-visita");
+await page.waitForSelector("#form-visita");
+await page.fill("#v-nombre", "A medias");
+let preguntado = "";
+page.removeAllListeners("dialog");
+page.once("dialog", (d) => { preguntado = d.message(); d.dismiss(); });
+await page.click('.pestanas button[data-ir="hoy"]');
+await page.waitForTimeout(300);
+check("al salir con una visita a medias pregunta y, si dice que no, la conserva", preguntado.includes("a medias") && (await page.inputValue("#v-nombre")) === "A medias");
+page.on("dialog", (d) => d.accept());
+await page.click('.pestanas button[data-ir="hoy"]');
+await page.waitForFunction(() => location.hash === "#hoy");
 
 console.log("\n📑 Operación");
 await page.goto(URL_APP + "#nueva-operacion");

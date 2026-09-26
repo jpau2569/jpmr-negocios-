@@ -149,7 +149,9 @@ export function eventosOperaciones(operaciones) {
 /** Mensajes de la plantilla para esta operación, con los datos ya puestos. */
 export function mensajesPara(op, ajustes = {}) {
   const [a, b] = tipoOperacion(op.tipo).partes;
-  const notaria = (op.fechas || []).find((f) => /notar/i.test(f.nombre) && esISO(f.fecha));
+  // La cita de firma: en compraventa, la de la notaría; en alquiler, la de la firma del contrato.
+  const claveCita = op.tipo === 'alquiler' ? /firma|contrato/i : /notar/i;
+  const notaria = (op.fechas || []).find((f) => claveCita.test(f.nombre) && esISO(f.fecha));
   const datos = {
     // En alquiler las plantillas también pueden usar {comprador}/{vendedor}.
     comprador: op.partes?.[a]?.nombre, vendedor: op.partes?.[b]?.nombre,

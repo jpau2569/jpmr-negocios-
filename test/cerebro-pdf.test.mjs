@@ -139,7 +139,7 @@ console.log("\n🔤 Texto en español");
   const s = comoTexto(doc.bytes());
   check("'Señor Ñandú 120.000 €' va en CP1252 (0xF1, 0xD1, 0xFA, 0x80)", s.includes("(Se\xF1or \xD1and\xFA 120.000 \x80) Tj"));
   check("escapa ( ) y \\ en las cadenas", s.includes("(Par\xE9ntesis \\(as\xED\\) y barra \\\\ fin) Tj"));
-  check("lo que no cabe en CP1252 sale como '?'", s.includes("(Emoji ? y flecha ?) Tj"));
+  check("los emojis se quitan y lo demás que no cabe en CP1252 sale como '?'", s.includes("(Emoji y flecha ?) Tj"));
   check("¿ ¡ º ª « » comillas, rayas, … y · en sus bytes CP1252",
     s.includes("(\xBFQu\xE9? \xA1S\xED! 1\xBA 2\xAA \xABhola\xBB \x93cita\x94 \x91s\xED\x92 \x96 \x97 \x85 \xB7) Tj"));
   check("la y se mide desde arriba (100 → 741.89)", s.includes("50 741.89 Td (Se"));
