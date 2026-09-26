@@ -8,7 +8,8 @@
 //  SSE y el briefing diario.
 // ============================================================================
 
-import handler, { buscarConGemini, calcular } from "../api/_clara.js";
+import handler, { buscarConGemini, calcular, resumenLeads } from "../api/_clara.js";
+import { leerWeb, esIpPrivada, htmlATexto } from "../lib/leerweb.js";
 import briefing from "../api/_briefing.js";
 import memoria from "../api/_memoria.js";
 import lead from "../api/_lead.js";
@@ -191,8 +192,8 @@ check("system: persona cacheada", sys[0]?.cache_control?.type === "ephemeral");
 check("system: fecha de hoy inyectada", sysTexto.includes("Hoy es"));
 check("system: memoria de Pau inyectada", sysTexto.includes("invertir en Oviedo"));
 check("system: modo inmobiliario activo", sysTexto.includes("NEGOCIO INMOBILIARIO"));
-check("declara las 4 herramientas base", (llamadasAnthropic[0]?.tools || []).length === 4);
-check("mi_cartera y usar_skill declaradas", ["mi_cartera", "usar_skill"].every((n) => (llamadasAnthropic[0]?.tools || []).some((t) => t.name === n)));
+check("declara las 5 herramientas base", (llamadasAnthropic[0]?.tools || []).length === 5);
+check("mi_cartera, usar_skill y leer_web declaradas", ["mi_cartera", "usar_skill", "leer_web"].every((n) => (llamadasAnthropic[0]?.tools || []).some((t) => t.name === n)));
 
 const segundaRonda = llamadasAnthropic[1]?.messages || [];
 const toolResult = JSON.stringify(segundaRonda);
@@ -398,7 +399,7 @@ const sysNube = (llamadasAnthropic[0]?.system || []).map((b) => b.text).join("\n
 check("respuesta 200 con nube activa", res.r.statusCode === 200, JSON.stringify(res.r.body));
 check("la memoria de la nube gana a la local", sysNube.includes("Le encanta Cudillero") && !sysNube.includes("no debería usarse"));
 check("el system dice que está sincronizada", sysNube.includes("sincronizada en la nube"));
-check("con nube activa hay 6 herramientas (recordar y crear_skill incluidas)", (llamadasAnthropic[0]?.tools || []).length === 6 && ["recordar", "crear_skill"].every((n) => llamadasAnthropic[0].tools.some((t) => t.name === n)));
+check("con nube activa hay 8 herramientas (recordar, crear_skill y mis_leads incluidas)", (llamadasAnthropic[0]?.tools || []).length === 8 && ["recordar", "crear_skill", "mis_leads"].every((n) => llamadasAnthropic[0].tools.some((t) => t.name === n)));
 check("recordar apuntó la nota en Supabase", llamadasSupabase.some((c) => c.fn === "clara_memoria_apunta" && c.args.nota === "Objetivo 2026: 20 exclusivas"));
 check("el tool_result confirma el guardado", JSON.stringify(llamadasAnthropic[1]?.messages || []).includes("Nota guardada"));
 // ---------------------------------------------------------------------------
@@ -588,6 +589,43 @@ check("clave correcta → 200 con la lista", res.r.statusCode === 200 && res.r.b
 delete process.env.SUPABASE_URL;
 delete process.env.SUPABASE_ANON_KEY;
 globalThis.fetch = realFetch;
+
+// ---------------------------------------------------------------------------
+console.log("\n— leer_web (lector de enlaces) —");
+check("bloquea loopback y redes privadas", ["127.0.0.1", "10.1.2.3", "192.168.1.10", "172.20.0.1", "169.254.169.254", "::1", "fd00::1", "::ffff:127.0.0.1"].every(esIpPrivada));
+check("permite IPs públicas", !esIpPrivada("93.184.216.34") && !esIpPrivada("2606:2800:220:1::1"));
+const pagina = htmlATexto("<html><head><title>Piso en Oviedo &amp; garaje</title><style>x{}</style></head><body><nav>menú</nav><h1>Piso 3 hab</h1><p>Precio: 120.000&nbsp;&euro;</p><script>alert(1)</script></body></html>");
+check("htmlATexto saca título y texto sin scripts ni menús", pagina.titulo === "Piso en Oviedo & garaje" && pagina.texto.includes("Piso 3 hab") && pagina.texto.includes("120.000 €") && !pagina.texto.includes("alert") && !pagina.texto.includes("menú"), JSON.stringify(pagina));
+
+const resolverPublico = async () => [{ address: "93.184.216.34" }];
+let pedidas = 0;
+globalThis.fetch = async () => { pedidas++; return new Response("x"); };
+check("rechaza localhost sin llamar a la red", (await leerWeb("http://localhost/admin", { resolver: resolverPublico })).includes("internas") && pedidas === 0);
+check("rechaza IP de metadatos de la nube", (await leerWeb("http://169.254.169.254/latest", { resolver: resolverPublico })).includes("internas") && pedidas === 0);
+check("rechaza dominio que resuelve a IP privada", (await leerWeb("https://trampa.example.com", { resolver: async () => [{ address: "10.0.0.5" }] })).includes("privadas") && pedidas === 0);
+check("rechaza protocolos no web", (await leerWeb("file:///etc/passwd", { resolver: resolverPublico })).includes("http") && pedidas === 0);
+check("enlace no válido avisado", (await leerWeb("no es un enlace")).includes("no es válido"));
+
+globalThis.fetch = async (url) => {
+  const u = String(url);
+  if (u === "https://portal.example.com/a") return new Response(null, { status: 301, headers: { location: "http://127.0.0.1/secreto" } });
+  if (u === "https://portal.example.com/piso") return new Response("<html><title>Ático en Gijón</title><body><p>95 m², 2 baños</p></body></html>", { headers: { "content-type": "text/html; charset=utf-8" } });
+  if (u === "https://portal.example.com/bloqueo") return new Response("no", { status: 403 });
+  if (u === "https://portal.example.com/foto.jpg") return new Response("xx", { headers: { "content-type": "image/jpeg" } });
+  throw new Error("fetch inesperado: " + u);
+};
+const leida = await leerWeb("https://portal.example.com/piso", { resolver: resolverPublico });
+check("lee una página y devuelve título + texto", leida.includes("Título: Ático en Gijón") && leida.includes("95 m², 2 baños"), leida);
+check("redirección a IP interna bloqueada", (await leerWeb("https://portal.example.com/a", { resolver: resolverPublico })).includes("internas"));
+check("web que bloquea (403) → pide pegar el texto", (await leerWeb("https://portal.example.com/bloqueo", { resolver: resolverPublico })).includes("copie y pegue"));
+check("imagen → pide adjuntarla con el clip", (await leerWeb("https://portal.example.com/foto.jpg", { resolver: resolverPublico })).includes("📎"));
+globalThis.fetch = realFetch;
+
+console.log("\n— mis_leads (resumen para Clara) —");
+check("sin leads → mensaje claro", resumenLeads([]).includes("Todavía no hay leads"));
+const rl = resumenLeads([{ id: 2, email: "ana@test.com", nombre: "Ana", telefono: null }, { id: 1, email: "luis@test.com", nombre: "" }]);
+check("resume leads omitiendo campos vacíos", rl.includes("Leads registrados: 2") && rl.includes("email: ana@test.com") && !rl.includes("telefono") && !rl.includes("nombre: ·"), rl);
+check("acota el número de leads", resumenLeads(Array.from({ length: 40 }, (_, i) => ({ id: i })), 25).split("\n").filter((l) => /^\d+\./.test(l)).length === 25);
 
 // ---------------------------------------------------------------------------
 console.log(`\nResultado: ${pasados} pasados, ${fallados} fallados.\n`);
