@@ -89,6 +89,8 @@
   .attachchip button{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;font-family:inherit}
   .attachchip button:hover{color:#ff6b6b}
   .bubble img.adj{max-width:220px;max-height:180px;border-radius:10px;display:block;margin-bottom:8px}
+  .bubble .adjs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .bubble .adjs img.adj{max-width:100px;max-height:100px;margin:0;object-fit:cover}
   .bubble .adjdoc{display:block;color:var(--muted);font-size:12.5px;margin-bottom:6px}
   .estado{color:var(--muted);font-size:12px;margin-top:8px;animation:blink 1.2s infinite}
 
@@ -225,7 +227,7 @@
     <textarea id="input" rows="1" placeholder="Escribe a Clara… (Enter para enviar, Shift+Enter para salto de línea)"></textarea>
     <button id="send">Enviar</button>
   </div>
-  <input type="file" id="fileattach" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" hidden />
+  <input type="file" id="fileattach" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" multiple hidden />
   <div class="hint">Clara es una IA y puede equivocarse. En temas graves de salud o emocionales, busca ayuda profesional.</div>
 </footer>
 
@@ -257,9 +259,12 @@
   const SYNC_KEY = "clara_sync_v1";
   function saveChat() {
     // Los adjuntos (base64) no se guardan en localStorage: pesan demasiado.
-    const ligero = history.map((m) =>
-      m.adjunto ? { role: m.role, content: m.content, adjunto: { omitido: true, tipo: m.adjunto.tipo || "archivo", nombre: m.adjunto.nombre || "" } } : m
-    );
+    const ligero = history.map((m) => {
+      const adjs = m.adjuntos || (m.adjunto ? [m.adjunto] : null);
+      return adjs
+        ? { role: m.role, content: m.content, adjuntos: adjs.map((a) => ({ omitido: true, tipo: a.tipo || "archivo", nombre: a.nombre || "" })) }
+        : m;
+    });
     try { localStorage.setItem(STORE_KEY, JSON.stringify({ history: ligero, mode })); } catch {}
   }
   function loadChat() {
@@ -391,15 +396,24 @@
     bubble.className = "bubble";
     if (role === "user") {
       bubble.textContent = text;
-      if (adj && adj.tipo === "imagen" && adj.data) {
-        const img = document.createElement("img");
-        img.className = "adj";
-        img.src = "data:" + adj.media_type + ";base64," + adj.data;
-        bubble.prepend(img);
-      } else if (adj) {
+      const adjs = Array.isArray(adj) ? adj : adj ? [adj] : [];
+      const fotos = adjs.filter((a) => a.tipo === "imagen" && a.data);
+      if (fotos.length) {
+        const caja = document.createElement("div");
+        caja.className = fotos.length > 1 ? "adjs" : "";
+        for (const a of fotos) {
+          const img = document.createElement("img");
+          img.className = "adj";
+          img.src = "data:" + a.media_type + ";base64," + a.data;
+          caja.appendChild(img);
+        }
+        bubble.prepend(caja);
+      }
+      const otros = adjs.filter((a) => !(a.tipo === "imagen" && a.data));
+      for (const a of otros.reverse()) {
         const doc = document.createElement("span");
         doc.className = "adjdoc";
-        doc.textContent = "📎 " + (adj.nombre || "documento adjunto");
+        doc.textContent = (a.tipo === "imagen" ? "🖼 " : "📎 ") + (a.nombre || "archivo adjunto");
         bubble.prepend(doc);
       }
     } else {
@@ -427,7 +441,9 @@
   }
 
   // ---- Adjuntos (📎 foto o PDF) ----
-  let adjunto = null; // {tipo:'imagen'|'pdf', media_type, data(base64), nombre}
+  let adjuntos = []; // [{tipo:'imagen'|'pdf', media_type, data(base64), nombre}]
+  const MAX_ADJUNTOS = 6;
+  const MAX_B64_TOTAL = 3_500_000; // Vercel corta peticiones de más de 4,5 MB
   const attachBtn = document.getElementById("attach");
   const fileAttach = document.getElementById("fileattach");
   const attachBar = document.getElementById("attachbar");
@@ -440,19 +456,18 @@
       r.readAsDataURL(file);
     });
   }
-  function comprimirImagen(file) {
+  function comprimirImagen(file, MAX = 1600, calidad = 0.85) {
     return new Promise((ok, mal) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
       img.onload = () => {
-        const MAX = 1600;
         const escala = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
         const c = document.createElement("canvas");
         c.width = Math.round(img.naturalWidth * escala);
         c.height = Math.round(img.naturalHeight * escala);
         c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
         URL.revokeObjectURL(url);
-        ok(c.toDataURL("image/jpeg", 0.85).split(",")[1]);
+        ok(c.toDataURL("image/jpeg", calidad).split(",")[1]);
       };
       img.onerror = () => { URL.revokeObjectURL(url); mal(new Error("No se pudo leer la imagen.")); };
       img.src = url;
@@ -460,43 +475,56 @@
   }
   function pintaAdjunto() {
     attachBar.innerHTML = "";
-    attachBar.classList.toggle("show", !!adjunto);
-    if (!adjunto) return;
-    const chip = document.createElement("span");
-    chip.className = "attachchip";
-    if (adjunto.tipo === "imagen") {
-      const mini = document.createElement("img");
-      mini.src = "data:" + adjunto.media_type + ";base64," + adjunto.data;
-      chip.appendChild(mini);
+    attachBar.classList.toggle("show", adjuntos.length > 0);
+    adjuntos.forEach((a, i) => {
+      const chip = document.createElement("span");
+      chip.className = "attachchip";
+      if (a.tipo === "imagen") {
+        const mini = document.createElement("img");
+        mini.src = "data:" + a.media_type + ";base64," + a.data;
+        chip.appendChild(mini);
+      }
+      chip.appendChild(document.createTextNode((a.tipo === "pdf" ? "📎 " : "") + a.nombre));
+      const quita = document.createElement("button");
+      quita.textContent = "✕";
+      quita.title = "Quitar adjunto";
+      quita.addEventListener("click", () => { adjuntos.splice(i, 1); pintaAdjunto(); });
+      chip.appendChild(quita);
+      attachBar.appendChild(chip);
+    });
+  }
+  // Prepara fotos (reducidas en el propio móvil) y PDFs para enviarlos a Clara.
+  async function anadeArchivos(files) {
+    const lista = Array.from(files || []);
+    let descartados = 0;
+    for (const file of lista) {
+      if (adjuntos.length >= MAX_ADJUNTOS) { descartados++; continue; }
+      const nombre = file.name || (file.type === "application/pdf" ? "documento.pdf" : "foto.jpg");
+      try {
+        if (file.type === "application/pdf") {
+          if (file.size > 2.5 * 1024 * 1024) { addError(`El PDF "${nombre}" supera los 2,5 MB. Comprímelo o divídelo e inténtalo de nuevo.`); continue; }
+          adjuntos.push({ tipo: "pdf", media_type: "application/pdf", data: await aBase64(file), nombre });
+        } else if (String(file.type).startsWith("image/")) {
+          // Con varias fotos se reducen un poco más para no pasar el límite de envío.
+          const varias = lista.length > 1 || adjuntos.length > 0;
+          adjuntos.push({ tipo: "imagen", media_type: "image/jpeg", data: await comprimirImagen(file, varias ? 1280 : 1600, varias ? 0.8 : 0.85), nombre });
+        } else {
+          addError(`"${nombre}": solo puedo leer fotos (JPG, PNG, WebP) o PDF.`);
+        }
+      } catch (e) {
+        addError(e.message || "No se pudo preparar el adjunto.");
+      }
     }
-    chip.appendChild(document.createTextNode((adjunto.tipo === "pdf" ? "📎 " : "") + adjunto.nombre));
-    const quita = document.createElement("button");
-    quita.textContent = "✕";
-    quita.title = "Quitar adjunto";
-    quita.addEventListener("click", () => { adjunto = null; pintaAdjunto(); });
-    chip.appendChild(quita);
-    attachBar.appendChild(chip);
+    if (descartados) addError(`Solo caben ${MAX_ADJUNTOS} archivos por mensaje: he dejado fuera ${descartados}. Mándamelos en el siguiente.`);
+    pintaAdjunto();
   }
   attachBtn.addEventListener("click", () => fileAttach.click());
   fileAttach.addEventListener("change", async () => {
-    const file = fileAttach.files[0];
+    const files = Array.from(fileAttach.files || []);
     fileAttach.value = "";
-    if (!file) return;
-    try {
-      if (file.type === "application/pdf") {
-        if (file.size > 2.5 * 1024 * 1024) { addError("El PDF supera los 2,5 MB. Comprímelo o divídelo e inténtalo de nuevo."); return; }
-        adjunto = { tipo: "pdf", media_type: "application/pdf", data: await aBase64(file), nombre: file.name };
-      } else if (file.type.startsWith("image/")) {
-        adjunto = { tipo: "imagen", media_type: "image/jpeg", data: await comprimirImagen(file), nombre: file.name };
-      } else {
-        addError("Solo puedo leer fotos (JPG, PNG, WebP) o PDF.");
-        return;
-      }
-      pintaAdjunto();
-      inputEl.focus();
-    } catch (e) {
-      addError(e.message || "No se pudo preparar el adjunto.");
-    }
+    if (!files.length) return;
+    await anadeArchivos(files);
+    inputEl.focus();
   });
 
   function addTyping() {
@@ -525,13 +553,20 @@
     busy = true;
     sendEl.disabled = true;
 
-    const adjEnviado = adjunto;
-    adjunto = null;
+    const pesoAdjuntos = adjuntos.reduce((t, a) => t + a.data.length, 0);
+    if (pesoAdjuntos > MAX_B64_TOTAL) {
+      addError("Entre todos los adjuntos pesan demasiado para un solo mensaje. Quita alguno y mándamelo en el siguiente.");
+      busy = false;
+      sendEl.disabled = false;
+      return;
+    }
+    const adjEnviados = adjuntos;
+    adjuntos = [];
     pintaAdjunto();
 
-    const userMsg = addMessage("user", text, adjEnviado).closest(".msg");
+    const userMsg = addMessage("user", text, adjEnviados).closest(".msg");
     const entrada = { role: "user", content: text };
-    if (adjEnviado) entrada.adjunto = adjEnviado;
+    if (adjEnviados.length) entrada.adjuntos = adjEnviados;
     history.push(entrada);
     addTyping();
 
@@ -540,16 +575,19 @@
     const deshacer = (mensajeError) => {
       history.pop();
       userMsg.remove();
-      if (adjEnviado) { adjunto = adjEnviado; pintaAdjunto(); }
+      if (adjEnviados.length) { adjuntos = adjEnviados; pintaAdjunto(); }
       inputEl.value = text;
       inputEl.dispatchEvent(new Event("input"));
       addError(mensajeError);
     };
 
     // Los adjuntos solo viajan en los últimos mensajes (el servidor también lo limita).
-    const payload = history.map((m, i) =>
-      m.adjunto && (i < history.length - 6 || m.adjunto.omitido) ? { role: m.role, content: m.content } : m
-    );
+    const payload = history.map((m, i) => {
+      const adjs = m.adjuntos || (m.adjunto ? [m.adjunto] : null);
+      if (!adjs) return m;
+      const vivos = i < history.length - 6 ? [] : adjs.filter((a) => !a.omitido && a.data);
+      return vivos.length ? { role: m.role, content: m.content, adjuntos: vivos } : { role: m.role, content: m.content };
+    });
 
     const finaliza = (texto) => {
       history.push({ role: "assistant", content: texto });
@@ -798,7 +836,7 @@
       history.push(m);
       // Los marcadores internos ("[Inicio de sesión…]", "[Pau ha activado…]") no se pintan.
       if (m.role === "user" && m.content.startsWith("[")) continue;
-      addMessage(m.role === "user" ? "user" : "assistant", m.content, m.adjunto);
+      addMessage(m.role === "user" ? "user" : "assistant", m.content, m.adjuntos || m.adjunto);
     }
     if (saved.mode && MODE_INTRO[saved.mode]) {
       mode = saved.mode;
@@ -812,6 +850,45 @@
     history.push({ role: "assistant", content: greeting });
   }
   inputEl.focus();
+
+  // ---- Compartir con Clara (desde WhatsApp u otra app en Android) ----
+  // El service worker (clara-sw.js) recibe lo compartido y lo deja en la caché
+  // "clara-compartido"; aquí se recoge, se adjunta y se prepara el mensaje.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("clara-sw.js", { scope: "/clara" }).catch(() => {});
+  }
+  async function recogeCompartido() {
+    if (!new URLSearchParams(location.search).has("compartido") || !("caches" in window)) return;
+    window.history.replaceState(null, "", location.pathname);
+    try {
+      const cache = await caches.open("clara-compartido");
+      const metaResp = await cache.match("/clara-compartido/meta");
+      if (!metaResp) return;
+      const meta = await metaResp.json();
+      const files = [];
+      for (let i = 0; i < (meta.n || 0); i++) {
+        const r = await cache.match("/clara-compartido/f" + i);
+        if (r) {
+          const blob = await r.blob();
+          files.push(new File([blob], meta.nombres?.[i] || "compartido-" + (i + 1), { type: blob.type || meta.tipos?.[i] || "" }));
+        }
+      }
+      await caches.delete("clara-compartido");
+      if (files.length) await anadeArchivos(files);
+      const partes = [meta.title, meta.text, meta.url].map((x) => String(x || "").trim()).filter(Boolean);
+      const unicas = partes.filter((p, i) => !partes.slice(0, i).some((q) => q.includes(p)));
+      inputEl.value =
+        "📲 Compartido desde WhatsApp" + (files.length ? ` (${files.length} archivo${files.length > 1 ? "s" : ""})` : "") + ":\n" +
+        (unicas.length ? unicas.join("\n") + "\n" : "") +
+        "\nEs del piso: ";
+      inputEl.dispatchEvent(new Event("input"));
+      inputEl.focus();
+      inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
+    } catch (e) {
+      addError("No he podido recoger lo que me has compartido. Prueba otra vez o adjúntalo con el clip 📎.");
+    }
+  }
+  recogeCompartido();
 </script>
 </body>
 </html>
