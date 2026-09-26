@@ -152,8 +152,23 @@ check("copia manipulada: avisoDias numérico, firma vacía, ids en texto y lista
 check("mensaje de alquiler rellena la fecha de firma del contrato", mensajesPara({ ...alq, fechas: [{ id: "x", nombre: "Firma del contrato de alquiler", fecha: "2026-10-03", hora: "12:00" }] }, {}).some((m) => m.texto.includes("03/10/2026") && m.texto.includes("12:00")));
 check(".ics escapa el punto y coma", crearIcs([{ uid: "z", fecha: "2026-10-01", titulo: "Notaría; Uría" }]).includes("Notaría\\; Uría"));
 const pdf2 = texto(pdfValoracion({ inmueble: { direccion: "Uría 12", zona: "Centro" }, propietario: "Luis" }, cuatro, aj, "2026-09-26"));
-check("PDF de valoración con rango, comparables y aviso de no-tasación", pdf2.includes("INFORME DE VALORACI") && pdf2.includes("Pelayo 1") && pdf2.includes("AVISO IMPORTANTE") && pdf2.includes("Banco de Espa") && pdf2.includes("/Count 2"));
+check("PDF de valoración con rango, comparables y aviso de no-tasación", pdf2.includes("INFORME DE VALORACI") && pdf2.includes("Pelayo 1") && pdf2.includes("AVISO IMPORTANTE") && pdf2.includes("ECO/805") && pdf2.includes("Muestra reducida") && pdf2.includes("/Count 2"));
 check("PDF de valoración sin datos suficientes lo dice", texto(pdfValoracion({ inmueble: {} }, pocos, aj, "2026-09-26")).includes("No hay datos suficientes"));
+
+console.log("\n🏘️ Ficha del piso (revisión de NICER)");
+{
+  const { limpiaFicha, CAMPOS_INMUEBLE } = await import("../cerebro/campos-piso.js");
+  const { pdfCaptacion } = await import("../cerebro/documentos.js");
+  const f = limpiaFicha({ m2Construidos: "85.5", comunidad: "45,50", precio: "120.000", banos: 1.5, ibi: "1.234,5" });
+  check("decimales bien: 85.5 y 45,50 no se multiplican; 120.000 y 1.234,5 son miles", f.m2Construidos === 85.5 && f.comunidad === 45.5 && f.precio === 120000 && f.banos === 1.5 && f.ibi === 1234.5, JSON.stringify(f));
+  check("la hoja de visita no lleva cargas, alquiler vigente ni precio mínimo", !CAMPOS_INMUEBLE.some((c) => ["cargas", "contratoAlquiler", "precioMinimo", "propNombre"].includes(c.id)));
+  const largo = texto(pdfCaptacion({ direccion: "Calle Marqués de Santa Cruz 12", cargas: "Hipoteca con Caja Rural, quedan 45.000 €", derrama: "Derrama de 3.000 € por la fachada, aprobada", calefaccion: "Gas natural individual con caldera de condensación nueva", precioMinimo: 230000, propNombre: "Luis", contratoAlquiler: "600 €/mes hasta 2027" },
+    { ...aj, textoCaptacion: "", textoRgpdCaptacion: "" }, { hoy: "2026-09-26" }));
+  check("los valores largos no se recortan en el PDF", ["Cruz 12", "45.000", "aprobada", "nueva"].every((t) => largo.includes(t)), "falta algún trozo");
+  check("el precio mínimo interno no sale en la captación", !largo.includes("230.000") && !largo.includes("Precio m\xednimo"));
+}
+const valFirmas = texto(pdfValoracion({ inmueble: { direccion: "Uría 12" } }, cuatro, { ...aj, firmaAgente: firma, firmaAgenteAncho: 8, firmaAgenteAlto: 6 }, "2026-09-26"));
+check("el informe de valoración lleva la firma bajo ASESORIA CASTRESANA INMO", valFirmas.includes("ASESORIA CASTRESANA INMO"));
 
 console.log("\n📷 /api/cerebro (leer documento con foto)");
 const resMock = () => { const r = { code: 0, body: null }; return { r, status(c) { r.code = c; return this; }, json(b) { r.body = b; return this; }, setHeader() {} }; };

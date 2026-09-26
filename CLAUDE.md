@@ -35,6 +35,11 @@ Reglas rápidas:
   - **Operaciones** de compraventa y alquiler por fases, con papeles, plazos legales, fechas en `.ics` y mensajes preparados.
   - **Informe de valoración** con comparables y PDF con la marca. Nunca inventa precios: sin 3 comparables no hay cifra.
   - **Mis papeles** con vencimientos y lectura de la fecha con foto (`api/_cerebro.js` → `/api/cerebro`, protegida con la clave de sincronización si hay Supabase).
+  - **Pisos** (fichas de captación de `cerebro/campos-piso.js`): dictado por voz y "Rellenar con Clara" (acción `ficha`), firma del propietario y **hoja de captación** en PDF, con desistimiento si se firma fuera de la oficina. Desde la ficha salen la hoja de visita con los datos del inmueble y la valoración.
+  - **Comparables con Clara** (acción `comparables`, Gemini y Google).
+  - **Valoraciones preparadas por Clara en el chat**, que llegan con la herramienta `preparar_valoracion` y un enlace `#importar=` (`cerebro/importar.js`).
+  - Todos los PDF llevan el logo de Asesoría Castresana y firmas bajo «ASESORIA CASTRESANA INMO». La firma del agente se guarda una vez en Ajustes.
+  - Enlace a **EstateScore AI** (`https://precious-panda-237987.netlify.app`, el analista de inversión de Pau).
 
   Módulos ES sin empaquetador. Generador de PDF propio (`cerebro/pdf.js`, sin dependencias). Datos solo en `localStorage`, con copia exportable. Los datos de dominio con fuentes están en `cerebro/operaciones-datos.js` y `cerebro/FUENTES-OPERACIONES.md`. Los textos legales de la hoja de visita son BORRADOR hasta que Pau los marca como revisados. Reglas en `cerebro/CLAUDE.md`, detalle en `cerebro/README.md` y guía para Pau en `cerebro/EMPEZAR-AQUI.md`. Tests: `test/cerebro-pdf.test.mjs`, `test/cerebro.test.mjs` y `test/cerebro.ui.test.mjs`.
 - **Equipo de Clara (subagentes de Claude Code)** en `.claude/agents/`:

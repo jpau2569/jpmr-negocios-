@@ -94,14 +94,36 @@ export function calculaValoracion(comparables, m2Sujeto) {
   return res;
 }
 
+/* Textos del informe preparados por NURIA (septiembre de 2026), sobre el
+   método de comparación de la Orden ECO/805/2003 (que para una tasación
+   oficial exige al menos 6 comparables). Aquí: con 3-5 hay cifra, pero se
+   marca como muestra reducida. */
+export const COMPARABLES_RECOMENDADOS = 6;
+
+const PLANTILLA_METODOLOGIA = "Este informe estima un rango de precio a partir de {n} inmuebles comparables de la misma zona y de características parecidas, sacados de {origen}. Para cada comparable se calcula el precio por metro cuadrado. Ordenados de menor a mayor, se toman la mediana (el valor central, que no se deja arrastrar por un anuncio muy caro o muy barato), el percentil 25 (una cuarta parte de los comparables está por debajo) y el percentil 75 (una cuarta parte está por encima). Así, la mitad central del mercado queda entre {p25} y {p75} €/m², con una mediana de {mediana} €/m². Multiplicados por la superficie de {superficie} m² de este inmueble, dan un rango orientativo de {rangoMin} a {rangoMax} €, con un valor central de {valorCentral} €. {ajusteTexto} Los comparables que son anuncios reflejan precios pedidos, no precios de venta. El precio medio de la zona según los portales se muestra solo como contexto y no entra en el cálculo.";
+
+const ORIGENES = { anuncio: 'anuncios publicados', venta: 'ventas cerradas', propio: 'testigos propios de la agencia', otro: 'otras fuentes' };
+const fmt = (n) => Math.round(n).toLocaleString('es-ES').replace(/(^|[^\d])(\d{4})(?=[^\d]|$)/g, (_, p, d) => `${p}${d[0]}.${d.slice(1)}`);
+
+/** Texto de «Cómo se ha calculado» con las cifras de este informe. */
+export function textoMetodologia(calculo) {
+  if (!calculo?.suficiente || !calculo.valor) return METODOLOGIA;
+  const origenes = [...new Set(calculo.validos.map((c) => ORIGENES[c.fuente] || ORIGENES.otro))];
+  const origen = origenes.length > 1 ? `${origenes.slice(0, -1).join(', ')} y ${origenes.at(-1)}` : origenes[0];
+  const conAjuste = calculo.validos.some((c) => c.ajuste);
+  return PLANTILLA_METODOLOGIA.replace(/\{(\w+)\}/g, (_, k) => ({
+    n: String(calculo.n), origen, p25: fmt(calculo.porM2.p25), p75: fmt(calculo.porM2.p75), mediana: fmt(calculo.porM2.mediana),
+    superficie: fmt(calculo.m2Sujeto), rangoMin: fmt(calculo.valor.bajo), rangoMax: fmt(calculo.valor.alto), valorCentral: fmt(calculo.valor.central),
+    ajusteTexto: conAjuste ? 'En algunos comparables el agente ha aplicado un ajuste (columna «Ajuste») porque este inmueble se diferencia de ellos en algún aspecto.' : '',
+  }[k] ?? ''))
+    .replace('Así, la mitad central del mercado queda entre', calculo.n < 4 ? 'Con menos de cuatro comparables no hay cuartiles que valgan, así que se usa el rango completo, del mínimo al máximo: entre' : 'Así, la mitad central del mercado queda entre')
+    .replace(/\s{2,}/g, ' ');
+}
+
 export const METODOLOGIA =
   'Método de comparación: se calcula el precio por metro cuadrado de cada comparable aportado por el agente ' +
   '(aplicando, si lo hay, el ajuste manual indicado en la tabla) y se toma la mediana como valor central. ' +
   'El rango orientativo va del percentil 25 al percentil 75 (o del mínimo al máximo si hay menos de cuatro ' +
   'comparables), multiplicado por la superficie del inmueble y redondeado a 500 €.';
 
-export const AVISO_VALORACION =
-  'Este informe es una estimación comercial orientativa elaborada únicamente con los comparables que figuran en él. ' +
-  'No es una tasación oficial (las tasaciones con validez hipotecaria solo las emiten sociedades de tasación ' +
-  'homologadas por el Banco de España) ni garantiza un precio de venta. Los precios de oferta de anuncios suelen ' +
-  'ser superiores a los de cierre.';
+export const AVISO_VALORACION = "Este documento es una estimación comercial de la agencia, basada en inmuebles comparables. No es una tasación oficial: no la ha hecho una sociedad de tasación homologada ni sigue la Orden ECO/805/2003. No sirve para pedir una hipoteca ni para trámites oficiales. Los precios de los anuncios son precios pedidos; el precio final de venta suele ser más bajo porque se negocia, y la diferencia depende de la zona, del estado del inmueble y del momento del mercado. El valor final lo fija lo que un comprador esté dispuesto a pagar; la agencia no garantiza vender a ningún precio concreto.";

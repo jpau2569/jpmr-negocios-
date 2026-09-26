@@ -75,7 +75,7 @@ main { flex: 1; padding: 16px 16px calc(96px + env(safe-area-inset-bottom)); out
 
 .pestanas {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(6, 1fr);
   max-width: 760px; margin: 0 auto;
   background: var(--tarjeta); border-top: 1px solid var(--linea);
   padding-bottom: env(safe-area-inset-bottom);
@@ -121,7 +121,7 @@ button.tarjeta { display: block; width: 100%; text-align: left; cursor: pointer;
 
 label { display: block; font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
 label .opc { font-weight: 400; color: var(--suave); }
-input[type=text], input[type=tel], input[type=email], input[type=number], input[type=date], input[type=time], input[type=password], input[type=search], select, textarea {
+input[type=text], input[type=url], input[type=tel], input[type=email], input[type=number], input[type=date], input[type=time], input[type=password], input[type=search], select, textarea {
   width: 100%; min-height: 46px; padding: 10px 12px; border-radius: 10px;
   border: 1px solid var(--linea); background: var(--tarjeta);
 }
@@ -190,4 +190,8 @@ a.suave, a.peq, .tarjeta a[href^="tel"], .aviso a { display: inline-flex; align-
 }
 @media print {
   .cabecera, .pestanas { display: none; }
+}
+/* Seis pestañas en un móvil estrecho: letra algo menor para que «Operaciones» quepa. */
+@media (max-width: 400px) {
+  .pestanas button { font-size: 10px; letter-spacing: -.3px; padding: 0 1px; }
 }

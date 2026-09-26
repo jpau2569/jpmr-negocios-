@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node test/enrutador.test.mjs && node test/clara.test.mjs && node test/castebot.test.mjs && node test/escaparate3d.test.mjs && node test/escaparate3d-pro.test.mjs && node test/chivato.test.mjs && node test/luxury-motion.test.mjs && node test/oportunidades.test.mjs && node test/fotos-faciles.test.mjs && node test/nicer-estudia.test.mjs && node test/cerebro-pdf.test.mjs && node test/cerebro.test.mjs",
+    "test": "node test/enrutador.test.mjs && node test/clara.test.mjs && node test/castebot.test.mjs && node test/escaparate3d.test.mjs && node test/escaparate3d-pro.test.mjs && node test/chivato.test.mjs && node test/luxury-motion.test.mjs && node test/oportunidades.test.mjs && node test/fotos-faciles.test.mjs && node test/nicer-estudia.test.mjs && node test/cerebro-pdf.test.mjs && node test/cerebro.test.mjs && node test/cerebro-api.test.mjs",
     "test:ui": "node test/ui.test.mjs && node test/clara-compartir.ui.test.mjs && node test/cerebro.ui.test.mjs && node test/nicer-estudia.ui.test.mjs"
   },
   "dependencies": {

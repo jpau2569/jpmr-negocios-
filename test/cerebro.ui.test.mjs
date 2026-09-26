@@ -28,8 +28,22 @@ const server = http.createServer(async (req, res) => {
   if (path === "/api/cerebro") {
     let cuerpo = "";
     for await (const t of req) cuerpo += t;
-    lecturas.push(JSON.parse(cuerpo));
+    const pedido = JSON.parse(cuerpo);
+    lecturas.push(pedido);
     res.writeHead(200, { "content-type": "application/json" });
+    if (pedido.accion === "ficha") {
+      res.end(JSON.stringify({ ok: true, dudas: ["No has dicho la orientación"], enlace: { leido: false },
+        ficha: { direccion: "C/ Uría 12", planta: "3º B", municipio: "Oviedo", zona: "Centro", tipo: "Piso", operacion: "Venta", precio: 245000, m2Construidos: 95, habitaciones: 3, banos: 2, ascensor: "Sí", garaje: "No", propNombre: "Luis Pérez García", propTelefono: "600222333", tipoEncargo: "Exclusiva", honorarios: "3 % + IVA", duracion: "6 meses", inventado: "no debe entrar" } }));
+      return;
+    }
+    if (pedido.accion === "comparables") {
+      res.end(JSON.stringify({ ok: true, comparables: [
+        { direccion: "Piso en Uría 20", precio: 250000, m2: 95, url: "https://www.idealista.com/inmueble/1/", fuente: "idealista" },
+        { direccion: "Piso en Campoamor", precio: 230000, m2: 90, url: "https://www.fotocasa.es/2", fuente: "fotocasa" },
+        { direccion: "Piso en Pelayo", precio: 275000, m2: 100, url: "javascript:alert(1)", fuente: "raro" },
+      ] }));
+      return;
+    }
     res.end(JSON.stringify({ ok: true, lectura: { legible: true, tipo: "itv", titulo: "ITV Seat León 1234ABC", vence: "2027-03-14", otras_fechas: [{ que: "Inspección", fecha: "2026-03-14" }], notas: "Estación de Lugones" } }));
     return;
   }
@@ -57,7 +71,7 @@ console.log("\n🏠 Arranque");
 await page.goto(URL_APP);
 await page.waitForSelector("h1");
 check("abre en Hoy con saludo", /Buen(os|as) (días|tardes|noches)/.test(await page.textContent("h1")));
-check("cinco pestañas", (await page.locator(".pestanas button").count()) === 5);
+check("seis pestañas", (await page.locator(".pestanas button").count()) === 6);
 check("sin desborde a 390 px", await sinDesborde());
 
 console.log("\n✍️ Hoja de visita");
@@ -206,6 +220,104 @@ await page.click('.pestanas button[data-ir="visitas"]');
 await page.waitForFunction(() => document.querySelector("#lista-visitas"), null, { timeout: 5000 }).catch(() => {});
 check("y se ven las visitas guardadas", (await page.textContent("#vista")).includes("Ana García López"));
 await context.setOffline(false);
+
+console.log("\n🏘️ Pisos: captación con Clara, firmas y documentos");
+await page.goto(URL_APP + "#ajustes");
+await page.waitForSelector("#aj-firma");
+const firmar = async (selector) => {
+  await page.locator(selector).scrollIntoViewIfNeeded();
+  const b = await page.locator(selector).boundingBox();
+  await page.mouse.move(b.x + 20, b.y + 80); await page.mouse.down();
+  for (let i = 1; i <= 12; i++) await page.mouse.move(b.x + 20 + i * 20, b.y + 80 - Math.sin(i / 2) * 40);
+  await page.mouse.up();
+};
+await firmar("#aj-firma");
+await page.click("#aj-guarda-firma");
+await page.waitForSelector("#aj-refirmar");
+check("la firma del agente queda guardada en Ajustes", (await estado()).ajustes.firmaAgente.startsWith("data:image/jpeg"));
+check("encabezado de firmas por defecto «ASESORIA CASTRESANA INMO»", (await page.inputValue("#aj-encabezadoFirmas")) === "ASESORIA CASTRESANA INMO");
+
+await page.goto(URL_APP + "#piso/nuevo");
+await page.waitForSelector("#pf-rellenar");
+check("ficha nueva con la dirección limpia (sin /nuevo)", /#piso\/piso-/.test(page.url()));
+await page.fill("#pf-dictado", "Piso en Uría 12, tercero B, Oviedo centro, 95 metros, tres habitaciones, dos baños, con ascensor, 245.000 euros. Propietario Luis Pérez García, exclusiva, 3 % más IVA, seis meses.");
+await page.click("#pf-rellenar");
+await page.waitForFunction(() => document.querySelector("#pf-estado")?.textContent.includes("He rellenado"), null, { timeout: 5000 }).catch(() => {});
+check("Clara rellena la ficha y avisa de revisar y de sus dudas", (await page.textContent("#pf-estado")).includes("Revísalos") && (await page.textContent("#pf-estado")).includes("orientación"));
+check("campos rellenos en el formulario", (await page.inputValue("#pf-direccion")) === "C/ Uría 12" && (await page.inputValue("#pf-precio")) === "245000" && (await page.inputValue("#pf-ascensor")) === "Sí");
+const piso1 = (await estado()).pisos.at(-1);
+check("lo inventado no entra en la ficha guardada", piso1.inventado === undefined && piso1.propNombre === "Luis Pérez García");
+check("el dictado viaja al servidor con la clave", lecturas.at(-1).accion === "ficha" && lecturas.at(-1).texto.includes("tercero B") && lecturas.at(-1).clave === "mi-clave");
+await page.fill("#pf-m2Utiles", "85.5");
+await page.locator("#pf-comunidad").evaluate((el) => { el.closest("details").open = true; });
+await page.fill("#pf-comunidad", "45.50");
+await page.waitForTimeout(600);
+check("decimales guardados tal cual (85,5 m² y 45,50 €)", (await estado()).pisos.at(-1).m2Utiles === 85.5 && (await estado()).pisos.at(-1).comunidad === 45.5);
+// Rellenar otra vez no machaca lo escrito: avisa del choque y deja elegir.
+await page.fill("#pf-precio", "250000");
+await page.waitForTimeout(500);
+await page.fill("#pf-dictado", "Otra vez los datos");
+await page.click("#pf-rellenar");
+await page.waitForSelector("[data-acepta]", { timeout: 5000 }).catch(() => {});
+check("Rellenar con Clara no cambia lo que Pau ya tenía y lo enseña", (await estado()).pisos.at(-1).precio === 250000 && (await page.textContent("#pf-estado")).includes("tú tenías «250000»"));
+await page.click('[data-acepta="precio"]');
+check("…y con un toque se acepta lo de Clara", (await estado()).pisos.at(-1).precio === 245000);
+await page.locator("#pf-lugarFirma").evaluate((el) => { el.closest("details").open = true; });
+await page.selectOption("#pf-lugarFirma", "Fuera de la oficina");
+await page.fill("#pf-precioMinimo", "230000");
+await firmar("#pf-firma");
+// Sin pulsar «Guardar firma»: al sacar el PDF la firma se guarda sola.
+const [capSinGuardar] = await Promise.all([page.waitForEvent("download"), page.click("#pf-captacion-desc")]);
+const pdfSinGuardar = (await readFile(await capSinGuardar.path())).toString("latin1");
+check("una firma sin guardar se guarda sola al sacar el PDF y sale en él", (await estado()).pisos.at(-1).firmaPropietario.startsWith("data:image/jpeg") && (pdfSinGuardar.match(/\/DCTDecode/g) || []).length >= 3);
+await page.reload();
+await page.waitForSelector("#pf-refirmar");
+check("firma del propietario guardada", (await estado()).pisos.at(-1).firmaPropietario.startsWith("data:image/jpeg"));
+const [cap] = await Promise.all([page.waitForEvent("download"), page.click("#pf-captacion-desc")]);
+const capPdf = (await readFile(await cap.path())).toString("latin1");
+check("hoja de captación en PDF con el logo y dos firmas", capPdf.startsWith("%PDF") && (capPdf.match(/\/DCTDecode/g) || []).length >= 3);
+check("encabezado de firmas «ASESORIA CASTRESANA INMO»", capPdf.includes("ASESORIA CASTRESANA INMO"));
+check("firmado fuera de la oficina → incluye el desistimiento", capPdf.includes("DERECHO DE DESISTIMIENTO"));
+check("el precio mínimo interno NO sale en el PDF", !capPdf.includes("230.000") && !capPdf.includes("Precio m\xednimo"));
+
+await page.click('a[href^="#nueva-visita/"]');
+await page.waitForSelector("#v-piso");
+check("la hoja de visita llega con el piso elegido", (await page.inputValue("#v-inmueble")).includes("Uría 12"));
+await page.fill("#v-nombre", "Marta Visitante");
+await page.check("#v-rgpd");
+await firmar("#v-firma");
+await page.click('#form-visita button[type="submit"]');
+await page.waitForFunction(() => location.hash.startsWith("#visita/"));
+const vis = (await estado()).visitas.at(-1);
+check("la visita guarda la copia de los datos del piso (sin propietario)", vis.piso?.m2Construidos === 95 && vis.piso?.propNombre === undefined && vis.pisoId === piso1.id);
+const [visPdfDesc] = await Promise.all([page.waitForEvent("download"), page.click("#v-descargar")]);
+const visPdf = (await readFile(await visPdfDesc.path())).toString("latin1");
+check("PDF de visita con datos del inmueble, logo y firmas encabezadas", visPdf.includes("DATOS DEL INMUEBLE") && visPdf.includes("ASESORIA CASTRESANA INMO") && (visPdf.match(/\/DCTDecode/g) || []).length >= 3);
+
+await page.goto(URL_APP + "#piso/" + piso1.id);
+await page.waitForSelector("#pf-valorar");
+await page.click("#pf-valorar");
+await page.waitForFunction(() => location.hash.startsWith("#valoracion/"));
+check("valorar el piso rellena el inmueble", (await page.inputValue("#vi-municipio")) === "Oviedo" && (await page.inputValue("#vi-m2")) === "95");
+await page.click("#val-buscar");
+await page.waitForSelector("#val-anade-cand", { timeout: 5000 }).catch(() => {});
+check("Clara propone comparables y avisa de que son precios de oferta", (await page.textContent("#val-candidatos")).includes("OFERTA") && (await page.locator("[data-cand]").count()) === 3);
+check("un enlace no https no se convierte en enlace", (await page.locator('#val-candidatos a[href^="javascript"]').count()) === 0);
+await page.click("#val-anade-cand");
+await page.waitForFunction(() => document.querySelector("#val-resultado")?.textContent.includes("Rango"), null, { timeout: 5000 }).catch(() => {});
+check("con 3 comparables hay rango, marcado como muestra reducida", (await page.textContent("#val-resultado")).includes("Muestra reducida"));
+check("referencia de zona de Oviedo como contexto", (await page.textContent("#val-resultado")).includes("Referencia de zona"));
+
+const { enlaceImportacion } = await import("../cerebro/importar.js");
+const enlace = enlaceImportacion(`http://localhost:${PORT}`, { v: 1, tipo: "valoracion", datos: { inmueble: { direccion: "Gijón, calle Corrida 5", municipio: "Gijón", m2: 80 }, propietario: "<b>Eva</b>",
+  comparables: [{ direccion: "A", fuente: "anuncio", precio: 200000, m2: 80, notas: "https://x.es/1" }, { direccion: "B", fuente: "anuncio", precio: 210000, m2: 82 }, { direccion: "C", fuente: "venta", precio: 190000, m2: 78 }] } });
+await page.goto(enlace);
+await page.waitForFunction(() => location.hash.startsWith("#valoracion/"), null, { timeout: 5000 }).catch(() => {});
+check("el enlace de Clara abre la valoración lista", (await page.inputValue("#vi-direccion")) === "Gijón, calle Corrida 5" && (await page.textContent("#val-resultado")).includes("Rango"));
+check("lo que viene en el enlace se pinta como texto", (await page.inputValue("#vi-prop")) === "<b>Eva</b>");
+const basura = await page.goto(`http://localhost:${PORT}/cerebro/app.html#importar=%%%basura`);
+await page.waitForTimeout(300);
+check("un enlace roto no rompe la app", (await page.locator(".pestanas").count()) === 1);
 
 console.log("\n📐 Anchos");
 for (const [w, hgt] of [[360, 740], [768, 1024], [1366, 900]]) {
