@@ -15,7 +15,8 @@ import memoria from "../api/_memoria.js";
 import lead from "../api/_lead.js";
 import leads from "../api/_leads.js";
 import { parsearInmuebles, resumenCartera } from "../lib/cartera.js";
-import { SKILLS_BASE, catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
+import { SKILLS_BASE, catalogoSkills, leerSkill, guardarSkill, parsearSkillMd, skillsDeArchivo } from "../lib/skills.js";
+import { leerConectores, piezasMcp, textoConectores } from "../lib/conectores.js";
 
 let pasados = 0;
 let fallados = 0;
@@ -409,7 +410,15 @@ check("hay 4 skills base", Object.keys(SKILLS_BASE).length === 4);
 check("skill de ebooks con método Higgsfield", (await leerSkill("", "ebook-lead-magnet")).includes("Higgsfield"));
 check("skill de apps móviles (PWA primero)", (await leerSkill("", "app-movil-profesional")).includes("PWA"));
 check("skill de webs 3D (Three.js)", (await leerSkill("", "web-3d-profesional")).includes("Three.js"));
-check("catálogo sin nube: solo las base", (await catalogoSkills("")).length === 4);
+const catSinNube = await catalogoSkills("");
+check("catálogo sin nube: base + SKILL.md", catSinNube.filter((x) => x.origen === "base").length === 4 && catSinNube.some((x) => x.origen === "SKILL.md" && x.nombre === "ficha-portal-inmobiliario"));
+check("toda carpeta de skills/ tiene un SKILL.md válido con su mismo nombre", (await import("node:fs")).readdirSync("skills", { withFileTypes: true }).filter((d) => d.isDirectory()).every((d) => skillsDeArchivo()[d.name]));
+check("lee una skill SKILL.md", (await leerSkill("", "mensajes-clientes")).includes("WhatsApp"));
+check("parsearSkillMd lee name y description", parsearSkillMd("---\nname: prueba-uno\ndescription: \"Sirve para X\"\n---\n# Hola").descripcion === "Sirve para X");
+check("parsearSkillMd rechaza sin cabecera o nombre malo", parsearSkillMd("# sin cabecera") === null && parsearSkillMd("---\nname: Mal Nombre\ndescription: x\n---\nz") === null);
+let chocoArchivo = "";
+try { await guardarSkill("mi-clave-sync", "mensajes-clientes", "x", "y"); } catch (e) { chocoArchivo = e.message; }
+check("no deja sobrescribir una skill SKILL.md", chocoArchivo.includes("carpeta skills/"));
 let choco = "";
 try { await guardarSkill("mi-clave-sync", "ebook-lead-magnet", "x", "y".repeat(60)); } catch (e) { choco = e.message; }
 check("no deja sobrescribir una skill base", choco.includes("no se puede sobrescribir"));
@@ -626,6 +635,44 @@ check("sin leads → mensaje claro", resumenLeads([]).includes("Todavía no hay 
 const rl = resumenLeads([{ id: 2, email: "ana@test.com", nombre: "Ana", telefono: null }, { id: 1, email: "luis@test.com", nombre: "" }]);
 check("resume leads omitiendo campos vacíos", rl.includes("Leads registrados: 2") && rl.includes("email: ana@test.com") && !rl.includes("telefono") && !rl.includes("nombre: ·"), rl);
 check("acota el número de leads", resumenLeads(Array.from({ length: 40 }, (_, i) => ({ id: i })), 25).split("\n").filter((l) => /^\d+\./.test(l)).length === 25);
+
+console.log("\n— conectores MCP —");
+check("sin CLARA_CONECTORES no hay conectores", leerConectores({}).conectores.length === 0);
+check("JSON roto → aviso, sin romper", leerConectores({ CLARA_CONECTORES: "{no" }).avisos[0].includes("JSON"));
+const cx = leerConectores({
+  CLARA_CONECTORES: JSON.stringify([
+    { nombre: "Notion", url: "https://mcp.example.com/mcp", token_env: "TOK_N", descripcion: "Notas" },
+    { nombre: "malo", url: "http://inseguro.example.com" },
+    { nombre: "cal", url: "https://cal.example.com/mcp", herramientas: ["listar_eventos"] },
+  ]),
+  TOK_N: "secreto-123",
+});
+check("valida nombres, https y lee el token de otra variable", cx.conectores.length === 2 && cx.conectores[0].nombre === "notion" && cx.conectores[0].token === "secreto-123" && cx.avisos.some((a) => a.includes("https")));
+const px = piezasMcp(cx.conectores);
+check("mcp_servers con token solo donde lo hay", px.mcp_servers[0].authorization_token === "secreto-123" && !("authorization_token" in px.mcp_servers[1]));
+check("lista blanca de herramientas", px.tools[1].default_config.enabled === false && px.tools[1].configs.listar_eventos.enabled === true);
+check("el texto de sistema no filtra tokens y pide confirmación", !textoConectores(cx.conectores).includes("secreto") && textoConectores(cx.conectores).includes("confirmación"));
+
+{
+  const peticiones = [];
+  globalThis.fetch = async (url, init) => {
+    peticiones.push({ url: String(url), body: JSON.parse(init.body), headers: init.headers });
+    return new Response(JSON.stringify({ id: "m", type: "message", role: "assistant", model: "claude-sonnet-5", content: [{ type: "text", text: "Hecho" }], stop_reason: "end_turn", usage: { input_tokens: 1, output_tokens: 1 } }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  process.env.CLARA_CONECTORES = JSON.stringify([{ nombre: "notion", url: "https://mcp.example.com/mcp", token: "tok-x" }]);
+  let rr = mockRes();
+  await handler({ method: "POST", body: { messages: [{ role: "user", content: "Mira mis notas" }] } }, rr);
+  const p0 = peticiones[0];
+  const cab = p0 && (p0.headers instanceof Headers ? p0.headers.get("anthropic-beta") : new Headers(p0.headers).get("anthropic-beta"));
+  check("con conector: va por la API beta con mcp-client", rr.r.body?.reply === "Hecho" && String(cab).includes("mcp-client-2025-11-20"), String(cab));
+  check("con conector: manda mcp_servers y su mcp_toolset", p0.body.mcp_servers?.[0]?.name === "notion" && p0.body.tools.some((t) => t.type === "mcp_toolset" && t.mcp_server_name === "notion"));
+  delete process.env.CLARA_CONECTORES;
+  peticiones.length = 0;
+  rr = mockRes();
+  await handler({ method: "POST", body: { messages: [{ role: "user", content: "Hola" }] } }, rr);
+  check("sin conector: petición normal, sin beta ni mcp_servers", !peticiones[0].body.mcp_servers && !new Headers(peticiones[0].headers).get("anthropic-beta"));
+  globalThis.fetch = realFetch;
+}
 
 // ---------------------------------------------------------------------------
 console.log(`\nResultado: ${pasados} pasados, ${fallados} fallados.\n`);

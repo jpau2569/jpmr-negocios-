@@ -14,6 +14,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { obtenerCartera, resumenCartera } from "../lib/cartera.js";
 import { nubeConfigurada, leerMemoria, apuntarNota, rpc } from "../lib/memoria.js";
 import { leerWeb } from "../lib/leerweb.js";
+import { BETA_MCP, leerConectores, piezasMcp, textoConectores } from "../lib/conectores.js";
 import { catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
 
 // Permite emitir la respuesta en streaming (res.write) en Vercel.
@@ -207,7 +208,7 @@ Con la nube activa tienes la herramienta "mis_leads", que lee los contactos que 
 Pau puede adjuntarte fotos (por ejemplo, de un inmueble o de un documento) y PDFs con el clip 📎 del chat. Cuando llegue un adjunto, analízalo de verdad: describe lo que ves, señala lo relevante y da recomendaciones concretas (en fotos de pisos: luz, orden, encuadre, qué mejorar para el anuncio; en documentos: resumen y puntos de atención). Si Pau habla de "la foto" o "el documento" y no ha llegado ningún adjunto, pídele que lo adjunte con el clip.
 
 ## Sistema de skills (usar_skill y crear_skill)
-Tienes una biblioteca de skills: manuales expertos que elevan tu nivel en tareas concretas. Antes de una tarea especializada, consulta el catálogo con la herramienta "usar_skill" (sin nombre) y carga la que aplique (con nombre): "ebook-lead-magnet" para ebooks/lead magnets/dossieres en PDF con el método Claude + Higgsfield; "app-movil-profesional" para apps móviles; "web-3d-profesional" para webs con 3D real; "crear-skills" para diseñar skills nuevas. Sigue la skill cargada al pie de la letra. Si Pau pide una tarea recurrente sin skill (o te pide crear una), usa "crear_skill" siguiendo el formato de "crear-skills": queda guardada para siempre en tu nube y debes aplicarla en esa misma respuesta. Cuando entregues un HTML completo (ebook, web, app), el chat le ofrece a Pau un botón para descargarlo como archivo.
+Tienes una biblioteca de skills: manuales expertos que elevan tu nivel en tareas concretas. Antes de una tarea especializada, consulta el catálogo con la herramienta "usar_skill" (sin nombre) y carga la que aplique (con nombre): "ebook-lead-magnet" para ebooks/lead magnets/dossieres en PDF con el método Claude + Higgsfield; "app-movil-profesional" para apps móviles; "web-3d-profesional" para webs con 3D real; "crear-skills" para diseñar skills nuevas; además, las skills en formato SKILL.md de la carpeta skills/ (por ejemplo "ficha-portal-inmobiliario" y "mensajes-clientes") y las que hayas creado tú. Si Pau te pasa el enlace de un SKILL.md, léelo con leer_web, adáptalo a su contexto y guárdalo con crear_skill. Sigue la skill cargada al pie de la letra. Si Pau pide una tarea recurrente sin skill (o te pide crear una), usa "crear_skill" siguiendo el formato de "crear-skills": queda guardada para siempre en tu nube y debes aplicarla en esa misma respuesta. Cuando entregues un HTML completo (ebook, web, app), el chat le ofrece a Pau un botón para descargarlo como archivo.
 
 ## Método CLARA de excelencia (cómo trabajas en todo lo que te pidan)
 1. Entiende el objetivo real: qué quiere conseguir Pau, no solo lo que ha escrito. Si falta un dato imprescindible, pregúntalo en una sola tanda (máximo 3 preguntas) o propón un valor por defecto razonable y avanza.
@@ -488,6 +489,11 @@ export default async function handler(req, res) {
     system.push({ type: "text", text: MODES[mode] });
   }
 
+  // Conectores (servidores MCP remotos) configurados en Vercel con CLARA_CONECTORES.
+  const { conectores, avisos: avisosConectores } = leerConectores();
+  if (avisosConectores.length) console.warn("Conectores de Clara:", avisosConectores.join("; "));
+  if (conectores.length) system.push({ type: "text", text: textoConectores(conectores) });
+
   const request = {
     model: MODEL,
     max_tokens: 8000,
@@ -592,13 +598,24 @@ export default async function handler(req, res) {
     });
   }
 
+  // Con conectores, la petición va por la API beta con el conector MCP; sin
+  // ellos, todo sigue exactamente igual que antes.
+  const client = new Anthropic();
+  let api = client.messages;
+  if (conectores.length) {
+    const mcp = piezasMcp(conectores);
+    request.mcp_servers = mcp.mcp_servers;
+    request.tools.push(...mcp.tools);
+    request.betas = [BETA_MCP];
+    api = client.beta.messages;
+  }
+
   const RESPUESTA_RECHAZO =
     "Lo siento, Pau, no puedo ayudarte con eso. ¿Quieres que lo enfoquemos de otra manera?";
   const RESPUESTA_LIMITE =
     "Uf, esto me ha llevado demasiados pasos y no he conseguido cerrarlo. ¿Puedes reformular la pregunta o darme un poco más de contexto? Así lo resuelvo mejor.";
 
   try {
-    const client = new Anthropic();
     let convo = history;
 
     // ---- Modo streaming (SSE): el texto va llegando al chat según se genera ----
@@ -613,13 +630,23 @@ export default async function handler(req, res) {
       try {
         let response = null;
         for (let ronda = 0; ronda <= MAX_TOOL_ROUNDS; ronda++) {
-          const flujo = client.messages.stream({ ...request, messages: convo });
+          const flujo = api.stream({ ...request, messages: convo });
           flujo.on("text", (delta) => {
             completo += delta;
             emite({ t: delta });
           });
+          flujo.on("streamEvent", (ev) => {
+            const b = ev?.type === "content_block_start" ? ev.content_block : null;
+            if (b?.type === "mcp_tool_use") emite({ estado: `🔌 Usando ${b.server_name}…` });
+          });
           response = await flujo.finalMessage();
-          if (response.stop_reason !== "tool_use" || ronda === MAX_TOOL_ROUNDS) break;
+          if (ronda === MAX_TOOL_ROUNDS) break;
+          // Turno largo de un conector pausado: se devuelve tal cual para que siga.
+          if (response.stop_reason === "pause_turn") {
+            convo = [...convo, { role: "assistant", content: response.content }];
+            continue;
+          }
+          if (response.stop_reason !== "tool_use") break;
 
           const toolUses = response.content.filter((b) => b.type === "tool_use");
           const toolResults = [];
@@ -644,7 +671,7 @@ export default async function handler(req, res) {
         let reply;
         if (completo.trim()) reply = completo.trim();
         else if (response?.stop_reason === "refusal") reply = RESPUESTA_RECHAZO;
-        else if (response?.stop_reason === "tool_use") reply = RESPUESTA_LIMITE; // se agotaron las rondas
+        else if (response?.stop_reason === "tool_use" || response?.stop_reason === "pause_turn") reply = RESPUESTA_LIMITE; // se agotaron las rondas
         else reply = RESPUESTA_RECHAZO;
         emite({ done: true, reply });
       } catch (e) {
@@ -655,9 +682,18 @@ export default async function handler(req, res) {
     }
 
     // ---- Modo clásico (JSON): se responde de una pieza al terminar ----
-    let response = await client.messages.create({ ...request, messages: convo });
+    let response = await api.create({ ...request, messages: convo });
 
-    for (let round = 0; round < MAX_TOOL_ROUNDS && response.stop_reason === "tool_use"; round++) {
+    for (
+      let round = 0;
+      round < MAX_TOOL_ROUNDS && (response.stop_reason === "tool_use" || response.stop_reason === "pause_turn");
+      round++
+    ) {
+      if (response.stop_reason === "pause_turn") {
+        convo = [...convo, { role: "assistant", content: response.content }];
+        response = await api.create({ ...request, messages: convo });
+        continue;
+      }
       const toolUses = response.content.filter((b) => b.type === "tool_use");
       const toolResults = [];
       for (const tu of toolUses) {
@@ -674,7 +710,7 @@ export default async function handler(req, res) {
         { role: "assistant", content: response.content },
         { role: "user", content: toolResults },
       ];
-      response = await client.messages.create({ ...request, messages: convo });
+      response = await api.create({ ...request, messages: convo });
     }
 
     const reply = response.content
@@ -689,7 +725,7 @@ export default async function handler(req, res) {
     if (!reply) {
       // Sin texto y aún pidiendo herramientas = se agotaron las rondas, no un rechazo.
       return res.status(200).json({
-        reply: response.stop_reason === "tool_use" ? RESPUESTA_LIMITE : RESPUESTA_RECHAZO,
+        reply: ["tool_use", "pause_turn"].includes(response.stop_reason) ? RESPUESTA_LIMITE : RESPUESTA_RECHAZO,
       });
     }
 
