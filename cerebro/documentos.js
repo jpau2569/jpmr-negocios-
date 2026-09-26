@@ -5,7 +5,7 @@
    Funciones puras: entran datos, sale un Uint8Array con el PDF.
    ═══════════════════════════════════════════════════════════════════ */
 
-import { A4, nuevoPdf, partirTexto } from './pdf.js';
+import { A4, anchoTexto, nuevoPdf, partirTexto } from './pdf.js';
 import { euros, fechaCorta, fechaLarga, numero } from './utiles.js';
 import { bytesDeDataUrl, declaracionDe } from './visitas.js';
 import { AVISO_VALORACION, FUENTES_COMPARABLE, METODOLOGIA, eurosM2 } from './valoracion.js';
@@ -22,7 +22,9 @@ const LIMITE = A4.alto - 80; // por encima del aviso de BORRADOR y del pie
 function cabecera(doc, ajustes, titulo, subtitulo) {
   doc.rect(0, 0, A4.ancho, 92, { relleno: MARINO });
   doc.rect(0, 92, A4.ancho, 4, { relleno: DORADO });
-  doc.texto(M, 40, partirTexto(ajustes.empresa || 'Asesoría Castresana', ANCHO - 210, 15, true)[0] || '', { tam: 15, negrita: true, color: [255, 255, 255] });
+  // La empresa ocupa lo que deje libre el título de cada documento.
+  const hueco = ANCHO - anchoTexto(titulo, 13, true) - 16;
+  doc.texto(M, 40, partirTexto(ajustes.empresa || 'Asesoría Castresana', hueco, 15, true)[0] || '', { tam: 15, negrita: true, color: [255, 255, 255] });
   doc.texto(M, 60, [ajustes.ciudad, ajustes.telefono && `Tel. ${ajustes.telefono}`, ajustes.web].filter(Boolean).join('  ·  '), { tam: 9, color: [215, 220, 230] });
   doc.texto(A4.ancho - M, 40, titulo, { tam: 13, negrita: true, color: DORADO, alinear: 'derecha' });
   if (subtitulo) doc.texto(A4.ancho - M, 60, subtitulo, { tam: 9, color: [215, 220, 230], alinear: 'derecha' });

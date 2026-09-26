@@ -522,7 +522,7 @@ function pintaOperacion(id) {
     ${plazosDe(op).length ? `<details class="tarjeta"><summary>⏱️ Calcular plazos legales</summary>
       <p class="suave peq">Pon la fecha de inicio y te calculo la fecha límite. Los días hábiles no descuentan festivos: compruébalo si cae cerca de uno.</p>
       ${plazosDe(op).map((pl, i) => `<div style="border-top:1px solid var(--linea);padding-top:8px;margin-top:8px">
-        <strong>${h(pl.nombre)}</strong><div class="suave peq">${pl.dias} días ${pl.tipoDias === 'habiles' ? 'hábiles' : 'naturales'} desde: ${h(pl.desde)}${pl.fuente ? ` · <a href="${h(pl.fuente)}" target="_blank" rel="noopener">fuente</a>` : ''}</div>
+        <strong>${h(pl.nombre)}</strong><div class="suave peq">${pl.dias} días ${pl.tipoDias === 'habiles' ? 'hábiles' : 'naturales'} desde: ${h(pl.desde)}${pl.fuente ? ` · <a class="peq" href="${h(pl.fuente)}" target="_blank" rel="noopener">fuente</a>` : ''}</div>
         <div class="fila"><input type="date" class="crece" data-plazo-base="${i}" aria-label="Fecha de inicio de ${h(pl.nombre)}" />
         <button class="btn" data-plazo="${i}">Añadir</button></div></div>`).join('')}
     </details>` : ''}

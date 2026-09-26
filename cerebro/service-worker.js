@@ -6,7 +6,7 @@
    Al tocar cualquier archivo de la lista: súbelo aquí y sube VERSION.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'cerebro-v1.0.1';
+const VERSION = 'cerebro-v1.0.2';
 const RECURSOS = [
   './', './index.html', './app.html', './styles.css', './app.js', './utiles.js', './datos.js',
   './calendario.js', './firma.js', './pdf.js', './documentos.js', './visitas.js', './operaciones.js',
@@ -34,6 +34,9 @@ self.addEventListener('activate', (e) => {
 // Red primero (así Pau siempre ve la última versión), pero con tiempo máximo:
 // con una cobertura que ni conecta ni falla (sótanos, garajes) se abre la
 // copia guardada a los 3 segundos en vez de quedarse en blanco.
+// Tras una red lenta, 30 s sirviendo de la caché: si no, la espera se sumaría
+// archivo a archivo (app.html → app.js → módulos) y tardaría ~12 s en abrir.
+let redLentaHasta = 0;
 const conTiempo = (promesa, ms) => Promise.race([promesa, new Promise((_, no) => setTimeout(() => no(new Error('lento')), ms))]);
 
 self.addEventListener('fetch', (e) => {
@@ -47,9 +50,14 @@ self.addEventListener('fetch', (e) => {
       }
       return resp;
     });
+    if (Date.now() < redLentaHasta) {
+      const g = await caches.match(e.request, { ignoreSearch: true });
+      if (g) { red.catch(() => {}); return g; }
+    }
     try {
       return await conTiempo(red, 3000);
     } catch {
+      redLentaHasta = Date.now() + 30000;
       const guardada = await caches.match(e.request, { ignoreSearch: true });
       if (guardada) return guardada;
       if (e.request.mode === 'navigate') {
