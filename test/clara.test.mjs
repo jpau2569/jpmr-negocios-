@@ -16,7 +16,9 @@ import lead from "../api/_lead.js";
 import leads from "../api/_leads.js";
 import { parsearInmuebles, resumenCartera } from "../lib/cartera.js";
 import { SKILLS_BASE, catalogoSkills, leerSkill, guardarSkill, parsearSkillMd, skillsDeArchivo } from "../lib/skills.js";
-import { leerConectores, piezasMcp, textoConectores } from "../lib/conectores.js";
+import { leerConectores, piezasMcp, textoConectores, secretoPuente } from "../lib/conectores.js";
+import { consultarModelo } from "../lib/openrouter.js";
+import puente from "../api/_mcp-puente.js";
 
 let pasados = 0;
 let fallados = 0;
@@ -682,6 +684,62 @@ check("el texto de sistema no filtra tokens y pide confirmación", !textoConecto
   rr = mockRes();
   await handler({ method: "POST", body: { messages: [{ role: "user", content: "Hola" }] } }, rr);
   check("sin conector: petición normal, sin beta ni mcp_servers", !peticiones[0].body.mcp_servers && !new Headers(peticiones[0].headers).get("anthropic-beta"));
+  globalThis.fetch = realFetch;
+}
+
+console.log("\n— segunda_opinion (OpenRouter) —");
+check("sin clave → aviso claro", (await consultarModelo({ pregunta: "hola" }, {})).includes("OPENROUTER_API_KEY"));
+check("nombre de modelo raro → rechazado sin llamar", (await consultarModelo({ pregunta: "hola", modelo: "gpt5; rm -rf" }, { OPENROUTER_API_KEY: "k" })).includes("no es válido"));
+{
+  const llamadas = [];
+  globalThis.fetch = async (url, init) => {
+    llamadas.push({ url: String(url), init, body: JSON.parse(init.body) });
+    if (JSON.parse(init.body).model === "sin/saldo") return new Response(JSON.stringify({ error: { message: "no credits" } }), { status: 402 });
+    return new Response(JSON.stringify({ model: "google/gemini-x", choices: [{ message: { content: "Coincido: la rentabilidad bruta ronda el 8 %." } }] }), { status: 200 });
+  };
+  const r = await consultarModelo({ pregunta: "¿Es buena esta inversión?", contexto: "Piso 98.000 €, alquiler 650 €" }, { OPENROUTER_API_KEY: "k-or" });
+  check("llama a OpenRouter con Bearer y openrouter/auto por defecto", llamadas[0].url === "https://openrouter.ai/api/v1/chat/completions" && llamadas[0].init.headers.Authorization === "Bearer k-or" && llamadas[0].body.model === "openrouter/auto");
+  check("manda contexto y pregunta", JSON.stringify(llamadas[0].body.messages).includes("98.000") && llamadas[0].body.messages.at(-1).content.includes("inversión"));
+  check("devuelve la respuesta con el modelo usado", r.includes("google/gemini-x") && r.includes("rentabilidad bruta"));
+  check("sin saldo (402) → mensaje claro", (await consultarModelo({ pregunta: "x", modelo: "sin/saldo" }, { OPENROUTER_API_KEY: "k" })).includes("saldo"));
+  globalThis.fetch = realFetch;
+}
+
+console.log("\n— puente MCP (conectores con cabecera propia, p. ej. Composio) —");
+{
+  const entorno = {
+    CLARA_CONECTORES: JSON.stringify([{ nombre: "composio", url: "https://backend.composio.example/v3/mcp/abc?user_id=pau", cabeceras: { "x-api-key": "COMPOSIO_API_KEY" } }]),
+    COMPOSIO_API_KEY: "clave-composio",
+    VERCEL_PROJECT_PRODUCTION_URL: "jpmr-negocios.vercel.app",
+  };
+  Object.assign(process.env, entorno);
+  const cx2 = leerConectores();
+  const c0 = cx2.conectores[0];
+  check("conector con cabeceras → Claude ve la url del puente, no la real", c0?.url === "https://jpmr-negocios.vercel.app/api/mcp-puente?c=composio" && !JSON.stringify(piezasMcp(cx2.conectores)).includes("clave-composio") && !JSON.stringify(piezasMcp(cx2.conectores)).includes("backend.composio"));
+  check("Claude se identifica con el secreto del puente", piezasMcp(cx2.conectores).mcp_servers[0].authorization_token === secretoPuente());
+
+  const reenvios = [];
+  globalThis.fetch = async (url, init) => {
+    reenvios.push({ url: String(url), init });
+    return new Response('data: {"jsonrpc":"2.0","id":1,"result":{}}\n\n', { status: 200, headers: { "content-type": "text/event-stream", "mcp-session-id": "ses-1" } });
+  };
+  const resP = () => {
+    const r = { statusCode: 0, headers: {}, chunks: [], ended: false, body: null };
+    return { r, status(c) { r.statusCode = c; return this; }, json(b) { r.body = b; return this; }, writeHead(c, h) { r.statusCode = c; Object.assign(r.headers, h); }, write(x) { r.chunks.push(Buffer.from(x).toString()); }, end() { r.ended = true; } };
+  };
+  let rp = resP();
+  await puente({ method: "POST", query: { c: "composio" }, headers: { authorization: "Bearer malo" }, body: {} }, rp);
+  check("sin el secreto → 401 y no reenvía", rp.r.statusCode === 401 && reenvios.length === 0);
+  rp = resP();
+  await puente({ method: "POST", query: { c: "otro" }, headers: { authorization: `Bearer ${secretoPuente()}` }, body: {} }, rp);
+  check("conector desconocido → 404 (no es un proxy abierto)", rp.r.statusCode === 404 && reenvios.length === 0);
+  rp = resP();
+  await puente({ method: "POST", query: { c: "composio" }, headers: { authorization: `Bearer ${secretoPuente()}`, "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-session-id": "ses-1" }, body: { jsonrpc: "2.0", id: 1, method: "tools/list" } }, rp);
+  const ida = reenvios[0];
+  check("reenvía a la url real con x-api-key y sin el secreto del puente", ida?.url === "https://backend.composio.example/v3/mcp/abc?user_id=pau" && ida.init.headers["x-api-key"] === "clave-composio" && !JSON.stringify(ida.init.headers).includes(secretoPuente()));
+  check("pasa el cuerpo JSON-RPC y la sesión MCP", JSON.parse(ida.init.body).method === "tools/list" && ida.init.headers["mcp-session-id"] === "ses-1");
+  check("devuelve el streaming y la sesión tal cual", rp.r.statusCode === 200 && rp.r.headers["mcp-session-id"] === "ses-1" && rp.r.chunks.join("").includes('"jsonrpc"') && rp.r.ended);
+  for (const k of Object.keys(entorno)) delete process.env[k];
   globalThis.fetch = realFetch;
 }
 

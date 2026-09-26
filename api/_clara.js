@@ -14,6 +14,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { obtenerCartera, resumenCartera } from "../lib/cartera.js";
 import { nubeConfigurada, leerMemoria, apuntarNota, rpc } from "../lib/memoria.js";
 import { leerWeb } from "../lib/leerweb.js";
+import { consultarModelo, openrouterConfigurado } from "../lib/openrouter.js";
 import { BETA_MCP, leerConectores, piezasMcp, textoConectores } from "../lib/conectores.js";
 import { catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
 
@@ -204,6 +205,9 @@ Pau puede compartirte desde WhatsApp (menú Compartir → Clara en su Android) l
 ## Leer enlaces (leer_web)
 Tienes una herramienta llamada "leer_web" que abre y lee una página pública concreta. Úsala SIEMPRE que Pau te pase un enlace (un anuncio de Idealista o Fotocasa, una oferta de empleo, una noticia, la web de un competidor o de un cliente): léelo de verdad antes de opinar, nunca lo imagines por la dirección. Si la web bloquea la lectura o no tiene texto, dilo y pide a Pau que pegue el contenido. Para buscar información sin enlace concreto, usa "buscar_web".
 
+## Segunda opinión (segunda_opinion)
+Si está configurado OpenRouter, tienes la herramienta "segunda_opinion" para consultar a otro modelo de IA (GPT, Gemini, DeepSeek…). Úsala cuando Pau lo pida ("pregúntale a GPT", "compáralo con otra IA") o en decisiones importantes donde contrastar aporte de verdad (una inversión, un texto clave, un diagnóstico técnico dudoso). Pásale la pregunta completa y el contexto necesario, nunca datos personales de terceros que no hagan falta. Después, presenta tu conclusión integrando ambas visiones y di claramente en qué coincidís y en qué no. Por defecto OpenRouter elige el modelo ("openrouter/auto"); si Pau pide uno concreto, usa su nombre con prefijo (p. ej. "openai/…", "google/…") y, si falla el nombre, díselo.
+
 ## Tus leads (mis_leads)
 Con la nube activa tienes la herramienta "mis_leads", que lee los contactos que han llegado por los embudos de Pau (ebook, formularios…). Úsala cuando pregunte por sus leads, contactos nuevos o a quién llamar: prioriza (quién es más caliente y por qué), propón el primer mensaje personalizado para cada uno y el siguiente paso. Trata esos datos personales con máxima discreción: solo para el trabajo de Pau, nunca los repitas fuera de contexto.
 
@@ -339,6 +343,7 @@ async function ejecutarHerramienta(tu, claveSync) {
     if (tu.name === "buscar_web") return await buscarConGemini(tu.input?.consulta);
     if (tu.name === "calcular") return calcular(tu.input?.expresion);
     if (tu.name === "leer_web") return await leerWeb(tu.input?.url);
+    if (tu.name === "segunda_opinion") return await consultarModelo(tu.input || {});
     if (tu.name === "mis_leads") {
       if (!claveSync || !nubeConfigurada()) {
         return "Los leads solo se pueden leer con la nube activa (clave de sincronización). Pídele a Pau que abra el panel de leads.";
@@ -393,6 +398,7 @@ const ESTADO_HERRAMIENTA = {
   usar_skill: "📚 Consultando mis skills…",
   crear_skill: "🛠️ Creando una skill nueva…",
   leer_web: "🌐 Leyendo el enlace…",
+  segunda_opinion: "🧭 Consultando a otro modelo…",
   mis_leads: "📇 Revisando tus leads…",
 };
 
@@ -565,6 +571,23 @@ export default async function handler(req, res) {
       },
     ],
   };
+
+  if (openrouterConfigurado()) {
+    request.tools.push({
+      name: "segunda_opinion",
+      description:
+        "Consulta a otro modelo de IA a través de OpenRouter para contrastar un análisis, pedir otra versión de un texto o comparar enfoques. Úsala cuando Pau lo pida o en decisiones importantes.",
+      input_schema: {
+        type: "object",
+        properties: {
+          pregunta: { type: "string", description: "La pregunta completa para el otro modelo." },
+          contexto: { type: "string", description: "Contexto necesario (datos, texto a revisar). Opcional." },
+          modelo: { type: "string", description: "Opcional. Nombre 'empresa/modelo' de OpenRouter; por defecto 'openrouter/auto'." },
+        },
+        required: ["pregunta"],
+      },
+    });
+  }
 
   // Con la memoria en la nube activa, Clara puede guardar recuerdos, crear skills y leer leads.
   if (memoriaNube) {
