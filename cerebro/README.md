@@ -20,11 +20,15 @@ La hizo el equipo de Clara:
 | `operaciones.js` + `operaciones-datos.js` | Fases, papeles (quién los aporta y su carácter: obligatorio, habitual o según el caso, con fuente), plazos (naturales o hábiles), fechas, eventos y mensajes. Los datos los preparó NURIA el 26/09/2026. |
 | `valoracion.js` | €/m² con ajuste manual, mediana y rango P25-P75 (mínimo-máximo si hay menos de 4). **Sin 3 comparables válidos y superficie no hay precio.** Aviso de dispersión alta. |
 | `papeles.js` | Tipos, estado (vencido, pronto u ok), orden, eventos y renovación anual. |
+| `campos-piso.js` | Definición única de los más de 50 datos de un piso (grupos, tipos texto, número, opciones, sí/no y fecha). Genera el formulario, los PDF, el esquema de Claude (`esquemaFicha`) y `limpiaFicha`. Los campos `interno` (precio mínimo) nunca salen en un PDF. Incluye la referencia de zona (€/m² de oferta de idealista, agosto 2026, tomada de EstateScore AI; solo contexto). |
+| `dictado.js` | Dictado por voz con la Web Speech API (es-ES, en varias tandas); si no está disponible, se oculta. |
+| `importar.js` (IYAN) | Enlace `#importar=<base64url>` con el que Clara abre una valoración ya montada. `decodificaImportacion` sanea los datos y la app los pasa además por `normaliza`. |
+| `logo-castresana.jpg/.png` | Logo oficial (inmoweb), en JPEG sobre blanco para los PDF. |
 | `app.js` | Pantallas y eventos. Navegación por `#ancla`; todo el texto pasa por `escapaHtml`. |
 | `service-worker.js` | Red primero y caché si no hay conexión. `/api` nunca se cachea. Al tocar un archivo, sube `VERSION`. |
 
 ## Backend
-`api/_cerebro.js` (en `/api/cerebro` a través de `api/[ruta].js`), acción `leer-documento`:
+`api/_cerebro.js` (en `/api/cerebro` a través de `api/[ruta].js`). Acciones: `ficha` (dictado, anuncio o enlace → ficha, solo con lo que consta; los números que no aparecen en el texto se descartan) y `comparables` (Gemini con Google → Claude; solo anuncios con precio, m² y url presente en las fuentes, 10 como máximo; sin `GEMINI_API_KEY` responde 503). Y `leer-documento`:
 - Recibe una foto JPEG, PNG o WebP de 3 MB como máximo. Claude la lee con la herramienta forzada `datos_documento` y `limpiaLectura` descarta las fechas imposibles.
 - Nunca queda abierto. Con Supabase exige la clave de sincronización (se valida con `clara_memoria_lee`); sin Supabase exige la variable `CEREBRO_CLAVE` de Vercel y, si no existe, responde 503. Así nadie gasta el saldo de Anthropic.
 - No guarda nada.

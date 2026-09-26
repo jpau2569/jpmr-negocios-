@@ -152,7 +152,7 @@ check("copia manipulada: avisoDias numérico, firma vacía, ids en texto y lista
 check("mensaje de alquiler rellena la fecha de firma del contrato", mensajesPara({ ...alq, fechas: [{ id: "x", nombre: "Firma del contrato de alquiler", fecha: "2026-10-03", hora: "12:00" }] }, {}).some((m) => m.texto.includes("03/10/2026") && m.texto.includes("12:00")));
 check(".ics escapa el punto y coma", crearIcs([{ uid: "z", fecha: "2026-10-01", titulo: "Notaría; Uría" }]).includes("Notaría\\; Uría"));
 const pdf2 = texto(pdfValoracion({ inmueble: { direccion: "Uría 12", zona: "Centro" }, propietario: "Luis" }, cuatro, aj, "2026-09-26"));
-check("PDF de valoración con rango, comparables y aviso de no-tasación", pdf2.includes("INFORME DE VALORACI") && pdf2.includes("Pelayo 1") && pdf2.includes("AVISO IMPORTANTE") && pdf2.includes("Banco de Espa") && pdf2.includes("/Count 2"));
+check("PDF de valoración con rango, comparables y aviso de no-tasación", pdf2.includes("INFORME DE VALORACI") && pdf2.includes("Pelayo 1") && pdf2.includes("AVISO IMPORTANTE") && pdf2.includes("ECO/805") && pdf2.includes("Muestra reducida") && pdf2.includes("/Count 2"));
 check("PDF de valoración sin datos suficientes lo dice", texto(pdfValoracion({ inmueble: {} }, pocos, aj, "2026-09-26")).includes("No hay datos suficientes"));
 
 console.log("\n📷 /api/cerebro (leer documento con foto)");

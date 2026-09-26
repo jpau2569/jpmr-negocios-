@@ -195,7 +195,7 @@ check("system: persona cacheada", sys[0]?.cache_control?.type === "ephemeral");
 check("system: fecha de hoy inyectada", sysTexto.includes("Hoy es"));
 check("system: memoria de Pau inyectada", sysTexto.includes("invertir en Oviedo"));
 check("system: modo inmobiliario activo", sysTexto.includes("NEGOCIO INMOBILIARIO"));
-check("declara las 5 herramientas base", (llamadasAnthropic[0]?.tools || []).length === 5);
+check("declara las 6 herramientas base (preparar_valoracion incluida)", (llamadasAnthropic[0]?.tools || []).length === 6 && (llamadasAnthropic[0]?.tools || []).some((t) => t.name === "preparar_valoracion"));
 check("mi_cartera, usar_skill y leer_web declaradas", ["mi_cartera", "usar_skill", "leer_web"].every((n) => (llamadasAnthropic[0]?.tools || []).some((t) => t.name === n)));
 
 const segundaRonda = llamadasAnthropic[1]?.messages || [];
@@ -413,7 +413,7 @@ const sysNube = (llamadasAnthropic[0]?.system || []).map((b) => b.text).join("\n
 check("respuesta 200 con nube activa", res.r.statusCode === 200, JSON.stringify(res.r.body));
 check("la memoria de la nube gana a la local", sysNube.includes("Le encanta Cudillero") && !sysNube.includes("no debería usarse"));
 check("el system dice que está sincronizada", sysNube.includes("sincronizada en la nube"));
-check("con nube activa hay 8 herramientas (recordar, crear_skill y mis_leads incluidas)", (llamadasAnthropic[0]?.tools || []).length === 8 && ["recordar", "crear_skill", "mis_leads"].every((n) => llamadasAnthropic[0].tools.some((t) => t.name === n)));
+check("con nube activa hay 9 herramientas (recordar, crear_skill y mis_leads incluidas)", (llamadasAnthropic[0]?.tools || []).length === 9 && ["recordar", "crear_skill", "mis_leads"].every((n) => llamadasAnthropic[0].tools.some((t) => t.name === n)));
 check("recordar apuntó la nota en Supabase", llamadasSupabase.some((c) => c.fn === "clara_memoria_apunta" && c.args.nota === "Objetivo 2026: 20 exclusivas"));
 check("el tool_result confirma el guardado", JSON.stringify(llamadasAnthropic[1]?.messages || []).includes("Nota guardada"));
 // ---------------------------------------------------------------------------

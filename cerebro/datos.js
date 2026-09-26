@@ -9,6 +9,7 @@
 
 import { validaFecha } from './operaciones.js';
 import { esFirmaJpeg } from './visitas.js';
+import { CAMPOS_INMUEBLE, limpiaFicha } from './campos-piso.js';
 
 export const CLAVE = 'cerebro_util_pau_v1';
 export const VERSION_DATOS = 1;
@@ -25,11 +26,22 @@ export const AJUSTES_BASE = {
   textoDeclaracion: '',
   textoRgpd: '',
   textosRevisados: false,
+  // Hoja de captación (borrador hasta que Pau los marque como revisados).
+  textoCaptacion: '',
+  textoRgpdCaptacion: '',
+  textoDesistimiento: '',
+  textosCaptacionRevisados: false,
+  // Encabezado del bloque de firmas de todos los documentos.
+  encabezadoFirmas: 'ASESORIA CASTRESANA INMO',
+  // Firma del agente (JPEG), guardada una vez para todos los documentos.
+  firmaAgente: '',
   claveSync: '',
 };
+// Números en los ajustes (tamaño en px de la firma del agente).
+const AJUSTES_NUM = ['firmaAgenteAncho', 'firmaAgenteAlto'];
 
 export function estadoVacio() {
-  return { version: VERSION_DATOS, ajustes: { ...AJUSTES_BASE }, visitas: [], operaciones: [], valoraciones: [], papeles: [] };
+  return { version: VERSION_DATOS, ajustes: { ...AJUSTES_BASE }, pisos: [], visitas: [], operaciones: [], valoraciones: [], papeles: [] };
 }
 
 const lista = (x) => (Array.isArray(x) ? x.filter((e) => e && typeof e === 'object' && e.id) : []).map((e) => ({ ...e, id: String(e.id).slice(0, 80) }));
@@ -45,6 +57,19 @@ export function normaliza(bruto) {
     if (typeof AJUSTES_BASE[k] === 'boolean') e.ajustes[k] = typeof aj[k] === 'boolean' ? aj[k] : AJUSTES_BASE[k];
     else if (typeof aj[k] === 'string') e.ajustes[k] = aj[k].slice(0, 4000);
   }
+  e.ajustes.firmaAgente = esFirmaJpeg(aj.firmaAgente) ? aj.firmaAgente : '';
+  for (const k of AJUSTES_NUM) if (Number(aj[k]) > 0) e.ajustes[k] = Math.min(4000, Number(aj[k]));
+  if (!e.ajustes.encabezadoFirmas.trim()) e.ajustes.encabezadoFirmas = AJUSTES_BASE.encabezadoFirmas;
+  e.pisos = lista(bruto.pisos).map((p) => ({
+    ...limpiaFicha(p),
+    id: p.id,
+    creado: cadena(p.creado, 10),
+    notas: cadena(p.notas, 2000),
+    enlace: /^https:\/\//.test(String(p.enlace || '')) ? cadena(p.enlace, 500) : '',
+    firmaPropietario: esFirmaJpeg(p.firmaPropietario) ? p.firmaPropietario : '',
+    firmaPropietarioAncho: Number(p.firmaPropietarioAncho) || 600,
+    firmaPropietarioAlto: Number(p.firmaPropietarioAlto) || 200,
+  }));
   // Cada lista se rehace con la forma que espera la app: una copia antigua,
   // rota o manipulada no puede romper una pantalla ni colar HTML.
   e.visitas = lista(bruto.visitas).map((v) => {
@@ -57,6 +82,8 @@ export function normaliza(bruto) {
       aceptaRgpd: v.aceptaRgpd === true, aceptaOfertas: v.aceptaOfertas === true,
       firma: esFirmaJpeg(v.firma) ? v.firma : '',
       firmaAncho: Number(v.firmaAncho) || 600, firmaAlto: Number(v.firmaAlto) || 200,
+      pisoId: cadena(v.pisoId, 80),
+      piso: v.piso && typeof v.piso === 'object' ? limpiaFicha(Object.fromEntries(CAMPOS_INMUEBLE.map((c) => [c.id, v.piso[c.id]]))) : undefined,
     };
   });
   e.operaciones = lista(bruto.operaciones).map((o) => ({
@@ -123,7 +150,7 @@ export function leeCopia(texto) {
   return {
     ok: true,
     estado,
-    resumen: `${estado.visitas.length} visitas, ${estado.operaciones.length} operaciones, ${estado.valoraciones.length} valoraciones y ${estado.papeles.length} papeles`,
+    resumen: `${estado.pisos.length} pisos, ${estado.visitas.length} visitas, ${estado.operaciones.length} operaciones, ${estado.valoraciones.length} valoraciones y ${estado.papeles.length} papeles`,
   };
 }
 

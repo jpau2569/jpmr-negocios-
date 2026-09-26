@@ -47,6 +47,8 @@ export function limpiaVisita(v) {
     firmaAncho: Number(v.firmaAncho) || 600,
     firmaAlto: Number(v.firmaAlto) || 200,
     registrada: v.registrada || new Date().toISOString(),
+    pisoId: String(v.pisoId || '').slice(0, 80),
+    piso: v.piso && typeof v.piso === 'object' ? v.piso : undefined,
   };
 }
 

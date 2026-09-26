@@ -7,3 +7,6 @@
 - **Todo texto** que se pinte pasa por `escapaHtml`.
 - **Service worker:** al tocar cualquier archivo, añadirlo a `RECURSOS` y subir `VERSION`.
 - **Pruebas:** `node test/cerebro.test.mjs` y `node test/cerebro.ui.test.mjs` deben quedar en verde.
+- **Datos del piso:** se definen en `campos-piso.js` y en ningún otro sitio. Un campo `interno: true` no puede salir en ningún PDF.
+- **Firmas:** todos los documentos llevan el bloque de firmas con el encabezado de `ajustes.encabezadoFirmas` («ASESORIA CASTRESANA INMO») y el logo `logo-castresana.jpg`.
+- **Lo que rellena la IA** (ficha o comparables) se presenta siempre para que Pau lo revise; nunca se imprime sin pasar por él.

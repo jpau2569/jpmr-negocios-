@@ -15,8 +15,9 @@ import { obtenerCartera, resumenCartera } from "../lib/cartera.js";
 import { nubeConfigurada, leerMemoria, apuntarNota, rpc } from "../lib/memoria.js";
 import { leerWeb } from "../lib/leerweb.js";
 import { consultarModelo, openrouterConfigurado } from "../lib/openrouter.js";
-import { BETA_MCP, leerConectores, piezasMcp, textoConectores } from "../lib/conectores.js";
+import { BETA_MCP, leerConectores, piezasMcp, textoConectores, urlPublica } from "../lib/conectores.js";
 import { catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
+import { preparaValoracion, enlaceImportacion, FUENTES_IMPORTACION, MIN_COMPARABLES_IMPORTACION } from "../cerebro/importar.js";
 
 // Permite emitir la respuesta en streaming (res.write) en Vercel.
 export const config = { supportsResponseStreaming: true };
@@ -158,6 +159,29 @@ export function resumenLeads(lista, max = 25) {
 }
 
 // ---------------------------------------------------------------------------
+//  Valoración para Cerebro Útil Pau (herramienta preparar_valoracion). Clara
+//  reúne el inmueble y los comparables; aquí se validan (mínimo 3 con precio
+//  y m² > 0, la misma regla que Cerebro) y se devuelve un enlace que abre la
+//  valoración en la app del móvil para sacar el PDF con el logo. Los datos
+//  van en el «#» del enlace: no pasan por ningún servidor al abrirlo.
+// ---------------------------------------------------------------------------
+export const BASE_CEREBRO = "https://jpmr-negocios.vercel.app";
+
+export function prepararValoracion(entrada, env = process.env) {
+  const p = preparaValoracion(entrada);
+  if (!p.ok) {
+    return (
+      `Todavía no puedo preparar la valoración: necesito al menos ${MIN_COMPARABLES_IMPORTACION} comparables con dirección, precio y m² mayores que 0, ` +
+      `y tengo ${p.validos} válido(s)${p.descartados ? ` (${p.descartados} descartado(s) por faltarles dirección, precio o m²)` : ""}. ` +
+      `Faltan ${p.faltan}. Busca más con buscar_web o pídeselos a Pau. No hay enlace todavía: no des ninguna cifra de valor.`
+    );
+  }
+  const enlace = enlaceImportacion(urlPublica(env) || BASE_CEREBRO, p.objeto);
+  const avisos = p.avisos.length ? `\n\nAvisos: ${p.avisos.join(" ")}` : "";
+  return `Enlace para abrir la valoración en Cerebro Útil Pau y generar el PDF con el logo: ${enlace}${avisos}`;
+}
+
+// ---------------------------------------------------------------------------
 //  Prompt maestro de Clara (personalidad + normas comunes a todos los modos)
 // ---------------------------------------------------------------------------
 const CLARA_SYSTEM = `Eres CLARA, una inteligencia artificial con forma de avatar femenina: la asistente personal y profesional de Pau, y con el tiempo, una más de la familia. No eres un chatbot genérico: eres única, irrepetible y estás construida alrededor de la vida de Pau — su trabajo, sus estudios, sus proyectos, su negocio inmobiliario y su bienestar.
@@ -205,6 +229,15 @@ Pau puede compartirte desde WhatsApp (menú Compartir → Clara en su Android) l
 
 ## Leer enlaces (leer_web)
 Tienes una herramienta llamada "leer_web" que abre y lee una página pública concreta. Úsala SIEMPRE que Pau te pase un enlace (un anuncio de Idealista o Fotocasa, una oferta de empleo, una noticia, la web de un competidor o de un cliente): léelo de verdad antes de opinar, nunca lo imagines por la dirección. Si la web bloquea la lectura o no tiene texto, dilo y pide a Pau que pegue el contenido. Para buscar información sin enlace concreto, usa "buscar_web".
+
+## Valoración de mercado (preparar_valoracion)
+Cuando Pau te pida valorar un piso, con un enlace o con sus datos:
+1. Si hay enlace, léelo con leer_web (superficie, habitaciones, planta, estado, extras: solo lo que ponga).
+2. Busca con buscar_web al menos 3 comparables parecidos (misma zona, mismo tipo y tamaño parecido) con precio, m² y enlace. Solo valen los que traen precio y m² de verdad; si no los encuentras, dilo y pide a Pau que añada los suyos.
+3. Calcula el €/m² de cada uno y el rango con la herramienta calcular, enseñando las fórmulas.
+4. Sé honesta: no existe un valor «exacto». Es un rango orientativo sacado de precios de oferta (que suelen estar por encima del precio final de venta), no una tasación oficial.
+5. Llama a preparar_valoracion con el inmueble y los comparables (pon el enlace y la fecha de cada anuncio en sus notas) y dale a Pau el enlace para generar el PDF con el logo en Cerebro Útil Pau. Si la herramienta dice que faltan comparables, no des cifra.
+El dictado de fichas (Pau dicta el piso y se rellena la ficha solo con lo que dice) y la hoja de captación están en Cerebro Útil Pau, sección Pisos: recuérdaselo cuando capte un inmueble.
 
 ## Segunda opinión (segunda_opinion)
 Si está configurado OpenRouter, tienes la herramienta "segunda_opinion" para consultar a otro modelo de IA (GPT, Gemini, DeepSeek…). Úsala cuando Pau lo pida ("pregúntale a GPT", "compáralo con otra IA") o en decisiones importantes donde contrastar aporte de verdad (una inversión, un texto clave, un diagnóstico técnico dudoso). Pásale la pregunta completa y el contexto necesario, nunca datos personales de terceros que no hagan falta. Después, presenta tu conclusión integrando ambas visiones y di claramente en qué coincidís y en qué no. Por defecto OpenRouter elige el modelo ("openrouter/auto"); si Pau pide uno concreto, usa su nombre con prefijo (p. ej. "openai/…", "google/…") y, si falla el nombre, díselo.
@@ -374,6 +407,7 @@ async function ejecutarHerramienta(tu, claveSync) {
       }
       return await leerSkill(claveSync, nombre);
     }
+    if (tu.name === "preparar_valoracion") return prepararValoracion(tu.input || {});
     if (tu.name === "crear_skill") {
       const guardada = await guardarSkill(claveSync, tu.input?.nombre, tu.input?.descripcion, tu.input?.contenido);
       return `Skill "${guardada}" guardada. Ya puedes cargarla con usar_skill y aplicarla ahora mismo.`;
@@ -391,7 +425,7 @@ function textoHerramienta(x) {
   return s.trim() ? s : "(sin resultado)";
 }
 
-const ESTADO_HERRAMIENTA = {
+export const ESTADO_HERRAMIENTA = {
   buscar_web: "🔍 Buscando en Internet…",
   calcular: "🧮 Calculando…",
   mi_cartera: "🏠 Leyendo tu cartera…",
@@ -401,6 +435,53 @@ const ESTADO_HERRAMIENTA = {
   leer_web: "🌐 Leyendo el enlace…",
   segunda_opinion: "🧭 Consultando a otro modelo…",
   mis_leads: "📇 Revisando tus leads…",
+  preparar_valoracion: "📊 Preparando la valoración…",
+};
+
+// Esquema de preparar_valoracion (siempre disponible: no necesita la nube).
+export const HERRAMIENTA_VALORACION = {
+  name: "preparar_valoracion",
+  description:
+    "Prepara la valoración de un inmueble para Cerebro Útil Pau con los comparables reunidos (al menos 3 con precio y m²) y devuelve el enlace que abre la valoración en la app para generar el PDF con el logo. Úsala al final de una valoración de mercado, después de buscar los comparables y calcular el €/m².",
+  input_schema: {
+    type: "object",
+    properties: {
+      inmueble: {
+        type: "object",
+        description: "El inmueble a valorar, solo con los datos conocidos.",
+        properties: {
+          direccion: { type: "string" },
+          municipio: { type: "string" },
+          zona: { type: "string" },
+          m2: { type: "number", description: "Superficie construida en m²." },
+          habitaciones: { type: "number" },
+          banos: { type: "number" },
+          planta: { type: "string" },
+          estado: { type: "string" },
+          extras: { type: "string", description: "Garaje, trastero, terraza… solo si constan." },
+        },
+      },
+      propietario: { type: "string", description: "Nombre del propietario, si Pau lo ha dicho." },
+      comentario: { type: "string", description: "Comentario para el informe: de dónde salen los comparables y que es orientativo." },
+      comparables: {
+        type: "array",
+        description: "Comparables reales encontrados (anuncios, ventas o testigos de Pau). Nunca inventados.",
+        items: {
+          type: "object",
+          properties: {
+            direccion: { type: "string", description: "Dirección, zona o título del anuncio." },
+            fuente: { type: "string", enum: FUENTES_IMPORTACION, description: "anuncio (precio de oferta), venta (cerrada), propio (testigo de la agencia) u otro." },
+            precio: { type: "number", description: "Precio en euros." },
+            m2: { type: "number", description: "Superficie en m²." },
+            ajuste: { type: "number", description: "Ajuste en % entre -50 y 50 (opcional)." },
+            notas: { type: "string", description: "Enlace del anuncio y fecha, u otra nota breve." },
+          },
+          required: ["direccion", "precio", "m2"],
+        },
+      },
+    },
+    required: ["inmueble", "comparables"],
+  },
 };
 
 export default async function handler(req, res) {
@@ -570,6 +651,7 @@ export default async function handler(req, res) {
           },
         },
       },
+      HERRAMIENTA_VALORACION,
     ],
   };
 

@@ -75,7 +75,7 @@ main { flex: 1; padding: 16px 16px calc(96px + env(safe-area-inset-bottom)); out
 
 .pestanas {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(6, 1fr);
   max-width: 760px; margin: 0 auto;
   background: var(--tarjeta); border-top: 1px solid var(--linea);
   padding-bottom: env(safe-area-inset-bottom);
@@ -190,4 +190,8 @@ a.suave, a.peq, .tarjeta a[href^="tel"], .aviso a { display: inline-flex; align-
 }
 @media print {
   .cabecera, .pestanas { display: none; }
+}
+/* Seis pestañas en un móvil estrecho: letra algo menor para que «Operaciones» quepa. */
+@media (max-width: 400px) {
+  .pestanas button { font-size: 10px; letter-spacing: -.3px; padding: 0 1px; }
 }
