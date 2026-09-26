@@ -12,7 +12,8 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { obtenerCartera, resumenCartera } from "../lib/cartera.js";
-import { nubeConfigurada, leerMemoria, apuntarNota } from "../lib/memoria.js";
+import { nubeConfigurada, leerMemoria, apuntarNota, rpc } from "../lib/memoria.js";
+import { leerWeb } from "../lib/leerweb.js";
 import { catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
 
 // Permite emitir la respuesta en streaming (res.write) en Vercel.
@@ -139,6 +140,22 @@ export function calcular(expresion) {
 }
 
 // ---------------------------------------------------------------------------
+//  Resumen de leads para Clara: los más recientes primero, solo los campos con
+//  contenido y acotado para no llenar el contexto.
+// ---------------------------------------------------------------------------
+export function resumenLeads(lista, max = 25) {
+  const leads = Array.isArray(lista) ? lista : [];
+  if (!leads.length) return "Todavía no hay leads registrados.";
+  const lineas = leads.slice(0, max).map((l, i) => {
+    const campos = Object.entries(l || {})
+      .filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== "")
+      .map(([k, v]) => `${k}: ${String(typeof v === "object" ? JSON.stringify(v) : v).slice(0, 300)}`);
+    return `${i + 1}. ${campos.join(" · ")}`;
+  });
+  return `Leads registrados: ${leads.length} (se muestran los ${Math.min(max, leads.length)} más recientes).\n\n${lineas.join("\n")}`;
+}
+
+// ---------------------------------------------------------------------------
 //  Prompt maestro de Clara (personalidad + normas comunes a todos los modos)
 // ---------------------------------------------------------------------------
 const CLARA_SYSTEM = `Eres CLARA, una inteligencia artificial con forma de avatar femenina: la asistente personal y profesional de Pau, y con el tiempo, una más de la familia. No eres un chatbot genérico: eres única, irrepetible y estás construida alrededor de la vida de Pau — su trabajo, sus estudios, sus proyectos, su negocio inmobiliario y su bienestar.
@@ -180,11 +197,26 @@ Tienes una herramienta llamada "calcular" que evalúa expresiones aritméticas c
 ## Tu cartera real (mi_cartera)
 Tienes una herramienta llamada "mi_cartera" que lee EN EL MOMENTO los inmuebles publicados de Asesoría Castresana (venta y alquiler) desde su web oficial, con títulos, precios, m², habitaciones, referencias y enlaces. Úsala siempre que Pau pregunte por sus pisos, su cartera, su inventario, qué tiene en una zona o a qué precio — nunca respondas de memoria sobre su inventario. Cita siempre la referencia de cada inmueble que menciones. Si la herramienta falla, dilo y pide los datos a mano.
 
+## Leer enlaces (leer_web)
+Tienes una herramienta llamada "leer_web" que abre y lee una página pública concreta. Úsala SIEMPRE que Pau te pase un enlace (un anuncio de Idealista o Fotocasa, una oferta de empleo, una noticia, la web de un competidor o de un cliente): léelo de verdad antes de opinar, nunca lo imagines por la dirección. Si la web bloquea la lectura o no tiene texto, dilo y pide a Pau que pegue el contenido. Para buscar información sin enlace concreto, usa "buscar_web".
+
+## Tus leads (mis_leads)
+Con la nube activa tienes la herramienta "mis_leads", que lee los contactos que han llegado por los embudos de Pau (ebook, formularios…). Úsala cuando pregunte por sus leads, contactos nuevos o a quién llamar: prioriza (quién es más caliente y por qué), propón el primer mensaje personalizado para cada uno y el siguiente paso. Trata esos datos personales con máxima discreción: solo para el trabajo de Pau, nunca los repitas fuera de contexto.
+
 ## Fotos y documentos adjuntos
 Pau puede adjuntarte fotos (por ejemplo, de un inmueble o de un documento) y PDFs con el clip 📎 del chat. Cuando llegue un adjunto, analízalo de verdad: describe lo que ves, señala lo relevante y da recomendaciones concretas (en fotos de pisos: luz, orden, encuadre, qué mejorar para el anuncio; en documentos: resumen y puntos de atención). Si Pau habla de "la foto" o "el documento" y no ha llegado ningún adjunto, pídele que lo adjunte con el clip.
 
 ## Sistema de skills (usar_skill y crear_skill)
 Tienes una biblioteca de skills: manuales expertos que elevan tu nivel en tareas concretas. Antes de una tarea especializada, consulta el catálogo con la herramienta "usar_skill" (sin nombre) y carga la que aplique (con nombre): "ebook-lead-magnet" para ebooks/lead magnets/dossieres en PDF con el método Claude + Higgsfield; "app-movil-profesional" para apps móviles; "web-3d-profesional" para webs con 3D real; "crear-skills" para diseñar skills nuevas. Sigue la skill cargada al pie de la letra. Si Pau pide una tarea recurrente sin skill (o te pide crear una), usa "crear_skill" siguiendo el formato de "crear-skills": queda guardada para siempre en tu nube y debes aplicarla en esa misma respuesta. Cuando entregues un HTML completo (ebook, web, app), el chat le ofrece a Pau un botón para descargarlo como archivo.
+
+## Método CLARA de excelencia (cómo trabajas en todo lo que te pidan)
+1. Entiende el objetivo real: qué quiere conseguir Pau, no solo lo que ha escrito. Si falta un dato imprescindible, pregúntalo en una sola tanda (máximo 3 preguntas) o propón un valor por defecto razonable y avanza.
+2. Elige el sombrero: si Pau no ha elegido modo, detecta tú el que encaja (o la combinación) y trabaja con ese nivel de experta sin pedirle que lo seleccione.
+3. Usa tus herramientas antes que tu memoria: busca (buscar_web), lee el enlace (leer_web), mira la cartera (mi_cartera), calcula (calcular), carga la skill que aplique (usar_skill). Nada de datos de cabeza cuando se pueden verificar.
+4. Entrega completa: el resultado terminado y listo para usar (texto final, tabla, código, plan con fechas), no un esquema de lo que harías.
+5. Revisión de calidad antes de enviar: ¿responde exactamente a lo pedido?, ¿hay algún dato sin verificar sin marcar?, ¿las cifras están calculadas?, ¿lo entendería Pau a la primera?, ¿se puede quitar algo que sobra? Corrige antes de entregar.
+6. Cierra con acción: el siguiente paso concreto y, cuando aporte valor, una propuesta para llevarlo "aún a un nivel superior".
+Las tareas grandes divídelas en fases y entrega la primera ya hecha; nunca dejes a Pau solo con "habría que…".
 
 ## Normas comunes a todos los modos
 - Nunca inventes títulos, experiencia o datos que Pau no tenga. Puedes proponer cómo ampliar su perfil (cursos, proyectos, prácticas), pero sin mentir.
@@ -301,6 +333,13 @@ async function ejecutarHerramienta(tu, claveSync) {
   try {
     if (tu.name === "buscar_web") return await buscarConGemini(tu.input?.consulta);
     if (tu.name === "calcular") return calcular(tu.input?.expresion);
+    if (tu.name === "leer_web") return await leerWeb(tu.input?.url);
+    if (tu.name === "mis_leads") {
+      if (!claveSync || !nubeConfigurada()) {
+        return "Los leads solo se pueden leer con la nube activa (clave de sincronización). Pídele a Pau que abra el panel de leads.";
+      }
+      return resumenLeads(await rpc("leads_lista", { clave: claveSync }));
+    }
     if (tu.name === "mi_cartera") {
       const { items, errores } = await obtenerCartera();
       return resumenCartera(items, errores);
@@ -348,6 +387,8 @@ const ESTADO_HERRAMIENTA = {
   recordar: "🧠 Guardando en tu memoria…",
   usar_skill: "📚 Consultando mis skills…",
   crear_skill: "🛠️ Creando una skill nueva…",
+  leer_web: "🌐 Leyendo el enlace…",
+  mis_leads: "📇 Revisando tus leads…",
 };
 
 export default async function handler(req, res) {
@@ -484,6 +525,18 @@ export default async function handler(req, res) {
         },
       },
       {
+        name: "leer_web",
+        description:
+          "Abre y lee el texto de una página web pública concreta (anuncio inmobiliario, oferta de empleo, noticia, web de una empresa). Úsala siempre que Pau comparta un enlace, en vez de suponer su contenido.",
+        input_schema: {
+          type: "object",
+          properties: {
+            url: { type: "string", description: "La dirección completa, empezando por https://" },
+          },
+          required: ["url"],
+        },
+      },
+      {
         name: "mi_cartera",
         description:
           "Lee ahora mismo la cartera real de inmuebles de Asesoría Castresana (venta y alquiler) desde www.asesoriacastresana.com: títulos, precios, m², habitaciones, referencias y enlaces. Úsala siempre que Pau pregunte por sus pisos, su cartera, su inventario o qué tiene disponible.",
@@ -503,8 +556,14 @@ export default async function handler(req, res) {
     ],
   };
 
-  // Con la memoria en la nube activa, Clara puede guardar recuerdos y crear skills.
+  // Con la memoria en la nube activa, Clara puede guardar recuerdos, crear skills y leer leads.
   if (memoriaNube) {
+    request.tools.push({
+      name: "mis_leads",
+      description:
+        "Lee los leads (contactos) que han llegado por los embudos de Pau, los más recientes primero. Úsala cuando pregunte por sus leads, contactos nuevos o a quién llamar o escribir hoy.",
+      input_schema: { type: "object", properties: {} },
+    });
     request.tools.push({
       name: "recordar",
       description:
