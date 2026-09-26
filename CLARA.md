@@ -64,7 +64,25 @@ En Vercel → Settings → Environment Variables:
 - Máximo 10 conectores. Si el JSON está mal, Clara lo ignora y sigue funcionando (el aviso sale en los logs de Vercel).
 - Redespliega. En el chat verás el aviso **🔌 Usando <conector>…** cuando lo use.
 
+### Servidores que piden la clave en una cabecera propia (Composio)
+
+Composio (tu conector **"dev"**, con Gmail, Calendar, Drive, Sheets, Instagram y cientos de apps más) pide su clave en la cabecera `x-api-key`, y el conector de Claude solo sabe enviar un token estándar. Para esos casos Clara tiene un **puente** (`/api/mcp-puente`): Claude llama al puente con un secreto que solo conoce tu servidor, y el puente reenvía **solo** a la dirección configurada añadiendo la cabecera.
+
+1. En Composio, crea (o abre) tu servidor MCP con las apps que quieras darle a Clara y copia su **dirección MCP** y tu **API key**.
+2. En Vercel añade `COMPOSIO_API_KEY` con esa clave.
+3. En `CLARA_CONECTORES`:
+
+```json
+[{"nombre": "composio", "url": "<dirección MCP de tu servidor de Composio>", "cabeceras": {"x-api-key": "COMPOSIO_API_KEY"}, "descripcion": "Gmail, Google Calendar, Drive y demás apps de Pau"}]
+```
+
+En `cabeceras` va el **nombre** de la variable, nunca la clave. El puente usa la dirección pública del proyecto (`VERCEL_PROJECT_PRODUCTION_URL`, la pone Vercel sola; se puede forzar con `CLARA_URL_PUBLICA`) y un secreto derivado de `ANTHROPIC_API_KEY` (o `CLARA_PUENTE_SECRETO` si lo defines).
+
 Seguridad: los tokens nunca llegan al navegador y **Clara pide tu confirmación antes de cualquier acción que cambie algo fuera del chat** (enviar un correo, crear o borrar un evento…). Cada conector cuesta tokens extra porque Claude recibe la lista de sus herramientas: activa solo los que uses.
+
+## Segunda opinión con OpenRouter — configuración
+
+Con **`OPENROUTER_API_KEY`** en Vercel (clave de openrouter.ai → Keys), Clara gana la herramienta `segunda_opinion`: consulta a otro modelo (GPT, Gemini, DeepSeek…) cuando se lo pides ("pregúntale a GPT") o en decisiones importantes, y te presenta la conclusión integrando ambas visiones. Por defecto usa `openrouter/auto` (OpenRouter elige el modelo); puedes fijar otro con `OPENROUTER_MODELO` (nombre con prefijo, p. ej. `google/…`). Se paga con el saldo de tu cuenta de OpenRouter.
 
 ## Memoria en la nube (fase 3) — configuración
 

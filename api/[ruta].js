@@ -26,6 +26,7 @@ const RUTAS = {
   leads: () => import("./_leads.js"),
   "luxury-motion": () => import("./_luxury-motion.js"),
   memoria: () => import("./_memoria.js"),
+  "mcp-puente": () => import("./_mcp-puente.js"),
   "oportunidades-ficha": () => import("./_oportunidades-ficha.js"),
   oportunidades: () => import("./_oportunidades.js"),
   profe: () => import("./_profe.js"),
