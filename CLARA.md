@@ -38,6 +38,32 @@ Este mandato vive también en `clara_persona.md` (sección "Lo que sabes de Pau"
 - **`ebook.html` + `ebook-guia.html` + `api/lead.js`** — el **embudo del ebook**: landing de captura ("Los 7 errores que hunden el precio de tu piso en Oviedo") con formulario que guarda cada lead en Supabase (tabla `clara_leads`, alta validada por RPC pública y lectura solo con la clave de sincronización — función `leads_lista`) y entrega la guía al instante. El ebook son 16 páginas A4 con la marca Castresana, listas para PDF (Ctrl+P). URLs una vez desplegado: `/ebook.html` (landing) y `/ebook-guia.html` (la guía).
 - **`leads.html` + `api/leads.js`** — **panel privado de leads**: lista los leads capturados (fecha, nombre, email, teléfono, origen, tipo) con buscador y exportación a CSV. Protegido con tu **clave de sincronización** (la misma de la 🧠 memoria): el endpoint llama a la RPC `leads_lista` de Supabase, que valida la clave. URL una vez desplegado: `/leads.html`. Requiere que la función `leads_lista(clave)` exista en Supabase.
 - **`lib/skills.js`** — el **sistema de skills** de Clara: manuales expertos que carga bajo demanda con la herramienta `usar_skill`. Vienen cuatro de serie: `ebook-lead-magnet` (ebooks/lead magnets/dossieres en PDF con el método Claude + Higgsfield, también a partir de los vídeos de Pau — Clara entrega un HTML premium con botón **⬇ Descargar HTML** en el chat, que se convierte en PDF con Ctrl+P), `app-movil-profesional` (apps móviles: PWA primero, Capacitor para tiendas), `web-3d-profesional` (webs con 3D real: Three.js, React Three Fiber, tours 360º) y `crear-skills` (meta-skill). Con la nube activa, Clara además puede **crear sus propias skills** con la herramienta `crear_skill`: quedan guardadas en Supabase (tabla `clara_skills`, mismo blindaje que la memoria) y disponibles para siempre.
+- **`skills/<nombre>/SKILL.md`** — skills en el **formato estándar SKILL.md** (cabecera `name` + `description` y el manual en markdown). Clara las carga solas y aparecen en su catálogo con el origen `SKILL.md`; vienen `ficha-portal-inmobiliario` (paquete para pegar en Inmoweb/Idealista/Fotocasa) y `mensajes-clientes` (correos y WhatsApp en varios tonos + seguimiento). Para añadir una, crea la carpeta con su `SKILL.md` (guía en `skills/README.md`). Clara también puede leer un `SKILL.md` desde un enlace con `leer_web` y guardarlo como skill suya.
+- **`lib/leerweb.js`** — herramienta `leer_web`: Clara lee cualquier página pública que le pases (anuncios, ofertas, noticias). Bloquea direcciones internas o privadas en cada redirección.
+- **`lib/conectores.js`** — **conectores** de Clara: servidores MCP remotos (correo, calendario, Notion, hojas de cálculo, CRM…) que usa la propia API de Claude. Se activan solo desde Vercel con la variable `CLARA_CONECTORES` (ver abajo). Sin esa variable, Clara funciona exactamente igual que antes.
+
+## Conectores (MCP) — configuración
+
+Un conector es un **servidor MCP remoto**: una dirección `https://…` que ofrece el propio servicio (o una plataforma de integraciones) junto con un token de acceso. Comprueba en la documentación de cada servicio si ofrece servidor MCP remoto y cómo obtener su dirección y su token. Solo sirven los que funcionan por URL (no los que se instalan en tu ordenador).
+
+En Vercel → Settings → Environment Variables:
+
+1. Guarda cada token en su propia variable, por ejemplo `NOTION_MCP_TOKEN`.
+2. Crea `CLARA_CONECTORES` con una lista en JSON:
+
+```json
+[
+  {"nombre": "notion", "url": "https://<servidor-mcp-de-notion>/mcp", "token_env": "NOTION_MCP_TOKEN", "descripcion": "Mis notas y bases de datos"},
+  {"nombre": "calendario", "url": "https://<otro-servidor>/mcp", "token_env": "CAL_MCP_TOKEN", "herramientas": ["listar_eventos"]}
+]
+```
+
+- `nombre`: minúsculas, números, `-` o `_`. `url`: obligatoria y con `https://`.
+- `herramientas` (opcional): lista blanca; si la pones, Clara solo puede usar esas herramientas del conector. Muy recomendable para empezar en modo *solo lectura*.
+- Máximo 10 conectores. Si el JSON está mal, Clara lo ignora y sigue funcionando (el aviso sale en los logs de Vercel).
+- Redespliega. En el chat verás el aviso **🔌 Usando <conector>…** cuando lo use.
+
+Seguridad: los tokens nunca llegan al navegador y **Clara pide tu confirmación antes de cualquier acción que cambie algo fuera del chat** (enviar un correo, crear o borrar un evento…). Cada conector cuesta tokens extra porque Claude recibe la lista de sus herramientas: activa solo los que uses.
 
 ## Memoria en la nube (fase 3) — configuración
 
