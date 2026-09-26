@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Cerebro Útil Pau</title>
+<meta name="description" content="Hojas de visita con firma, operaciones hasta la notaría, valoraciones y mis papeles. Todo se guarda en el móvil." />
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content="#10203a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Cerebro" />
+<meta name="robots" content="noindex" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icono.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icono-180.png" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app">
+  <header class="cabecera">
+    <div class="marca">
+      <img src="icono.svg" alt="" width="34" height="34" style="border-radius:9px" />
+      <div>
+        <div class="titulo">Cerebro Útil Pau</div>
+        <div class="sub">Asesoría Castresana</div>
+      </div>
+    </div>
+    <button class="icono-btn" id="btn-ajustes" aria-label="Ajustes">⚙️</button>
+  </header>
+
+  <main id="vista" tabindex="-1"><noscript>Cerebro Útil Pau necesita JavaScript.</noscript></main>
+
+  <nav class="pestanas" aria-label="Secciones">
+    <button data-ir="hoy"><span class="ico" aria-hidden="true">🏠</span>Hoy</button>
+    <button data-ir="visitas"><span class="ico" aria-hidden="true">✍️</span>Visitas</button>
+    <button data-ir="operaciones"><span class="ico" aria-hidden="true">📑</span>Operaciones</button>
+    <button data-ir="valorar"><span class="ico" aria-hidden="true">📊</span>Valorar</button>
+    <button data-ir="papeles"><span class="ico" aria-hidden="true">📁</span>Papeles</button>
+  </nav>
+</div>
+<div id="aviso" class="aviso-flotante oculto" role="status" aria-live="polite"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
