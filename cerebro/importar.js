@@ -15,6 +15,12 @@ export const MIN_COMPARABLES_IMPORTACION = 3;
 export const MAX_COMPARABLES_IMPORTACION = 20;
 const MAX_CODIFICADO = 60000; // un enlace más largo que esto no es nuestro
 
+// Rangos razonables: fuera de ellos el número es un error (1e300 €, 1,2 €,
+// 0,5 m²) y se descarta en vez de estropear el €/m² de toda la valoración.
+export const RANGO_PRECIO = { min: 1000, max: 50_000_000 }; // € de un comparable
+export const RANGO_M2 = { min: 5, max: 100_000 };           // m² de un comparable o del inmueble
+export const RANGO_AJUSTE = { min: -50, max: 50 };          // % de ajuste
+
 /* ── base64url sobre UTF-8 (sin Buffer, para que valga en el navegador) ── */
 
 function aBase64url(bytes) {
@@ -40,6 +46,8 @@ const cadena = (v, max) => (typeof v === 'string' || typeof v === 'number' ? Str
 export function numeroImportacion(v) {
   if (typeof v === 'number') return Number.isFinite(v) ? v : '';
   if (typeof v !== 'string' || !v.trim()) return '';
+  // «1e300» no es un número que escriba nadie: sin esto se leería 1300.
+  if (/\d\s*e\s*[+-]?\d/i.test(v)) return '';
   let s = v.replace(/[^\d.,-]/g, '');
   if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, '').replace(',', '.');
   else s = s.replace(',', '.');
@@ -52,6 +60,12 @@ const positivo = (v) => {
   return n !== '' && n > 0 ? n : '';
 };
 
+/** El número si está dentro de { min, max } (ambos incluidos); si no, ''. */
+export function enRango(v, { min, max }) {
+  const n = numeroImportacion(v);
+  return n !== '' && n >= min && n <= max ? n : '';
+}
+
 /** Deja los datos de una valoración con la forma que espera Cerebro. */
 export function normalizaValoracion(datos) {
   const d = datos && typeof datos === 'object' ? datos : {};
@@ -60,7 +74,7 @@ export function normalizaValoracion(datos) {
     direccion: cadena(i.direccion, 120),
     municipio: cadena(i.municipio, 60),
     zona: cadena(i.zona, 60),
-    m2: positivo(i.m2),
+    m2: enRango(i.m2, RANGO_M2),
     habitaciones: positivo(i.habitaciones),
     banos: positivo(i.banos),
     planta: cadena(i.planta, 30),
@@ -70,21 +84,21 @@ export function normalizaValoracion(datos) {
   const comparables = (Array.isArray(d.comparables) ? d.comparables : [])
     .filter((c) => c && typeof c === 'object')
     .slice(0, MAX_COMPARABLES_IMPORTACION)
-    .map((c) => {
-      const ajuste = numeroImportacion(c.ajuste);
-      return {
-        direccion: cadena(c.direccion, 120),
-        fuente: FUENTES_IMPORTACION.includes(c.fuente) ? c.fuente : 'otro',
-        precio: positivo(c.precio),
-        m2: positivo(c.m2),
-        ajuste: ajuste !== '' && ajuste >= -50 && ajuste <= 50 ? ajuste : '',
-        notas: cadena(c.notas, 300),
-      };
-    });
+    .map((c) => ({
+      direccion: cadena(c.direccion, 120),
+      fuente: FUENTES_IMPORTACION.includes(c.fuente) ? c.fuente : 'otro',
+      precio: enRango(c.precio, RANGO_PRECIO),
+      m2: enRango(c.m2, RANGO_M2),
+      ajuste: enRango(c.ajuste, RANGO_AJUSTE),
+      notas: cadena(c.notas, 300),
+    }));
   return { inmueble, propietario: cadena(d.propietario, 80), comentario: cadena(d.comentario, 1500), comparables };
 }
 
-/** Un comparable sirve si tiene dirección (o referencia), precio y m² mayores que 0. */
+/**
+ * Un comparable sirve si tiene dirección (o referencia), precio y m² mayores
+ * que 0. Tras normalizaValoracion, un precio o unos m² fuera de rango ya son ''.
+ */
 export const comparableValido = (c) => Boolean(c?.direccion) && c.precio > 0 && c.m2 > 0;
 
 /* ── API pública ── */
@@ -122,7 +136,7 @@ export function enlaceImportacion(base, obj) {
 /**
  * Prepara una importación de valoración a partir de lo que reúne Clara.
  * Devuelve { ok, objeto, validos, descartados, faltan, avisos }:
- * ok es false si no hay al menos 3 comparables con precio y m² > 0.
+ * ok es false si no hay al menos 3 comparables con precio y m² dentro de rango.
  */
 export function preparaValoracion(entrada) {
   const datos = normalizaValoracion(entrada);
@@ -131,7 +145,7 @@ export function preparaValoracion(entrada) {
   const faltan = Math.max(0, MIN_COMPARABLES_IMPORTACION - validos.length);
   const avisos = [];
   if (!datos.inmueble.m2) avisos.push('Falta la superficie del piso: añádela en Cerebro para que salga el rango.');
-  if (descartados) avisos.push(`He dejado fuera ${descartados} comparable(s) sin dirección, precio o m².`);
+  if (descartados) avisos.push(`He dejado fuera ${descartados} comparable(s) sin dirección, precio o m², o con cifras imposibles (precio fuera de 1.000-50.000.000 € o m² fuera de 5-100.000).`);
   return {
     ok: faltan === 0,
     faltan,

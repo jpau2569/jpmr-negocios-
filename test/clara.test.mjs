@@ -628,6 +628,39 @@ check("rechaza dominio que resuelve a IP privada", (await leerWeb("https://tramp
 check("rechaza protocolos no web", (await leerWeb("file:///etc/passwd", { resolver: resolverPublico })).includes("http") && pedidas === 0);
 check("enlace no válido avisado", (await leerWeb("no es un enlace")).includes("no es válido"));
 
+// IPv6 que llevan dentro una IPv4 privada (hallazgo de NICER): antes pasaban.
+const IPV6_CON_IPV4_PRIVADA = [
+  "::ffff:7f00:1",              // ::ffff:127.0.0.1 tal como lo deja new URL()
+  "::ffff:127.0.0.1",
+  "::FFFF:127.0.0.1",
+  "0:0:0:0:0:ffff:7f00:1",
+  "::ffff:a9fe:a9fe",           // 169.254.169.254 (metadatos de la nube)
+  "::ffff:169.254.169.254",
+  "::ffff:a00:5",               // 10.0.0.5
+  "::ffff:c0a8:10a",            // 192.168.1.10
+  "::7f00:1",                   // ::127.0.0.1 (compatible)
+  "::127.0.0.1",
+  "64:ff9b::7f00:1",            // NAT64
+  "64:ff9b::a9fe:a9fe",
+  "64:ff9b::127.0.0.1",
+  "::ffff:0:7f00:1",            // SIIT
+  "::ffff:0:127.0.0.1",
+  "2002:7f00:1::1",             // 6to4 de 127.0.0.1
+];
+const escapan = IPV6_CON_IPV4_PRIVADA.filter((ip) => !esIpPrivada(ip));
+check("bloquea IPv6 con una IPv4 privada dentro (mapeada, compatible, NAT64, SIIT, 6to4)", escapan.length === 0, escapan.join(", "));
+const privadasV6 = ["::", "::1", "0:0:0:0:0:0:0:1", "fe80::1", "fe80::1%eth0", "febf:ffff::1", "fc00::1", "fd12:3456::1", "fdff:ffff::1", "ff02::1", "fec0::1", "64:ff9b:1::1", "2001:db8::1"];
+const escapanV6 = privadasV6.filter((ip) => !esIpPrivada(ip));
+check("bloquea ::, ::1, fe80::/10, fc00::/7, multidifusión y rangos reservados", escapanV6.length === 0, escapanV6.join(", "));
+const publicasV6 = ["2606:2800:220:1::1", "2a00:1450:4003:80e::200e", "2001:4860:4860::8888", "::ffff:5db8:d822", "::ffff:93.184.216.34", "64:ff9b::808:808", "2002:5db8:d822::1", "fe00::1", "fbff::1"];
+const bloqueadasPublicas = publicasV6.filter(esIpPrivada);
+check("las IPv6 públicas (y las que llevan una IPv4 pública) siguen permitidas", bloqueadasPublicas.length === 0, bloqueadasPublicas.join(", "));
+check("una IPv6 mal escrita no se da por buena", esIpPrivada("::ffff:zzzz:1") && esIpPrivada("1::2::3"));
+for (const enlace of ["https://[::ffff:127.0.0.1]/", "https://[::ffff:a9fe:a9fe]/latest/meta-data", "https://[::7f00:1]/", "https://[64:ff9b::7f00:1]/", "https://[::ffff:0:7f00:1]/", "https://[0:0:0:0:0:ffff:7f00:1]/", "https://[fe80::1]/", "https://[fd00::1]/", "https://[::]/"]) {
+  check(`leerWeb no pide ${enlace}`, (await leerWeb(enlace, { resolver: resolverPublico })).includes("internas") && pedidas === 0);
+}
+check("rechaza dominio que resuelve a una IPv6 con IPv4 privada dentro", (await leerWeb("https://trampa6.example.com", { resolver: async () => [{ address: "::ffff:7f00:1" }] })).includes("privadas") && pedidas === 0);
+
 globalThis.fetch = async (url) => {
   const u = String(url);
   if (u === "https://portal.example.com/a") return new Response(null, { status: 301, headers: { location: "http://127.0.0.1/secreto" } });

@@ -5,8 +5,8 @@
 //  Los enlaces se prueban con IP literales, así que no hace falta DNS.
 // ============================================================================
 
-import cerebro, { ficha, numerosDelTexto, apareceNumero, fuentesDeGemini, validaComparables, consultaComparables, limpiaInmuebleBusqueda, MAX_COMPARABLES } from "../api/_cerebro.js";
-import clara, { prepararValoracion, ESTADO_HERRAMIENTA, BASE_CEREBRO } from "../api/_clara.js";
+import cerebro, { ficha, numerosDelTexto, apareceNumero, fuentesDeGemini, fragmentosDelTexto, validaComparables, consultaComparables, limpiaInmuebleBusqueda, MAX_COMPARABLES } from "../api/_cerebro.js";
+import clara, { prepararValoracion, ESTADO_HERRAMIENTA, BASE_CEREBRO, HERRAMIENTA_VALORACION } from "../api/_clara.js";
 import { codificaImportacion, decodificaImportacion, enlaceImportacion, preparaValoracion, normalizaValoracion } from "../cerebro/importar.js";
 import { esquemaFicha } from "../cerebro/campos-piso.js";
 
@@ -201,6 +201,25 @@ check("ninguno verificable: ok con lista vacía y el mensaje", r.code === 200 &&
 check("fuentesDeGemini lee «[n] título — url» y url sola", fuentesDeGemini("x\n\nFuentes:\n[1] A — B — https://a.es/1\n[2] https://b.es/2").map((f) => f.titulo + "|" + f.url).join(",") === "A — B|https://a.es/1,|https://b.es/2");
 check("validaComparables con lista rota no revienta", validaComparables(null, "x").comparables.length === 0 && validaComparables([null, 5, "x"], "x").descartados === 3);
 
+// Hallazgos de NICER: url exacta de las fuentes y precio + m² del MISMO anuncio.
+const URL_ID = "https://www.idealista.com/inmueble/1/";
+const URL_FC = "https://www.fotocasa.es/es/comprar/vivienda/oviedo/2";
+const gem = (cuerpo) => `${cuerpo}\n\nFuentes:\n[1] idealista.com — ${URL_ID}\n[2] fotocasa.es — ${URL_FC}`;
+const DOS = gem("Piso en Campoamor, 230.000 €, 90 m², 3 hab. Piso en Fruela, 210.000 €, 85 m².");
+const val = (c, texto = DOS) => validaComparables([{ direccion: "x", fuente: "idealista", ...c }], texto);
+check("control: precio y m² del mismo anuncio y url exacta → vale", val({ precio: 230000, m2: 90, url: URL_ID }).comparables.length === 1 && val({ precio: 210000, m2: 85, url: URL_FC }).comparables.length === 1);
+check("mezcla: el precio de un anuncio con los m² de otro (misma línea) → descartado", val({ precio: 230000, m2: 85, url: URL_ID }).descartados === 1 && val({ precio: 210000, m2: 90, url: URL_FC }).descartados === 1);
+const DOS_LINEAS = gem("- Piso en Campoamor: 230.000 €, 3 habitaciones\n- Piso en Fruela: 85 m², reformado");
+check("mezcla: precio en una línea y m² en otra → descartado", val({ precio: 230000, m2: 85, url: URL_ID }, DOS_LINEAS).descartados === 1);
+check("url truncada («https://www.idealista.com» siendo la fuente …/inmueble/1/) → descartada", val({ precio: 230000, m2: 90, url: "https://www.idealista.com" }).descartados === 1);
+check("url con un trozo de más o de menos → descartada", val({ precio: 230000, m2: 90, url: URL_ID + "x" }).descartados === 1 && val({ precio: 230000, m2: 90, url: URL_ID.slice(0, -1) }).descartados === 1);
+check("url que sale en el texto pero no en «Fuentes» → descartada", val({ precio: 230000, m2: 90, url: "https://otra.es/1" }, gem("Piso en Campoamor, 230.000 €, 90 m² (https://otra.es/1).")).descartados === 1);
+check("los números de la lista de fuentes no cuentan como anuncio", val({ precio: 1000, m2: 2, url: URL_FC }, `Nada.\n\nFuentes:\n[1] 1000 pisos — ${URL_ID}\n[2] 2 m² — ${URL_FC}`).descartados === 1);
+const MARKDOWN = gem("1. **Piso en Campoamor**\n   - Precio: 230.000 €\n   - Superficie: 90 m²\n2. **Piso en Fruela**\n   - Precio: 210.000 €\n   - Superficie: 85 m²");
+check("lista Markdown con el precio y los m² en líneas sangradas del mismo anuncio → vale", val({ precio: 230000, m2: 90, url: URL_ID }, MARKDOWN).comparables.length === 1 && val({ precio: 210000, m2: 85, url: URL_FC }, MARKDOWN).comparables.length === 1);
+check("…y en esa lista la mezcla entre anuncios sigue descartada", val({ precio: 230000, m2: 85, url: URL_ID }, MARKDOWN).descartados === 1);
+check("fragmentosDelTexto no parte «230.000» ni «85,5»", fragmentosDelTexto("Piso, 230.000 €, 85,5 m². Otro.").includes("Piso, 230.000 €, 85,5 m²."));
+
 // ═════════════════════════════════════════════════════════════════════════════
 console.log("\n📦 cerebro/importar.js");
 const OBJ = { v: 1, tipo: "valoracion", datos: {
@@ -223,7 +242,24 @@ check("la basura devuelve null y nunca lanza", todasNull && !lanzo);
 const norm = decodificaImportacion(b64({ v: 1, tipo: "valoracion", datos: { inmueble: { m2: "92", direccion: 7, raro: "x" }, comparables: [{ direccion: "<b>x</b>", fuente: "hackeo", precio: "120.000", m2: "85,5", ajuste: 90 }, "roto", null] } }));
 check("normaliza tipos: números en texto, fuente desconocida → otro, ajuste fuera de rango, campos raros fuera", norm && norm.datos.inmueble.m2 === 92 && norm.datos.inmueble.direccion === "7" && !("raro" in norm.datos.inmueble) && norm.datos.comparables.length === 1 && norm.datos.comparables[0].fuente === "otro" && norm.datos.comparables[0].precio === 120000 && norm.datos.comparables[0].m2 === 85.5 && norm.datos.comparables[0].ajuste === "", JSON.stringify(norm));
 check("normalizaValoracion con basura da la forma vacía", normalizaValoracion("x").comparables.length === 0 && normalizaValoracion(null).inmueble.direccion === "");
-check("preparaValoracion cuenta los válidos", preparaValoracion({ comparables: [{ direccion: "a", precio: 1, m2: 1 }, { direccion: "b", precio: 0, m2: 1 }] }).validos === 1);
+check("preparaValoracion cuenta los válidos", preparaValoracion({ comparables: [{ direccion: "a", precio: 120000, m2: 80 }, { direccion: "b", precio: 0, m2: 80 }] }).validos === 1);
+
+// Números absurdos (hallazgo de NICER): fuera de rango se descartan.
+const unComp = (c) => normalizaValoracion({ comparables: [{ direccion: "a", ...c }] }).comparables[0];
+check("precio 1e300 € → descartado", unComp({ precio: 1e300, m2: 80 }).precio === "");
+check("precio 1,2 € (número y texto) → descartado", unComp({ precio: 1.2, m2: 80 }).precio === "" && unComp({ precio: "1,2 €", m2: 80 }).precio === "");
+check("precio «1e300» en texto no se lee como 1300", unComp({ precio: "1e300", m2: 80 }).precio === "");
+check("precio Infinity y 50.000.001 € → descartados", unComp({ precio: Infinity, m2: 80 }).precio === "" && unComp({ precio: 50000001, m2: 80 }).precio === "");
+check("precio en los bordes (1.000 y 50.000.000 €) → vale", unComp({ precio: 1000, m2: 80 }).precio === 1000 && unComp({ precio: "50.000.000", m2: 80 }).precio === 50000000);
+check("m² del comparable fuera de 5-100.000 → descartado", unComp({ precio: 120000, m2: 4.9 }).m2 === "" && unComp({ precio: 120000, m2: 100001 }).m2 === "" && unComp({ precio: 120000, m2: 1e300 }).m2 === "");
+check("m² en los bordes (5 y 100.000) → vale", unComp({ precio: 120000, m2: 5 }).m2 === 5 && unComp({ precio: 120000, m2: "100.000" }).m2 === 100000);
+check("ajuste entre -50 y 50 (bordes incluidos)", unComp({ ajuste: -50 }).ajuste === -50 && unComp({ ajuste: 50 }).ajuste === 50 && unComp({ ajuste: 50.1 }).ajuste === "" && unComp({ ajuste: -51 }).ajuste === "");
+const m2Inm = (m2) => normalizaValoracion({ inmueble: { m2 } }).inmueble.m2;
+check("m² del inmueble fuera de 5-100.000 → vacío", m2Inm(1) === "" && m2Inm(1e300) === "" && m2Inm(100001) === "" && m2Inm(92) === 92 && m2Inm(5) === 5);
+const absurdos = preparaValoracion({ inmueble: { m2: 1e300 }, comparables: [
+  { direccion: "a", precio: 230000, m2: 90 }, { direccion: "b", precio: 1e300, m2: 90 }, { direccion: "c", precio: 1.2, m2: 90 }, { direccion: "d", precio: 210000, m2: 0.5 },
+] });
+check("preparaValoracion: 1e300 €, 1,2 € y 0,5 m² quedan fuera y no hay valoración", !absurdos.ok && absurdos.validos === 1 && absurdos.descartados === 3 && absurdos.avisos.some((a) => a.includes("cifras imposibles")) && absurdos.avisos.some((a) => a.includes("Falta la superficie")), JSON.stringify(absurdos.avisos));
 
 // ═════════════════════════════════════════════════════════════════════════════
 console.log("\n📊 preparar_valoracion (Clara)");
@@ -245,6 +281,10 @@ check("el enlace se decodifica bien", decod?.tipo === "valoracion" && decod.dato
 check("sin superficie del piso: enlace con aviso", prepararValoracion({ inmueble: { direccion: "x" }, comparables: tres }, {}).includes("Falta la superficie"));
 check("usa la dirección pública si está configurada", prepararValoracion({ inmueble: INM, comparables: tres }, { CLARA_URL_PUBLICA: "mi-web.es" }).includes("https://mi-web.es/cerebro/app.html#importar="));
 check("estado visible en el chat", ESTADO_HERRAMIENTA.preparar_valoracion === "📊 Preparando la valoración…");
+const conAbsurdos = prepararValoracion({ inmueble: INM, comparables: [...tres.slice(0, 2), { direccion: "Uría 20", fuente: "anuncio", precio: 1e300, m2: 95 }, { direccion: "Uría 22", fuente: "anuncio", precio: 1.2, m2: 95 }] }, {});
+check("preparar_valoracion: 1e300 € y 1,2 € no cuentan como comparables (sin enlace)", !conAbsurdos.includes("importar=") && conAbsurdos.includes("Faltan 1") && conAbsurdos.includes("2 descartado") && conAbsurdos.includes("fuera de esos rangos"), conAbsurdos);
+const notasDesc = HERRAMIENTA_VALORACION.input_schema.properties.comparables.items.properties.notas.description;
+check("el esquema pide SOLO la url en las notas del comparable", notasDesc.includes("SOLO la url") && !/fecha,/.test(notasDesc) && notasDesc.includes("sin fecha"));
 
 // Flujo completo por el chat: Claude pide la herramienta y recibe el enlace.
 let ronda = 0;
@@ -257,6 +297,7 @@ await clara({ method: "POST", body: { messages: [{ role: "user", content: "Való
 const chat = llamadas.claude.slice(claudeAntesChat);
 check("preparar_valoracion declarada siempre (sin nube)", chat[0]?.tools.some((t) => t.name === "preparar_valoracion") && chat[0].tools.length === 6);
 check("el prompt de Clara tiene la sección de valoración", chat[0]?.system[0].text.includes("## Valoración de mercado") && chat[0].system[0].text.includes("no una tasación oficial") && chat[0].system[0].text.includes("sección Pisos"));
+check("el prompt de valoración pide SOLO la url en «notas» (ni enlace y fecha juntos)", chat[0]?.system[0].text.includes("pon SOLO la url del anuncio") && !chat[0].system[0].text.includes("pon el enlace y la fecha de cada anuncio en sus notas"));
 const resultado = chat[1]?.messages.at(-1).content[0];
 check("el tool_result lleva el enlace de Cerebro", rc.statusCode === 200 && resultado?.type === "tool_result" && resultado.content.includes("/cerebro/app.html#importar="), JSON.stringify(resultado));
 

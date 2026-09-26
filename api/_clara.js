@@ -171,8 +171,8 @@ export function prepararValoracion(entrada, env = process.env) {
   const p = preparaValoracion(entrada);
   if (!p.ok) {
     return (
-      `Todavía no puedo preparar la valoración: necesito al menos ${MIN_COMPARABLES_IMPORTACION} comparables con dirección, precio y m² mayores que 0, ` +
-      `y tengo ${p.validos} válido(s)${p.descartados ? ` (${p.descartados} descartado(s) por faltarles dirección, precio o m²)` : ""}. ` +
+      `Todavía no puedo preparar la valoración: necesito al menos ${MIN_COMPARABLES_IMPORTACION} comparables con dirección, precio (entre 1.000 y 50.000.000 €) y m² (entre 5 y 100.000), ` +
+      `y tengo ${p.validos} válido(s)${p.descartados ? ` (${p.descartados} descartado(s) por faltarles dirección, precio o m², o por tener cifras fuera de esos rangos)` : ""}. ` +
       `Faltan ${p.faltan}. Busca más con buscar_web o pídeselos a Pau. No hay enlace todavía: no des ninguna cifra de valor.`
     );
   }
@@ -236,7 +236,7 @@ Cuando Pau te pida valorar un piso, con un enlace o con sus datos:
 2. Busca con buscar_web al menos 3 comparables parecidos (misma zona, mismo tipo y tamaño parecido) con precio, m² y enlace. Solo valen los que traen precio y m² de verdad; si no los encuentras, dilo y pide a Pau que añada los suyos.
 3. Calcula el €/m² de cada uno y el rango con la herramienta calcular, enseñando las fórmulas.
 4. Sé honesta: no existe un valor «exacto». Es un rango orientativo sacado de precios de oferta (que suelen estar por encima del precio final de venta), no una tasación oficial.
-5. Llama a preparar_valoracion con el inmueble y los comparables (pon el enlace y la fecha de cada anuncio en sus notas) y dale a Pau el enlace para generar el PDF con el logo en Cerebro Útil Pau. Si la herramienta dice que faltan comparables, no des cifra.
+5. Llama a preparar_valoracion con el inmueble y los comparables (en «notas» de cada comparable pon SOLO la url del anuncio, empezando por https://, sin fecha ni otro texto: Cerebro la convierte en el botón «Ver el anuncio»; la fecha, si la sabes, dila en tu respuesta) y dale a Pau el enlace para generar el PDF con el logo en Cerebro Útil Pau. Si la herramienta dice que faltan comparables, no des cifra.
 El dictado de fichas (Pau dicta el piso y se rellena la ficha solo con lo que dice) y la hoja de captación están en Cerebro Útil Pau, sección Pisos: recuérdaselo cuando capte un inmueble.
 
 ## Segunda opinión (segunda_opinion)
@@ -474,7 +474,7 @@ export const HERRAMIENTA_VALORACION = {
             precio: { type: "number", description: "Precio en euros." },
             m2: { type: "number", description: "Superficie en m²." },
             ajuste: { type: "number", description: "Ajuste en % entre -50 y 50 (opcional)." },
-            notas: { type: "string", description: "Enlace del anuncio y fecha, u otra nota breve." },
+            notas: { type: "string", description: "SOLO la url del anuncio (https://…), sin fecha ni otro texto. Vacío si no hay enlace." },
           },
           required: ["direccion", "precio", "m2"],
         },
