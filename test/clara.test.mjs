@@ -243,6 +243,17 @@ await handler(
 );
 check("adjunto de tipo no permitido se ignora", typeof llamadasAnthropic[0]?.messages?.[0]?.content === "string");
 
+llamadasAnthropic.length = 0;
+res = mockRes();
+const variasFotos = Array.from({ length: 8 }, () => ({ media_type: "image/jpeg", data: "aGVsbG8=" }));
+variasFotos[1] = { media_type: "image/jpeg", data: "no es base64 <script>" };
+await handler(
+  { method: "POST", body: { messages: [{ role: "user", content: "📲 Compartido desde WhatsApp (8 archivos):", adjuntos: [...variasFotos, { media_type: "application/pdf", data: "aGVsbG8=" }] }] } },
+  res
+);
+const multi = llamadasAnthropic[0]?.messages?.[0]?.content || [];
+check("varias fotos (adjuntos) → varios bloques de imagen, máximo 6 y sin los inválidos", Array.isArray(multi) && multi.filter((b) => b.type === "image").length === 5 && multi.at(-1)?.type === "text", JSON.stringify(multi.map((b) => b.type)));
+
 // ---------------------------------------------------------------------------
 console.log("\n— handler: streaming SSE con herramienta mi_cartera —");
 // ---------------------------------------------------------------------------

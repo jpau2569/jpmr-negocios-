@@ -198,6 +198,9 @@ Tienes una herramienta llamada "calcular" que evalúa expresiones aritméticas c
 ## Tu cartera real (mi_cartera)
 Tienes una herramienta llamada "mi_cartera" que lee EN EL MOMENTO los inmuebles publicados de Asesoría Castresana (venta y alquiler) desde su web oficial, con títulos, precios, m², habitaciones, referencias y enlaces. Úsala siempre que Pau pregunte por sus pisos, su cartera, su inventario, qué tiene en una zona o a qué precio — nunca respondas de memoria sobre su inventario. Cita siempre la referencia de cada inmueble que menciones. Si la herramienta falla, dilo y pide los datos a mano.
 
+## Compartido desde WhatsApp (📲)
+Pau puede compartirte desde WhatsApp (menú Compartir → Clara en su Android) las fotos, enlaces y textos que le mandan sus clientes. Esos mensajes empiezan por "📲 Compartido desde WhatsApp" y pueden traer hasta 6 fotos. Cuando llegue uno: 1) si trae un enlace, léelo con leer_web; 2) analiza todas las fotos (estancia, estado, luz, qué se ve y qué no); 3) si Pau no ha dicho de qué piso es o qué quiere, pregúntaselo en una línea, proponiendo lo más útil (normalmente la ficha para Inmoweb con la skill "ficha-portal-inmobiliario"); 4) separa siempre lo que dicen las fotos o el cliente de lo que falta por confirmar. No tienes acceso directo a su WhatsApp: solo ves lo que él te comparte.
+
 ## Leer enlaces (leer_web)
 Tienes una herramienta llamada "leer_web" que abre y lee una página pública concreta. Úsala SIEMPRE que Pau te pase un enlace (un anuncio de Idealista o Fotocasa, una oferta de empleo, una noticia, la web de un competidor o de un cliente): léelo de verdad antes de opinar, nunca lo imagines por la dirección. Si la web bloquea la lectura o no tiene texto, dilo y pide a Pau que pegue el contenido. Para buscar información sin enlace concreto, usa "buscar_web".
 
@@ -328,6 +331,7 @@ const ADJUNTO_TIPOS = {
   "application/pdf": "document",
 };
 const MAX_ADJUNTO_B64 = 5_000_000; // ~3,7 MB reales por adjunto
+const MAX_ADJUNTOS = 6; // por mensaje (p. ej. varias fotos compartidas desde WhatsApp)
 
 // Ejecuta una herramienta pedida por Clara y devuelve su resultado en texto.
 async function ejecutarHerramienta(tu, claveSync) {
@@ -424,26 +428,26 @@ export default async function handler(req, res) {
 
   const history = brutos.map((m, i) => {
     const texto = m.content.slice(0, 30000);
-    const bloque = ADJUNTO_TIPOS[m.adjunto?.media_type];
     const esReciente = i >= brutos.length - 4;
-    if (
-      m.role === "user" &&
-      bloque &&
-      esReciente &&
-      typeof m.adjunto.data === "string" &&
-      m.adjunto.data.length > 0 &&
-      m.adjunto.data.length <= MAX_ADJUNTO_B64 &&
-      /^[A-Za-z0-9+/=]+$/.test(m.adjunto.data)
-    ) {
-      const source = { type: "base64", media_type: m.adjunto.media_type, data: m.adjunto.data };
-      return {
-        role: "user",
-        content: [
-          bloque === "image" ? { type: "image", source } : { type: "document", source },
-          { type: "text", text: texto },
-        ],
-      };
+    // Formato nuevo (adjuntos: [...]) y el de siempre (adjunto: {...}).
+    const lista = Array.isArray(m.adjuntos) ? m.adjuntos : m.adjunto ? [m.adjunto] : [];
+    const bloques = [];
+    if (m.role === "user" && esReciente) {
+      for (const a of lista.slice(0, MAX_ADJUNTOS)) {
+        const bloque = ADJUNTO_TIPOS[a?.media_type];
+        if (
+          bloque &&
+          typeof a.data === "string" &&
+          a.data.length > 0 &&
+          a.data.length <= MAX_ADJUNTO_B64 &&
+          /^[A-Za-z0-9+/=]+$/.test(a.data)
+        ) {
+          const source = { type: "base64", media_type: a.media_type, data: a.data };
+          bloques.push(bloque === "image" ? { type: "image", source } : { type: "document", source });
+        }
+      }
     }
+    if (bloques.length) return { role: "user", content: [...bloques, { type: "text", text: texto }] };
     return { role: m.role, content: texto };
   });
 
