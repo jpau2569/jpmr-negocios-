@@ -394,7 +394,7 @@ export function pdfValoracion(val, calculo, ajustes, hoy, opciones = {}) {
   e.cabe(30);
   doc.texto(M, e.y, `${ajustes.agente} · ${ajustes.empresa}`, { tam: 10, negrita: true, color: MARINO });
   e.y += 14;
-  doc.texto(M, e.y, [ajustes.telefono && `Tel. ${ajustes.telefono}`, ajustes.whatsapp && `WhatsApp ${ajustes.whatsapp}`, ajustes.email, ajustes.web].filter(Boolean).join('  ·  '), { tam: 9, color: GRIS });
+  doc.texto(M, e.y, partirTexto([ajustes.telefono && `Tel. ${ajustes.telefono}`, ajustes.whatsapp && `WhatsApp ${ajustes.whatsapp}`, ajustes.email, ajustes.web].filter(Boolean).join('  ·  '), ANCHO, 9)[0] || '', { tam: 9, color: GRIS });
   pie(doc, `Informe generado con Cerebro Útil Pau el ${fechaLarga(hoy)}`, false);
   return doc.bytes();
 }
