@@ -2,7 +2,7 @@
   "functions": {
     "api/[ruta].js": {
       "maxDuration": 60,
-      "includeFiles": "{agentes/**,sol-niebla-agua/api/**,chivato/datos/**,skills/**,cerebro/*.js}"
+      "includeFiles": "{agentes/**,sol-niebla-agua/api/**,chivato/datos/**,skills/**,cerebro/*.js,fotos-idealista/*.js}"
     }
   },
   "crons": [

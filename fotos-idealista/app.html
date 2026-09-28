@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fotos para Idealista — Asesoría Castresana</title>
+<meta name="description" content="Prepara las fotos de un piso para Idealista: tamaño correcto, retoque suave, sin GPS, orden recomendado y nombres claros.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14161a" media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="styles.css">
+<script>
+  // Tema antes de pintar para que no parpadee.
+  try { const t = JSON.parse(localStorage.getItem("fotos-idealista:ajustes") || "{}").tema; if (t) document.documentElement.dataset.tema = t; } catch {}
+</script>
+</head>
+<body>
+<header class="cabecera">
+  <div>
+    <h1>Fotos para Idealista</h1>
+    <p class="lema">Del móvil al anuncio: tamaño, retoque suave, orden y nombres.</p>
+  </div>
+  <button type="button" id="tema" class="btn-icono" aria-label="Cambiar entre tema claro y oscuro">◐</button>
+</header>
+
+<main class="contenedor">
+  <section class="tarjeta" aria-labelledby="t-cargar">
+    <h2 id="t-cargar">1. Elige las fotos del piso</h2>
+    <div id="zona" class="zona">
+      <label for="archivos" class="btn-principal">Elegir fotos</label>
+      <input id="archivos" type="file" accept="image/*,.heic,.heif" multiple class="vh">
+      <p class="zona-ayuda">Puedes elegir muchas a la vez (JPG, PNG, WebP o HEIC del iPhone).<span class="solo-pc"> O arrástralas aquí.</span></p>
+    </div>
+    <p class="privacidad">Las fotos se preparan en este aparato y salen <strong>sin ubicación GPS</strong>. Si la IA está encendida, solo se envía una copia pequeña para reconocer cada estancia.</p>
+
+    <div class="opciones">
+      <label class="interruptor"><input type="checkbox" id="op-retoque" checked> <span>Retoque suave (luz, contraste y nitidez, sin cambiar nada de la foto)</span></label>
+      <label class="interruptor"><input type="checkbox" id="op-ia" checked> <span>Usar la IA para reconocer estancias y avisar de lo que sobra</span></label>
+      <div class="campo">
+        <label for="referencia">Referencia del inmueble <span class="opc">(opcional, va en el nombre del ZIP)</span></label>
+        <input id="referencia" type="text" maxlength="40" autocomplete="off" placeholder="Ej.: Uría 12 3ºB">
+      </div>
+      <details class="ajustes">
+        <summary>Clave de la IA</summary>
+        <div class="campo">
+          <label for="clave">Clave de sincronización <span class="opc">(la misma de Clara y Cerebro; se guarda solo en este aparato)</span></label>
+          <input id="clave" type="password" autocomplete="off">
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <div id="progreso" class="progreso oculto" role="status" aria-live="polite">
+    <p id="progreso-texto"></p>
+    <div class="barra"><div id="progreso-barra"></div></div>
+  </div>
+  <div id="errores" class="errores" role="alert"></div>
+
+  <section class="tarjeta oculto" id="bloque-fotos" aria-labelledby="t-fotos">
+    <div class="titulo-fila">
+      <h2 id="t-fotos">2. Revisa el orden</h2>
+      <p id="resumen" class="resumen"></p>
+    </div>
+    <div id="estado-ia" aria-live="polite"></div>
+    <div class="acciones-lista">
+      <button type="button" id="ordenar" class="btn-secundario">Ordenar como recomienda Idealista</button>
+      <button type="button" id="reanalizar" class="btn-secundario">Volver a pasar la IA</button>
+    </div>
+    <p class="ayuda">La primera es la portada. Muévelas con ↑ ↓<span class="solo-pc"> o arrastrándolas</span>.</p>
+    <ol id="lista" class="lista"></ol>
+
+    <div id="bloque-apartadas" class="oculto">
+      <h3>Apartadas (no van en el anuncio)</h3>
+      <ul id="apartadas" class="lista-apartadas"></ul>
+    </div>
+  </section>
+
+  <section class="tarjeta oculto" id="bloque-salida" aria-labelledby="t-salida">
+    <h2 id="t-salida">3. Llévatelas</h2>
+    <div class="acciones-salida">
+      <button type="button" id="zip" class="btn-principal">Descargar ZIP</button>
+      <button type="button" id="compartir" class="btn-principal oculto">Compartir o guardar en Fotos</button>
+      <button type="button" id="una-a-una" class="btn-secundario">Descargar una a una</button>
+      <button type="button" id="empezar" class="btn-secundario">Empezar otro piso</button>
+    </div>
+    <p class="ayuda">En el iPhone, <em>Compartir</em> → <em>Guardar imágenes</em> las deja en la galería listas para subir a la app de Idealista.</p>
+  </section>
+</main>
+
+<footer class="pie">
+  <p>Asesoría Castresana · <a href="/marcadeagua.html">Quitar un objeto de una foto</a></p>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

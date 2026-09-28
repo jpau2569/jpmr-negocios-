@@ -22,6 +22,7 @@ const RUTAS = {
   escaparate: () => import("./_escaparate.js"),
   foto: () => import("./_foto.js"),
   fotos: () => import("./_fotos.js"),
+  "fotos-idealista": () => import("./_fotos-idealista.js"),
   health: () => import("./_health.js"),
   lead: () => import("./_lead.js"),
   leads: () => import("./_leads.js"),
