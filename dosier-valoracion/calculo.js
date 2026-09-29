@@ -52,9 +52,10 @@ export function construirDosier(datos) {
   }
 
   // Bajada de precio, si consta el precio anterior.
-  const anterior = Number(inm.precioAnterior);
+  const hist = Array.isArray(inm.historialPrecios) ? inm.historialPrecios.filter((h) => Number(h?.precio) > 0) : [];
+  const anterior = hist.length ? Number(hist[0].precio) : Number(inm.precioAnterior);
   const bajada = anterior > precio && precio > 0
-    ? { anterior, diferencia: anterior - precio, porcentaje: ((anterior - precio) / anterior) * 100 }
+    ? { anterior, diferencia: anterior - precio, porcentaje: ((anterior - precio) / anterior) * 100, escalones: hist.length }
     : null;
 
   // Dónde cae el precio publicado respecto al rango.

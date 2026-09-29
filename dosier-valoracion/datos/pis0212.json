@@ -41,7 +41,20 @@
       "Acceso adaptado a movilidad reducida"
     ],
     "certificadoEnergetico": null,
-    "precioAnterior": 198000
+    "historialPrecios": [
+      {
+        "precio": 198000,
+        "visitas": null
+      },
+      {
+        "precio": 190000,
+        "visitas": 5
+      },
+      {
+        "precio": 180000,
+        "visitas": 12
+      }
+    ]
   },
   "fotos": [
     "https://storage.googleapis.com/static.inmoweb.es/clients/2853/property/1764630/image/w/WhatsApp%20Image%202026-07-21%20at%2018.22.26.jpg",
@@ -102,10 +115,11 @@
     "Certificado energético: la ficha web muestra un texto erróneo y no tiene consumo ni emisiones",
     "Cuota de comunidad e IBI",
     "Referencia catastral y nota simple (cargas, titularidad)",
-    "Número de visitas y ofertas a cada precio, y fecha en que salió a la venta"
+    "Cuántos días estuvo a cada precio y cuántas visitas hubo a 198.000 €",
+    "Ofertas recibidas (y a qué precio)"
   ],
   "mercado": {
-    "demandaTrasBajada": "Muchas de las visitas llegaron después de bajar el precio a 180.000 €.",
-    "fuente": "Dato aportado por el agente (Pau); falta el número exacto de visitas y ofertas."
+    "demandaTrasBajada": "De las 17 visitas registradas, 12 llegaron con el precio a 180.000 € y 5 con el precio a 190.000 €.",
+    "fuente": "Datos aportados por el agente (Pau). Falta el tiempo que estuvo a cada precio, el número de visitas a 198.000 € y las ofertas."
   }
 }

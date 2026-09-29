@@ -49,6 +49,14 @@ p{margin:0 0 1em}
 .cifra--oro strong{color:var(--oro-claro)}
 .veredicto{background:var(--papel-2);border-left:4px solid var(--oro);padding:1.1rem 1.3rem;border-radius:0 12px 12px 0;margin-top:1.2rem}
 
+/* Historial de precios */
+.historia{margin-top:1.4rem;background:#fff;border:1px solid #e6dfcf;border-radius:14px;padding:1.2rem 1.4rem}
+.historia h3{font-size:1.05rem}
+.historia ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.historia li{border-left:3px solid #d9d1bf;padding:.2rem 0 .2rem .8rem}
+.historia li.hoy{border-color:var(--oro)}
+.historia b{display:block;font:600 1.3rem var(--serif)} .historia span{display:block;font-size:.8rem;color:var(--tinta-2)} .historia em{font-style:normal;font-weight:600;color:var(--oro-oscuro)}
+
 /* Inmueble */
 .ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0 2.4rem}
 .ficha div{display:flex;justify-content:space-between;gap:1rem;padding:.65rem 0;border-bottom:1px solid #e6dfcf}

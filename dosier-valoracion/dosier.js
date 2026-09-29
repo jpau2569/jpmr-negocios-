@@ -29,11 +29,18 @@ function veredicto(d, m) {
   const pub = euros(d.inmueble.precioPublicado);
   const rango = `${euros(calculo.valor.bajo)} y ${euros(calculo.valor.alto)}`;
   const b = m.bajada;
-  const historia = b ? ` El piso salió a <b>${euros(b.anterior)}</b> y se bajó a ${pub} (<b>−${b.diferencia.toLocaleString('es-ES')} €, un ${b.porcentaje.toFixed(1).replace('.', ',')} %</b>). Esa bajada puede ser una señal de que el mercado no aceptó el precio anterior, y es un motivo más para contrastar antes de subirlo.` : '';
+  const historia = b ? ` El piso salió a <b>${euros(b.anterior)}</b>${b.escalones > 2 ? ', pasó por precios intermedios' : ''} y se bajó hasta ${pub} (<b>−${b.diferencia.toLocaleString('es-ES')} €, un ${b.porcentaje.toFixed(1).replace('.', ',')} %</b>). Esa bajada puede ser una señal de que el mercado no aceptó el precio anterior, y es un motivo más para contrastar antes de subirlo.` : '';
   const cautela = historia + ' Ojo: los comparables son precios <b>pedidos</b>, no de venta cerrada, y son pocos. Por eso esto no es una orden de subir el precio, sino la razón para contrastarlo con ventas cerradas antes de decidir.';
   if (posicion.lugar === 'debajo') return `El precio publicado (<b>${pub}</b>) está <b>por debajo</b> del rango que sugieren los comparables, entre ${rango}.${cautela}`;
   if (posicion.lugar === 'encima') return `El precio publicado (<b>${pub}</b>) está <b>por encima</b> del rango que sugieren los comparables, entre ${rango}. Un precio por encima del mercado suele alargar el tiempo de venta o forzar una bajada posterior.${cautela}`;
   return `El precio publicado (<b>${pub}</b>) está <b>dentro</b> del rango que sugieren los comparables, entre ${rango}.${cautela}`;
+}
+
+function historia(d) {
+  const h = d.inmueble.historialPrecios;
+  if (!Array.isArray(h) || h.length < 2) return '';
+  const paso = (x, k) => `<li${k === h.length - 1 ? ' class="hoy"' : ''}><b>${euros(x.precio)}</b><span>${k === h.length - 1 ? 'precio actual' : k === 0 ? 'precio inicial' : 'primera bajada'}</span><em>${Number.isFinite(x.visitas) ? `${x.visitas} visitas` : 'visitas sin datos'}</em></li>`;
+  return `<div class="historia"><h3>Cómo ha respondido el mercado a cada precio</h3><ol>${h.map(paso).join('')}</ol><p class="pequeno suave">Ojo: no sabemos cuánto tiempo estuvo a cada precio, así que las visitas no son una tasa por día. Y una visita no es una oferta: las ofertas están pendientes de confirmar.</p></div>`;
 }
 
 function seccionRango(d, m) {
@@ -108,6 +115,7 @@ function html(d, m) {
       <div class="cifra"><b>Mediana de la muestra</b><strong>${miles(c.porM2.mediana)} €/m²</strong><small>${c.n} comparables, ya ajustados</small></div>` : `<div class="cifra"><b>Rango orientativo</b><strong>—</strong><small>Faltan ${c.faltan} comparables</small></div>`}
     </div>
     <div class="veredicto">${veredicto(d, m)}</div>
+    ${historia(d)}
     ${d.mercado?.demandaTrasBajada ? `<div class="veredicto" style="border-left-color:var(--ok)"><b>Lo que ha dicho el mercado.</b> ${esc(d.mercado.demandaTrasBajada)} Es la señal más directa que tenemos: a ${euros(d.inmueble.precioPublicado)} hay demanda real. Los comparables son precios <b>pedidos</b>, así que el rango de arriba es una <b>referencia de techo</b>, no una promesa de precio de cierre. Cualquier subida se decidiría con usted, vigilando que no se pierda esa demanda.</div>` : ''}
   </div></section>
 
