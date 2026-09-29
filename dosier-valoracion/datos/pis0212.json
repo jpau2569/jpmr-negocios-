@@ -45,7 +45,8 @@
       {
         "precio": 198000,
         "visitas": null,
-        "dias": null
+        "dias": null,
+        "nota": "Sin aceptación del mercado"
       },
       {
         "precio": 190000,
@@ -118,11 +119,12 @@
     "Certificado energético: la ficha web muestra un texto erróneo y no tiene consumo ni emisiones",
     "Cuota de comunidad e IBI",
     "Referencia catastral y nota simple (cargas, titularidad)",
-    "Ofertas recibidas (y a qué precio)",
-    "Días y visitas del tramo a 198.000 €"
+    "Días y visitas del tramo a 198.000 €",
+    "Primera oferta: es el dato que fija el precio real de cierre"
   ],
   "mercado": {
     "demandaTrasBajada": "A 190.000 € hubo 5 visitas en un mes; a 180.000 €, 12 visitas en 20 días.",
-    "fuente": "Datos aportados por el agente (Pau). «Un mes» se cuenta como 30 días. Faltan los días y visitas a 198.000 € y las ofertas."
+    "fuente": "Datos aportados por el agente (Pau). «Un mes» se cuenta como 30 días. A 198.000 € no hubo aceptación del mercado; faltan sus visitas y días. Por ahora no hay ninguna oferta.",
+    "ofertas": 0
   }
 }

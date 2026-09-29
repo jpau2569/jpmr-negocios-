@@ -46,6 +46,7 @@ check("el historial tiene 3 precios (198/190/180) y las visitas 5 y 12", JSON.st
 check("el ritmo a 190.000 es 5 visitas en 30 días ≈ 1,17/semana", Math.abs(m.ritmo.antes - 5 / 30 * 7) < 1e-9);
 check("el ritmo a 180.000 es 12 visitas en 20 días = 4,2/semana", Math.abs(m.ritmo.ahora - 4.2) < 1e-9);
 check("el ritmo se multiplica por 3,6 al bajar a 180.000", Math.abs(m.ritmo.veces - 3.6) < 1e-9 && m.ritmo.precioAntes === 190000);
+check("el JSON recoge que no hay ofertas y que a 198.000 no hubo aceptación", datos.mercado.ofertas === 0 && /Sin aceptación/.test(datos.inmueble.historialPrecios[0].nota));
 check("sin días no se inventa ritmo (tramo de 198.000 sin datos)", ritmoSemanal(datos.inmueble.historialPrecios[0]) === null && ritmoSemanal({ visitas: 5, dias: 0 }) === null && ritmoSemanal({ visitas: null, dias: 20 }) === null);
 check("sin historial ni precio anterior no se inventa ninguna bajada", construirDosier({ ...datos, inmueble: { ...datos.inmueble, historialPrecios: undefined } }).bajada === null);
 check("la muestra de 4 se marca como reducida", m.avisos.some((a) => a.nivel === "medio" && /reducida/.test(a.texto)));
@@ -155,7 +156,7 @@ if (chromium) {
     check("la valoración enseña el rango calculado", txt.includes("193.500") && txt.includes("225.500") && txt.includes("204.500"), txt.slice(0, 200));
     check("el resumen enseña el precio publicado, el anterior y el veredicto «por debajo»", (await p.textContent("#resumen")).includes("180.000") && (await p.textContent("#resumen")).includes("198.000") && (await p.textContent("#resumen")).includes("por debajo"));
     check("la galería tiene las fotos del JSON", (await p.locator(".galeria img").count()) === datos.fotos.length);
-    check("el resumen enseña el historial con 12 visitas a 180.000 y 5 a 190.000", (await p.locator(".historia li").count()) === 3 && (await p.textContent(".historia")).includes("12 visitas") && (await p.textContent(".historia")).includes("5 visitas") && (await p.textContent(".historia")).includes("3,6 veces") && (await p.textContent("#resumen")).includes("Lo que ha dicho el mercado"));
+    check("el resumen enseña el historial con 12 visitas a 180.000 y 5 a 190.000", (await p.locator(".historia li").count()) === 3 && (await p.textContent(".historia")).includes("12 visitas") && (await p.textContent(".historia")).includes("5 visitas") && (await p.textContent(".historia")).includes("3,6 veces") && (await p.textContent(".historia")).includes("Sin aceptación") && (await p.textContent("#resumen")).includes("no ha llegado ninguna oferta") && (await p.textContent("#resumen")).includes("Lo que ha dicho el mercado"));
     check("aparece el aviso legal y el contacto", (await p.textContent("#pendientes")).includes("No es una tasación oficial") && (await p.textContent("footer")).includes("985 210 468"));
     check("sin errores de JavaScript en la página", errores.length === 0, errores.join(" | "));
     await p.emulateMedia({ media: "print" });
