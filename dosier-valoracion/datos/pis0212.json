@@ -1,0 +1,96 @@
+{
+  "validado": false,
+  "fecha": "2026-09-29",
+  "agente": {
+    "nombre": "Pau Moralejo",
+    "empresa": "Asesoría Castresana · Gestión Inmobiliaria",
+    "telefonos": ["985 210 468", "689 929 926"],
+    "email": "inmobiliariacastresana@gmail.com",
+    "direccion": "Calle Cabo Noval, 8 Bajo 2 · 33007 Oviedo (Asturias)",
+    "web": "https://www.asesoriacastresana.com"
+  },
+  "inmueble": {
+    "ref": "PIS0212",
+    "titulo": "Piso luminoso con garaje en Oviedo",
+    "url": "https://www.asesoriacastresana.com/piso--oviedo-con--es1764630.html",
+    "poblacion": "Oviedo",
+    "precioPublicado": 180000,
+    "bajadaDePrecio": true,
+    "m2Construidos": 98,
+    "m2Utiles": 87,
+    "habitaciones": 3,
+    "banos": 1,
+    "planta": "1ª",
+    "exterior": true,
+    "ascensor": true,
+    "orientacion": "Suroeste",
+    "vistas": "Despejadas",
+    "garaje": "1 plaza en el mismo edificio, incluida en el precio",
+    "estado": "Segunda mano, en buen estado (edificio en buen estado)",
+    "cocina": "Independiente y equipada",
+    "calefaccion": "Gas natural individual",
+    "equipamiento": ["Semi-amueblado", "Parquet", "Ventanas de PVC con doble acristalamiento", "Persianas", "Puerta blindada", "Acceso adaptado a movilidad reducida"],
+    "certificadoEnergetico": null
+  },
+  "fotos": [
+    "https://storage.googleapis.com/static.inmoweb.es/clients/2853/property/1764630/image/w/WhatsApp%20Image%202026-07-21%20at%2018.22.26.jpg",
+    "https://storage.googleapis.com/static.inmoweb.es/clients/2853/property/1764630/image/w/WhatsApp%20Image%202026-07-21%20at%2018.22.21.jpg",
+    "https://storage.googleapis.com/static.inmoweb.es/clients/2853/property/1764630/image/w/WhatsApp%20Image%202026-07-21%20at%2018.23.11.jpg",
+    "https://storage.googleapis.com/static.inmoweb.es/clients/2853/property/1764630/image/thumb/585_335/WhatsApp%20Image%202026-07-21%20at%2018.34.12.jpg",
+    "https://storage.googleapis.com/static.inmoweb.es/clients/2853/property/1764630/image/thumb/585_335/WhatsApp%20Image%202026-07-21%20at%2018.27.58.jpg",
+    "https://storage.googleapis.com/static.inmoweb.es/clients/2853/property/1764630/image/thumb/585_335/WhatsApp%20Image%202026-07-21%20at%2018.23.23.jpg"
+  ],
+  "comparables": [
+    {
+      "id": "PIS0206",
+      "direccion": "Calle Río Narcea (PIS0206)",
+      "url": "https://www.asesoriacastresana.com/piso-en-oviedo-con-ascensor-es1747936.html",
+      "fuente": "anuncio",
+      "precio": 178500,
+      "m2": 98,
+      "ajuste": 0,
+      "ficha": "3 hab. · 2 baños · 4ª planta con ascensor · terraza de 3 m² · trastero incluido · estado impecable · sin garaje en la ficha",
+      "motivoAjuste": "Sin ajuste: el garaje incluido de su piso compensa el segundo baño, la terraza y el trastero de este comparable (criterio provisional)."
+    },
+    {
+      "id": "PIS0177",
+      "direccion": "Calle San Lázaro (PIS0177)",
+      "url": "https://www.asesoriacastresana.com/piso-en-oviedo-con-vistas-es1673606.html",
+      "fuente": "anuncio",
+      "precio": 169000,
+      "m2": 75,
+      "ajuste": -10,
+      "ficha": "3 hab. · 1 baño · 1ª planta sin ascensor · totalmente reformado · trastero incluido",
+      "motivoAjuste": "-10 %: está totalmente reformado y su piso no (criterio provisional, a validar)."
+    },
+    {
+      "id": "PIS0153",
+      "direccion": "Zona centro (PIS0153)",
+      "url": "https://www.asesoriacastresana.com/piso-en-oviedo-con-ascensor-es1571561.html",
+      "fuente": "anuncio",
+      "precio": 215000,
+      "m2": 90,
+      "ajuste": -10,
+      "ficha": "3 hab. · 1ª planta con ascensor · reformado · certificado energético G",
+      "motivoAjuste": "-10 %: está reformado y su piso no (criterio provisional, a validar)."
+    },
+    {
+      "id": "PIS0120",
+      "direccion": "Calle tranquila (PIS0120)",
+      "url": "https://www.asesoriacastresana.com/piso-en-oviedo-con-ascensor-es1452092.html",
+      "fuente": "anuncio",
+      "precio": 220000,
+      "m2": 80,
+      "ajuste": 0,
+      "ficha": "3 hab. · 2 baños · 1ª planta con ascensor · necesita reforma de baños, ventanas y suelos · publicado desde diciembre de 2024 según la fecha de sus fotos",
+      "motivoAjuste": "Sin ajuste, pero es el precio más alto de la muestra y sigue sin venderse: se mira con cautela."
+    }
+  ],
+  "pendientes": [
+    "Dirección exacta y barrio del inmueble",
+    "Certificado energético: la ficha web muestra un texto erróneo y no tiene consumo ni emisiones",
+    "Cuota de comunidad e IBI",
+    "Referencia catastral y nota simple (cargas, titularidad)",
+    "Precio anterior a la bajada de precio y fecha de publicación"
+  ]
+}
