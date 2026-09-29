@@ -51,6 +51,12 @@ export function construirDosier(datos) {
     avisos.push({ nivel: 'info', texto: 'Falta el certificado energético (obligatorio para publicar y vender).' });
   }
 
+  // Bajada de precio, si consta el precio anterior.
+  const anterior = Number(inm.precioAnterior);
+  const bajada = anterior > precio && precio > 0
+    ? { anterior, diferencia: anterior - precio, porcentaje: ((anterior - precio) / anterior) * 100 }
+    : null;
+
   // Dónde cae el precio publicado respecto al rango.
   let posicion = null;
   if (calculo.suficiente && calculo.valor && precio > 0) {
@@ -85,7 +91,7 @@ export function construirDosier(datos) {
   }
 
   return {
-    calculo, eurM2Publicado, posicion, torres, avisos,
+    calculo, eurM2Publicado, posicion, bajada, torres, avisos,
     // La plantilla de Cerebro menciona un precio medio de zona que este dosier no muestra: se quita esa frase.
     metodologia: calculo.suficiente ? textoMetodologia(calculo).replace(/\s*El precio medio de la zona[^.]*\./, '') : '',
     borrador: !datos?.validado,

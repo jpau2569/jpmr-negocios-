@@ -28,7 +28,9 @@ function veredicto(d, m) {
   }
   const pub = euros(d.inmueble.precioPublicado);
   const rango = `${euros(calculo.valor.bajo)} y ${euros(calculo.valor.alto)}`;
-  const cautela = ' Ojo: los comparables son precios <b>pedidos</b>, no de venta cerrada, y son pocos. Por eso esto no es una orden de subir el precio, sino la razón para contrastarlo con ventas cerradas antes de decidir.';
+  const b = m.bajada;
+  const historia = b ? ` El piso salió a <b>${euros(b.anterior)}</b> y se bajó a ${pub} (<b>−${b.diferencia.toLocaleString('es-ES')} €, un ${b.porcentaje.toFixed(1).replace('.', ',')} %</b>). Esa bajada puede ser una señal de que el mercado no aceptó el precio anterior, y es un motivo más para contrastar antes de subirlo.` : '';
+  const cautela = historia + ' Ojo: los comparables son precios <b>pedidos</b>, no de venta cerrada, y son pocos. Por eso esto no es una orden de subir el precio, sino la razón para contrastarlo con ventas cerradas antes de decidir.';
   if (posicion.lugar === 'debajo') return `El precio publicado (<b>${pub}</b>) está <b>por debajo</b> del rango que sugieren los comparables, entre ${rango}.${cautela}`;
   if (posicion.lugar === 'encima') return `El precio publicado (<b>${pub}</b>) está <b>por encima</b> del rango que sugieren los comparables, entre ${rango}. Un precio por encima del mercado suele alargar el tiempo de venta o forzar una bajada posterior.${cautela}`;
   return `El precio publicado (<b>${pub}</b>) está <b>dentro</b> del rango que sugieren los comparables, entre ${rango}.${cautela}`;
@@ -101,7 +103,7 @@ function html(d, m) {
   <section id="resumen"><div class="envoltura">
     <h2><small>1 · Resumen</small>Dónde está su piso en el mercado</h2>
     <div class="cifras">
-      <div class="cifra"><b>Precio publicado</b><strong>${euros(i.precioPublicado)}</strong><small>${i.bajadaDePrecio ? 'Tras una bajada de precio · ' : ''}${miles(m.eurM2Publicado)} €/m² construido</small></div>
+      <div class="cifra"><b>Precio publicado</b><strong>${euros(i.precioPublicado)}</strong><small>${m.bajada ? `Antes ${euros(m.bajada.anterior)} · ` : i.bajadaDePrecio ? 'Tras una bajada de precio · ' : ''}${miles(m.eurM2Publicado)} €/m² construido</small></div>
       ${c.suficiente ? `<div class="cifra cifra--oro"><b>Rango orientativo</b><strong>${miles(c.valor.bajo)} – ${miles(c.valor.alto)} €</strong><small>Valor central ${euros(c.valor.central)}</small></div>
       <div class="cifra"><b>Mediana de la muestra</b><strong>${miles(c.porM2.mediana)} €/m²</strong><small>${c.n} comparables, ya ajustados</small></div>` : `<div class="cifra"><b>Rango orientativo</b><strong>—</strong><small>Faltan ${c.faltan} comparables</small></div>`}
     </div>

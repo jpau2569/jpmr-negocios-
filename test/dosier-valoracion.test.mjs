@@ -41,6 +41,8 @@ check("cifras esperadas con los ajustes provisionales (193.500 / 204.500 / 225.5
 check("el €/m² publicado es 180.000 / 98", Math.abs(m.eurM2Publicado - 180000 / 98) < 1e-9);
 check("el precio publicado cae por debajo del rango", m.posicion?.lugar === "debajo" && m.posicion.diferenciaConBajo === 180000 - 193500);
 check("el método no habla de un precio de zona que el dosier no enseña", m.metodologia.length > 100 && !/precio medio de la zona/.test(m.metodologia));
+check("la bajada de precio sale de 198.000 a 180.000 (−18.000 €, −9,1 %)", m.bajada?.diferencia === 18000 && m.bajada.anterior === 198000 && Math.abs(m.bajada.porcentaje - 9.0909) < 0.001);
+check("sin precio anterior no se inventa ninguna bajada", construirDosier({ ...datos, inmueble: { ...datos.inmueble, precioAnterior: undefined } }).bajada === null);
 check("la muestra de 4 se marca como reducida", m.avisos.some((a) => a.nivel === "medio" && /reducida/.test(a.texto)));
 check("mientras `validado` sea false sale el aviso de BORRADOR", m.borrador && m.avisos.some((a) => a.nivel === "borrador"));
 check("con `validado: true` desaparece el borrador", !construirDosier({ ...datos, validado: true }).borrador);
@@ -146,7 +148,7 @@ if (chromium) {
     check("el lienzo 3D tiene algo dibujado (no está en blanco)", pixeles > 100, `píxeles distintos: ${pixeles}`);
     const txt = await p.textContent("#valoracion");
     check("la valoración enseña el rango calculado", txt.includes("193.500") && txt.includes("225.500") && txt.includes("204.500"), txt.slice(0, 200));
-    check("el resumen enseña el precio publicado y el veredicto «por debajo»", (await p.textContent("#resumen")).includes("180.000") && (await p.textContent("#resumen")).includes("por debajo"));
+    check("el resumen enseña el precio publicado, el anterior y el veredicto «por debajo»", (await p.textContent("#resumen")).includes("180.000") && (await p.textContent("#resumen")).includes("198.000") && (await p.textContent("#resumen")).includes("por debajo"));
     check("la galería tiene las fotos del JSON", (await p.locator(".galeria img").count()) === datos.fotos.length);
     check("aparece el aviso legal y el contacto", (await p.textContent("#pendientes")).includes("No es una tasación oficial") && (await p.textContent("footer")).includes("985 210 468"));
     check("sin errores de JavaScript en la página", errores.length === 0, errores.join(" | "));
