@@ -102,6 +102,10 @@
     "Certificado energético: la ficha web muestra un texto erróneo y no tiene consumo ni emisiones",
     "Cuota de comunidad e IBI",
     "Referencia catastral y nota simple (cargas, titularidad)",
-    "Fecha en que salió a la venta y cuántas visitas ha tenido a cada precio"
-  ]
+    "Número de visitas y ofertas a cada precio, y fecha en que salió a la venta"
+  ],
+  "mercado": {
+    "demandaTrasBajada": "Muchas de las visitas llegaron después de bajar el precio a 180.000 €.",
+    "fuente": "Dato aportado por el agente (Pau); falta el número exacto de visitas y ofertas."
+  }
 }

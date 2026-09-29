@@ -150,6 +150,7 @@ if (chromium) {
     check("la valoración enseña el rango calculado", txt.includes("193.500") && txt.includes("225.500") && txt.includes("204.500"), txt.slice(0, 200));
     check("el resumen enseña el precio publicado, el anterior y el veredicto «por debajo»", (await p.textContent("#resumen")).includes("180.000") && (await p.textContent("#resumen")).includes("198.000") && (await p.textContent("#resumen")).includes("por debajo"));
     check("la galería tiene las fotos del JSON", (await p.locator(".galeria img").count()) === datos.fotos.length);
+    check("el resumen recoge que la demanda llegó tras la bajada", (await p.textContent("#resumen")).includes("Lo que ha dicho el mercado") && (await p.textContent("#resumen")).includes("después de bajar"));
     check("aparece el aviso legal y el contacto", (await p.textContent("#pendientes")).includes("No es una tasación oficial") && (await p.textContent("footer")).includes("985 210 468"));
     check("sin errores de JavaScript en la página", errores.length === 0, errores.join(" | "));
     await p.emulateMedia({ media: "print" });

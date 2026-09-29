@@ -108,6 +108,7 @@ function html(d, m) {
       <div class="cifra"><b>Mediana de la muestra</b><strong>${miles(c.porM2.mediana)} €/m²</strong><small>${c.n} comparables, ya ajustados</small></div>` : `<div class="cifra"><b>Rango orientativo</b><strong>—</strong><small>Faltan ${c.faltan} comparables</small></div>`}
     </div>
     <div class="veredicto">${veredicto(d, m)}</div>
+    ${d.mercado?.demandaTrasBajada ? `<div class="veredicto" style="border-left-color:var(--ok)"><b>Lo que ha dicho el mercado.</b> ${esc(d.mercado.demandaTrasBajada)} Es la señal más directa que tenemos: a ${euros(d.inmueble.precioPublicado)} hay demanda real. Los comparables son precios <b>pedidos</b>, así que el rango de arriba es una <b>referencia de techo</b>, no una promesa de precio de cierre. Cualquier subida se decidiría con usted, vigilando que no se pierda esa demanda.</div>` : ''}
   </div></section>
 
   <section id="inmueble" style="background:var(--papel-2)"><div class="envoltura">
