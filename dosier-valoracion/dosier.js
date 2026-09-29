@@ -5,7 +5,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import { escapaHtml as esc } from '../cerebro/utiles.js';
-import { construirDosier, euros, miles, fechaLarga, AVISO_VALORACION } from './calculo.js';
+import { construirDosier, euros, miles, fechaLarga, ritmoSemanal, AVISO_VALORACION } from './calculo.js';
 import { montarEscena, hayWebGL } from './escena.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -36,11 +36,11 @@ function veredicto(d, m) {
   return `El precio publicado (<b>${pub}</b>) está <b>dentro</b> del rango que sugieren los comparables, entre ${rango}.${cautela}`;
 }
 
-function historia(d) {
+function historia(d, m) {
   const h = d.inmueble.historialPrecios;
   if (!Array.isArray(h) || h.length < 2) return '';
-  const paso = (x, k) => `<li${k === h.length - 1 ? ' class="hoy"' : ''}><b>${euros(x.precio)}</b><span>${k === h.length - 1 ? 'precio actual' : k === 0 ? 'precio inicial' : 'primera bajada'}</span><em>${Number.isFinite(x.visitas) ? `${x.visitas} visitas` : 'visitas sin datos'}</em></li>`;
-  return `<div class="historia"><h3>Cómo ha respondido el mercado a cada precio</h3><ol>${h.map(paso).join('')}</ol><p class="pequeno suave">Ojo: no sabemos cuánto tiempo estuvo a cada precio, así que las visitas no son una tasa por día. Y una visita no es una oferta: las ofertas están pendientes de confirmar.</p></div>`;
+  const paso = (x, k) => `<li${k === h.length - 1 ? ' class="hoy"' : ''}><b>${euros(x.precio)}</b><span>${k === h.length - 1 ? 'precio actual' : k === 0 ? 'precio inicial' : 'primera bajada'}</span><em>${Number.isFinite(x.visitas) ? `${x.visitas} visitas${Number.isFinite(x.dias) ? ` en ${x.dias} días` : ''}` : 'visitas sin datos'}</em>${ritmoSemanal(x) !== null ? `<small>≈ ${ritmoSemanal(x).toFixed(1).replace('.', ',')} visitas por semana</small>` : ''}</li>`;
+  return `<div class="historia"><h3>Cómo ha respondido el mercado a cada precio</h3><ol>${h.map(paso).join('')}</ol>${m.ritmo ? `<p class="ritmo">Al bajar de ${euros(m.ritmo.precioAntes)} a ${euros(d.inmueble.precioPublicado)}, el ritmo pasó de <b>${m.ritmo.antes.toFixed(1).replace('.', ',')}</b> a <b>${m.ritmo.ahora.toFixed(1).replace('.', ',')} visitas por semana</b>: unas <b>${m.ritmo.veces.toFixed(1).replace('.', ',')} veces más</b>.</p>` : ''}<p class="pequeno suave">Ojo: son pocas visitas (una muestra pequeña), «un mes» se cuenta como 30 días y una visita no es una oferta. Las ofertas están pendientes de confirmar.</p></div>`;
 }
 
 function seccionRango(d, m) {
@@ -115,7 +115,7 @@ function html(d, m) {
       <div class="cifra"><b>Mediana de la muestra</b><strong>${miles(c.porM2.mediana)} €/m²</strong><small>${c.n} comparables, ya ajustados</small></div>` : `<div class="cifra"><b>Rango orientativo</b><strong>—</strong><small>Faltan ${c.faltan} comparables</small></div>`}
     </div>
     <div class="veredicto">${veredicto(d, m)}</div>
-    ${historia(d)}
+    ${historia(d, m)}
     ${d.mercado?.demandaTrasBajada ? `<div class="veredicto" style="border-left-color:var(--ok)"><b>Lo que ha dicho el mercado.</b> ${esc(d.mercado.demandaTrasBajada)} Es la señal más directa que tenemos: a ${euros(d.inmueble.precioPublicado)} hay demanda real. Los comparables son precios <b>pedidos</b>, así que el rango de arriba es una <b>referencia de techo</b>, no una promesa de precio de cierre. Cualquier subida se decidiría con usted, vigilando que no se pierda esa demanda.</div>` : ''}
   </div></section>
 

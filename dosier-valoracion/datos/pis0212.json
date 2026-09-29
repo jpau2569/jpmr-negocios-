@@ -44,15 +44,18 @@
     "historialPrecios": [
       {
         "precio": 198000,
-        "visitas": null
+        "visitas": null,
+        "dias": null
       },
       {
         "precio": 190000,
-        "visitas": 5
+        "visitas": 5,
+        "dias": 30
       },
       {
         "precio": 180000,
-        "visitas": 12
+        "visitas": 12,
+        "dias": 20
       }
     ]
   },
@@ -115,11 +118,11 @@
     "Certificado energético: la ficha web muestra un texto erróneo y no tiene consumo ni emisiones",
     "Cuota de comunidad e IBI",
     "Referencia catastral y nota simple (cargas, titularidad)",
-    "Cuántos días estuvo a cada precio y cuántas visitas hubo a 198.000 €",
-    "Ofertas recibidas (y a qué precio)"
+    "Ofertas recibidas (y a qué precio)",
+    "Días y visitas del tramo a 198.000 €"
   ],
   "mercado": {
-    "demandaTrasBajada": "De las 17 visitas registradas, 12 llegaron con el precio a 180.000 € y 5 con el precio a 190.000 €.",
-    "fuente": "Datos aportados por el agente (Pau). Falta el tiempo que estuvo a cada precio, el número de visitas a 198.000 € y las ofertas."
+    "demandaTrasBajada": "A 190.000 € hubo 5 visitas en un mes; a 180.000 €, 12 visitas en 20 días.",
+    "fuente": "Datos aportados por el agente (Pau). «Un mes» se cuenta como 30 días. Faltan los días y visitas a 198.000 € y las ofertas."
   }
 }

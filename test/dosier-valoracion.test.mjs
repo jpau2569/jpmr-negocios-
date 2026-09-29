@@ -13,7 +13,7 @@ import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 
-import { construirDosier, miles, euros, fechaLarga } from "../dosier-valoracion/calculo.js";
+import { construirDosier, ritmoSemanal, miles, euros, fechaLarga } from "../dosier-valoracion/calculo.js";
 import { calculaValoracion } from "../cerebro/valoracion.js";
 
 let pasados = 0, fallados = 0;
@@ -43,6 +43,10 @@ check("el precio publicado cae por debajo del rango", m.posicion?.lugar === "deb
 check("el método no habla de un precio de zona que el dosier no enseña", m.metodologia.length > 100 && !/precio medio de la zona/.test(m.metodologia));
 check("la bajada de precio sale de 198.000 a 180.000 (−18.000 €, −9,1 %)", m.bajada?.diferencia === 18000 && m.bajada.anterior === 198000 && Math.abs(m.bajada.porcentaje - 9.0909) < 0.001);
 check("el historial tiene 3 precios (198/190/180) y las visitas 5 y 12", JSON.stringify(datos.inmueble.historialPrecios.map((h) => [h.precio, h.visitas])) === "[[198000,null],[190000,5],[180000,12]]" && m.bajada.escalones === 3);
+check("el ritmo a 190.000 es 5 visitas en 30 días ≈ 1,17/semana", Math.abs(m.ritmo.antes - 5 / 30 * 7) < 1e-9);
+check("el ritmo a 180.000 es 12 visitas en 20 días = 4,2/semana", Math.abs(m.ritmo.ahora - 4.2) < 1e-9);
+check("el ritmo se multiplica por 3,6 al bajar a 180.000", Math.abs(m.ritmo.veces - 3.6) < 1e-9 && m.ritmo.precioAntes === 190000);
+check("sin días no se inventa ritmo (tramo de 198.000 sin datos)", ritmoSemanal(datos.inmueble.historialPrecios[0]) === null && ritmoSemanal({ visitas: 5, dias: 0 }) === null && ritmoSemanal({ visitas: null, dias: 20 }) === null);
 check("sin historial ni precio anterior no se inventa ninguna bajada", construirDosier({ ...datos, inmueble: { ...datos.inmueble, historialPrecios: undefined } }).bajada === null);
 check("la muestra de 4 se marca como reducida", m.avisos.some((a) => a.nivel === "medio" && /reducida/.test(a.texto)));
 check("mientras `validado` sea false sale el aviso de BORRADOR", m.borrador && m.avisos.some((a) => a.nivel === "borrador"));
@@ -151,7 +155,7 @@ if (chromium) {
     check("la valoración enseña el rango calculado", txt.includes("193.500") && txt.includes("225.500") && txt.includes("204.500"), txt.slice(0, 200));
     check("el resumen enseña el precio publicado, el anterior y el veredicto «por debajo»", (await p.textContent("#resumen")).includes("180.000") && (await p.textContent("#resumen")).includes("198.000") && (await p.textContent("#resumen")).includes("por debajo"));
     check("la galería tiene las fotos del JSON", (await p.locator(".galeria img").count()) === datos.fotos.length);
-    check("el resumen enseña el historial con 12 visitas a 180.000 y 5 a 190.000", (await p.locator(".historia li").count()) === 3 && (await p.textContent(".historia")).includes("12 visitas") && (await p.textContent(".historia")).includes("5 visitas") && (await p.textContent("#resumen")).includes("Lo que ha dicho el mercado"));
+    check("el resumen enseña el historial con 12 visitas a 180.000 y 5 a 190.000", (await p.locator(".historia li").count()) === 3 && (await p.textContent(".historia")).includes("12 visitas") && (await p.textContent(".historia")).includes("5 visitas") && (await p.textContent(".historia")).includes("3,6 veces") && (await p.textContent("#resumen")).includes("Lo que ha dicho el mercado"));
     check("aparece el aviso legal y el contacto", (await p.textContent("#pendientes")).includes("No es una tasación oficial") && (await p.textContent("footer")).includes("985 210 468"));
     check("sin errores de JavaScript en la página", errores.length === 0, errores.join(" | "));
     await p.emulateMedia({ media: "print" });

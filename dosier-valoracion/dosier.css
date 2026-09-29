@@ -55,6 +55,8 @@ p{margin:0 0 1em}
 .historia ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 .historia li{border-left:3px solid #d9d1bf;padding:.2rem 0 .2rem .8rem}
 .historia li.hoy{border-color:var(--oro)}
+.historia small{display:block;font-size:.8rem;color:var(--tinta-2);margin-top:.15rem}
+.historia .ritmo{margin:1.1rem 0 .6rem;font-size:1rem}
 .historia b{display:block;font:600 1.3rem var(--serif)} .historia span{display:block;font-size:.8rem;color:var(--tinta-2)} .historia em{font-style:normal;font-weight:600;color:var(--oro-oscuro)}
 
 /* Inmueble */

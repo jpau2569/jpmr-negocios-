@@ -16,6 +16,12 @@ export { AVISO_VALORACION, COMPARABLES_RECOMENDADOS };
 export const miles = (n) => Math.round(Number(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 export const euros = (n) => `${miles(n)} €`;
 
+/** Visitas por semana de un tramo de precio; null si falta algún dato. */
+export function ritmoSemanal(tramo) {
+  const v = Number(tramo?.visitas), dias = Number(tramo?.dias);
+  return Number.isFinite(v) && v >= 0 && dias > 0 && tramo?.visitas !== null && tramo?.dias !== null ? (v / dias) * 7 : null;
+}
+
 /** Fecha ISO → "29 de septiembre de 2026" (sin depender del huso). */
 export function fechaLarga(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
@@ -58,6 +64,13 @@ export function construirDosier(datos) {
     ? { anterior, diferencia: anterior - precio, porcentaje: ((anterior - precio) / anterior) * 100, escalones: hist.length }
     : null;
 
+  // Cuánto más ritmo de visitas hay al precio actual que al inmediatamente anterior.
+  let ritmo = null;
+  if (hist.length >= 2) {
+    const ahora = ritmoSemanal(hist.at(-1)), antes = ritmoSemanal(hist.at(-2));
+    if (ahora !== null && antes !== null && antes > 0) ritmo = { ahora, antes, veces: ahora / antes, precioAntes: Number(hist.at(-2).precio) };
+  }
+
   // Dónde cae el precio publicado respecto al rango.
   let posicion = null;
   if (calculo.suficiente && calculo.valor && precio > 0) {
@@ -92,7 +105,7 @@ export function construirDosier(datos) {
   }
 
   return {
-    calculo, eurM2Publicado, posicion, bajada, torres, avisos,
+    calculo, eurM2Publicado, posicion, bajada, ritmo, torres, avisos,
     // La plantilla de Cerebro menciona un precio medio de zona que este dosier no muestra: se quita esa frase.
     metodologia: calculo.suficiente ? textoMetodologia(calculo).replace(/\s*El precio medio de la zona[^.]*\./, '') : '',
     borrador: !datos?.validado,
