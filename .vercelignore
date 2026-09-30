@@ -3,3 +3,6 @@
 # rotas. La ficha pública es `fotos-faciles.html`, que sí se despliega.
 fotos-faciles/
 test/
+
+# Fotos y borradores de anuncios de clientes: material de trabajo, no debe ser público.
+fotos-listas/

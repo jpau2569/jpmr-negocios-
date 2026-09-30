@@ -227,7 +227,7 @@
     <textarea id="input" rows="1" placeholder="Escribe a Clara… (Enter para enviar, Shift+Enter para salto de línea)"></textarea>
     <button id="send">Enviar</button>
   </div>
-  <input type="file" id="fileattach" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" multiple hidden />
+  <input type="file" id="fileattach" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,audio/*,.opus,.ogg,.m4a,.mp3,.wav,.aac" multiple hidden />
   <div class="hint">Clara es una IA y puede equivocarse. En temas graves de salud o emocionales, busca ayuda profesional.</div>
 </footer>
 
@@ -413,7 +413,7 @@
       for (const a of otros.reverse()) {
         const doc = document.createElement("span");
         doc.className = "adjdoc";
-        doc.textContent = (a.tipo === "imagen" ? "🖼 " : "📎 ") + (a.nombre || "archivo adjunto");
+        doc.textContent = (a.tipo === "imagen" ? "🖼 " : a.tipo === "audio" ? "🎙 " : "📎 ") + (a.nombre || "archivo adjunto");
         bubble.prepend(doc);
       }
     } else {
@@ -484,7 +484,7 @@
         mini.src = "data:" + a.media_type + ";base64," + a.data;
         chip.appendChild(mini);
       }
-      chip.appendChild(document.createTextNode((a.tipo === "pdf" ? "📎 " : "") + a.nombre));
+      chip.appendChild(document.createTextNode((a.tipo === "pdf" ? "📎 " : a.tipo === "audio" ? "🎙 " : "") + a.nombre));
       const quita = document.createElement("button");
       quita.textContent = "✕";
       quita.title = "Quitar adjunto";
@@ -504,12 +504,16 @@
         if (file.type === "application/pdf") {
           if (file.size > 2.5 * 1024 * 1024) { addError(`El PDF "${nombre}" supera los 2,5 MB. Comprímelo o divídelo e inténtalo de nuevo.`); continue; }
           adjuntos.push({ tipo: "pdf", media_type: "application/pdf", data: await aBase64(file), nombre });
+        } else if (String(file.type).startsWith("audio/") || /\.(opus|ogg|m4a|mp3|wav|aac)$/i.test(nombre)) {
+          if (file.size > 3.4 * 1024 * 1024) { addError(`El audio "${nombre}" supera los 3,4 MB. Grábalo más corto e inténtalo de nuevo.`); continue; }
+          const tipoAud = String(file.type || "").startsWith("audio/") ? file.type : /\.(opus|ogg)$/i.test(nombre) ? "audio/ogg" : /\.m4a$/i.test(nombre) ? "audio/mp4" : /\.mp3$/i.test(nombre) ? "audio/mpeg" : /\.wav$/i.test(nombre) ? "audio/wav" : "audio/aac";
+          adjuntos.push({ tipo: "audio", media_type: tipoAud, data: await aBase64(file), nombre });
         } else if (String(file.type).startsWith("image/")) {
           // Con varias fotos se reducen un poco más para no pasar el límite de envío.
           const varias = lista.length > 1 || adjuntos.length > 0;
           adjuntos.push({ tipo: "imagen", media_type: "image/jpeg", data: await comprimirImagen(file, varias ? 1280 : 1600, varias ? 0.8 : 0.85), nombre });
         } else {
-          addError(`"${nombre}": solo puedo leer fotos (JPG, PNG, WebP) o PDF.`);
+          addError(`"${nombre}": solo puedo leer fotos (JPG, PNG, WebP), PDF o audios.`);
         }
       } catch (e) {
         addError(e.message || "No se pudo preparar el adjunto.");

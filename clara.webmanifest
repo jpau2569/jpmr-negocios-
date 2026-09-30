@@ -44,6 +44,9 @@
           "accept": [
             "image/*",
             "application/pdf",
+            "audio/*",
+            ".opus",
+            ".m4a",
             ".jpg",
             ".jpeg",
             ".png",
