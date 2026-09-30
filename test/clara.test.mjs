@@ -18,6 +18,7 @@ import { parsearInmuebles, resumenCartera } from "../lib/cartera.js";
 import { SKILLS_BASE, catalogoSkills, leerSkill, guardarSkill, parsearSkillMd, skillsDeArchivo } from "../lib/skills.js";
 import { leerConectores, piezasMcp, textoConectores, secretoPuente } from "../lib/conectores.js";
 import { consultarModelo } from "../lib/openrouter.js";
+import { tipoAudio, transcribirAudio } from "../lib/audio.js";
 import puente from "../api/_mcp-puente.js";
 
 let pasados = 0;
@@ -774,6 +775,48 @@ console.log("\n— puente MCP (conectores con cabecera propia, p. ej. Composio) 
   check("devuelve el streaming y la sesión tal cual", rp.r.statusCode === 200 && rp.r.headers["mcp-session-id"] === "ses-1" && rp.r.chunks.join("").includes('"jsonrpc"') && rp.r.ended);
   for (const k of Object.keys(entorno)) delete process.env[k];
   globalThis.fetch = realFetch;
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n— oídos: audios y notas de voz —");
+// ---------------------------------------------------------------------------
+check("tipoAudio acepta ogg con parámetros (WhatsApp)", tipoAudio("audio/ogg; codecs=opus") === "audio/ogg");
+check("tipoAudio rechaza lo que no es audio", tipoAudio("application/zip") === null && tipoAudio("") === null);
+check("transcribirAudio sin clave avisa", (await transcribirAudio("aGVsbG8=", "audio/ogg", { key: "" })).error?.includes("GEMINI_API_KEY"));
+{
+  const llamadasGem = [];
+  const fakeGemini = async (url, init) => {
+    llamadasGem.push({ url, body: JSON.parse(init.body) });
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "Llama al propietario de Foncalada mañana." }] } }] }), { status: 200 });
+  };
+  const r = await transcribirAudio("aGVsbG8=", "audio/mp4", { fetchImpl: fakeGemini, key: "k" });
+  check("transcribirAudio devuelve el texto", r.texto === "Llama al propietario de Foncalada mañana.");
+  check("manda el audio como inline_data con su tipo", llamadasGem[0]?.body?.contents?.[0]?.parts?.[0]?.inline_data?.mime_type === "audio/mp4");
+  const mal = await transcribirAudio("aGVsbG8=", "audio/mp4", { fetchImpl: async () => new Response("x", { status: 500 }), key: "k" });
+  check("si Gemini falla, devuelve error (no inventa)", !mal.texto && mal.error.includes("500"));
+}
+{
+  process.env.GEMINI_API_KEY = "k-test";
+  const enviadas = [];
+  const realFetch2 = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    if (String(url).includes("generativelanguage")) {
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "Quiero ver el piso el jueves." }] } }] }), { status: 200 });
+    }
+    enviadas.push(JSON.parse(init.body));
+    return new Response(JSON.stringify({ id: "m", type: "message", role: "assistant", model: "claude-sonnet-5", content: [{ type: "text", text: "Anotado." }], stop_reason: "end_turn", usage: { input_tokens: 1, output_tokens: 1 } }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  const r2 = mockRes();
+  await handler({ method: "POST", body: { messages: [{ role: "user", content: "Escucha esto", adjuntos: [{ media_type: "audio/ogg; codecs=opus", data: "aGVsbG8=", nombre: "nota.opus" }] }] } }, r2);
+  const c = enviadas[0]?.messages?.[0]?.content;
+  check("el audio llega a Claude como texto transcrito", typeof c === "string" && c.includes("Quiero ver el piso el jueves.") && c.includes("Escucha esto"));
+  delete process.env.GEMINI_API_KEY;
+  enviadas.length = 0;
+  const r3 = mockRes();
+  await handler({ method: "POST", body: { messages: [{ role: "user", content: "Escucha", adjuntos: [{ media_type: "audio/mpeg", data: "aGVsbG8=", nombre: "a.mp3" }] }] } }, r3);
+  const c3 = enviadas[0]?.messages?.[0]?.content;
+  check("sin clave: marca NO transcrito y no inventa contenido", typeof c3 === "string" && c3.includes("NO transcrito"));
+  globalThis.fetch = realFetch2;
 }
 
 // ---------------------------------------------------------------------------

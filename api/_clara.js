@@ -13,6 +13,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { obtenerCartera, resumenCartera } from "../lib/cartera.js";
 import { nubeConfigurada, leerMemoria, apuntarNota, rpc } from "../lib/memoria.js";
+import { tipoAudio, transcribirAudio } from "../lib/audio.js";
 import { leerWeb } from "../lib/leerweb.js";
 import { consultarModelo, openrouterConfigurado } from "../lib/openrouter.js";
 import { BETA_MCP, leerConectores, piezasMcp, textoConectores, urlPublica } from "../lib/conectores.js";
@@ -245,6 +246,11 @@ Si está configurado OpenRouter, tienes la herramienta "segunda_opinion" para co
 
 ## Tus leads (mis_leads)
 Con la nube activa tienes la herramienta "mis_leads", que lee los contactos que han llegado por los embudos de Pau (ebook, formularios…). Úsala cuando pregunte por sus leads, contactos nuevos o a quién llamar: prioriza (quién es más caliente y por qué), propón el primer mensaje personalizado para cada uno y el siguiente paso. Trata esos datos personales con máxima discreción: solo para el trabajo de Pau, nunca los repitas fuera de contexto.
+
+## Oídos, vista y rigor
+- Oídos: Pau puede adjuntar notas de voz y audios (WhatsApp, grabadora). Te llegan ya transcritos entre corchetes [🎙 …]. Trátalos como si Pau te lo hubiera escrito: actúa sobre lo que dice sin repetirle la transcripción. Si viene marcado como NO transcrito, díselo en una línea y no supongas el contenido; lo inaudible es [inaudible], no lo rellenes.
+- Vista: ante fotos de inmuebles, mira como un perito y un fotógrafo a la vez: qué estancia es, si hay duplicadas de la misma habitación, orientación vertical u horizontal, luz, reflejos, desorden, datos personales visibles (documentos, matrículas, caras, fotos familiares), estado real (humedades, instalaciones antiguas) y si lo visible cuadra con lo que Pau ha declarado (nº de habitaciones y baños). Separa siempre lo que SE VE de lo que se supone. Para portales carga la skill fotos-inmueble.
+- Rigor: antes de responder, revisa tu propia respuesta. Cifras recalculadas, nada afirmado que no esté en los datos o en una fuente, y todo lo no verificable marcado como tal. Si detectas un error tuyo anterior, corrígelo tú primero y en una línea. Al redactar anuncios: lo que no consta, no se escribe.
 
 ## Fotos y documentos adjuntos
 Pau puede adjuntarte fotos (por ejemplo, de un inmueble o de un documento) y PDFs con el clip 📎 del chat. Cuando llegue un adjunto, analízalo de verdad: describe lo que ves, señala lo relevante y da recomendaciones concretas (en fotos de pisos: luz, orden, encuadre, qué mejorar para el anuncio; en documentos: resumen y puntos de atención). Si Pau habla de "la foto" o "el documento" y no ha llegado ningún adjunto, pídele que lo adjunte con el clip.
@@ -515,14 +521,23 @@ export default async function handler(req, res) {
     )
     .slice(-MAX_HISTORY);
 
-  const history = brutos.map((m, i) => {
+  const history = await Promise.all(brutos.map(async (m, i) => {
     const texto = m.content.slice(0, 30000);
     const esReciente = i >= brutos.length - 4;
     // Formato nuevo (adjuntos: [...]) y el de siempre (adjunto: {...}).
     const lista = Array.isArray(m.adjuntos) ? m.adjuntos : m.adjunto ? [m.adjunto] : [];
     const bloques = [];
+    const notasVoz = [];
     if (m.role === "user" && esReciente) {
       for (const a of lista.slice(0, MAX_ADJUNTOS)) {
+        // Oídos: los audios se transcriben y entran como texto (máximo 3 por mensaje).
+        if (tipoAudio(a?.media_type)) {
+          if (notasVoz.length >= 3 || typeof a.data !== "string" || a.data.length > MAX_ADJUNTO_B64 || !/^[A-Za-z0-9+/=]+$/.test(a.data)) continue;
+          const nombre = String(a.nombre || "audio").slice(0, 60);
+          const r = await transcribirAudio(a.data, a.media_type);
+          notasVoz.push(r.texto ? `[🎙 Audio "${nombre}", transcrito:\n${r.texto}]` : `[🎙 Audio "${nombre}" NO transcrito: ${r.error}. Díselo a Pau y no supongas su contenido.]`);
+          continue;
+        }
         const bloque = ADJUNTO_TIPOS[a?.media_type];
         if (
           bloque &&
@@ -536,9 +551,10 @@ export default async function handler(req, res) {
         }
       }
     }
-    if (bloques.length) return { role: "user", content: [...bloques, { type: "text", text: texto }] };
-    return { role: m.role, content: texto };
-  });
+    const textoFinal = notasVoz.length ? notasVoz.join("\n\n") + "\n\n" + texto : texto;
+    if (bloques.length) return { role: "user", content: [...bloques, { type: "text", text: textoFinal }] };
+    return { role: m.role, content: textoFinal };
+  }));
 
   if (history.length === 0 || history[0].role !== "user") {
     return res.status(400).json({ error: "La conversación debe empezar con un mensaje del usuario." });
