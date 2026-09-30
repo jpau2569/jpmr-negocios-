@@ -84,6 +84,8 @@ Seguridad: los tokens nunca llegan al navegador y **Clara pide tu confirmación 
 
 Con **`OPENROUTER_API_KEY`** en Vercel (clave de openrouter.ai → Keys), Clara gana la herramienta `segunda_opinion`: consulta a otro modelo (GPT, Gemini, DeepSeek…) cuando se lo pides ("pregúntale a GPT") o en decisiones importantes, y te presenta la conclusión integrando ambas visiones. Por defecto usa `openrouter/auto` (OpenRouter elige el modelo); puedes fijar otro con `OPENROUTER_MODELO` (nombre con prefijo, p. ej. `google/…`). Se paga con el saldo de tu cuenta de OpenRouter.
 
+**Perplexity** (`investigar_perplexity`): con **`PERPLEXITY_API_KEY`** (perplexity.ai → API) Clara investiga en la web y te da la respuesta con las fuentes citadas (modelo `sonar-pro`; se cambia con `PERPLEXITY_MODELO`). Si solo tienes `OPENROUTER_API_KEY`, la usa por OpenRouter con `perplexity/sonar-pro`. Sin fuentes, Clara lo marca como no verificado. **Otros modelos de Claude** (p. ej. Opus) se consultan con `segunda_opinion` pasando el nombre `anthropic/…`; Clara en sí ya funciona con Claude (`ANTHROPIC_API_KEY`).
+
 ## Memoria en la nube (fase 3) — configuración
 
 En Vercel → Settings → Environment Variables, añade (además de las claves de siempre):

@@ -16,6 +16,8 @@ import { nubeConfigurada, leerMemoria, apuntarNota, rpc } from "../lib/memoria.j
 import { tipoAudio, transcribirAudio } from "../lib/audio.js";
 import { leerWeb } from "../lib/leerweb.js";
 import { consultarModelo, openrouterConfigurado } from "../lib/openrouter.js";
+import { investigarConPerplexity, perplexityConfigurado } from "../lib/perplexity.js";
+import { estadoClara } from "../lib/estado-clara.js";
 import { BETA_MCP, leerConectores, piezasMcp, textoConectores, urlPublica } from "../lib/conectores.js";
 import { catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
 import { preparaValoracion, enlaceImportacion, FUENTES_IMPORTACION, MIN_COMPARABLES_IMPORTACION } from "../cerebro/importar.js";
@@ -241,6 +243,9 @@ Cuando Pau te pida valorar un piso, con un enlace o con sus datos:
 5. Llama a preparar_valoracion con el inmueble y los comparables (en «notas» de cada comparable pon SOLO la url del anuncio, empezando por https://, sin fecha ni otro texto: Cerebro la convierte en el botón «Ver el anuncio»; la fecha, si la sabes, dila en tu respuesta) y dale a Pau el enlace para generar el PDF con el logo en Cerebro Útil Pau. Si la herramienta dice que faltan comparables, no des cifra.
 El dictado de fichas (Pau dicta el piso y se rellena la ficha solo con lo que dice) y la hoja de captación están en Cerebro Útil Pau, sección Pisos: recuérdaselo cuando capte un inmueble.
 
+## Perplexity (investigar_perplexity)
+Si está configurado, tienes "investigar_perplexity": investiga en la web con Perplexity y devuelve la respuesta con fuentes. Úsala cuando Pau la nombre ("pregúntale a Perplexity") o cuando necesites datos actuales con fuente (normativa, mercado, noticias). Enséñale siempre las fuentes; si vienen sin fuentes, dilo y trátalo como no verificado. Claude eres tú; para consultar a otro modelo de Claude o a otras IAs usa segunda_opinion con el nombre de modelo (p. ej. "anthropic/…").
+
 ## Segunda opinión (segunda_opinion)
 Si está configurado OpenRouter, tienes la herramienta "segunda_opinion" para consultar a otro modelo de IA (GPT, Gemini, DeepSeek…). Úsala cuando Pau lo pida ("pregúntale a GPT", "compáralo con otra IA") o en decisiones importantes donde contrastar aporte de verdad (una inversión, un texto clave, un diagnóstico técnico dudoso). Pásale la pregunta completa y el contexto necesario, nunca datos personales de terceros que no hagan falta. Después, presenta tu conclusión integrando ambas visiones y di claramente en qué coincidís y en qué no. Por defecto OpenRouter elige el modelo ("openrouter/auto"); si Pau pide uno concreto, usa su nombre con prefijo (p. ej. "openai/…", "google/…") y, si falla el nombre, díselo.
 
@@ -385,6 +390,7 @@ async function ejecutarHerramienta(tu, claveSync) {
     if (tu.name === "calcular") return calcular(tu.input?.expresion);
     if (tu.name === "leer_web") return await leerWeb(tu.input?.url);
     if (tu.name === "segunda_opinion") return await consultarModelo(tu.input || {});
+    if (tu.name === "investigar_perplexity") return await investigarConPerplexity(tu.input || {});
     if (tu.name === "mis_leads") {
       if (!claveSync || !nubeConfigurada()) {
         return "Los leads solo se pueden leer con la nube activa (clave de sincronización). Pídele a Pau que abra el panel de leads.";
@@ -441,6 +447,7 @@ export const ESTADO_HERRAMIENTA = {
   crear_skill: "🛠️ Creando una skill nueva…",
   leer_web: "🌐 Leyendo el enlace…",
   segunda_opinion: "🧭 Consultando a otro modelo…",
+  investigar_perplexity: "🔎 Investigando con Perplexity…",
   mis_leads: "📇 Revisando tus leads…",
   preparar_valoracion: "📊 Preparando la valoración…",
 };
@@ -492,6 +499,10 @@ export const HERRAMIENTA_VALORACION = {
 };
 
 export default async function handler(req, res) {
+  // Chequeo de estado (GET /api/clara?estado=1): qué piezas están activas. Sin claves.
+  if (req.method === "GET" && req.query?.estado !== undefined) {
+    return res.status(200).json(estadoClara());
+  }
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Usa POST con un cuerpo JSON." });
   }
@@ -672,6 +683,18 @@ export default async function handler(req, res) {
     ],
   };
 
+  if (perplexityConfigurado()) {
+    request.tools.push({
+      name: "investigar_perplexity",
+      description:
+        "Investiga en la web con Perplexity y devuelve la respuesta con las fuentes citadas. Úsala para datos actuales y verificables (noticias, normativa reciente, precios de mercado, comparar fuentes) cuando Pau lo pida o buscar_web se quede corta. Cita siempre las fuentes que devuelva.",
+      input_schema: {
+        type: "object",
+        properties: { consulta: { type: "string", description: "La pregunta completa, con zona, fechas o cifras relevantes." } },
+        required: ["consulta"],
+      },
+    });
+  }
   if (openrouterConfigurado()) {
     request.tools.push({
       name: "segunda_opinion",
