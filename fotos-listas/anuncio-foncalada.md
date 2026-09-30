@@ -11,16 +11,16 @@
 ## Descripción
 Te presentamos esta vivienda en la calle Foncalada, en una zona céntrica y consolidada de Oviedo, ideal para moverse a pie. [VERIFICAR: comercios, supermercados, colegios, restauración y transporte público en el entorno.]
 
-Está en una tercera planta y tiene 95 m² construidos según Catastro, con salón, cocina, tres habitaciones y dos baños. Una distribución versátil, pensada tanto para una familia que busca espacio cerca del centro como para quien quiere una vivienda con potencial de actualización.
+Está en una tercera planta con ascensor y tiene 95 m² construidos según Catastro (87 m² útiles), con salón, cocina, tres habitaciones y dos baños. Una distribución versátil, pensada tanto para una familia que busca espacio cerca del centro como para quien quiere una vivienda con potencial de actualización.
 
 El salón es el espacio principal de la casa. Las tres habitaciones permiten adaptarla a cada necesidad: dormitorios, despacho para teletrabajo, cuarto de invitados o zona de estudio. Uno de los dormitorios cuenta con amplio armario empotrado. Suelos de parqué en salón y dormitorios y ventanas de PVC [VERIFICAR: doble acristalamiento].
 
-Edificio de 1964. Una buena base para reformar y crear un hogar moderno y personalizado, con la comodidad de tener la ciudad a pocos pasos.
+Calefacción individual de gas ciudad. Edificio de 1964. Una buena base para reformar y crear un hogar moderno y personalizado, con la comodidad de tener la ciudad a pocos pasos.
 
 ## Características
-- Calle Foncalada, Oviedo · 3.ª planta · [ASCENSOR: sí/no]
-- 95 m² construidos (Catastro) · [m² útiles: ?]
+- Calle Foncalada, Oviedo · 3.ª planta · con ascensor
+- 95 m² construidos (Catastro) · 87 m² útiles [CONFIRMAR que los 87 son útiles]
 - Salón, cocina, 3 habitaciones, 2 baños
 - Edificio de 1964
-- Calefacción: [?] · Gastos de comunidad: [?] · Orientación / exterior-interior: [?]
-- Certificado energético: [OBLIGATORIO en el anuncio: letra o "en trámite"]
+- Calefacción: gas ciudad individual · Gastos de comunidad: [?] · Orientación / exterior-interior: [?]
+- Certificado energético: en trámite
