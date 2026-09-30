@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plano 3D · altura 2,50 m | Asesoría Castresana</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f8fb;color:#17354a;font:15px system-ui}
+header,main{max-width:1300px;margin:auto;padding:22px}header small{letter-spacing:2px}
+h1{margin:12px 0;font-size:30px}.notice{background:#fff0cc;padding:14px;border-radius:12px;line-height:1.5}
+button{border:1px solid #adc0cf;background:#fff;color:#17354a;padding:11px 16px;border-radius:8px;margin:12px 5px 12px 0;cursor:pointer}
+button.active{background:#17354a;color:#fff}
+.ctl{display:inline-flex;align-items:center;gap:8px;margin:0 14px 0 6px}
+.ctl input{width:78px;padding:8px;border:1px solid #adc0cf;border-radius:8px;font:inherit}
+canvas{display:block;width:100%;height:600px;background:#edf3f7;border-radius:15px;touch-action:none}
+p{line-height:1.5}footer{padding:20px;color:#516472}
+@media(max-width:650px){canvas{height:440px}h1{font-size:24px}header,main{padding:15px}}
+</style>
+<header><small>ASESORÍA CASTRESANA</small><h1>Plano 3D · altura libre 2,50 m</h1>
+<div class="notice"><b>Altura de techo fijada en 2,50 m.</b> La escala en planta (unidades del croquis por metro) es una <b>estimación</b> calibrada con las superficies anotadas (baños 4 m², aseo 3 m², habitación 8 m², ±10 %); el croquis no tiene cotas. Puedes ajustarla abajo. Las paredes son los trazos visibles del croquis, sin grosor medido ni huecos de puertas/ventanas.</div></header>
+<main>
+<button id="orbit" class="active">Vista 3D</button><button id="top">Vista superior</button><button id="reset">Restablecer</button><button id="minus">Alejar</button><button id="plus">Acercar</button>
+<label class="ctl">Altura (m)<input id="alt" type="number" step="0.05" min="2" max="4" value="2.50"></label>
+<label class="ctl">Escala (u/m)<input id="esc" type="number" step="1" min="40" max="300" value="100"></label>
+<canvas aria-label="Plano tridimensional con altura de techo 2,50 metros"></canvas>
+<p>Arrastra con el ratón o el dedo para girar. Rueda o botones para acercar. El indicador rojo marca la altura al techo.</p>
+</main>
+<footer>Preliminar · pendiente de medición in situ.</footer>
+<script>
+const D={"walls": [[[171.43, 374.65], [162.54, 528.32], [157.46, 661.67], [163.81, 685.8], [267.95, 679.45], [370.82, 670.5600000000001], [487.66, 670.5600000000001], [528.3, 680.72], [652.76, 670.5600000000001]], [[791.19, 666.75], [979.15, 655.32], [1177.27, 647.7]], [[1205.21, 645.16], [1363.96, 637.54], [1531.6, 631.19], [1536.68, 742.95], [1539.22, 826.77], [1734.8, 824.23], [1887.2, 828.04]], [[180.32, 368.3], [236.2, 363.22]], [[360.65999999999997, 356.87], [414.0, 358.14], [486.39, 354.33]], [[546.0799999999999, 356.87], [587.99, 364.49], [661.6500000000001, 360.68]], [[777.22, 350.52], [850.88, 355.6]], [[882.63, 353.06], [888.98, 500.38], [1026.1399999999999, 491.49], [1176.0, 490.22]], [[880.09, 0.0], [876.28, 138.43]], [[872.47, 261.62], [872.47, 307.34000000000003], [1164.5700000000002, 293.37]], [[1167.1100000000001, 212.09], [1165.8400000000001, 241.3]], [[1187.43, 369.57], [1184.89, 444.5], [1282.68, 440.69], [1389.3600000000001, 438.15000000000003], [1394.44, 491.49], [1192.51, 491.49]], [[1186.16, 488.95], [1198.8600000000001, 518.16]], [[1518.9, 15.24], [1722.1, 2.54], [1849.1000000000001, 15.24], [1851.64, 147.32], [1850.3700000000001, 234.95000000000002], [1506.2, 236.22]], [[1506.2, 265.43], [1507.47, 320.04]], [[1506.2, 367.03000000000003], [1512.55, 464.82], [1696.7, 457.2], [1887.2, 458.47]], [[412.73, 359.41], [414.0, 477.52], [411.46000000000004, 560.07]], [[586.72, 363.22], [581.64, 468.63], [574.02, 565.15]], [[1115.04, 8.89], [1113.77, 106.68], [1126.47, 209.55], [1212.83, 208.28]], [[1266.17, 205.74], [1316.97, 203.2]], [[1315.7, 7.62], [1318.24, 113.03], [1318.24, 203.2], [1376.66, 201.93]], [[1430.0, 199.39000000000001], [1494.77, 196.85]], [[1493.5, 29.21], [1487.15, 157.48]], [[1493.5, 193.04], [1494.77, 231.14000000000001]], [[1518.9, 476.25], [1544.3, 474.98]]], "labels": [[298.43, 491.49, "Habitaci\u00f3n", "8 m\u00b2"], [499.09000000000003, 490.22, "Aseo", "3 m\u00b2"], [833.1, 582.9300000000001, "Cocina", "Superficie dudosa"], [1027.4099999999999, 417.83, "Habitaci\u00f3n", "Superficie dudosa"], [1000.74, 162.56, "Habitaci\u00f3n", "12 m\u00b2"], [1214.1, 102.87, "Ba\u00f1o", "4 m\u00b2"], [1398.25, 105.41, "Ba\u00f1o", "4 m\u00b2"], [1671.3, 133.35, "Habitaci\u00f3n", "14 \u00b7 unidad por confirmar"], [1681.46, 361.95, "Habitaci\u00f3n", "14 \u00b7 unidad por confirmar"], [1714.48, 638.8100000000001, "Sal\u00f3n", "20 m\u00b2 \u00b7 lectura provisional"], [1353.8, 342.9, "Hall", "6 m\u00b2"], [1353.8, 570.23, "Hall", "5 m\u00b2"]]};
+const cv=document.querySelector('canvas'),ctx=cv.getContext('2d');
+let az=-.12,el=.84,zoom=1,mode='3d',H=2.5,U=100;
+const $=q=>document.querySelector(q),fm=v=>v.toFixed(2).replace('.',',');
+function project(x,y,z){x-=1000;y-=400;const xx=x*Math.cos(az)-y*Math.sin(az),yy=x*Math.sin(az)+y*Math.cos(az),s=Math.min(cv.clientWidth/2000,cv.clientHeight/1150)*zoom;return[cv.clientWidth/2+xx*s,cv.clientHeight/2+(yy*Math.cos(el)-z*Math.sin(el))*s+20]}
+function draw(){
+ const d=devicePixelRatio||1,h=H*U;cv.width=cv.clientWidth*d;cv.height=cv.clientHeight*d;ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,cv.clientWidth,cv.clientHeight);
+ const faces=[];
+ D.walls.forEach(w=>{for(let i=0;i<w.length-1;i++){const[x,y]=w[i],[a,b]=w[i+1];faces.push({p:[[x,y,0],[a,b,0],[a,b,h],[x,y,h]],dep:((y+b)/2-400)*Math.cos(az)+((x+a)/2-1000)*Math.sin(az),n:Math.abs(Math.cos(Math.atan2(b-y,a-x)-az))})}});
+ faces.sort((a,b)=>a.dep-b.dep);
+ faces.forEach(f=>{ctx.beginPath();f.p.forEach((p,i)=>{const q=project(...p);i?ctx.lineTo(...q):ctx.moveTo(...q)});ctx.closePath();
+  ctx.fillStyle=mode==='top'?'#a6c6d7':'hsl(200,38%,'+(68+f.n*14)+'%)';ctx.fill();ctx.strokeStyle='#22465d';ctx.lineWidth=1.2;ctx.stroke()});
+ ctx.font='12px system-ui';ctx.textAlign='center';
+ D.labels.forEach(([x,y,n,a])=>{const q=project(x,y,mode==='top'?0:h*.2);ctx.fillStyle='#17354a';ctx.fillText(n,q[0],q[1]);if(mode==='top'){ctx.font='10px system-ui';ctx.fillText(a,q[0],q[1]+15);ctx.font='12px system-ui'}});
+ if(mode==='3d'){const q0=project(95,700,0),q1=project(95,700,h);ctx.strokeStyle='#c0392b';ctx.fillStyle='#c0392b';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(...q0);ctx.lineTo(...q1);ctx.moveTo(q0[0]-6,q0[1]);ctx.lineTo(q0[0]+6,q0[1]);ctx.moveTo(q1[0]-6,q1[1]);ctx.lineTo(q1[0]+6,q1[1]);ctx.stroke();ctx.font='bold 13px system-ui';ctx.textAlign='right';ctx.fillText(fm(H)+' m',q1[0]-10,(q0[1]+q1[1])/2)}
+ const a=project(60,790,0),b=project(60+U,790,0);ctx.strokeStyle='#17354a';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(...a);ctx.lineTo(...b);ctx.stroke();ctx.textAlign='left';ctx.fillStyle='#17354a';ctx.font='12px system-ui';ctx.fillText('1 m',b[0]+8,b[1]+4);
+ ctx.fillStyle='#516472';ctx.fillText('ALTURA AL TECHO '+fm(H)+' m · ESCALA ESTIMADA '+U+' u/m',15,cv.clientHeight-18)}
+let prev;cv.onpointerdown=e=>{prev=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId)};
+cv.onpointermove=e=>{if(!prev)return;if(mode==='3d'){az+=(e.clientX-prev[0])*.006;el=Math.max(.1,Math.min(1.4,el+(e.clientY-prev[1])*.004))}prev=[e.clientX,e.clientY];draw()};
+cv.onpointerup=cv.onpointercancel=()=>prev=null;
+cv.onwheel=e=>{e.preventDefault();zoom=Math.max(.35,Math.min(3,zoom*Math.exp(-e.deltaY*.001)));draw()};
+function setmode(m){mode=m;az=m==='top'?0:-.12;el=m==='top'?0:.84;$('#orbit').classList.toggle('active',m==='3d');$('#top').classList.toggle('active',m==='top');draw()}
+$('#orbit').onclick=()=>setmode('3d');$('#top').onclick=()=>setmode('top');
+$('#reset').onclick=()=>{zoom=1;H=2.5;U=100;$('#alt').value='2.50';$('#esc').value=100;setmode('3d')};
+$('#plus').onclick=()=>{zoom=Math.min(3,zoom*1.2);draw()};$('#minus').onclick=()=>{zoom=Math.max(.35,zoom/1.2);draw()};
+$('#alt').oninput=e=>{const v=parseFloat(e.target.value);if(v>=2&&v<=4){H=v;draw()}};
+$('#esc').oninput=e=>{const v=parseFloat(e.target.value);if(v>=40&&v<=300){U=v;draw()}};
+window.onresize=draw;draw();
+</script></html>
