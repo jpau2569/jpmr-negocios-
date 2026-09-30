@@ -19,6 +19,7 @@ import { SKILLS_BASE, catalogoSkills, leerSkill, guardarSkill, parsearSkillMd, s
 import { leerConectores, piezasMcp, textoConectores, secretoPuente } from "../lib/conectores.js";
 import { consultarModelo } from "../lib/openrouter.js";
 import { tipoAudio, transcribirAudio } from "../lib/audio.js";
+import { investigarConPerplexity, perplexityConfigurado } from "../lib/perplexity.js";
 import puente from "../api/_mcp-puente.js";
 
 let pasados = 0;
@@ -817,6 +818,25 @@ check("transcribirAudio sin clave avisa", (await transcribirAudio("aGVsbG8=", "a
   const c3 = enviadas[0]?.messages?.[0]?.content;
   check("sin clave: marca NO transcrito y no inventa contenido", typeof c3 === "string" && c3.includes("NO transcrito"));
   globalThis.fetch = realFetch2;
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n— Perplexity —");
+// ---------------------------------------------------------------------------
+check("perplexityConfigurado según claves", !perplexityConfigurado({}) && perplexityConfigurado({ PERPLEXITY_API_KEY: "k" }) && perplexityConfigurado({ OPENROUTER_API_KEY: "k" }));
+check("sin clave avisa", (await investigarConPerplexity({ consulta: "hola" }, {})).includes("no está configurado"));
+{
+  const vistas = [];
+  const fake = async (url, init) => { vistas.push({ url, body: JSON.parse(init.body), auth: init.headers.Authorization }); return new Response(JSON.stringify({ choices: [{ message: { content: "El ITP en Asturias es del 8 %." } }], citations: ["https://www.asturias.es/itp", "javascript:alert(1)"] }), { status: 200 }); };
+  const r = await investigarConPerplexity({ consulta: "ITP Asturias" }, { PERPLEXITY_API_KEY: "kp" }, fake);
+  check("API directa con sonar-pro", vistas[0].url.includes("api.perplexity.ai") && vistas[0].body.model === "sonar-pro" && vistas[0].auth === "Bearer kp");
+  check("devuelve texto y solo fuentes http(s)", r.includes("8 %") && r.includes("1. https://www.asturias.es/itp") && !r.includes("javascript:"));
+  await investigarConPerplexity({ consulta: "x" }, { OPENROUTER_API_KEY: "ko" }, fake);
+  check("sin clave directa usa OpenRouter perplexity/sonar-pro", vistas[1].url.includes("openrouter.ai") && vistas[1].body.model === "perplexity/sonar-pro");
+  const sin = await investigarConPerplexity({ consulta: "x" }, { PERPLEXITY_API_KEY: "k" }, async () => new Response(JSON.stringify({ choices: [{ message: { content: "Algo." } }] }), { status: 200 }));
+  check("sin fuentes lo marca como no verificado", sin.includes("no verificado"));
+  const e401 = await investigarConPerplexity({ consulta: "x" }, { PERPLEXITY_API_KEY: "k" }, async () => new Response("{}", { status: 401 }));
+  check("401 → aviso de clave", e401.includes("PERPLEXITY_API_KEY"));
 }
 
 // ---------------------------------------------------------------------------
