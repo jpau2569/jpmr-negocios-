@@ -20,6 +20,7 @@ import { leerConectores, piezasMcp, textoConectores, secretoPuente } from "../li
 import { consultarModelo } from "../lib/openrouter.js";
 import { tipoAudio, transcribirAudio } from "../lib/audio.js";
 import { investigarConPerplexity, perplexityConfigurado } from "../lib/perplexity.js";
+import { estadoClara } from "../lib/estado-clara.js";
 import puente from "../api/_mcp-puente.js";
 
 let pasados = 0;
@@ -837,6 +838,25 @@ check("sin clave avisa", (await investigarConPerplexity({ consulta: "hola" }, {}
   check("sin fuentes lo marca como no verificado", sin.includes("no verificado"));
   const e401 = await investigarConPerplexity({ consulta: "x" }, { PERPLEXITY_API_KEY: "k" }, async () => new Response("{}", { status: 401 }));
   check("401 → aviso de clave", e401.includes("PERPLEXITY_API_KEY"));
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n— chequeo de estado —");
+// ---------------------------------------------------------------------------
+{
+  const vacio = estadoClara({});
+  check("sin ANTHROPIC_API_KEY: ok=false y lo dice", vacio.ok === false && vacio.resumen.includes("ANTHROPIC_API_KEY"));
+  const lleno = estadoClara({ ANTHROPIC_API_KEY: "sk-secreto", GEMINI_API_KEY: "g-secreto", OPENROUTER_API_KEY: "o-secreto" });
+  check("con la clave de Claude: ok=true", lleno.ok === true);
+  check("Perplexity activa con OpenRouter", lleno.piezas.find((p) => p.id === "perplexity").activa);
+  check("nube inactiva indica qué variables faltan", JSON.stringify(lleno.piezas.find((p) => p.id === "nube").falta) === '["SUPABASE_URL","SUPABASE_ANON_KEY"]');
+  check("NUNCA devuelve el valor de una clave", !JSON.stringify(lleno).match(/secreto/));
+  const rs = mockRes();
+  await handler({ method: "GET", query: { estado: "1" } }, rs);
+  check("GET ?estado=1 → 200 con piezas", rs.r.statusCode === 200 && Array.isArray(rs.r.body?.piezas));
+  const rg = mockRes();
+  await handler({ method: "GET", query: {} }, rg);
+  check("GET sin ?estado sigue siendo 405", rg.r.statusCode === 405);
 }
 
 // ---------------------------------------------------------------------------

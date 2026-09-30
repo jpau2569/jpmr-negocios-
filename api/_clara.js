@@ -17,6 +17,7 @@ import { tipoAudio, transcribirAudio } from "../lib/audio.js";
 import { leerWeb } from "../lib/leerweb.js";
 import { consultarModelo, openrouterConfigurado } from "../lib/openrouter.js";
 import { investigarConPerplexity, perplexityConfigurado } from "../lib/perplexity.js";
+import { estadoClara } from "../lib/estado-clara.js";
 import { BETA_MCP, leerConectores, piezasMcp, textoConectores, urlPublica } from "../lib/conectores.js";
 import { catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
 import { preparaValoracion, enlaceImportacion, FUENTES_IMPORTACION, MIN_COMPARABLES_IMPORTACION } from "../cerebro/importar.js";
@@ -498,6 +499,10 @@ export const HERRAMIENTA_VALORACION = {
 };
 
 export default async function handler(req, res) {
+  // Chequeo de estado (GET /api/clara?estado=1): qué piezas están activas. Sin claves.
+  if (req.method === "GET" && req.query?.estado !== undefined) {
+    return res.status(200).json(estadoClara());
+  }
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Usa POST con un cuerpo JSON." });
   }
