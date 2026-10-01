@@ -32,7 +32,7 @@
 // ============================================================================
 
 import Anthropic from "@anthropic-ai/sdk";
-import { buscarConGemini } from "./_clara.js";
+import { buscarWeb, buscadorDisponible } from "./_clara.js";
 
 const MODEL = "claude-sonnet-5";
 const MAX_HISTORY = 16; // el chat de dudas es corto por naturaleza
@@ -432,7 +432,7 @@ export default async function handler(req, res) {
     ];
   }
 
-  const buscador = Boolean(process.env.GEMINI_API_KEY);
+  const buscador = buscadorDisponible();
   const system = systemPrompt({
     nombre: String(nombre || "Nicer").slice(0, 40),
     curso: String(curso || "2º ESO").slice(0, 40),
@@ -466,7 +466,7 @@ export default async function handler(req, res) {
         let texto;
         if (llamada.name === "buscar_web") {
           busquedas += 1;
-          texto = await buscarConGemini(String(llamada.input?.consulta || "")).catch(
+          texto = await buscarWeb(String(llamada.input?.consulta || "")).catch(
             (e) => "No se pudo buscar: " + String(e?.message || e));
         } else {
           texto = `Herramienta desconocida: ${llamada.name}`;

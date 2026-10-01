@@ -90,7 +90,7 @@ check("con nube: sin clave → 401 y no llama a Claude", r.code === 401 && llama
 r = await pide({ accion: "ficha", texto: "Piso en Oviedo", clave: "mala" });
 check("con nube: clave incorrecta → 401", r.code === 401 && r.body.error.includes("incorrecta") && llamadas.claude.length === 0);
 r = await pide({ accion: "comparables", inmueble: { municipio: "Oviedo" }, clave: "buena" });
-check("comparables sin GEMINI_API_KEY → 503 con mensaje claro", r.code === 503 && r.body.error === "La búsqueda de comparables necesita GEMINI_API_KEY en Vercel; mientras tanto, añádelos a mano");
+check("comparables sin buscador → 503 con mensaje claro", r.code === 503 && r.body.error === "La búsqueda de comparables necesita GEMINI_API_KEY u OPENROUTER_API_KEY en Vercel; mientras tanto, añádelos a mano");
 check("…y sin gastar en Claude ni en Gemini", llamadas.claude.length === 0 && llamadas.gemini.length === 0);
 
 // ═════════════════════════════════════════════════════════════════════════════

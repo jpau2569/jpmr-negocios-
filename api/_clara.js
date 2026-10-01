@@ -132,7 +132,14 @@ export async function buscarWeb(consulta, env = process.env) {
   if (/^(Perplexity|No se pudo conectar con Perplexity|La cuenta no tiene saldo|No se recibió)/.test(alt)) {
     return `${r}\nTampoco funcionó el respaldo: ${alt}`;
   }
-  return `(Gemini no disponible: ${r.split(".")[0]}. Resultado obtenido con Perplexity.)\n\n${alt}`;
+  // Fuentes al mismo formato que Gemini («[1] url») para que Cerebro y el Profe las lean igual.
+  const normal = alt.replace(/^(\d+)\. (https?:\/\/\S+)\s*$/gm, "[$1] $2");
+  return `(Gemini no disponible: ${r.split(".")[0]}. Resultado obtenido con Perplexity.)\n\n${normal}`;
+}
+
+// ¿Hay algún motor de búsqueda configurado (Gemini o el respaldo)?
+export function buscadorDisponible(env = process.env) {
+  return Boolean(env.GEMINI_API_KEY) || perplexityConfigurado(env);
 }
 
 // ---------------------------------------------------------------------------
@@ -517,6 +524,16 @@ export const HERRAMIENTA_VALORACION = {
   },
 };
 
+// 1 segundo de silencio en WAV (PCM 16 bits, 8 kHz, mono) para probar los oídos.
+function wavSilencio(muestras = 8000) {
+  const b = Buffer.alloc(44 + muestras * 2);
+  b.write("RIFF", 0); b.writeUInt32LE(36 + muestras * 2, 4); b.write("WAVE", 8);
+  b.write("fmt ", 12); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22);
+  b.writeUInt32LE(8000, 24); b.writeUInt32LE(16000, 28); b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34);
+  b.write("data", 36); b.writeUInt32LE(muestras * 2, 40);
+  return b;
+}
+
 export default async function handler(req, res) {
   // Chequeo de estado (GET /api/clara?estado=1): qué piezas están activas. Sin claves.
   if (req.method === "GET" && req.query?.estado !== undefined) {
@@ -529,6 +546,13 @@ export default async function handler(req, res) {
       const fallo = FALLO_GEMINI.test(r);
       const motor = r.includes("Resultado obtenido con Perplexity") ? "perplexity (respaldo)" : `gemini (${GEMINI_MODEL})`;
       estado.prueba_buscador = { motor, ok: !fallo, ms: Date.now() - t0, resultado: String(r).slice(0, 600) };
+    }
+    // ?estado=1&probar=oidos → transcribe 1 s de silencio (WAV generado aquí):
+    // si responde «[sin voz]» o cualquier texto, los oídos funcionan.
+    if (req.query?.probar === "oidos") {
+      const t0 = Date.now();
+      const r = await transcribirAudio(wavSilencio().toString("base64"), "audio/wav");
+      estado.prueba_oidos = { ok: Boolean(r.texto), ms: Date.now() - t0, resultado: String(r.texto || r.error).slice(0, 300) };
     }
     return res.status(200).json(estado);
   }

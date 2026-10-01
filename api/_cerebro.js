@@ -27,7 +27,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { timingSafeEqual } from "node:crypto";
 import { nubeConfigurada, leerMemoria } from "../lib/memoria.js";
 import { leerWeb } from "../lib/leerweb.js";
-import { buscarConGemini } from "./_clara.js";
+import { buscarWeb, buscadorDisponible } from "./_clara.js";
 import { CAMPOS_PISO, esquemaFicha, limpiaFicha } from "../cerebro/campos-piso.js";
 
 function igualSeguro(a, b) {
@@ -476,8 +476,8 @@ export function validaComparables(lista, textoGemini) {
 export const MENSAJE_SIN_COMPARABLES = "No he encontrado anuncios con precio y m² verificables; añade tú los comparables";
 
 export async function comparables(body, res) {
-  if (!process.env.GEMINI_API_KEY) {
-    return res.status(503).json({ error: "La búsqueda de comparables necesita GEMINI_API_KEY en Vercel; mientras tanto, añádelos a mano" });
+  if (!buscadorDisponible()) {
+    return res.status(503).json({ error: "La búsqueda de comparables necesita GEMINI_API_KEY u OPENROUTER_API_KEY en Vercel; mientras tanto, añádelos a mano" });
   }
   const inmueble = limpiaInmuebleBusqueda(body.inmueble);
   if (!inmueble.municipio && !inmueble.zona && !inmueble.direccion) {
@@ -487,7 +487,7 @@ export async function comparables(body, res) {
   if (no) return res.status(no.codigo).json({ error: no.error });
 
   const consulta = consultaComparables(inmueble);
-  const textoGemini = String(await buscarConGemini(consulta));
+  const textoGemini = String(await buscarWeb(consulta));
   const fuentes = fuentesDeGemini(textoGemini);
   res.setHeader("Cache-Control", "no-store");
   // Sin fuentes no hay enlaces que verificar: no merece la pena gastar en Claude.

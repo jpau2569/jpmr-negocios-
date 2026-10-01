@@ -184,6 +184,7 @@
     <button class="tbtn" id="memory" title="Notas que Clara recuerda siempre, entre conversaciones">🧠 Memoria</button>
     <button class="tbtn" id="export" title="Descarga la conversación como archivo Markdown">⬇ Exportar</button>
     <button class="tbtn" id="reset" title="Borra esta conversación y empieza de cero">🗑 Nueva</button>
+    <button class="tbtn" id="reboot" title="Reinicia Clara: carga la última versión publicada, empieza de cero y comprueba que todo funciona. No borra tu Memoria ni tu clave.">🔄 Reiniciar</button>
   </div>
   <img class="claraface" id="claraFace" src="clara-rostro.jpg" alt="Rostro de Clara"
        onerror="this.style.display='none'" />
@@ -704,6 +705,50 @@
     location.reload();
   });
 
+  // ---- 🔄 Reiniciar: última versión + caché limpia + chequeo de estado ----
+  // Borra la conversación, los service workers y las cachés del navegador y
+  // recarga sin caché. NO toca la 🧠 Memoria, la clave de sincronización ni la voz.
+  const rebootBtn = document.getElementById("reboot");
+  rebootBtn.addEventListener("click", async () => {
+    if (!confirm("¿Reiniciar Clara?\n\nCarga la última versión, empieza una conversación nueva y comprueba que todo funciona.\nTu 🧠 Memoria y tu clave NO se borran.")) return;
+    rebootBtn.disabled = true;
+    rebootBtn.textContent = "🔄 Reiniciando…";
+    if (speechOK) speechSynthesis.cancel();
+    try { localStorage.removeItem(STORE_KEY); } catch {}
+    try { sessionStorage.setItem("clara_reinicio", "1"); } catch {}
+    try {
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch {}
+    try {
+      if ("caches" in window) {
+        const claves = await caches.keys();
+        await Promise.all(claves.map((k) => caches.delete(k)));
+      }
+    } catch {}
+    location.replace(location.pathname + "?v=" + Date.now());
+  });
+
+  // Tras un reinicio: quita ?v= de la barra y enseña el estado real de Clara.
+  async function informeReinicio() {
+    let marcado = false;
+    try { marcado = sessionStorage.getItem("clara_reinicio") === "1"; sessionStorage.removeItem("clara_reinicio"); } catch {}
+    if (new URLSearchParams(location.search).has("v")) window.history.replaceState(null, "", location.pathname);
+    if (!marcado) return;
+    try {
+      const r = await fetch("/api/clara?estado=1", { cache: "no-store" });
+      const e = await r.json();
+      const lineas = (e.piezas || [])
+        .filter((p) => p.id !== "conectores" || p.activa)
+        .map((p) => (p.activa ? "✅ " : "⚠️ ") + p.nombre + (p.activa ? "" : " — falta " + (p.falta || []).join(", ")));
+      addMessage("assistant", "🔄 Clara reiniciada con la última versión.\n\n" + (e.resumen || "") + "\n" + lineas.join("\n"));
+    } catch {
+      addError("🔄 Clara reiniciada, pero no he podido comprobar el estado del servidor. Revisa tu conexión.");
+    }
+  }
+
   // ---- Panel 🧠 Memoria (local + nube opcional con clave de sincronización) ----
   const memOverlay = document.getElementById("memOverlay");
   const memText = document.getElementById("memText");
@@ -893,6 +938,7 @@
     }
   }
   recogeCompartido();
+  informeReinicio();
 </script>
 </body>
 </html>

@@ -800,18 +800,33 @@ console.log("\n— oídos: audios y notas de voz —");
 // ---------------------------------------------------------------------------
 check("tipoAudio acepta ogg con parámetros (WhatsApp)", tipoAudio("audio/ogg; codecs=opus") === "audio/ogg");
 check("tipoAudio rechaza lo que no es audio", tipoAudio("application/zip") === null && tipoAudio("") === null);
-check("transcribirAudio sin clave avisa", (await transcribirAudio("aGVsbG8=", "audio/ogg", { key: "" })).error?.includes("GEMINI_API_KEY"));
+check("transcribirAudio sin clave avisa", (await transcribirAudio("aGVsbG8=", "audio/ogg", { key: "", orKey: "" })).error?.includes("GEMINI_API_KEY"));
 {
   const llamadasGem = [];
   const fakeGemini = async (url, init) => {
     llamadasGem.push({ url, body: JSON.parse(init.body) });
     return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "Llama al propietario de Foncalada mañana." }] } }] }), { status: 200 });
   };
-  const r = await transcribirAudio("aGVsbG8=", "audio/mp4", { fetchImpl: fakeGemini, key: "k" });
+  const r = await transcribirAudio("aGVsbG8=", "audio/mp4", { fetchImpl: fakeGemini, key: "k", orKey: "" });
   check("transcribirAudio devuelve el texto", r.texto === "Llama al propietario de Foncalada mañana.");
   check("manda el audio como inline_data con su tipo", llamadasGem[0]?.body?.contents?.[0]?.parts?.[0]?.inline_data?.mime_type === "audio/mp4");
-  const mal = await transcribirAudio("aGVsbG8=", "audio/mp4", { fetchImpl: async () => new Response("x", { status: 500 }), key: "k" });
+  const mal = await transcribirAudio("aGVsbG8=", "audio/mp4", { fetchImpl: async () => new Response("x", { status: 500 }), key: "k", orKey: "" });
   check("si Gemini falla, devuelve error (no inventa)", !mal.texto && mal.error.includes("500"));
+  // Respaldo: Gemini 429 (sin cuota) → OpenRouter con el mismo modelo.
+  const urls = [];
+  const fakeMixto = async (url, init) => {
+    urls.push(String(url));
+    if (String(url).includes("generativelanguage")) return new Response("quota", { status: 429 });
+    const b = JSON.parse(init.body);
+    const audio = b.messages[0].content.find((c) => c.type === "input_audio");
+    return new Response(JSON.stringify({ choices: [{ message: { content: audio?.input_audio?.format === "ogg" ? "Nota de voz transcrita." : "?" } }] }), { status: 200 });
+  };
+  const rr = await transcribirAudio("aGVsbG8=", "audio/ogg; codecs=opus", { fetchImpl: fakeMixto, key: "k", orKey: "or" });
+  check("audio: Gemini 429 → transcribe por OpenRouter (ogg)", rr.texto === "Nota de voz transcrita." && urls.some((u) => u.includes("openrouter.ai")));
+  const soloOr = await transcribirAudio("aGVsbG8=", "audio/mpeg", { fetchImpl: fakeMixto, key: "", orKey: "or" });
+  check("audio: sin clave de Gemini usa OpenRouter", soloOr.texto === "?" || soloOr.texto === "Nota de voz transcrita.");
+  const ambos = await transcribirAudio("aGVsbG8=", "audio/ogg", { fetchImpl: async () => new Response("x", { status: 500 }), key: "k", orKey: "or" });
+  check("audio: si fallan los dos, error claro con ambos motivos", !ambos.texto && ambos.error.includes("Gemini") && ambos.error.includes("respaldo"));
 }
 {
   process.env.GEMINI_API_KEY = "k-test";
