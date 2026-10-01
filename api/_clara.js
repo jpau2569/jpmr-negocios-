@@ -82,6 +82,7 @@ export async function buscarConGemini(consulta) {
 
   if (!resp.ok) {
     const detail = await resp.text().catch(() => "");
+    console.error("[buscar_web] Gemini", resp.status, GEMINI_MODEL, detail.slice(0, 500));
     if (resp.status === 401 || resp.status === 403 || (resp.status === 400 && /api key/i.test(detail))) {
       return `Gemini rechazó la clave (${resp.status}). Revisa GEMINI_API_KEY en Vercel.`;
     }
@@ -93,6 +94,9 @@ export async function buscarConGemini(consulta) {
 
   const data = await resp.json().catch(() => ({}));
   const cand = data?.candidates?.[0];
+  if (!cand?.content?.parts?.length) {
+    console.error("[buscar_web] respuesta sin texto", GEMINI_MODEL, JSON.stringify(data).slice(0, 500));
+  }
   const answer = (cand?.content?.parts || [])
     .map((p) => p?.text || "")
     .filter(Boolean)
@@ -501,7 +505,16 @@ export const HERRAMIENTA_VALORACION = {
 export default async function handler(req, res) {
   // Chequeo de estado (GET /api/clara?estado=1): qué piezas están activas. Sin claves.
   if (req.method === "GET" && req.query?.estado !== undefined) {
-    return res.status(200).json(estadoClara());
+    const estado = estadoClara();
+    // ?estado=1&probar=buscador → hace una búsqueda real con Gemini y devuelve
+    // un extracto del resultado (o el error exacto). Nunca devuelve claves.
+    if (req.query?.probar === "buscador") {
+      const t0 = Date.now();
+      const r = await buscarConGemini("¿Qué fecha es hoy? Responde en una línea con una noticia de hoy en España.");
+      const fallo = /^(La búsqueda con Gemini|Gemini rechazó|Gemini ha limitado|No se pudo conectar|Gemini no devolvió)/.test(r);
+      estado.prueba_buscador = { modelo: GEMINI_MODEL, ok: !fallo, ms: Date.now() - t0, resultado: String(r).slice(0, 600) };
+    }
+    return res.status(200).json(estado);
   }
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Usa POST con un cuerpo JSON." });
