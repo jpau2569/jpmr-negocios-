@@ -26,7 +26,7 @@ import { preparaValoracion, enlaceImportacion, FUENTES_IMPORTACION, MIN_COMPARAB
 export const config = { supportsResponseStreaming: true };
 
 const MODEL = "claude-sonnet-5";
-const GEMINI_MODEL = "gemini-2.5-flash"; // buscador con fuentes (Google AI Studio); alternativa: "gemini-2.5-pro"
+const GEMINI_MODEL = "gemini-3.8-flash"; // buscador con fuentes (Google AI Studio), mismo modelo que lib/audio.js
 const MAX_HISTORY = 60; // últimos N mensajes que se envían al modelo
 const MAX_TOOL_ROUNDS = 6; // rondas máximas de búsqueda por respuesta
 
