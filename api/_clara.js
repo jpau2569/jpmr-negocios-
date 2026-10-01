@@ -120,6 +120,21 @@ export async function buscarConGemini(consulta) {
   return out;
 }
 
+const FALLO_GEMINI = /^(La búsqueda con Gemini|Gemini rechazó|Gemini ha limitado|No se pudo conectar con Gemini|Gemini no devolvió)/;
+
+// buscar_web: primero Gemini + Google Search; si Gemini falla (sin cuota 429,
+// clave, caída…) y hay Perplexity/OpenRouter, busca por ahí para que Clara
+// nunca se quede sin Internet. Devuelve el texto con fuentes.
+export async function buscarWeb(consulta, env = process.env) {
+  const r = await buscarConGemini(consulta);
+  if (!FALLO_GEMINI.test(r) || !perplexityConfigurado(env)) return r;
+  const alt = await investigarConPerplexity({ consulta }, env);
+  if (/^(Perplexity|No se pudo conectar con Perplexity|La cuenta no tiene saldo|No se recibió)/.test(alt)) {
+    return `${r}\nTampoco funcionó el respaldo: ${alt}`;
+  }
+  return `(Gemini no disponible: ${r.split(".")[0]}. Resultado obtenido con Perplexity.)\n\n${alt}`;
+}
+
 // ---------------------------------------------------------------------------
 //  Calculadora exacta (rentabilidades, precio/m², cuotas…). Solo admite
 //  aritmética pura — se valida la expresión antes de evaluarla y jamás se
@@ -390,7 +405,7 @@ const MAX_ADJUNTOS = 6; // por mensaje (p. ej. varias fotos compartidas desde Wh
 // Ejecuta una herramienta pedida por Clara y devuelve su resultado en texto.
 async function ejecutarHerramienta(tu, claveSync) {
   try {
-    if (tu.name === "buscar_web") return await buscarConGemini(tu.input?.consulta);
+    if (tu.name === "buscar_web") return await buscarWeb(tu.input?.consulta);
     if (tu.name === "calcular") return calcular(tu.input?.expresion);
     if (tu.name === "leer_web") return await leerWeb(tu.input?.url);
     if (tu.name === "segunda_opinion") return await consultarModelo(tu.input || {});
@@ -510,9 +525,10 @@ export default async function handler(req, res) {
     // un extracto del resultado (o el error exacto). Nunca devuelve claves.
     if (req.query?.probar === "buscador") {
       const t0 = Date.now();
-      const r = await buscarConGemini("¿Qué fecha es hoy? Responde en una línea con una noticia de hoy en España.");
-      const fallo = /^(La búsqueda con Gemini|Gemini rechazó|Gemini ha limitado|No se pudo conectar|Gemini no devolvió)/.test(r);
-      estado.prueba_buscador = { modelo: GEMINI_MODEL, ok: !fallo, ms: Date.now() - t0, resultado: String(r).slice(0, 600) };
+      const r = await buscarWeb("¿Qué fecha es hoy? Responde en una línea con una noticia de hoy en España.");
+      const fallo = FALLO_GEMINI.test(r);
+      const motor = r.includes("Resultado obtenido con Perplexity") ? "perplexity (respaldo)" : `gemini (${GEMINI_MODEL})`;
+      estado.prueba_buscador = { motor, ok: !fallo, ms: Date.now() - t0, resultado: String(r).slice(0, 600) };
     }
     return res.status(200).json(estado);
   }
@@ -636,7 +652,7 @@ export default async function handler(req, res) {
       {
         name: "buscar_web",
         description:
-          "Busca información actual en Internet con Gemini y la búsqueda de Google (noticias, precios, datos, ofertas de empleo, empresas). Devuelve un resumen con las fuentes citadas. Úsala siempre que la respuesta dependa de información reciente.",
+          "Busca información actual en Internet con Gemini y la búsqueda de Google (si Gemini no está disponible, usa Perplexity automáticamente). Noticias, precios, datos, ofertas de empleo, empresas. Devuelve un resumen con las fuentes citadas. Úsala siempre que la respuesta dependa de información reciente.",
         input_schema: {
           type: "object",
           properties: {

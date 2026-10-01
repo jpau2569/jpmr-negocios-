@@ -8,7 +8,7 @@
 //  SSE y el briefing diario.
 // ============================================================================
 
-import handler, { buscarConGemini, calcular, resumenLeads } from "../api/_clara.js";
+import handler, { buscarConGemini, buscarWeb, calcular, resumenLeads } from "../api/_clara.js";
 import { leerWeb, esIpPrivada, htmlATexto } from "../lib/leerweb.js";
 import briefing from "../api/_briefing.js";
 import memoria from "../api/_memoria.js";
@@ -124,6 +124,22 @@ globalThis.fetch = async () => new Response("boom", { status: 429 });
 check("gestiona el error 429", (await buscarConGemini("x")).includes("429"));
 globalThis.fetch = async () => new Response("API key not valid", { status: 400 });
 check("clave inválida → mensaje de clave", (await buscarConGemini("x")).includes("GEMINI_API_KEY"));
+
+// Respaldo: Gemini sin cuota (429) → Perplexity vía OpenRouter.
+{
+  const llamadas = [];
+  globalThis.fetch = async (url) => {
+    llamadas.push(String(url));
+    if (String(url).includes("generativelanguage")) return new Response("quota", { status: 429 });
+    return new Response(JSON.stringify({ choices: [{ message: { content: "Hoy es 1 de octubre.", annotations: [{ url_citation: { url: "https://elpais.com/x" } }] } }] }), { status: 200 });
+  };
+  const env = { OPENROUTER_API_KEY: "or-test" };
+  const rr = await buscarWeb("noticia de hoy", env);
+  check("respaldo: Gemini 429 → usa Perplexity", rr.includes("Resultado obtenido con Perplexity") && rr.includes("Hoy es 1 de octubre") && rr.includes("elpais.com"));
+  check("respaldo: llama a OpenRouter tras Gemini", llamadas.some((u) => u.includes("openrouter.ai")));
+  const sinRespaldo = await buscarWeb("x", {});
+  check("sin Perplexity: devuelve el error de Gemini", sinRespaldo.includes("429") && !sinRespaldo.includes("Perplexity"));
+}
 globalThis.fetch = realFetch;
 
 // ---------------------------------------------------------------------------
