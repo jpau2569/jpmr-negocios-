@@ -818,6 +818,7 @@ check("transcribirAudio sin clave avisa", (await transcribirAudio("aGVsbG8=", "a
     urls.push(String(url));
     if (String(url).includes("generativelanguage")) return new Response("quota", { status: 429 });
     const b = JSON.parse(init.body);
+    if (!(b.max_tokens > 0 && b.max_tokens <= 4000)) return new Response("sin tope", { status: 402 });
     const audio = b.messages[0].content.find((c) => c.type === "input_audio");
     return new Response(JSON.stringify({ choices: [{ message: { content: audio?.input_audio?.format === "ogg" ? "Nota de voz transcrita." : "?" } }] }), { status: 200 });
   };
