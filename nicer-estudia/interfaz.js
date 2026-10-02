@@ -439,9 +439,13 @@ function vistaLeccion(estado, l, ctx) {
       <div style="margin-top:6px">${estadoLeccion(l, ctx)}</div>
     </div>
 
+    ${ctx.preparandoFotos && !ctx.resumiendo ? `<div class="tarjeta" style="margin-top:10px">
+        <span class="escribiendo" style="align-self:center"><i></i><i></i><i></i></span>
+        <p>Preparando las fotos de las páginas: ${escapa(ctx.preparandoFotos)}…</p>
+      </div>` : ''}
     ${resumiendo ? `<div class="tarjeta flash" style="margin-top:10px">
         <span class="escribiendo" style="align-self:center"><i></i><i></i><i></i></span>
-        <p>Clara está leyendo tu lección y haciéndote los apuntes.<br />Tarda unos segundos.</p>
+        <p>Clara está leyendo tu lección y haciéndote los apuntes.<br />Tarda unos segundos${fotosEnMemoria > 2 ? ' (con varias fotos, hasta un minuto)' : ''}.</p>
       </div>`
       : !l.resumida ? `<div class="tarjeta" style="margin-top:10px">
         <p style="font-size:.92rem">${puedeResumir
@@ -701,10 +705,15 @@ function burbujaClara(m, i, ctx) {
   return `<div class="burbuja profe">${escapa(m.texto)}${pie ? `<div class="pie-burbuja">${pie}</div>` : ''}</div>`;
 }
 
+const miniaturaSegura = (src) => typeof src === 'string' && src.startsWith('data:image/jpeg;base64,');
+
 function burbujaAlumno(m) {
-  const foto = m.miniatura
-    ? `<img class="foto-chat" src="${m.miniatura}" alt="Foto enviada" />`
-    : m.foto ? '<span class="pastilla gris">📷 Foto</span>' : '';
+  const minis = (m.miniaturas || (m.miniatura ? [m.miniatura] : [])).filter(miniaturaSegura);
+  const n = m.fotos || (m.foto ? 1 : 0);
+  const foto = minis.length
+    ? `<div class="fotos-chat${minis.length > 1 ? ' varias' : ''}">${minis.map((src, i) =>
+        `<img class="foto-chat" src="${src}" alt="Foto enviada ${i + 1}" />`).join('')}</div>`
+    : n ? `<span class="pastilla gris">📷 ${n === 1 ? 'Foto' : `${n} fotos`}</span>` : '';
   return `<div class="burbuja yo">${foto}${m.texto ? escapa(m.texto) : ''}</div>`;
 }
 
@@ -726,7 +735,7 @@ function propuestaHorario(horario) {
 }
 
 export function vistaClara(estado, ctx) {
-  const { chat, pensando, error, propuestas, fotoPendiente, dictando } = ctx;
+  const { chat, pensando, error, propuestas, fotosPendientes = [], preparandoFotos, dictando } = ctx;
   return `
   <section class="seccion">
     <div class="tarjeta cabeza-clara">
@@ -745,12 +754,12 @@ export function vistaClara(estado, ctx) {
 
 Pregúntame lo que no entiendas y te lo explico paso a paso, las veces que haga falta. Si son deberes, no te doy la solución hecha: te llevo hasta ella.
 
-Puedes escribirme, hablarme 🎤 o mandarme una foto 📷 del ejercicio, del libro o de tu horario.</div>
+Puedes escribirme, hablarme 🎤 o mandarme fotos 📷 (hasta 6 de golpe) del ejercicio, del libro o de tu horario.</div>
           <div class="chips" style="margin-top:4px">
             ${SUGERENCIAS.map((x) => `<button class="chip" data-accion="sugerencia" data-id="${x.id}">${x.texto}</button>`).join('')}
           </div>`}
         ${pensando ? `<div class="burbuja profe"><span class="escribiendo"><i></i><i></i><i></i></span>
-          ${pensando === 'foto' ? ' <span style="font-size:.82rem;color:var(--tinta-2)">Mirando la foto…</span>' : ''}</div>` : ''}
+          ${pensando === 'foto' ? ' <span style="font-size:.82rem;color:var(--tinta-2)">Mirando lo que me has mandado…</span>' : ''}</div>` : ''}
         ${error ? `<div class="burbuja error">${escapa(error)}</div>` : ''}
       </div>
       ${propuestas?.length ? `<div class="aviso-caja" style="margin-top:12px">
@@ -777,19 +786,29 @@ Puedes escribirme, hablarme 🎤 o mandarme una foto 📷 del ejercicio, del lib
       ${ctx.horarioPropuesto ? propuestaHorario(ctx.horarioPropuesto) : ''}
 
       <div class="caja-escribir">
-        ${fotoPendiente ? `<div class="foto-pendiente">
-          <img src="${fotoPendiente.miniatura}" alt="Foto para Clara" />
-          <span>Foto lista para mandar</span>
-          <button class="borrar" data-accion="quitar-foto" aria-label="Quitar la foto">✕</button>
+        ${fotosPendientes.length || preparandoFotos ? `<div class="fotos-pendientes">
+          <div class="tira-fotos">
+            ${fotosPendientes.map((f, i) => `<div class="mini-foto">
+              <img src="${miniaturaSegura(f.miniatura) ? f.miniatura : ''}" alt="Foto ${i + 1} para Clara" />
+              <button class="quitar" data-accion="quitar-foto" data-i="${i}" aria-label="Quitar la foto ${i + 1}">✕</button>
+            </div>`).join('')}
+            ${preparandoFotos ? '<div class="mini-foto cargando" aria-hidden="true"><span class="escribiendo"><i></i><i></i><i></i></span></div>' : ''}
+          </div>
+          <div class="pie-fotos">
+            <span id="preparando-fotos" aria-live="polite">${preparandoFotos
+              ? `Preparando foto ${preparandoFotos}…`
+              : `${fotosPendientes.length === 1 ? '1 foto lista' : `${fotosPendientes.length} fotos listas`} · máx. 6`}</span>
+            ${fotosPendientes.length > 1 && !preparandoFotos ? '<button class="mini fantasma" data-accion="quitar-foto" data-i="todas">Quitar todas</button>' : ''}
+          </div>
         </div>` : ''}
         <textarea id="profe-texto" rows="2" placeholder="${dictando ? 'Te escucho…' : 'Escribe tu duda, o dale al micro'}"></textarea>
         <div class="fila fila-escribir">
-          <button class="icono" data-accion="elegir-foto" aria-label="Mandar una foto" title="Mandar una foto">📷</button>
+          <button class="icono${fotosPendientes.length ? ' con-cuenta' : ''}" data-accion="elegir-foto" aria-label="${fotosPendientes.length ? 'Añadir otra foto' : 'Mandar fotos'}" title="Fotos (hasta 6)"${preparandoFotos || fotosPendientes.length >= 6 ? ' disabled' : ''}>📷${fotosPendientes.length ? `<b>${fotosPendientes.length}</b>` : ''}</button>
           ${ctx.puedeDictar ? `<button class="icono${dictando ? ' grabando' : ''}" data-accion="dictar"
             aria-label="${dictando ? 'Parar de escuchar' : 'Hablar en vez de escribir'}" title="Hablar">🎤</button>` : ''}
-          <button class="principal" data-accion="preguntar"${pensando ? ' disabled' : ''}>Enviar</button>
+          <button class="principal" data-accion="preguntar"${pensando || preparandoFotos ? ' disabled' : ''}>Enviar</button>
         </div>
-        <input type="file" id="foto-input" accept="image/*" hidden />
+        <input type="file" id="foto-input" accept="image/*" multiple hidden />
       </div>
     </div>
     <p style="font-size:.78rem;color:var(--tinta-2);margin-top:8px">
@@ -1025,8 +1044,10 @@ export function formLeccion(estado, leccion = null) {
     <select id="f-libro" name="libro"><option value="">— Sin libro —</option>
       ${libros.map((l) => `<option value="${l.id}"${l.id === leccion?.libroId ? ' selected' : ''}>${escapa(l.titulo)} · ${escapa(D.nombreAsignatura(estado, l.asignaturaId))}</option>`).join('')}
     </select></div>
-  <div class="campo"><label for="f-fotos">📷 Fotos de las páginas (hasta ${L.MAX_FOTOS_LECCION})</label>
-    <input id="f-fotos" name="fotos" type="file" accept="image/*" multiple /></div>
+  <div class="campo"><span class="etiqueta-campo">Fotos de las páginas (hasta ${L.MAX_FOTOS_LECCION})</span>
+    <label for="f-fotos" class="boton-fotos" id="f-fotos-boton">📷 Hacer o elegir fotos</label>
+    <input id="f-fotos" name="fotos" type="file" accept="image/*" multiple class="input-oculto" />
+    <div id="f-fotos-lista"></div></div>
   <div class="campo"><label for="f-texto">…o escribe / pega el texto de la lección</label>
     <textarea id="f-texto" name="texto" rows="8" placeholder="Puedes pegar el tema entero, o lo que has copiado en clase">${escapa(leccion?.texto || '')}</textarea></div>
   <p style="font-size:.8rem;color:var(--tinta-2)">Las fotos se reducen en el móvil y solo se mandan a Clara para hacer los apuntes; no se guardan.</p>`;

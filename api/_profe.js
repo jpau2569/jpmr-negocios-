@@ -16,8 +16,8 @@
 //      responde con calidez y manda a un adulto, con los teléfonos de ayuda.
 //   3. Lo que busca en Internet lo cita con su fuente.
 //
-//  Acepta una foto (ejercicio, página del libro, apuntes u horario) en el
-//  último mensaje. Si el alumno pide material, el modelo añade al final un
+//  Acepta hasta 6 fotos (ejercicio, páginas del libro, apuntes u horario)
+//  en el último mensaje (`imagenes`; la `imagen` suelta antigua sigue valiendo). Si el alumno pide material, el modelo añade al final un
 //  bloque con JSON que aquí se extrae y se devuelve aparte:
 //    [[TARJETAS]] → tarjetas de repaso (con idioma, para oírlas en inglés)
 //    [[TEST]]     → preguntas de opción múltiple para autoevaluarse
@@ -326,6 +326,13 @@ export function imagenesValidas(imagenes) {
   return salida;
 }
 
+/** Fotos del chat: la lista nueva `imagenes` (hasta 6) o la foto suelta
+    antigua `imagen`, para que una app sin actualizar siga funcionando. */
+export function fotosDelChat(cuerpo) {
+  const lista = Array.isArray(cuerpo?.imagenes) && cuerpo.imagenes.length ? cuerpo.imagenes : [cuerpo?.imagen];
+  return imagenesValidas(lista);
+}
+
 const bloqueImagen = (f) => ({ type: "image", source: { type: "base64", media_type: f.media_type, data: f.data } });
 const corta = (v, n) => String(v ?? "").slice(0, n);
 
@@ -396,7 +403,7 @@ export default async function handler(req, res) {
   } catch {
     return res.status(400).json({ error: "La petición no es JSON válido." });
   }
-  const { mensajes, curso, nombre, asignaturas, imagen } = cuerpo;
+  const { mensajes, curso, nombre, asignaturas } = cuerpo;
   const modo = MODOS.includes(cuerpo.modo) ? cuerpo.modo : "chat";
 
   const history = modo !== "chat" ? [] : (Array.isArray(mensajes) ? mensajes : [])
@@ -407,6 +414,10 @@ export default async function handler(req, res) {
       role: m.role === "user" ? "user" : "assistant",
       content: m.content.slice(0, 4000),
     }));
+  // La charla tiene que empezar por el alumno. Si al recortar queda delante
+  // una respuesta de Clara, se quita en vez de rechazar la petición entera
+  // (antes, a partir del 8.º mensaje, cada pregunta daba un 400).
+  while (history.length && history[0].role !== "user") history.shift();
 
   if (modo !== "chat") {
     const mensaje = mensajeDeModo(modo, cuerpo);
@@ -418,19 +429,22 @@ export default async function handler(req, res) {
     history.push(mensaje);
   }
 
-  if (!history.length || history[0].role !== "user") {
-    return res.status(400).json({ error: "La conversación tiene que empezar con una pregunta." });
+  if (!history.length || history[history.length - 1].role !== "user") {
+    console.warn("/api/profe 400: charla sin pregunta del alumno", { modo, mensajes: Array.isArray(mensajes) ? mensajes.length : 0 });
+    return res.status(400).json({ error: "Escríbeme tu pregunta y te contesto." });
   }
 
-  // La foto va delante del texto en el último mensaje del alumno.
-  const foto = modo === "chat" ? imagenValida(imagen) : null;
+  // Las fotos van delante del texto en el último mensaje del alumno.
+  const fotos = modo === "chat" ? fotosDelChat(cuerpo) : [];
+  const foto = fotos.length > 0;
   const ultimo = history[history.length - 1];
-  if (foto && ultimo.role === "user") {
+  if (foto) {
     ultimo.content = [
-      { type: "image", source: { type: "base64", media_type: foto.media_type, data: foto.data } },
-      { type: "text", text: ultimo.content },
+      ...fotos.map(bloqueImagen),
+      { type: "text", text: fotos.length > 1 ? `[Te mando ${fotos.length} fotos]\n${ultimo.content}` : ultimo.content },
     ];
   }
+  const fotosLeccion = modo === "leccion" ? imagenesValidas(cuerpo.imagenes).length : 0;
 
   const buscador = buscadorDisponible();
   const system = systemPrompt({
@@ -446,7 +460,9 @@ export default async function handler(req, res) {
     thinking: { type: "adaptive" },
     // Es un chat con un chaval: rapidez antes que exhaustividad. Corregir es
     // lo más sencillo y lo que más impaciencia da, así que va en "low".
-    output_config: { effort: modo === "corregir" ? "low" : "medium" },
+    // Con muchas fotos se baja el esfuerzo para no pasar del minuto que da
+    // Vercel (si no, la respuesta se cortaba con un 504).
+    output_config: { effort: modo === "corregir" || fotos.length >= 3 || fotosLeccion >= 4 ? "low" : "medium" },
     system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
     messages: history,
   };
@@ -508,7 +524,9 @@ export default async function handler(req, res) {
     }
     if (err instanceof Anthropic.BadRequestError) {
       console.error("Petición rechazada en /api/profe:", err.message);
-      return res.status(400).json({ error: foto ? "No he podido leer la foto. Prueba con otra más nítida." : "No he podido procesar la pregunta." });
+      return res.status(400).json({ error: foto || fotosLeccion
+        ? "No he podido leer alguna foto. Prueba con otra más nítida o con menos a la vez."
+        : "No he podido procesar la pregunta." });
     }
     if (err instanceof Anthropic.APIError) {
       console.error("Error de la API de Claude en /api/profe:", err.status, err.message);

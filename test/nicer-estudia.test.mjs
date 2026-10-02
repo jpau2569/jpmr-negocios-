@@ -12,12 +12,12 @@ import * as UI from "../nicer-estudia/interfaz.js";
 import * as Q from "../nicer-estudia/cuestionario.js";
 import { dibujaEsquema, esquemaDeIA, parteTexto } from "../nicer-estudia/esquema.js";
 import * as A from "../nicer-estudia/ambiente.js";
-import profe, { separaTarjetas, separaBloques, imagenValida, imagenesValidas, mensajeDeModo } from "../api/_profe.js";
+import profe, { separaTarjetas, separaBloques, imagenValida, imagenesValidas, mensajeDeModo, fotosDelChat } from "../api/_profe.js";
 import * as L from "../nicer-estudia/lecciones.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { icsExamen, escapaIcs, doblaLinea } from "../nicer-estudia/calendario.js";
 import { idiomaDe, limpiaParaLeer } from "../nicer-estudia/voz.js";
-import { medidas } from "../nicer-estudia/foto.js";
+import { medidas, ajustesPara, escalones, pareceFoto, AJUSTES_CHAT, PRESUPUESTO_B64, MAX_FOTOS } from "../nicer-estudia/foto.js";
 
 let pasados = 0, fallados = 0;
 const check = (nombre, cond, detalle = "") => {
@@ -303,6 +303,33 @@ console.log("\n🤖 Clara por dentro (Claude y Gemini simulados)");
     pideLeccion.system.length === 2 && pideLeccion.system[1].text.includes("[[LECCION]]") && pideLeccion.system[0].cache_control);
   check("en los modos de trabajo no se ofrece el buscador", !pideLeccion.tools);
 
+  // Varias fotos en el chat (hasta 6), delante del texto.
+  peticiones.length = 0;
+  Anthropic.Messages.prototype.create = async function (p) {
+    peticiones.push(JSON.parse(JSON.stringify(p)));
+    return { stop_reason: "end_turn", content: [{ type: "text", text: "Veo las tres páginas." }] };
+  };
+  const rVarias = resFalsa();
+  await profe({ method: "POST", body: {
+    mensajes: [{ role: "user", content: "Mira estas" }],
+    imagenes: [1, 2, 3].map(() => ({ media_type: "image/jpeg", data: "QUJD" }))
+  } }, rVarias);
+  const cont = peticiones[0].messages.at(-1).content;
+  check("el chat acepta varias fotos juntas", rVarias.code === 200 && cont.filter((b) => b.type === "image").length === 3);
+  check("y el texto va detrás de todas", cont.at(-1).type === "text" && cont.at(-1).text.includes("3 fotos"));
+  check("con 3 o más fotos baja el esfuerzo (no pasar del minuto de Vercel)", peticiones[0].output_config.effort === "low");
+  check("como mucho 6 fotos en el chat", fotosDelChat({ imagenes: Array(9).fill({ media_type: "image/jpeg", data: "QUJD" }) }).length === 6);
+  check("la foto suelta antigua sigue valiendo", fotosDelChat({ imagen: { media_type: "image/jpeg", data: "QUJD" } }).length === 1);
+
+  // Charla larga: antes, a partir del 8.º mensaje empezaba por Clara y daba 400.
+  peticiones.length = 0;
+  const larga = [];
+  for (let i = 0; i < 17; i++) larga.push({ role: i % 2 ? "profe" : "user", content: `mensaje ${i}` });
+  const rLarga = resFalsa();
+  await profe({ method: "POST", body: { mensajes: larga.slice(-16) } }, rLarga);
+  check("una charla larga que empieza por Clara ya no da 400", rLarga.code === 200);
+  check("se manda empezando por el alumno", peticiones[0].messages[0].role === "user");
+
   const r5 = resFalsa();
   await profe({ method: "POST", body: { modo: "leccion", leccion: { titulo: "vacía" } } }, r5);
   check("una lección sin texto ni fotos se rechaza con un mensaje claro", r5.code === 400 && r5.body.error.includes("foto"));
@@ -447,6 +474,37 @@ console.log("\n📷 Fotos");
     JSON.stringify(medidas(4000, 3000)) === JSON.stringify({ ancho: 1600, alto: 1200 }));
   check("una foto pequeña no se agranda", medidas(800, 600).ancho === 800);
   check("la foto vertical conserva la proporción", medidas(3000, 4000).alto === 1600);
+  check("una sola foto va grande", ajustesPara(1).lado === 1600);
+  check("seis juntas caben en el presupuesto", ajustesPara(6).maxB64 * 6 <= PRESUPUESTO_B64);
+  check("el presupuesto deja hueco bajo los 4,5 MB de Vercel", PRESUPUESTO_B64 < 3_800_000);
+  check("en el chat, seis fotos juntas tampoco se pasan", AJUSTES_CHAT.maxB64 * MAX_FOTOS <= PRESUPUESTO_B64);
+  check("más de 6 se queda en 6", ajustesPara(20).maxB64 === ajustesPara(6).maxB64);
+  const pasos = escalones({ lado: 1400, calidad: 0.72 });
+  check("si no cabe, primero baja la calidad y luego el tamaño",
+    pasos[0].calidad === 0.72 && pasos[1].calidad < 0.72 && pasos.at(-1).lado < 1400);
+  check("nunca baja de calidad 0,5 (el texto seguiría leyéndose)", pasos.every((p) => p.calidad >= 0.5));
+  check("una foto de la cámara sin tipo (algunos Android) se acepta", pareceFoto({ type: "", name: "IMG_2026.jpg" }));
+  check("un PDF no pasa por foto", !pareceFoto({ type: "application/pdf", name: "a.pdf" }));
+}
+
+console.log("\n💬 Charla que se manda a Clara");
+{
+  const chat = [];
+  for (let i = 0; i < 17; i++) chat.push({ rol: i % 2 ? "profe" : "user", texto: `m${i}`, fotos: i === 2 ? 3 : 0 });
+  const h = D.historialParaClara(chat);
+  check("empieza siempre por el alumno", h[0].role === "user");
+  check("no pasa de 16", h.length <= 16);
+  check("acaba en la pregunta nueva", h.at(-1).content === "m16");
+  check("las fotos de antes no se reenvían, solo se dicen", h.some((m) => m.content.startsWith("[Te mandé 3 fotos]")));
+  check("la charla guardada recuerda cuántas fotos llevaba", (() => {
+    const g = []; const almacen = { getItem: (k) => g[k] ?? null, setItem: (k, v) => { g[k] = v; } };
+    globalThis.localStorage = almacen;
+    D.guardarChat([{ rol: "user", texto: "x", foto: true, fotos: 4, miniaturas: ["data:image/jpeg;base64,AAA"] }]);
+    const guardado = Object.values(g)[0] || "";
+    const vuelta = D.cargarChat();
+    delete globalThis.localStorage;
+    return !guardado.includes("base64") && vuelta[0]?.fotos === 4;
+  })());
 }
 
 console.log("\n🗓️  Horario desde una foto");

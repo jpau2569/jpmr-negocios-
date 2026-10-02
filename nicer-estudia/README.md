@@ -91,7 +91,7 @@ sombrero: el de profesora de un alumno de ESO de un colegio bilingüe.
 | Qué hace | Cómo |
 |---|---|
 | Explica dudas sin dar los deberes hechos | Prompt de `api/_profe.js` (regla de oro) |
-| **Foto** de un ejercicio, del libro o de los apuntes | `foto.js` la reduce a 1600 px JPEG en el móvil; va delante del texto en el último mensaje |
+| **Fotos** (hasta 6) de un ejercicio, del libro o de los apuntes | Se suman tanda a tanda (cámara de una en una o galería de golpe); `foto.js` las reduce **de una en una** en el móvil (1600 px, calidad ajustada para que 6 quepan en ~3,3 MB) y van delante del texto en el último mensaje (`imagenes`) |
 | **Horario desde una foto** | Clara devuelve `[[HORARIO]]`; la app lo enseña, y al confirmar `aplicaHorario()` lo pone y crea las asignaturas que falten |
 | **Busca información** para trabajos, citando la fuente | Herramienta `buscar_web` con `buscarConGemini` (el mismo buscador de la Clara de Pau). Solo si hay `GEMINI_API_KEY` |
 | **Hablar** en vez de escribir y **escuchar** sus respuestas | `voz.js` (Web Speech API del navegador); detecta si la respuesta está en inglés para leerla con acento inglés |
@@ -157,7 +157,7 @@ Cada capa solo conoce a la de debajo:
 - `esquema.js` — el mapa del tema dibujado como SVG
 - `ambiente.js` — sonido de fondo generado (ruido filtrado), sin archivos
 - `voz.js` — dictado y lectura en voz alta (español e inglés)
-- `foto.js` — reduce la foto en el móvil antes de mandársela a Clara
+- `foto.js` — reduce las fotos en el móvil (de una en una, con presupuesto de tamaño) antes de mandárselas a Clara
 - `calendario.js` — el examen y su plan como archivo `.ics` con avisos
 - `lecciones.js` — validar lo que devuelve Clara, lección → tarjetas y
   esquema, contenido para el examen, examen de prueba y nota final (puro)

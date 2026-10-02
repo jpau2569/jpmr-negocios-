@@ -12,7 +12,7 @@ import * as Q from './cuestionario.js';
 import { dibujaEsquema, esquemaDeIA } from './esquema.js';
 import { crearAmbiente, AMBIENTES } from './ambiente.js';
 import * as Voz from './voz.js';
-import { preparaFoto } from './foto.js';
+import { preparaFotos, ajustesPara, AJUSTES_CHAT, MAX_FOTOS } from './foto.js';
 import { icsExamen } from './calendario.js';
 import * as L from './lecciones.js';
 
@@ -32,7 +32,8 @@ const ctx = {
   testPropuesto: [],
   esquemaPropuesto: null,
   horarioPropuesto: null,   // horario leído de una foto, pendiente de confirmar
-  fotoPendiente: null,      // foto elegida y reducida, aún sin mandar
+  fotosPendientes: [],      // fotos elegidas y reducidas, aún sin mandar (hasta 6)
+  preparandoFotos: null,    // «2 de 5» mientras se reducen en el móvil
   borrador: '',             // lo escrito en la caja, para no perderlo al repintar
   leccionAbierta: null,     // lección que se está leyendo en Estudiar → Lecciones
   filtroAsig: '',           // asignatura elegida en la lista de lecciones
@@ -148,7 +149,8 @@ function pide({ titulo, html, aceptar = 'Guardar' }) {
           datos[c.name] = datos[c.name] || [];
           if (c.checked) datos[c.name].push(c.value);
         } else if (c.type === 'file') {
-          datos[c.name] = Array.from(c.files || []);
+          // Las fotos se van juntando en varias tandas (ver «f-fotos» abajo).
+          datos[c.name] = c._fotos ? [...c._fotos] : Array.from(c.files || []);
         } else {
           datos[c.name] = c.value;
         }
@@ -481,7 +483,7 @@ const acciones = {
     ctx.chat = [];
     D.guardarChat([]);
     ctx.horarioPropuesto = null;
-    ctx.fotoPendiente = null;
+    ctx.fotosPendientes = [];
     ctx.propuestas = [];
     ctx.testPropuesto = [];
     ctx.esquemaPropuesto = null;
@@ -512,11 +514,22 @@ const acciones = {
     if (!s) return;
     ctx.borrador = s.rellena;
     render();
-    if (s.foto) $('#foto-input')?.click();
+    if (s.foto) acciones['elegir-foto']();
     else enfocaCaja();
   },
-  'elegir-foto': () => $('#foto-input')?.click(),
-  'quitar-foto': () => { ctx.fotoPendiente = null; render(); },
+  'elegir-foto': () => {
+    if (ctx.preparandoFotos) return;
+    if (ctx.fotosPendientes.length >= MAX_FOTOS) {
+      ctx.error = `Como mucho ${MAX_FOTOS} fotos por mensaje. Manda estas y luego sigues.`;
+      return render();
+    }
+    $('#foto-input')?.click();
+  },
+  'quitar-foto': (el) => {
+    const i = Number(el.dataset.i);
+    ctx.fotosPendientes = Number.isInteger(i) ? ctx.fotosPendientes.filter((_, j) => j !== i) : [];
+    render();
+  },
   dictar: () => {
     if (ctx.dictando) { pararDictado?.(); return; }
     Voz.calla();
@@ -683,13 +696,21 @@ async function editaLeccion(leccion) {
   ctx.leccionAbierta = actual.id;
 
   if (fotos.length) {
-    try {
-      ctx.fotosLeccion[actual.id] = await Promise.all(
-        fotos.map((f) => preparaFoto(f, { lado: 1400, calidad: 0.72 })));
-    } catch (e) {
+    // De una en una y enseñando por dónde va: en paralelo se comía la
+    // memoria del móvil y la app se quedaba congelada.
+    ctx.preparandoFotos = `0 de ${fotos.length}`;
+    render();
+    const r = await preparaFotos(fotos, {
+      ajustes: ajustesPara(fotos.length),
+      alProgreso: (hechas, total) => { ctx.preparandoFotos = `${Math.min(hechas + 1, total)} de ${total}`; render(); }
+    });
+    ctx.preparandoFotos = null;
+    if (!r.fotos.length) {
       render();
-      return avisa(`No he podido abrir alguna foto: ${e.message}`);
+      return avisa(`No he podido abrir las fotos: ${r.motivo}`);
     }
+    ctx.fotosLeccion[actual.id] = r.fotos;
+    if (r.fallidas) avisa(`${plural(r.fallidas, 'foto no se ha podido abrir', 'fotos no se han podido abrir')} (${r.motivo}). Sigo con las otras ${r.fotos.length}.`);
   }
   render();
   window.scrollTo({ top: 0 });
@@ -785,33 +806,66 @@ async function entregaExamen() {
   terminaTest(correccion);
 }
 
-/** Llamada a Clara en un modo de trabajo, con tiempo máximo: resumir seis
-    páginas puede tardar, pero nunca dejar la pantalla colgada. */
-async function llamaClara(modo, cuerpo, espera = 75000) {
+/* ── Llamada a Clara ────────────────────────────────────────────
+   Una sola puerta para todo (chat, lección, examen y corrección):
+   - tiempo máximo, para que la pantalla nunca se quede colgada;
+   - un reintento automático si el fallo es pasajero (red que se corta,
+     servidor saturado), que es lo que hacía que «se bloqueara cada poco»;
+   - mensajes que un chaval entiende en vez de «Error 504». */
+const REINTENTABLES = new Set([429, 500, 502, 503]);
+const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function errorClara(mensaje, reintentar = false) {
+  const e = new Error(mensaje);
+  e.reintentar = reintentar;
+  return e;
+}
+
+async function unaLlamada(cuerpo, espera) {
   const corte = new AbortController();
   const alarma = setTimeout(() => corte.abort(), espera);
   try {
-    const res = await fetch('/api/profe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: corte.signal,
-      body: JSON.stringify({
-        modo, ...cuerpo,
-        curso: estado.alumno.curso,
-        nombre: estado.alumno.nombre,
-        asignaturas: estado.asignaturas.map((x) => x.nombre)
-      })
-    });
+    let res;
+    try {
+      res = await fetch('/api/profe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: corte.signal,
+        body: cuerpo
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') throw errorClara('Ha tardado demasiado. Vuelve a probar (con menos fotos irá más rápido).');
+      if (!navigator.onLine) throw errorClara('No hay conexión.');
+      throw errorClara('Se ha cortado la conexión.', true);
+    }
     const datos = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(datos.error || `Error ${res.status}.`);
-    return datos;
-  } catch (e) {
-    if (e.name === 'AbortError') throw new Error('Ha tardado demasiado.');
-    if (!navigator.onLine) throw new Error('No hay conexión.');
-    throw e;
+    if (res.ok) return datos;
+    if (res.status === 413) throw errorClara('Las fotos pesan demasiado juntas. Quita alguna y vuelve a probar.');
+    if (res.status === 504) throw errorClara('Clara ha tardado demasiado en leerlo todo. Prueba con menos fotos a la vez.');
+    throw errorClara(datos.error || `Error ${res.status}.`, REINTENTABLES.has(res.status));
   } finally {
     clearTimeout(alarma);
   }
+}
+
+async function llamaClara(modo, cuerpo, espera = 85000) {
+  const json = JSON.stringify({
+    modo, ...cuerpo,
+    curso: estado.alumno.curso,
+    nombre: estado.alumno.nombre,
+    asignaturas: estado.asignaturas.map((x) => x.nombre)
+  });
+  let ultimo;
+  for (let intento = 0; intento < 2; intento++) {
+    if (intento) await pausa(2500);
+    try {
+      return await unaLlamada(json, espera);
+    } catch (e) {
+      ultimo = e;
+      if (!e.reintentar) break;
+    }
+  }
+  throw ultimo;
 }
 
 function enfocaCaja() {
@@ -1153,16 +1207,22 @@ const celebra = () => tono(880, 0.09);
 /* ── Clara ──────────────────────────────────────────────────────── */
 async function preguntaAlProfe() {
   const caja = $('#profe-texto');
-  const foto = ctx.fotoPendiente;
-  const texto = ((caja?.value ?? ctx.borrador) || '').trim() || (foto ? 'Mira esta foto.' : '');
-  if (!texto || ctx.pensando) return;
+  const fotos = ctx.fotosPendientes;
+  const texto = ((caja?.value ?? ctx.borrador) || '').trim()
+    || (fotos.length ? (fotos.length === 1 ? 'Mira esta foto.' : `Mira estas ${fotos.length} fotos.`) : '');
+  if (!texto || ctx.pensando || ctx.preparandoFotos) return;
 
   pararDictado?.();
   Voz.calla();
-  ctx.chat.push({ rol: 'user', texto, foto: Boolean(foto), miniatura: foto?.miniatura || null });
+  ctx.chat.push({
+    rol: 'user', texto,
+    foto: fotos.length > 0, fotos: fotos.length,
+    miniaturas: fotos.map((f) => f.miniatura)
+  });
+  const automatico = /^Mira (esta foto|estas \d+ fotos)\.$/.test(texto);
   ctx.borrador = '';
-  ctx.fotoPendiente = null;
-  ctx.pensando = foto ? 'foto' : true;
+  ctx.fotosPendientes = [];
+  ctx.pensando = fotos.length ? 'foto' : true;
   ctx.error = null;
   ctx.propuestas = [];
   ctx.testPropuesto = [];
@@ -1171,24 +1231,12 @@ async function preguntaAlProfe() {
   render();
 
   try {
-    const res = await fetch('/api/profe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        // Las fotos anteriores no se reenvían (gastan mucho): Clara ya las
-        // describió en su respuesta, así que basta con decir que las hubo.
-        mensajes: ctx.chat.slice(-16).map((m) => ({
-          role: m.rol,
-          content: (m.foto && m !== ctx.chat.at(-1) ? '[Te mandé una foto] ' : '') + m.texto
-        })),
-        imagen: foto ? { media_type: foto.media_type, data: foto.data } : undefined,
-        curso: estado.alumno.curso,
-        nombre: estado.alumno.nombre,
-        asignaturas: estado.asignaturas.map((a) => a.nombre)
-      })
-    });
-    const datos = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(datos.error || `Error ${res.status}`);
+    // Las fotos anteriores no se reenvían (gastan mucho): Clara ya las
+    // describió en su respuesta, así que basta con decir que las hubo.
+    const datos = await llamaClara('chat', {
+      mensajes: D.historialParaClara(ctx.chat),
+      imagenes: fotos.map((f) => ({ media_type: f.media_type, data: f.data }))
+    }, fotos.length ? 85000 : 70000);
     ctx.chat.push({ rol: 'profe', texto: datos.reply || 'No he sabido responder a eso.', buscado: datos.busquedas > 0 });
     ctx.propuestas = Array.isArray(datos.tarjetas) ? datos.tarjetas.slice(0, 20) : [];
     const asigTest = datos.esquema?.asignatura ? D.buscaAsignatura(estado, datos.esquema.asignatura) : null;
@@ -1204,10 +1252,10 @@ async function preguntaAlProfe() {
     ctx.error = navigator.onLine
       ? `Clara no ha podido responder: ${e.message}`
       : 'Sin conexión. Clara necesita internet; el resto de la app funciona igual.';
-    // Si falla, la foto y el texto no se pierden: vuelven a la caja.
-    const enviado = ctx.chat.pop();
-    ctx.borrador = enviado?.texto === 'Mira esta foto.' ? '' : (enviado?.texto || '');
-    if (foto) ctx.fotoPendiente = foto;
+    // Si falla, las fotos y el texto no se pierden: vuelven a la caja.
+    ctx.chat.pop();
+    ctx.borrador = automatico ? '' : texto;
+    ctx.fotosPendientes = fotos;
   } finally {
     ctx.pensando = false;
     D.guardarChat(ctx.chat);
@@ -1222,19 +1270,79 @@ document.addEventListener('input', (ev) => {
   }
 });
 
+/* Fotos para Clara: se pueden elegir varias de golpe (galería) o ir
+   añadiendo de una en una (cámara), hasta 6. Se reducen en el móvil de una
+   en una y la pantalla dice por dónde va. */
 document.addEventListener('change', async (ev) => {
   if (ev.target?.id !== 'foto-input') return;
-  const archivo = ev.target.files?.[0];
+  const hueco = MAX_FOTOS - ctx.fotosPendientes.length;
+  const archivos = Array.from(ev.target.files || []);
   ev.target.value = ''; // para poder elegir la misma foto otra vez
-  if (!archivo) return;
-  try {
-    ctx.fotoPendiente = await preparaFoto(archivo);
-    ctx.error = null;
-  } catch (e) {
-    ctx.error = `No he podido abrir la foto: ${e.message}`;
-  }
+  if (!archivos.length || ctx.preparandoFotos) return;
+  const elegidas = archivos.slice(0, Math.max(0, hueco));
+  ctx.error = null;
+  ctx.preparandoFotos = `1 de ${elegidas.length}`;
+  render();
+  const r = await preparaFotos(elegidas, {
+    ajustes: AJUSTES_CHAT,
+    alProgreso: (hechas, total) => {
+      if (hechas >= total) return;
+      ctx.preparandoFotos = `${hechas + 1} de ${total}`;
+      const marca = $('#preparando-fotos');
+      if (marca) marca.textContent = `Preparando foto ${ctx.preparandoFotos}…`;
+    }
+  });
+  ctx.preparandoFotos = null;
+  ctx.fotosPendientes = [...ctx.fotosPendientes, ...r.fotos].slice(0, MAX_FOTOS);
+  const avisos = [];
+  if (archivos.length > elegidas.length) avisos.push(`Solo caben ${MAX_FOTOS} fotos por mensaje; he cogido las ${elegidas.length} primeras.`);
+  if (r.fallidas) avisos.push(`${r.fallidas === 1 ? 'Una foto no se ha podido abrir' : `${r.fallidas} fotos no se han podido abrir`}: ${r.motivo}`);
+  ctx.error = avisos.join(' ') || null;
   render();
   enfocaCaja();
+});
+
+/* Fotos de las páginas de una lección (en el diálogo): cada vez que elige,
+   se SUMAN a las que ya había en vez de sustituirlas. Así puede hacerlas
+   con la cámara de una en una. */
+document.addEventListener('change', (ev) => {
+  const campo = ev.target;
+  if (campo?.id !== 'f-fotos') return;
+  const max = L.MAX_FOTOS_LECCION;
+  const antes = campo._fotos || [];
+  const nuevas = Array.from(campo.files || []);
+  campo._fotos = [...antes, ...nuevas].slice(0, max);
+  campo.value = '';
+  pintaFotosLeccion(campo, antes.length + nuevas.length > max);
+});
+
+function pintaFotosLeccion(campo, sobran = false) {
+  const lista = $('#f-fotos-lista');
+  if (!lista) return;
+  const fotos = campo._fotos || [];
+  lista.innerHTML = fotos.length
+    ? `<div class="chips">${fotos.map((_, i) => `<span class="chip chip-foto">📄 Página ${i + 1}
+        <button type="button" class="borrar-foto" data-quita-pagina="${i}" aria-label="Quitar la página ${i + 1}">✕</button></span>`).join('')}</div>
+       <p class="nota-fotos">${fotos.length} de ${L.MAX_FOTOS_LECCION}${fotos.length < L.MAX_FOTOS_LECCION ? ' · puedes añadir más (también de una en una con la cámara)' : ''}${sobran ? ` · solo caben ${L.MAX_FOTOS_LECCION}, he cogido las primeras` : ''}</p>`
+    : '';
+  const lleno = fotos.length >= L.MAX_FOTOS_LECCION;
+  campo.disabled = lleno;
+  const etiqueta = $('#f-fotos-boton');
+  if (etiqueta) {
+    etiqueta.textContent = lleno ? `✅ ${L.MAX_FOTOS_LECCION} páginas listas` : fotos.length ? '➕ Añadir más páginas' : '📷 Hacer o elegir fotos';
+    etiqueta.classList.toggle('lleno', lleno);
+  }
+}
+
+document.addEventListener('click', (ev) => {
+  const boton = ev.target?.closest?.('[data-quita-pagina]');
+  if (!boton) return;
+  ev.preventDefault();
+  const campo = $('#f-fotos');
+  if (!campo?._fotos) return;
+  const i = Number(boton.dataset.quitaPagina);
+  campo._fotos = campo._fotos.filter((_, j) => j !== i);
+  pintaFotosLeccion(campo);
 });
 
 /* Atajos en el PC: la lógica vive en repaso.js (atajoTeclado). */

@@ -388,12 +388,44 @@ input[type="range"] { min-height: 32px; padding: 0; accent-color: var(--azul); }
 .pie-burbuja .mini { min-height: 32px; }
 .foto-chat { display: block; max-width: 160px; border-radius: 10px; margin-bottom: 6px; }
 .caja-escribir { margin-top: 12px; }
-.foto-pendiente {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
-  padding: 6px 8px; border: 1px solid var(--borde); border-radius: 12px; font-size: .84rem; color: var(--tinta-2);
+/* Varias fotos para Clara (hasta 6) */
+.fotos-chat { display: block; margin-bottom: 6px; }
+.fotos-chat.varias { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; max-width: 240px; }
+.fotos-chat.varias .foto-chat { width: 100%; aspect-ratio: 1; object-fit: cover; margin: 0; border-radius: 8px; }
+.fotos-pendientes {
+  margin-bottom: 8px; padding: 8px; border: 1px solid var(--borde); border-radius: 12px;
 }
-.foto-pendiente img { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; }
-.foto-pendiente .borrar { margin-left: auto; }
+.tira-fotos { display: flex; flex-wrap: wrap; gap: 8px; }
+.mini-foto { position: relative; width: 56px; height: 56px; flex: 0 0 56px; }
+.mini-foto img { width: 100%; height: 100%; object-fit: cover; border-radius: 9px; display: block; }
+.mini-foto.cargando { display: grid; place-items: center; border: 1px dashed var(--borde); border-radius: 9px; }
+.mini-foto .quitar {
+  position: absolute; top: -9px; right: -9px; width: 28px; height: 28px; min-height: 28px; min-width: 28px;
+  padding: 0; border-radius: 999px; font-size: .75rem; line-height: 1;
+  background: var(--tarjeta); color: var(--tinta); border: 1px solid var(--borde); box-shadow: var(--sombra);
+}
+/* Objetivo táctil de 44 px aunque el círculo se vea de 28 */
+.mini-foto .quitar::after { content: ''; position: absolute; inset: -8px; }
+.pie-fotos { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: .82rem; color: var(--tinta-2); }
+.pie-fotos > span { flex: 1; min-width: 0; }
+button.icono.con-cuenta { position: relative; }
+button.icono.con-cuenta b {
+  position: absolute; top: 2px; right: 4px; min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 999px; font-size: .7rem; line-height: 18px; background: var(--azul); color: var(--tarjeta);
+}
+/* Fotos de las páginas de una lección */
+.etiqueta-campo { display: block; font-size: .8rem; font-weight: 600; color: var(--tinta-2); margin-bottom: 5px; }
+label.boton-fotos {
+  display: flex; align-items: center; justify-content: center; min-height: 48px; margin: 0;
+  border: 1px dashed var(--azul); border-radius: 11px; background: var(--azul-suave);
+  color: var(--azul); font-size: .92rem; font-weight: 700; cursor: pointer;
+}
+label.boton-fotos.lleno { border-style: solid; border-color: var(--verde); background: var(--verde-suave); color: var(--verde); cursor: default; }
+.input-oculto { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; opacity: 0; pointer-events: none; }
+#f-fotos-lista .chips { margin-top: 8px; }
+.chip-foto { display: inline-flex; align-items: center; gap: 4px; padding-right: 2px; border: 1px solid var(--borde); }
+.chip-foto .borrar-foto { min-height: 36px; min-width: 36px; padding: 0; border: 0; background: transparent; color: var(--tinta-2); }
+.nota-fotos { font-size: .78rem; color: var(--tinta-2); margin-top: 6px; }
 .fila-escribir { margin-top: 8px; }
 .fila-escribir > .icono { flex: 0 0 52px; }
 button.icono { padding: 0; font-size: 1.25rem; min-width: 52px; }
@@ -441,6 +473,12 @@ dialog h2 { padding: 16px 16px 0; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 @media (min-width: 560px) { .rejilla { grid-template-columns: repeat(4, 1fr); } }
 
+/* Móviles medianos (361-420 px): con contadores en las pestañas, «Esquemas»
+   se salía 2 px a 390 px. Un pelo menos de aire y caben las cuatro. */
+@media (max-width: 420px) {
+  .pestanas { gap: 2px; }
+  .pestanas button { padding: 0 5px; font-size: .8rem; }
+}
 /* Móviles estrechos (320-360 px): las cuatro pestañas de Estudiar tienen que
    caber sin deslizar, o la última no la encuentra nadie. */
 @media (max-width: 360px) {

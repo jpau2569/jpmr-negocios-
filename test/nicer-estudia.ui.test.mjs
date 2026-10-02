@@ -93,7 +93,7 @@ await page.route("**/api/profe", (ruta) => {
       correccion: { correcciones: [{ nota: 6, bien: "La definición es correcta.", mejorar: "Falta un ejemplo.", modelo: "Es el espacio que ocupa un cuerpo; por ejemplo, un litro de agua ocupa 1 dm³." }] }
     });
   }
-  if (ultimoCuerpo.imagen) {
+  if (ultimoCuerpo.imagenes?.length || ultimoCuerpo.imagen) {
     return ruta.fulfill({
       status: 200,
       contentType: "application/json",
@@ -356,19 +356,28 @@ check("la charla con Clara sigue ahí al volver a abrir la app",
 
 console.log("\n📷 Foto del horario");
 const { readFile: leer } = await import("node:fs/promises");
-await page.setInputFiles("#foto-input", {
-  name: "horario.png",
-  mimeType: "image/png",
-  buffer: await leer(new URL("../nicer-estudia/icono-512.png", import.meta.url))
-});
-await page.waitForSelector(".foto-pendiente img");
-check("la foto se prepara antes de mandarla", await page.locator(".foto-pendiente").isVisible());
+const png = await leer(new URL("../nicer-estudia/icono-512.png", import.meta.url));
+const unaFoto = (n) => ({ name: `foto-${n}.png`, mimeType: "image/png", buffer: png });
+await page.setInputFiles("#foto-input", unaFoto(1));
+await page.waitForSelector(".fotos-pendientes .mini-foto img");
+check("la foto se prepara antes de mandarla", await page.locator(".fotos-pendientes").isVisible());
+// Segunda tanda (como cuando se hacen con la cámara de una en una): se SUMAN.
+await page.setInputFiles("#foto-input", [unaFoto(2), unaFoto(3)]);
+await page.waitForFunction(() => document.querySelectorAll(".fotos-pendientes .mini-foto img").length === 3);
+check("las fotos se suman tanda a tanda (3 en la caja)",
+  (await page.locator(".fotos-pendientes .mini-foto img").count()) === 3);
+check("el botón de la cámara cuenta las fotos", (await page.locator('[data-accion="elegir-foto"] b').textContent()) === "3");
+await page.click('.mini-foto [data-accion="quitar-foto"][data-i="1"]');
+check("se puede quitar una foto suelta", (await page.locator(".fotos-pendientes .mini-foto img").count()) === 2);
 await page.click('[data-accion="preguntar"]');
 await page.waitForSelector('[data-accion="aplicar-horario"]');
-check("la foto viaja reducida y en JPEG",
-  ultimoCuerpo?.imagen?.media_type === "image/jpeg" && ultimoCuerpo.imagen.data.length > 500);
+check("las fotos viajan juntas, reducidas y en JPEG",
+  ultimoCuerpo?.imagenes?.length === 2 && ultimoCuerpo.imagenes.every((f) => f.media_type === "image/jpeg" && f.data.length > 500));
+check("todas juntas caben de sobra en una petición de Vercel", JSON.stringify(ultimoCuerpo).length < 4_000_000);
 check("sin reenviar la foto original", !JSON.stringify(ultimoCuerpo.mensajes).includes("data:image"));
-check("en el chat se ve la miniatura", await page.locator(".burbuja.yo img.foto-chat").last().isVisible());
+check("la charla que se manda empieza por el alumno", ultimoCuerpo.mensajes[0].role === "user");
+check("en el chat se ven las miniaturas", (await page.locator(".burbuja.yo").last().locator("img.foto-chat").count()) === 2);
+check("la caja de fotos se vacía al mandar", (await page.locator(".fotos-pendientes").count()) === 0);
 check("Clara enseña el horario leído antes de ponerlo",
   (await page.locator(".horario-leido").textContent()).includes("Religión"));
 await page.click('[data-accion="aplicar-horario"]');
@@ -396,10 +405,11 @@ await page.fill("#f-titulo", "Tema 2 — La materia");
 await page.selectOption('select[name="asignatura"]', { label: "Física y Química" });
 await page.selectOption('select[name="libro"]', { index: 1 });
 await page.fill("#f-texto", "La materia es todo lo que tiene masa y ocupa volumen. Estados: sólido, líquido y gaseoso.");
-await page.setInputFiles("#f-fotos", {
-  name: "pagina.png", mimeType: "image/png",
-  buffer: await leer(new URL("../nicer-estudia/icono-512.png", import.meta.url))
-});
+await page.setInputFiles("#f-fotos", { name: "pagina-1.png", mimeType: "image/png", buffer: png });
+await page.setInputFiles("#f-fotos", { name: "pagina-2.png", mimeType: "image/png", buffer: png });
+check("las páginas se suman al elegirlas en varias veces", (await page.locator("#f-fotos-lista .chip-foto").count()) === 2);
+await page.click('[data-quita-pagina="1"]');
+check("se puede quitar una página antes de guardar", (await page.locator("#f-fotos-lista .chip-foto").count()) === 1);
 await page.click("#dlg-aceptar");
 await page.waitForSelector(".conceptos");
 check("al guardarla, Clara la resume sola", ultimoCuerpo?.modo === "leccion");

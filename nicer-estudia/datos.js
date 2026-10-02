@@ -289,6 +289,8 @@ export function resumenDatos(estado) {
    copia de seguridad y así un chat largo no engorda los datos importantes.
    Las fotos no se guardan (solo se marca que la hubo): ocupan mucho y ya
    cumplieron su función. */
+const cuantasFotos = (m) => Math.max(0, Math.min(6, Math.floor(Number(m?.fotos)) || (m?.foto ? 1 : 0)));
+
 export function cargarChat() {
   const a = almacen();
   if (!a) return [];
@@ -297,7 +299,7 @@ export function cargarChat() {
     return (Array.isArray(lista) ? lista : [])
       .filter((m) => (m?.rol === 'user' || m?.rol === 'profe') && typeof m.texto === 'string')
       .slice(-MAX_CHAT)
-      .map((m) => ({ rol: m.rol, texto: m.texto.slice(0, 8000), foto: Boolean(m.foto), buscado: Boolean(m.buscado) }));
+      .map((m) => ({ rol: m.rol, texto: m.texto.slice(0, 8000), foto: Boolean(m.foto), fotos: cuantasFotos(m), buscado: Boolean(m.buscado) }));
   } catch {
     return [];
   }
@@ -307,8 +309,10 @@ export function guardarChat(chat) {
   const a = almacen();
   if (!a) return false;
   try {
+    // Las miniaturas no se guardan (pesan y son fotos de un menor): solo
+    // cuántas fotos llevaba el mensaje.
     const ligero = (chat || []).slice(-MAX_CHAT).map((m) => ({
-      rol: m.rol, texto: m.texto, foto: Boolean(m.foto), buscado: Boolean(m.buscado)
+      rol: m.rol, texto: m.texto, foto: Boolean(m.foto), fotos: cuantasFotos(m), buscado: Boolean(m.buscado)
     }));
     a.setItem(CLAVE_CHAT, JSON.stringify(ligero));
     return true;
@@ -505,4 +509,19 @@ export function buscaAsignatura(estado, texto) {
     || estado.asignaturas.find((a) => normalizaTexto(a.nombre).startsWith(objetivo.slice(0, 4)))
     || estado.asignaturas.find((a) => normalizaTexto(a.nombre).includes(objetivo))
     || null;
+}
+
+/** Lo que se le manda a Clara de la charla: las 16 últimas intervenciones,
+    empezando SIEMPRE por una del alumno. Antes, a partir del octavo mensaje
+    la lista empezaba por una respuesta de Clara y el servidor la rechazaba
+    con un 400: por eso «se bloqueaba» en las charlas largas. */
+export function historialParaClara(chat, max = 16) {
+  const ultimo = chat.at(-1);
+  const trozo = chat.slice(-max).map((m) => {
+    const n = m.fotos || (m.foto ? 1 : 0);
+    const marca = n && m !== ultimo ? `[Te mandé ${n === 1 ? 'una foto' : `${n} fotos`}] ` : '';
+    return { role: m.rol, content: marca + (m.texto || '') };
+  });
+  while (trozo.length && trozo[0].role !== 'user') trozo.shift();
+  return trozo;
 }
