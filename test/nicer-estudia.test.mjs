@@ -17,6 +17,7 @@ import * as L from "../nicer-estudia/lecciones.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { icsExamen, escapaIcs, doblaLinea } from "../nicer-estudia/calendario.js";
 import { idiomaDe, limpiaParaLeer } from "../nicer-estudia/voz.js";
+import * as F from "../nicer-estudia/ficha.js";
 import { medidas, ajustesPara, escalones, pareceFoto, AJUSTES_CHAT, PRESUPUESTO_B64, MAX_FOTOS } from "../nicer-estudia/foto.js";
 
 let pasados = 0, fallados = 0;
@@ -485,6 +486,100 @@ console.log("\n📷 Fotos");
   check("nunca baja de calidad 0,5 (el texto seguiría leyéndose)", pasos.every((p) => p.calidad >= 0.5));
   check("una foto de la cámara sin tipo (algunos Android) se acepta", pareceFoto({ type: "", name: "IMG_2026.jpg" }));
   check("un PDF no pasa por foto", !pareceFoto({ type: "application/pdf", name: "a.pdf" }));
+}
+
+console.log("\n📚 Material de estudio, mini test del día y fichas");
+{
+  const teoria = {
+    explicacion: [{ titulo: "Qué es", texto: "La materia ocupa sitio." }, { titulo: "", texto: "" }],
+    infografia: { titulo: "La materia", idea: "Todo ocupa", bloques: [{ icono: "⚖️", titulo: "Masa", puntos: ["kg", "balanza"] }, { icono: "<b>", titulo: "Mal", puntos: [] }],
+      datos: [{ valor: "1 g/cm³", etiqueta: "agua" }, { valor: "", etiqueta: "x" }], recuerda: "Masa y volumen" }
+  };
+  const practica = {
+    ejemplos: [{ enunciado: "200 g y 50 cm³", pasos: ["d = m / V", "d = 4"], solucion: "4 g/cm³" }],
+    ejercicios: [{ enunciado: "Define masa", pista: "cuánto hay", solucion: "Cantidad de materia" }, { enunciado: "Sin solución" }],
+    minitest: Array.from({ length: 12 }, (_, i) => ({ pregunta: `P${i}`, opciones: ["a", "b", "c", "d"], correcta: i % 4, explicacion: `Porque ${i}` }))
+  };
+  const m = L.materialDeIA(teoria, practica, "2026-10-02");
+  check("el material junta teoría y práctica", m.explicacion.length === 1 && m.ejemplos.length === 1 && m.minitest.length === 10);
+  check("descarta lo vacío o sin solución", m.ejercicios.length === 1 && m.infografia.bloques.length === 1 && m.infografia.datos.length === 1);
+  check("un icono que no es emoji se cae", L.materialDeIA({ infografia: { bloques: [{ icono: "<b>", titulo: "T", puntos: ["p"] }] } }).infografia.bloques[0].icono === "");
+  check("si solo llega una mitad, vale", L.materialDeIA(null, practica).minitest.length === 10 && L.materialDeIA(teoria, null).explicacion.length === 1);
+  check("sin nada útil no hay material", L.materialDeIA({}, { minitest: [{ pregunta: "x", opciones: ["a"], correcta: 0 }] }) === null);
+  check("el material se guarda con la lección y sobrevive a normalizar",
+    D.normaliza({ lecciones: [{ id: "l1", titulo: "T", material: m }] }).lecciones[0].material?.minitest.length === 10);
+  check("un material roto en una copia no rompe nada", D.normaliza({ lecciones: [{ id: "l1", titulo: "T", material: "basura" }] }).lecciones[0].material === null);
+  const preg = L.minitestDeLeccion({ material: m, asignaturaId: "a1" });
+  check("el mini test de la lección sale listo para la app", preg.length === 10 && preg[0].id && preg[0].explicacion === "Porque 0" && preg[0].asignaturaId === "a1");
+
+  const estado = D.normaliza({
+    asignaturas: [{ id: "a1", nombre: "FQ" }],
+    lecciones: [
+      { id: "l1", titulo: "Tema 1", fecha: "2026-09-20", material: m },
+      { id: "l2", titulo: "Tema 2", fecha: "2026-09-28", material: m },
+      { id: "l3", titulo: "Tema 3", fecha: "2026-09-29" }
+    ],
+    examenes: [{ id: "e1", titulo: "Examen", asignaturaId: "a1", fecha: "2026-10-06", leccionIds: ["l1"] }]
+  });
+  const hoy1 = L.miniTestDelDia(estado, "2026-10-02");
+  check("hay mini test del día con 8 preguntas", hoy1.preguntas.length === 8);
+  check("primero las lecciones del examen cercano", hoy1.lecciones[0] === "Tema 1");
+  check("reparte entre lecciones", new Set(hoy1.preguntas.map((p) => p.leccionId)).size === 2);
+  check("el mismo día sale el mismo mini test (la ficha coincide)",
+    JSON.stringify(L.miniTestDelDia(estado, "2026-10-02").preguntas.map((p) => p.pregunta)) === JSON.stringify(hoy1.preguntas.map((p) => p.pregunta)));
+  check("otro día sale otro", JSON.stringify(L.miniTestDelDia(estado, "2026-10-03").preguntas.map((p) => p.pregunta + p.leccionId)) !== JSON.stringify(hoy1.preguntas.map((p) => p.pregunta + p.leccionId)));
+  check("sin material no hay mini test del día", L.miniTestDelDia(D.normaliza({}), "2026-10-02").preguntas.length === 0);
+
+  const piezas = F.piezasDeFicha({ titulo: "Tema 2", fecha: "02/10/2026", partes: [{ titulo: "Tema 2", material: m }] });
+  const tipos = piezas.map((p) => p.t);
+  check("la ficha lleva portada, explicación, infografía, ejemplos, ejercicios y mini test",
+    ["portada", "info", "ejemplo", "ejercicio", "pregunta"].every((t) => tipos.includes(t)));
+  check("las soluciones van al final y en otra página", tipos.lastIndexOf("salto") > tipos.lastIndexOf("pregunta") && tipos.at(-1) === "solucion");
+  check("la solución del test dice la letra y el porqué", piezas.at(-1).texto.startsWith("b) b") && piezas.at(-1).texto.includes("Porque 9"));
+  const soloInfo = F.piezasDeFicha({ titulo: "T", partes: [{ titulo: "T", material: m }], incluir: { explicacion: false, ejemplos: false, ejercicios: false, minitest: false } });
+  check("se puede sacar solo la infografía", soloInfo.map((p) => p.t).join() === "portada,h2,info");
+  const sinSol = F.piezasDeFicha({ titulo: "T", partes: [{ titulo: "T", material: m }], incluir: { soluciones: false } });
+  check("y sin soluciones si se quiere", !sinSol.some((p) => p.t === "solucion"));
+  const dos = F.piezasDeFicha({ titulo: "Examen", partes: [{ titulo: "Tema 1", material: m }, { titulo: "Tema 2", material: m }] });
+  check("con varias lecciones cada una lleva su encabezado y los ejercicios siguen numerando",
+    dos.filter((p) => p.t === "h1").length === 2 && dos.filter((p) => p.t === "ejercicio").at(-1).n === 2);
+
+  const pdf = F.fichaPdf(piezas);
+  const textoPdf = new TextDecoder("latin1").decode(pdf);
+  check("el PDF es un PDF de verdad", textoPdf.startsWith("%PDF-1.4") && textoPdf.trimEnd().endsWith("%%EOF"));
+  check("con varias páginas (soluciones aparte)", (textoPdf.match(/\/Type \/Page /g) || []).length >= 2);
+  check("las fórmulas raras no salen como «?»", F.textoPdf("π·r² ≤ 3 → √4") === "pi·r² <= 3 -> raíz de 4");
+
+  const docx = F.fichaDocx(piezas);
+  const textoDocx = new TextDecoder().decode(docx);
+  check("el Word es un .docx (ZIP con su documento)", docx[0] === 0x50 && docx[1] === 0x4b
+    && ["[Content_Types].xml", "word/document.xml", "word/styles.xml", "_rels/.rels"].every((n) => textoDocx.includes(n)));
+  check("el Word lleva el contenido y escapa el XML", textoDocx.includes("Define masa") && !/<w:t[^>]*>[^<]*<b>/.test(textoDocx));
+  check("el CRC del ZIP es el estándar", F.crc32(new TextEncoder().encode("123456789")) === 0xCBF43926);
+  check("nombre de archivo limpio", F.nombreArchivo("Tema 2 — La materia ¿Qué es?", "pdf") === "ficha-tema-2-la-materia-que-es.pdf");
+
+  // Servidor: el modo material pide teoría o práctica con sus instrucciones.
+  const peticionesM = [];
+  const crearAntes = Anthropic.Messages.prototype.create;
+  Anthropic.Messages.prototype.create = async function (p) {
+    peticionesM.push(JSON.parse(JSON.stringify(p)));
+    return { stop_reason: "end_turn", content: [{ type: "text", text: 'Listo.\n[[MATERIAL]]{"minitest":[]}[[/MATERIAL]]' }] };
+  };
+  process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "clave";
+  const resM = () => { const r = { code: 0, body: null, headers: {} }; r.status = (c) => { r.code = c; return r; }; r.json = (b) => { r.body = b; return r; }; r.setHeader = () => r; return r; };
+  const rT = resM();
+  await profe({ method: "POST", body: { modo: "material", parte: "teoria", leccion: { titulo: "Tema 2", asignatura: "FQ" }, contenido: "## Tema 2\nResumen: la materia" } }, rT);
+  const rP = resM();
+  await profe({ method: "POST", body: { modo: "material", parte: "practica", leccion: { titulo: "Tema 2" }, contenido: "## Tema 2" } }, rP);
+  check("el modo material devuelve el bloque aparte", rT.code === 200 && rT.body.material && rT.body.reply === "Listo.");
+  check("teoría y práctica llevan instrucciones distintas",
+    peticionesM[0].system[1].text.includes("infografia") && peticionesM[1].system[1].text.includes("minitest"));
+  check("el material va con esfuerzo bajo (cabe en el minuto de Vercel)", peticionesM.every((p) => p.output_config.effort === "low"));
+  check("sin buscador en el modo material", peticionesM.every((p) => !p.tools));
+  const rV = resM();
+  await profe({ method: "POST", body: { modo: "material", parte: "teoria", leccion: { titulo: "x" } } }, rV);
+  check("sin contenido de la lección se rechaza", rV.code === 400);
+  Anthropic.Messages.prototype.create = crearAntes;
 }
 
 console.log("\n💬 Charla que se manda a Clara");

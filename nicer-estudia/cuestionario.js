@@ -75,6 +75,8 @@ export function preguntasDeIA(brutas, asignaturaId = null) {
         pregunta: String(p.pregunta).trim().slice(0, 300),
         opciones,
         correcta,
+        // Por qué es esa (la pone Clara en los mini tests); se enseña al contestar.
+        explicacion: typeof p.explicacion === 'string' ? p.explicacion.trim().slice(0, 300) : '',
         tarjetaId: null,
         asignaturaId
       };

@@ -47,7 +47,7 @@ const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
 const MAX_IMAGEN_B64 = 3_500_000;
 const MAX_FOTOS_LECCION = 6;
 const MAX_TOTAL_B64 = 3_800_000; // todas las páginas juntas, por debajo de los 4,5 MB
-const MODOS = ["chat", "leccion", "examen", "corregir"];
+const MODOS = ["chat", "leccion", "examen", "corregir", "material"];
 
 /* Instrucciones de cada modo de trabajo. Van en un bloque de sistema aparte
    del principal para que el prompt de Clara (el largo) siga en caché. */
@@ -88,7 +88,39 @@ pregunta y en el mismo orden:
 [[/CORRECCION]]
 - nota: de 0 a 10 (se admiten decimales). Una respuesta en blanco es 0.
 - bien: lo que ha hecho bien (una frase). mejorar: lo que le falta o sobra (una frase).
-- modelo: la respuesta de 10, corta, para que la aprenda.`
+- modelo: la respuesta de 10, corta, para que la aprenda.`,
+
+  // El material se pide en dos mitades en paralelo (teoría y práctica): así
+  // cada respuesta es la mitad de larga y ninguna roza el minuto de Vercel.
+  material_teoria: `## Modo material: explicación e infografía
+Te paso una lección suya (resumen, apuntes y conceptos). Prepárale material para ENTENDERLA,
+fiel a SU lección: no metas temas que no salen ni te inventes datos. Escribe una línea para él
+y después el bloque:
+[[MATERIAL]]
+{"explicacion":[{"titulo":"…","texto":"…"}],"infografia":{"titulo":"…","idea":"…","bloques":[{"icono":"🔬","titulo":"…","puntos":["…","…"]}],"datos":[{"valor":"…","etiqueta":"…"}],"recuerda":"…"}}
+[[/MATERIAL]]
+- explicacion: 3-5 apartados siguiendo la lección. Cada "texto" de 3-6 frases, claro, con un
+  ejemplo de su mundo, como se lo explicarías en una clase particular. Sin listas ni markdown.
+- infografia: el tema de un vistazo. "idea": la idea central en una frase. "bloques": 3-6, cada
+  uno con un emoji, un título de 2-5 palabras y 2-4 puntos MUY cortos (máx. 8 palabras).
+  "datos": 0-4 cifras, fechas o fórmulas clave que salen en la lección ("valor" corto).
+  "recuerda": el truco o la frase para no olvidarlo.
+Si la lección está en inglés (asignaturas bilingües), el material va en inglés.`,
+
+  material_practica: `## Modo material: ejemplos, ejercicios y mini test
+Te paso una lección suya. Prepárale PRÁCTICA sobre SU lección (no metas temas que no salen).
+Estos ejercicios los inventas tú para que practique, no son sus deberes: aquí SÍ das las
+soluciones completas, que irán al final de la ficha. Escribe una línea y después el bloque:
+[[MATERIAL]]
+{"ejemplos":[{"enunciado":"…","pasos":["…","…"],"solucion":"…"}],"ejercicios":[{"enunciado":"…","pista":"…","solucion":"…"}],"minitest":[{"pregunta":"…","opciones":["…","…","…","…"],"correcta":0,"explicacion":"…"}]}
+[[/MATERIAL]]
+- ejemplos: 2-3 ejercicios resueltos paso a paso (2-5 pasos cortos) como los del libro.
+- ejercicios: 5-6 para que los haga él, de fácil a difícil, del tipo que cae en los exámenes de
+  2º de ESO (calcular, definir, explicar, completar, relacionar, verdadero/falso razonado).
+  "pista": una ayuda de una línea sin dar la respuesta. "solucion": completa pero breve.
+- minitest: 8 preguntas de opción múltiple, 4 opciones creíbles, "correcta" es el índice
+  desde 0, y "explicacion" en una frase de por qué es esa.
+Si la lección está en inglés (asignaturas bilingües), el material va en inglés.`
 };
 
 function systemPrompt({ nombre, curso, asignaturas, buscador }) {
@@ -251,6 +283,8 @@ export function separaBloques(bruto) {
   texto = conExamen.texto;
   const conCorreccion = extraeBloque(texto, "CORRECCION");
   texto = conCorreccion.texto;
+  const conMaterial = extraeBloque(texto, "MATERIAL");
+  texto = conMaterial.texto;
 
   return {
     visible: texto.trim(),
@@ -259,6 +293,7 @@ export function separaBloques(bruto) {
     leccion: objeto(conLeccion.datos),
     examen: objeto(conExamen.datos),
     correccion: objeto(conCorreccion.datos),
+    material: objeto(conMaterial.datos),
     test: preguntas.length ? preguntas : [],
     esquema: ramas.length
       ? {
@@ -359,6 +394,15 @@ export function mensajeDeModo(modo, cuerpo) {
       + (contenido
         ? `\n\nEste es el contenido de mis lecciones (usa solo esto):\n${contenido}`
         : "\n\nNo tengo las lecciones metidas en la app: hazlo con lo que se da en 2º de ESO de ese tema, y avísame de que no es con mis apuntes.");
+    return { role: "user", content: texto };
+  }
+  if (modo === "material") {
+    const l = cuerpo.leccion || {};
+    const contenido = corta(cuerpo.contenido, 16000).trim();
+    if (!contenido) return null;
+    const texto = `Prepárame ${cuerpo.parte === "practica" ? "ejemplos, ejercicios y un mini test" : "la explicación y la infografía"}`
+      + ` de mi lección de ${corta(l.asignatura, 60) || "clase"} «${corta(l.titulo, 120) || "sin título"}».`
+      + `\n\nEsta es mi lección:\n${contenido}`;
     return { role: "user", content: texto };
   }
   if (modo === "corregir") {
@@ -462,11 +506,12 @@ export default async function handler(req, res) {
     // lo más sencillo y lo que más impaciencia da, así que va en "low".
     // Con muchas fotos se baja el esfuerzo para no pasar del minuto que da
     // Vercel (si no, la respuesta se cortaba con un 504).
-    output_config: { effort: modo === "corregir" || fotos.length >= 3 || fotosLeccion >= 4 ? "low" : "medium" },
+    output_config: { effort: modo === "corregir" || modo === "material" || fotos.length >= 3 || fotosLeccion >= 4 ? "low" : "medium" },
     system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
     messages: history,
   };
-  if (INSTRUCCIONES_MODO[modo]) peticion.system.push({ type: "text", text: INSTRUCCIONES_MODO[modo] });
+  const claveModo = modo === "material" ? `material_${cuerpo.parte === "practica" ? "practica" : "teoria"}` : modo;
+  if (INSTRUCCIONES_MODO[claveModo]) peticion.system.push({ type: "text", text: INSTRUCCIONES_MODO[claveModo] });
   // Sin clave de Gemini no se ofrece la herramienta: así Clara no promete
   // buscar algo que luego no puede. En los modos de trabajo no hace falta.
   if (buscador && modo === "chat") peticion.tools = [HERRAMIENTA_BUSCAR];
@@ -503,18 +548,18 @@ export default async function handler(req, res) {
     if (respuesta.stop_reason === "refusal") {
       return res.status(200).json({
         reply: "Eso no te lo puedo contestar yo. Si es algo del cole, pregúntamelo de otra manera; si es otra cosa, mejor háblalo con tu padre.",
-        tarjetas: [], test: [], esquema: null, horario: null, leccion: null, examen: null, correccion: null, busquedas, modo,
+        tarjetas: [], test: [], esquema: null, horario: null, leccion: null, examen: null, correccion: null, material: null, busquedas, modo,
       });
     }
 
-    const { visible, tarjetas, test, esquema, horario, leccion, examen, correccion } = separaBloques(textoDe(respuesta.content));
+    const { visible, tarjetas, test, esquema, horario, leccion, examen, correccion, material } = separaBloques(textoDe(respuesta.content));
     const reply = visible
       || (respuesta.stop_reason === "tool_use"
         ? "He buscado bastante y no he llegado a una respuesta clara. ¿Me lo preguntas de otra forma?"
         : "No he sabido responder a eso. ¿Me lo cuentas de otra manera?");
 
     res.setHeader("Cache-Control", "no-store");
-    return res.status(200).json({ reply, tarjetas, test, esquema, horario, leccion, examen, correccion, busquedas, modo });
+    return res.status(200).json({ reply, tarjetas, test, esquema, horario, leccion, examen, correccion, material, busquedas, modo });
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError) {
       return res.status(500).json({ error: "La clave ANTHROPIC_API_KEY no es válida." });

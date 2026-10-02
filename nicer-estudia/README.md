@@ -226,3 +226,9 @@ comprobar que la tarea diaria genera la de mañana), crear y repasar una
 tarjeta, hacer un test del Profe y otro sin conexión, guardar un esquema y un
 apunte, el modo concentración con sus ambientes, recargar y comprobar que a
 360 px no hay desborde horizontal ni botones impulsables.
+
+## Material de estudio y fichas (v4.3)
+
+- **Preparar material con Clara** (en cada lección resumida): explicación fácil por apartados, infografía, ejemplos resueltos paso a paso, ejercicios con pista y solución escondida, y mini test con explicación de cada respuesta. Clara lo hace en dos mitades a la vez (`modo: "material"`, `parte: "teoria" | "practica"`) y se guarda en la lección: luego funciona sin internet.
+- **Mini test del día** en Hoy: sale de los mini tests de sus lecciones (primero las de exámenes en los próximos 14 días), el mismo durante todo el día.
+- **Fichas PDF o Word** (`ficha.js`): de una lección, de un examen (todas sus lecciones con material) o del mini test del día. Se elige qué partes van, si llevan líneas para contestar y si van las soluciones al final (en otra página). Todo se genera en el móvil, sin librerías ni internet.

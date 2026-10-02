@@ -492,3 +492,58 @@ kbd {
   font: inherit; font-size: .74rem; padding: 1px 6px; border-radius: 5px;
   border: 1px solid var(--borde); background: var(--tarjeta); color: var(--tinta);
 }
+
+/* ── Material de estudio (explicación, infografía, ejemplos, ejercicios) ── */
+.acciones-material { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.acciones-material > button { flex: 1 1 140px; }
+.bloque-material {
+  margin-top: 10px; padding: 0 14px; border: 1px solid var(--borde); border-radius: var(--radio);
+  background: var(--tarjeta); box-shadow: var(--sombra);
+}
+.bloque-material > summary {
+  cursor: pointer; min-height: 48px; display: flex; align-items: center; gap: 6px;
+  font-weight: 700; font-size: .98rem; list-style: none;
+}
+.bloque-material > summary::-webkit-details-marker { display: none; }
+.bloque-material > summary::after { content: '▾'; margin-left: auto; color: var(--tinta-2); transition: transform .15s; }
+.bloque-material:not([open]) > summary::after { transform: rotate(-90deg); }
+.bloque-material[open] { padding-bottom: 14px; }
+.bloque-material h4 { font-size: .95rem; margin: 10px 0 4px; }
+.bloque-material p { font-size: .94rem; line-height: 1.55; }
+.nota-material { font-size: .84rem !important; color: var(--tinta-2); margin-bottom: 4px; }
+
+.infografia { display: grid; gap: 10px; }
+.info-titulo { text-align: center; font-weight: 800; font-size: 1.05rem; color: var(--morado); }
+.info-idea {
+  text-align: center; font-weight: 700; padding: 10px 12px; border-radius: 12px;
+  background: color-mix(in srgb, var(--morado) 12%, var(--tarjeta)); color: var(--morado);
+}
+.info-bloques { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.info-bloque { border-radius: 12px; overflow: hidden; background: var(--azul-suave); min-width: 0; }
+.info-cab { background: var(--azul); color: var(--tarjeta); font-weight: 700; font-size: .9rem; padding: 7px 10px; }
+.info-bloque ul { margin: 0; padding: 8px 10px 10px 26px; font-size: .86rem; display: grid; gap: 3px; }
+.info-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.info-dato {
+  display: grid; gap: 2px; text-align: center; padding: 10px 6px; border-radius: 12px;
+  background: var(--verde-suave); color: var(--verde);
+}
+.info-dato b { font-size: 1.15rem; }
+.info-dato span { font-size: .76rem; color: var(--tinta-2); }
+.info-recuerda {
+  padding: 10px 12px; border-radius: 12px; border: 1px solid var(--ambar);
+  background: var(--ambar-suave); color: var(--ambar); font-weight: 650; font-size: .9rem;
+}
+
+.ejercicio { padding: 10px 0; border-top: 1px solid var(--borde); }
+.ejercicio:first-of-type { border-top: 0; }
+.ejercicio .enunciado { font-size: .94rem; line-height: 1.5; }
+.ejercicio .pasos { margin: 6px 0 0; padding-left: 22px; font-size: .9rem; display: grid; gap: 3px; }
+.ejercicio .solucion { margin-top: 6px; font-weight: 650; color: var(--verde); font-size: .9rem; }
+.fila-desplegables { display: grid; gap: 4px; margin-top: 6px; }
+.fila-desplegables summary {
+  cursor: pointer; min-height: 40px; display: flex; align-items: center;
+  font-size: .86rem; font-weight: 600; color: var(--azul);
+}
+.fila-desplegables details > div { font-size: .9rem; padding: 2px 0 6px; }
+.explicacion-test { font-size: .9rem; }
+.opciones-ficha, .formato-ficha { display: grid; gap: 4px; }

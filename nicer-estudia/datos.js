@@ -6,7 +6,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import { aISO, sumaDias, diasEntre, diaSemana, id, esISO, limita, horaAMinutos, normalizaTexto } from './utiles.js';
-import { MAX_TEXTO_LECCION } from './lecciones.js';
+import { MAX_TEXTO_LECCION, normalizaMaterial } from './lecciones.js';
 
 export const CLAVE = 'nicer-estudia:v1';
 export const CLAVE_CHAT = 'nicer-estudia:chat';
@@ -213,7 +213,9 @@ export function normaliza(bruto) {
       definicion: String(c?.definicion || '').slice(0, 400)
     })).filter((c) => c.termino && c.definicion).slice(0, 15),
     fecha: esISO(l.fecha) ? l.fecha : aISO(),
-    resumida: esISO(l.resumida) ? l.resumida : null
+    resumida: esISO(l.resumida) ? l.resumida : null,
+    // Explicación, infografía, ejemplos, ejercicios y mini test de Clara.
+    material: normalizaMaterial(l.material)
   }));
   const leccionesValidas = new Set(lecciones.map((l) => l.id));
   for (const e of examenes) e.leccionIds = e.leccionIds.filter((x) => leccionesValidas.has(x));

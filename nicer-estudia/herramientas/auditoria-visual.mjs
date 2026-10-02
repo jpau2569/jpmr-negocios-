@@ -23,7 +23,10 @@ const semilla = () => {
   e.tareas=[{id:"t1",titulo:"Ejercicios "+largo,asignaturaId:A("Matem"),tipo:"deber",prioridad:"alta",repetir:"diaria",para:hoy,hecha:false,hechaEl:null,creada:hoy}];
   e.libros=[{id:"l1",asignaturaId:A("Física"),titulo:"Física y Química 2º ESO "+largo,editorial:"Anaya"}];
   e.lecciones=[{id:"x1",asignaturaId:A("Física"),libroId:"l1",titulo:"Tema 3 "+largo,texto:largo,fecha:hoy,resumida:hoy,resumen:"Resumen "+largo,
-    apuntes:[{titulo:"Apartado "+largo,puntos:["Punto "+largo]}],conceptos:[{termino:largo,definicion:largo}]}];
+    apuntes:[{titulo:"Apartado "+largo,puntos:["Punto "+largo]}],conceptos:[{termino:largo,definicion:largo}],
+    material:{explicacion:[{titulo:"Expl "+largo,texto:largo}],infografia:{titulo:largo,idea:largo,bloques:[{icono:"⚖️",titulo:largo.slice(0,50),puntos:[largo]},{icono:"📦",titulo:"Vol",puntos:["m³"]},{icono:"",titulo:"Tres",puntos:[largo]}],datos:[{valor:"1 g/cm³",etiqueta:largo},{valor:"100 °C",etiqueta:"hierve"}],recuerda:largo},
+      ejemplos:[{enunciado:largo,pasos:[largo,"d = m / V"],solucion:largo}],ejercicios:[{enunciado:largo,pista:largo,solucion:largo}],
+      minitest:[0,1,2,3,4].map(i=>({pregunta:"¿"+largo+i+"?",opciones:[largo,"b","c","d"],correcta:0,explicacion:largo})),fecha:hoy}}];
   e.examenes=[{id:"e1",titulo:"Examen "+largo,asignaturaId:A("Física"),fecha:en(3),temas:largo,leccionIds:["x1"],nota:null}];
   e.tarjetas=[{id:"c1",asignaturaId:A("Física"),pregunta:"¿"+largo+"?",respuesta:largo,caja:0,proximo:hoy,aciertos:0,fallos:0,origen:"ia",idioma:"es",creada:hoy}];
   e.esquemas=[{id:"s1",asignaturaId:A("Física"),titulo:"Esquema",fecha:hoy,ramas:[{titulo:"R",puntos:["p"]}]}];

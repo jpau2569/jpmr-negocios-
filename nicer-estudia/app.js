@@ -15,6 +15,7 @@ import * as Voz from './voz.js';
 import { preparaFotos, ajustesPara, AJUSTES_CHAT, MAX_FOTOS } from './foto.js';
 import { icsExamen } from './calendario.js';
 import * as L from './lecciones.js';
+import * as F from './ficha.js';
 
 /* ── Estado ─────────────────────────────────────────────────────── */
 let estado = D.cargar();
@@ -38,6 +39,7 @@ const ctx = {
   leccionAbierta: null,     // lección que se está leyendo en Estudiar → Lecciones
   filtroAsig: '',           // asignatura elegida en la lista de lecciones
   resumiendo: null,         // lección que Clara está resumiendo ahora mismo
+  preparandoMaterial: null, // lección a la que Clara le está preparando el material
   preparandoExamen: false,
   fotosLeccion: {},         // fotos de páginas en memoria (no se guardan), por lección
   dictando: false,
@@ -148,6 +150,8 @@ function pide({ titulo, html, aceptar = 'Guardar' }) {
         if (c.type === 'checkbox') {
           datos[c.name] = datos[c.name] || [];
           if (c.checked) datos[c.name].push(c.value);
+        } else if (c.type === 'radio') {
+          if (c.checked) datos[c.name] = c.value;
         } else if (c.type === 'file') {
           // Las fotos se van juntando en varias tandas (ver «f-fotos» abajo).
           datos[c.name] = c._fotos ? [...c._fotos] : Array.from(c.files || []);
@@ -651,6 +655,50 @@ const acciones = {
       origen: { accion: 'examen-leccion', id: l.id }
     });
   },
+  /* Material de estudio: explicación, infografía, ejemplos, ejercicios y
+     mini test. Se prepara una vez y queda guardado en la lección. */
+  'material-leccion': (el) => preparaMaterial(el.dataset.id),
+  'minitest-leccion': (el) => {
+    const l = estado.lecciones.find((x) => x.id === el.dataset.id);
+    const preguntas = L.minitestDeLeccion(l);
+    if (!preguntas.length) return avisa('Esta lección aún no tiene mini test. Dale a «Preparar material».');
+    empiezaTest(preguntas, `Mini test · ${l.titulo}`, { asignaturaId: l.asignaturaId, origen: { accion: 'minitest-leccion', id: l.id } });
+  },
+  'ficha-leccion': (el) => {
+    const l = estado.lecciones.find((x) => x.id === el.dataset.id);
+    if (!l?.material) return;
+    eligeYDescargaFicha({
+      titulo: l.titulo,
+      subtitulo: [D.nombreAsignatura(estado, l.asignaturaId), estado.alumno.curso].filter(Boolean).join(' · '),
+      partes: [{ titulo: l.titulo, material: l.material }]
+    });
+  },
+  'ficha-examen': (el) => {
+    const e = estado.examenes.find((x) => x.id === el.dataset.id);
+    if (!e) return;
+    const conMaterial = L.leccionesDeExamen(estado, e).filter((l) => l.material);
+    if (!conMaterial.length) return avisa('Ninguna lección de este examen tiene material todavía. Ábrelas y dale a «Preparar material».');
+    eligeYDescargaFicha({
+      titulo: `Examen: ${e.titulo}`,
+      subtitulo: [D.nombreAsignatura(estado, e.asignaturaId), `examen el ${e.fecha.split('-').reverse().join('/')}`].join(' · '),
+      partes: conMaterial.map((l) => ({ titulo: l.titulo, material: l.material }))
+    });
+  },
+  'minitest-dia': () => {
+    const m = L.miniTestDelDia(estado, ctx.hoy);
+    if (m.preguntas.length < L.MIN_MINITEST) return avisa('Para el mini test del día hace falta material en tus lecciones. Abre una y dale a «Preparar material».');
+    empiezaTest(m.preguntas, m.titulo, { origen: { accion: 'minitest-dia', id: '' } });
+  },
+  'ficha-minitest-dia': () => {
+    const m = L.miniTestDelDia(estado, ctx.hoy);
+    if (!m.preguntas.length) return;
+    eligeYDescargaFicha({
+      titulo: m.titulo,
+      subtitulo: m.lecciones.join(' · '),
+      partes: [{ titulo: m.titulo, material: { minitest: m.preguntas } }],
+      soloTest: true
+    });
+  },
   'examen-prueba': (el) => {
     const e = estado.examenes.find((x) => x.id === el.dataset.id);
     if (!e) return;
@@ -804,6 +852,80 @@ async function entregaExamen() {
     correccion = L.correccionDeIA(datos.correccion, t.desarrollo.length);
   } catch { /* se queda sin corrección: el resultado lo explica */ }
   terminaTest(correccion);
+}
+
+/* ── Material de estudio y fichas ───────────────────────────────── */
+
+/** Clara prepara el material en dos mitades a la vez (teoría y práctica):
+    así cada una tarda la mitad. Si una falla, se guarda la otra. */
+async function preparaMaterial(idLeccion) {
+  const l = estado.lecciones.find((x) => x.id === idLeccion);
+  if (!l || ctx.preparandoMaterial) return;
+  if (!l.resumen && !l.apuntes?.length && !l.texto) return avisa('Primero mete el texto o las fotos de la lección y deja que Clara la resuma.');
+  ctx.preparandoMaterial = l.id;
+  render();
+  const base = {
+    leccion: { titulo: l.titulo, asignatura: D.nombreAsignatura(estado, l.asignaturaId) },
+    contenido: L.textoDeLeccion(l)
+  };
+  const [teoria, practica] = await Promise.allSettled([
+    llamaClara('material', { ...base, parte: 'teoria' }, 85000),
+    llamaClara('material', { ...base, parte: 'practica' }, 85000)
+  ]);
+  ctx.preparandoMaterial = null;
+  const material = L.materialDeIA(
+    teoria.status === 'fulfilled' ? teoria.value.material : null,
+    practica.status === 'fulfilled' ? practica.value.material : null,
+    ctx.hoy
+  );
+  const guardada = estado.lecciones.find((x) => x.id === idLeccion);
+  if (material && guardada) {
+    // Si solo llegó una mitad y ya había material, se conserva lo de la otra.
+    guardada.material = L.normalizaMaterial({ ...(guardada.material || {}), ...Object.fromEntries(
+      Object.entries(material).filter(([, v]) => (Array.isArray(v) ? v.length : v))) });
+    marcaActividad();
+    persiste();
+    celebra();
+  }
+  render();
+  const fallo = [teoria, practica].find((r) => r.status === 'rejected');
+  if (!material) avisa(`Clara no ha podido preparar el material: ${fallo?.reason?.message || 'no ha devuelto nada'} Inténtalo otra vez.`);
+  else if (fallo) avisa(`He preparado una parte del material, pero la otra ha fallado (${fallo.reason?.message || 'error'}). Dale otra vez a «Rehacer material» para completarlo.`);
+}
+
+/** Pregunta qué meter en la ficha y en qué formato, y la descarga. */
+async function eligeYDescargaFicha({ titulo, subtitulo, partes, soloTest = false }) {
+  const html = UI.formFicha(partes, { soloTest });
+  const d = await pide({ titulo: 'Descargar ficha', html, aceptar: 'Descargar' });
+  if (!d) return;
+  const elegidas = new Set(d.incluir || []);
+  const incluir = Object.fromEntries(F.SECCIONES.map((x) => [x.id, soloTest ? true : elegidas.has(x.id)]));
+  if (soloTest) incluir.soluciones = elegidas.has('soluciones');
+  const piezas = F.piezasDeFicha({
+    titulo, subtitulo,
+    fecha: ctx.hoy.split('-').reverse().join('/'),
+    partes, incluir, hueco: (d.hueco || []).length > 0
+  });
+  if (piezas.length < 2) return avisa('Marca al menos una parte para la ficha.');
+  try {
+    const word = d.formato === 'docx';
+    const bytes = word ? F.fichaDocx(piezas) : F.fichaPdf(piezas);
+    const tipo = word ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf';
+    descargaArchivo(new Blob([bytes], { type: tipo }), F.nombreArchivo(titulo, word ? 'docx' : 'pdf'));
+    marcaActividad();
+  } catch (e) {
+    avisa(`No he podido crear la ficha: ${e.message}`);
+  }
+}
+
+function descargaArchivo(blob, nombre) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nombre;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
 /* ── Llamada a Clara ────────────────────────────────────────────

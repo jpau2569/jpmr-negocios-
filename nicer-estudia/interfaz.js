@@ -12,6 +12,7 @@ import * as Q from './cuestionario.js';
 import { dibujaEsquema } from './esquema.js';
 import { AMBIENTES } from './ambiente.js';
 import * as L from './lecciones.js';
+import { SECCIONES } from './ficha.js';
 
 const pct = (n) => `${Math.round(n * 100)}%`;
 
@@ -159,6 +160,8 @@ export function vistaHoy(estado, ctx) {
       : '<div class="vacio">Nada pendiente. Si tienes deberes, apúntalos en Agenda.</div>'}
   </section>
 
+  ${miniTestHoy(estado, hoy)}
+
   ${examenes.length ? `
   <section class="seccion">
     <header><h2>Próximo examen</h2></header>
@@ -177,6 +180,27 @@ export function vistaHoy(estado, ctx) {
           ${m.examenes.map((e) => `<li>📝 <span>Examen: ${escapa(e.titulo)}</span></li>`).join('')}
         </ul>`
         : '<div class="vacio" style="border:0;padding:4px">Pon tu horario en Yo → Horario y aquí verás qué meter en la mochila.</div>'}
+    </div>
+  </section>`;
+}
+
+/* Mini test del día: cada día uno distinto, sacado de sus lecciones. */
+function miniTestHoy(estado, hoy) {
+  const m = L.miniTestDelDia(estado, hoy);
+  if (m.preguntas.length < L.MIN_MINITEST) {
+    const resumidas = (estado.lecciones || []).some((l) => l.resumida);
+    return resumidas ? `<section class="seccion"><div class="aviso-caja">
+      🧪 <strong>Mini test de cada día:</strong> abre una lección y dale a «Preparar material». Clara te hace explicación,
+      infografía, ejercicios y un mini test, y aquí te saldrá uno nuevo cada día.</div></section>` : '';
+  }
+  return `<section class="seccion">
+    <header><h2>Mini test de hoy</h2><span class="extra">${plural(m.preguntas.length, 'pregunta', 'preguntas')}</span></header>
+    <div class="tarjeta">
+      <p style="font-size:.9rem;color:var(--tinta-2)">De: ${escapa(m.lecciones.join(' · '))}. Cinco minutos y listo.</p>
+      <div class="fila" style="margin-top:10px">
+        <button class="principal" data-accion="minitest-dia">🧪 Hacerlo ya</button>
+        <button data-accion="ficha-minitest-dia">📄 Ficha</button>
+      </div>
     </div>
   </section>`;
 }
@@ -203,6 +227,8 @@ function tarjetaExamen(estado, e, hoy) {
     <button class="principal ancho" style="margin-top:8px" data-accion="examen-prueba" data-id="${e.id}">
       🧪 Examen de prueba${(e.leccionIds || []).length ? ` · ${plural(e.leccionIds.length, 'lección', 'lecciones')}` : ''}
     </button>
+    ${L.leccionesDeExamen(estado, e).some((l) => l.material) ? `<button class="ancho" style="margin-top:6px" data-accion="ficha-examen" data-id="${e.id}">
+      📄 Ficha para imprimir (PDF o Word)</button>` : ''}
   </div>`;
 }
 
@@ -483,6 +509,8 @@ function vistaLeccion(estado, l, ctx) {
       ${l.apuntes?.length ? `<button data-accion="esquema-leccion" data-id="${l.id}">🗺️ Esquema</button>` : ''}
     </div>` : ''}
 
+    ${l.resumida || l.material ? materialLeccion(l, ctx) : ''}
+
     ${l.texto ? `<details style="margin-top:12px"><summary style="cursor:pointer;color:var(--tinta-2);font-size:.86rem">Texto original</summary>
       <div class="tarjeta texto-leccion" style="margin-top:8px">${escapa(l.texto)}</div></details>` : ''}
 
@@ -492,6 +520,98 @@ function vistaLeccion(estado, l, ctx) {
       <button class="mini peligro" data-accion="borrar-leccion" data-id="${l.id}">Borrar</button>
     </div>
   </section>`;
+}
+
+/* ── Material de estudio de una lección ─────────────────────────── */
+function materialLeccion(l, ctx) {
+  if (ctx.preparandoMaterial === l.id) {
+    return `<div class="tarjeta flash" style="margin-top:12px">
+      <span class="escribiendo" style="align-self:center"><i></i><i></i><i></i></span>
+      <p>Clara te está preparando la explicación, la infografía, ejemplos, ejercicios y un mini test.<br />Tarda menos de un minuto.</p>
+    </div>`;
+  }
+  const m = l.material;
+  if (!m) {
+    return `<div class="tarjeta material-vacio" style="margin-top:12px">
+      <h3>📚 Material de estudio</h3>
+      <p style="font-size:.9rem;color:var(--tinta-2);margin-top:4px">Explicación fácil, infografía, ejemplos resueltos,
+        ejercicios con soluciones y un mini test. Todo de esta lección, y descargable en PDF o Word para imprimir.</p>
+      <button class="principal ancho grande" style="margin-top:10px" data-accion="material-leccion" data-id="${l.id}"${ctx.preparandoMaterial ? ' disabled' : ''}>
+        ✨ Preparar material con Clara</button>
+    </div>`;
+  }
+  const r = L.resumenMaterial(m);
+  const info = m.infografia;
+  return `<div class="material" style="margin-top:12px">
+    <div class="tarjeta">
+      <h3>📚 Material de estudio</h3>
+      <div class="acciones-material">
+        ${r.minitest ? `<button class="principal" data-accion="minitest-leccion" data-id="${l.id}">🧪 Mini test (${r.minitest})</button>` : ''}
+        <button data-accion="ficha-leccion" data-id="${l.id}">📄 Ficha PDF / Word</button>
+      </div>
+    </div>
+
+    ${r.explicacion ? `<details class="bloque-material" open><summary>📖 Explicación</summary>
+      ${m.explicacion.map((a) => `${a.titulo ? `<h4>${escapa(a.titulo)}</h4>` : ''}<p>${escapa(a.texto)}</p>`).join('')}
+    </details>` : ''}
+
+    ${info ? `<details class="bloque-material" open><summary>🖼️ Infografía</summary>
+      <div class="infografia">
+        ${info.titulo ? `<div class="info-titulo">${escapa(info.titulo)}</div>` : ''}
+        ${info.idea ? `<div class="info-idea">${escapa(info.idea)}</div>` : ''}
+        <div class="info-bloques">${info.bloques.map((b) => `<div class="info-bloque">
+          <div class="info-cab">${b.icono ? `<span aria-hidden="true">${escapa(b.icono)}</span> ` : ''}${escapa(b.titulo)}</div>
+          <ul>${b.puntos.map((x) => `<li>${escapa(x)}</li>`).join('')}</ul></div>`).join('')}</div>
+        ${info.datos.length ? `<div class="info-datos">${info.datos.map((d) => `<div class="info-dato">
+          <b>${escapa(d.valor)}</b><span>${escapa(d.etiqueta)}</span></div>`).join('')}</div>` : ''}
+        ${info.recuerda ? `<div class="info-recuerda"><strong>Recuerda:</strong> ${escapa(info.recuerda)}</div>` : ''}
+      </div>
+    </details>` : ''}
+
+    ${r.ejemplos ? `<details class="bloque-material"><summary>✏️ Ejemplos resueltos (${r.ejemplos})</summary>
+      ${m.ejemplos.map((e, i) => `<div class="ejercicio">
+        <div class="enunciado"><b>Ejemplo ${i + 1}.</b> ${escapa(e.enunciado)}</div>
+        <ol class="pasos">${e.pasos.map((x) => `<li>${escapa(x)}</li>`).join('')}</ol>
+        ${e.solucion ? `<div class="solucion">✅ ${escapa(e.solucion)}</div>` : ''}
+      </div>`).join('')}
+    </details>` : ''}
+
+    ${r.ejercicios ? `<details class="bloque-material"><summary>🏋️ Ejercicios para practicar (${r.ejercicios})</summary>
+      <p class="nota-material">Hazlos en tu cuaderno y luego mira la solución. Si te atascas, tira de la pista.</p>
+      ${m.ejercicios.map((e, i) => `<div class="ejercicio">
+        <div class="enunciado"><b>${i + 1}.</b> ${escapa(e.enunciado)}</div>
+        <div class="fila-desplegables">
+          ${e.pista ? `<details><summary>💡 Pista</summary><div>${escapa(e.pista)}</div></details>` : ''}
+          <details><summary>👀 Solución</summary><div class="solucion">${escapa(e.solucion)}</div></details>
+        </div>
+      </div>`).join('')}
+    </details>` : ''}
+
+    <div class="fila" style="margin-top:8px">
+      <button class="mini fantasma" data-accion="material-leccion" data-id="${l.id}"${ctx.preparandoMaterial ? ' disabled' : ''}>🔁 Rehacer material</button>
+    </div>
+  </div>`;
+}
+
+/** El diálogo de «Descargar ficha»: qué partes y en qué formato. */
+export function formFicha(partes, { soloTest = false } = {}) {
+  const cuenta = (id) => partes.reduce((s, p) => s + (id === 'infografia' ? (p.material?.infografia ? 1 : 0)
+    : (p.material?.[id]?.length || 0)), 0);
+  const opciones = SECCIONES.filter((x) => (soloTest ? x.id === 'soluciones'
+    : x.id === 'soluciones' ? cuenta('ejercicios') + cuenta('minitest') > 0 : cuenta(x.id) > 0));
+  return `
+  ${soloTest ? '' : '<p style="font-size:.86rem;color:var(--tinta-2);margin-bottom:6px">¿Qué quieres en la ficha?</p>'}
+  <div class="opciones-ficha">
+    ${opciones.map((x) => `<label class="marcar"><input type="checkbox" name="incluir" value="${x.id}" checked />
+      <span>${escapa(x.texto)}${x.id !== 'soluciones' && cuenta(x.id) > 1 ? ` <small>(${cuenta(x.id)})</small>` : ''}</span></label>`).join('')}
+    ${!soloTest && cuenta('ejercicios') ? `<label class="marcar"><input type="checkbox" name="hueco" value="si" checked />
+      <span>Líneas para contestar los ejercicios</span></label>` : ''}
+  </div>
+  <p style="font-size:.86rem;color:var(--tinta-2);margin:12px 0 6px">Formato</p>
+  <div class="formato-ficha">
+    <label class="marcar"><input type="radio" name="formato" value="pdf" checked /><span>📄 PDF <small>(para imprimir)</small></span></label>
+    <label class="marcar"><input type="radio" name="formato" value="docx" /><span>📝 Word <small>(para editar)</small></span></label>
+  </div>`;
 }
 
 /* ── Test (idea tomada de Cuestia, pero con SUS tarjetas y sin cuenta) ── */
@@ -586,6 +706,7 @@ function subTest(estado, ctx) {
           }).join('')}
         </div>
       </div>
+      ${contestada && p.explicacion ? `<div class="aviso-caja explicacion-test" style="margin-top:10px">${elegida === p.correcta ? '✅' : '💡'} ${escapa(p.explicacion)}</div>` : ''}
       ${ctx.teclado ? '<p class="atajos">Teclado: <kbd>1</kbd>-<kbd>4</kbd> eligen · <kbd>Enter</kbd> siguiente</p>' : ''}
       ${contestada ? `<button class="principal ancho" style="margin-top:10px" data-accion="siguiente-pregunta">
         ${t.i + 1 < t.preguntas.length ? 'Siguiente' : 'Ver la nota'}</button>` : ''}

@@ -135,3 +135,134 @@ export function notaFinal({ aciertos = 0, total = 0 } = {}, desarrollo = [], not
   if (!maximo) return 0;
   return Math.round(((aciertos + logradoDes) / maximo) * 100) / 10;
 }
+
+/* ── Material de estudio ──────────────────────────────────────────
+   Clara lo prepara una vez por lección (en dos mitades: teoría y
+   práctica) y se guarda en la propia lección, así que después se lee,
+   se hace el mini test y se descarga la ficha sin internet. */
+
+const ICONO = /^[\p{Extended_Pictographic}\u200D\uFE0F]{1,8}$/u;
+
+/** Normaliza el material (venga de Clara o de una copia). null si está vacío. */
+export function normalizaMaterial(bruto) {
+  if (!bruto || typeof bruto !== 'object') return null;
+  const explicacion = lista(bruto.explicacion)
+    .map((a) => ({ titulo: texto(a?.titulo, 100), texto: texto(a?.texto, 1500) }))
+    .filter((a) => a.texto)
+    .slice(0, 6);
+  const inf = bruto.infografia && typeof bruto.infografia === 'object' ? bruto.infografia : null;
+  const bloques = lista(inf?.bloques)
+    .map((b) => {
+      const icono = texto(b?.icono, 12);
+      return {
+        icono: ICONO.test(icono) ? icono : '',
+        titulo: texto(b?.titulo, 60),
+        puntos: lista(b?.puntos).map((x) => texto(x, 120)).filter(Boolean).slice(0, 4)
+      };
+    })
+    .filter((b) => b.titulo && b.puntos.length)
+    .slice(0, 6);
+  const infografia = bloques.length ? {
+    titulo: texto(inf?.titulo, 100),
+    idea: texto(inf?.idea, 240),
+    bloques,
+    datos: lista(inf?.datos)
+      .map((d) => ({ valor: texto(d?.valor, 40), etiqueta: texto(d?.etiqueta, 80) }))
+      .filter((d) => d.valor && d.etiqueta)
+      .slice(0, 4),
+    recuerda: texto(inf?.recuerda, 240)
+  } : null;
+  const ejemplos = lista(bruto.ejemplos)
+    .map((e) => ({
+      enunciado: texto(e?.enunciado, 600),
+      pasos: lista(e?.pasos).map((x) => texto(x, 300)).filter(Boolean).slice(0, 6),
+      solucion: texto(e?.solucion, 400)
+    }))
+    .filter((e) => e.enunciado && (e.pasos.length || e.solucion))
+    .slice(0, 4);
+  const ejercicios = lista(bruto.ejercicios)
+    .map((e) => ({ enunciado: texto(e?.enunciado, 600), pista: texto(e?.pista, 200), solucion: texto(e?.solucion, 800) }))
+    .filter((e) => e.enunciado && e.solucion)
+    .slice(0, 8);
+  const minitest = preguntasDeIA(bruto.minitest).slice(0, 10)
+    .map(({ pregunta, opciones, correcta, explicacion: porque }) => ({ pregunta, opciones, correcta, explicacion: porque || '' }));
+  if (!explicacion.length && !infografia && !ejemplos.length && !ejercicios.length && !minitest.length) return null;
+  return {
+    explicacion, infografia, ejemplos, ejercicios, minitest,
+    fecha: /^\d{4}-\d{2}-\d{2}$/.test(bruto.fecha || '') ? bruto.fecha : aISO()
+  };
+}
+
+/** Junta las dos mitades que devuelve Clara. Si solo llega una, vale igual. */
+export function materialDeIA(teoria, practica, hoy = aISO()) {
+  return normalizaMaterial({ ...(teoria || {}), ...(practica || {}), fecha: hoy });
+}
+
+/** ¿Qué trae el material? Para los botones y la ficha. */
+export function resumenMaterial(m) {
+  return {
+    explicacion: m?.explicacion?.length || 0,
+    infografia: m?.infografia ? 1 : 0,
+    ejemplos: m?.ejemplos?.length || 0,
+    ejercicios: m?.ejercicios?.length || 0,
+    minitest: m?.minitest?.length || 0
+  };
+}
+
+/** Preguntas del mini test de una lección, listas para el test de la app. */
+export function minitestDeLeccion(leccion) {
+  return preguntasDeIA(leccion?.material?.minitest, leccion?.asignaturaId || null);
+}
+
+/* ── Mini test del día ────────────────────────────────────────────
+   Cada día un mini test distinto, pero el MISMO durante todo el día (así
+   la ficha en PDF coincide con lo que hace en la app). Sale de los mini
+   tests de sus lecciones, primero las de exámenes cercanos y las últimas
+   que ha metido. Sin internet. */
+
+function semilla(textoSemilla) {
+  let h = 2166136261;
+  for (const c of String(textoSemilla)) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); }
+  return () => {
+    h = (h + 0x6D2B79F5) | 0;
+    let t = Math.imul(h ^ (h >>> 15), 1 | h);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export const MIN_MINITEST = 4;
+
+export function miniTestDelDia(estado, hoy = aISO(), cuantas = 8) {
+  const azar = semilla(hoy);
+  const lecciones = lista(estado?.lecciones).filter((l) => l.material?.minitest?.length);
+  const enExamen = new Set();
+  for (const e of lista(estado?.examenes)) {
+    if (!e?.fecha || e.fecha < hoy) continue;
+    const dias = (Date.parse(e.fecha) - Date.parse(hoy)) / 86400000;
+    if (dias > 14) continue;
+    for (const l of leccionesDeExamen(estado, e)) enExamen.add(l.id);
+  }
+  const orden = [...lecciones].sort((a, b) =>
+    (enExamen.has(b.id) - enExamen.has(a.id)) || String(b.fecha).localeCompare(String(a.fecha)));
+  const elegidas = orden.slice(0, 4);
+  const bolsa = [];
+  for (const l of elegidas) {
+    const propias = minitestDeLeccion(l).map((p) => ({ ...p, leccionId: l.id }));
+    for (let i = propias.length - 1; i > 0; i--) {
+      const j = Math.floor(azar() * (i + 1));
+      [propias[i], propias[j]] = [propias[j], propias[i]];
+    }
+    bolsa.push(propias);
+  }
+  // Repartidas entre lecciones: una de cada, por turnos.
+  const preguntas = [];
+  for (let ronda = 0; preguntas.length < cuantas && bolsa.some((b) => b.length); ronda++) {
+    for (const b of bolsa) if (b.length && preguntas.length < cuantas) preguntas.push(b.shift());
+  }
+  return {
+    titulo: `Mini test del ${hoy.split('-').reverse().join('/')}`,
+    preguntas,
+    lecciones: elegidas.map((l) => l.titulo)
+  };
+}

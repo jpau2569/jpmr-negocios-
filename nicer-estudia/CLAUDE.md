@@ -54,6 +54,10 @@ Se sirve por HTTP, no con `file://`.
 - **Las fotos de las páginas no se guardan**: se reducen en el móvil, se
   mandan a Clara una vez y se quedan en memoria solo hasta que la lección se
   resume. Lo que se guarda es el texto: resumen, apuntes y conceptos.
+- **El material de estudio se prepara una vez y se guarda**: explicación, infografía,
+  ejemplos, ejercicios y mini test viven en `leccion.material`; el mini test del día y las
+  fichas PDF/Word salen de ahí sin internet. Los ejercicios del material los inventa Clara
+  para practicar (no son sus deberes), por eso ahí sí lleva soluciones.
 - **Lo que no necesita internet no lo usa**: tarjetas y esquema de una
   lección salen de sus apuntes en el propio móvil (`lecciones.js`).
 - **Todo lo que escribe el alumno pasa por `escapa()`** antes de ir al HTML.

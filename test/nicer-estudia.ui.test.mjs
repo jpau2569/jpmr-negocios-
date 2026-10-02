@@ -46,7 +46,7 @@ const server = http.createServer(async (req, res) => {
 await new Promise((ok) => server.listen(PORT, ok));
 
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
-const page = await browser.newPage({ viewport: { width: 360, height: 780 } });
+const page = await browser.newPage({ viewport: { width: 360, height: 780 }, acceptDownloads: true });
 
 const errores = [];
 page.on("pageerror", (e) => errores.push(String(e)));
@@ -55,6 +55,7 @@ page.on("console", (m) => { if (m.type() === "error") errores.push(m.text()); })
 // Clara responde en local. Si le llega una foto, contesta con un horario
 // leído; si no, con tarjetas, test y esquema.
 let ultimoCuerpo = null;
+const peticionesMaterial = [];
 await page.route("**/api/profe", (ruta) => {
   ultimoCuerpo = JSON.parse(ruta.request().postData() || "{}");
   const responde = (datos) => ruta.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(datos) });
@@ -71,6 +72,28 @@ await page.route("**/api/profe", (ruta) => {
           { termino: "Masa", definicion: "Cantidad de materia de un cuerpo" },
           { termino: "Volumen", definicion: "Espacio que ocupa un cuerpo" }
         ]
+      }
+    });
+  }
+  if (ultimoCuerpo.modo === "material") {
+    peticionesMaterial.push(ultimoCuerpo.parte);
+    return responde(ultimoCuerpo.parte === "practica" ? {
+      reply: "Aquí tienes práctica.",
+      material: {
+        ejemplos: [{ enunciado: "Un bloque de 200 g ocupa 50 cm³. ¿Densidad?", pasos: ["d = m / V", "d = 200 / 50"], solucion: "4 g/cm³" }],
+        ejercicios: [
+          { enunciado: "Define masa con tus palabras.", pista: "Cuánto hay.", solucion: "La cantidad de materia de un cuerpo." },
+          { enunciado: "¿Flota un objeto de 3 g/cm³?", pista: "Compara con el agua.", solucion: "No, es más denso que el agua." }
+        ],
+        minitest: Array.from({ length: 6 }, (_, i) => ({ pregunta: `¿Pregunta ${i + 1} de la materia?`, opciones: ["Kilogramo", "Litro", "Metro", "Segundo"], correcta: 0, explicacion: "La masa se mide en kilogramos." }))
+      }
+    } : {
+      reply: "Aquí tienes la teoría.",
+      material: {
+        explicacion: [{ titulo: "Qué es la materia", texto: "Todo lo que tiene masa y ocupa un volumen, como tu mochila." }],
+        infografia: { titulo: "La materia de un vistazo", idea: "Masa y volumen", bloques: [
+          { icono: "⚖️", titulo: "Masa", puntos: ["Se mide en kg"] }, { icono: "📦", titulo: "Volumen", puntos: ["Se mide en m³"] }],
+          datos: [{ valor: "1 g/cm³", etiqueta: "densidad del agua" }], recuerda: "Masa = cuánto hay." }
       }
     });
   }
@@ -425,6 +448,43 @@ check("la lección se guarda con su libro y sin la foto", await page.evaluate(()
   const l = e.lecciones[0];
   return l.libroId && l.resumida && l.apuntes.length === 2 && !JSON.stringify(e).includes("base64");
 }));
+
+console.log("\n📚 Material de estudio y fichas");
+await page.click('[data-accion="material-leccion"]');
+await page.waitForSelector(".bloque-material");
+check("Clara prepara teoría y práctica a la vez", peticionesMaterial.sort().join() === "practica,teoria");
+check("se ve la explicación", (await page.locator(".bloque-material").first().textContent()).includes("tu mochila"));
+check("y la infografía con sus bloques y datos", (await page.locator(".info-bloque").count()) === 2 && (await page.locator(".info-dato").count()) === 1);
+check("las soluciones de los ejercicios van escondidas hasta que las abre",
+  !(await page.locator('.ejercicio .solucion:has-text("cantidad de materia")').isVisible()));
+check("el material queda guardado en la lección (sirve sin internet)", await page.evaluate(() =>
+  JSON.parse(localStorage.getItem("nicer-estudia:v1")).lecciones[0].material?.minitest?.length === 6));
+const { readFile: leerArchivo } = await import("node:fs/promises");
+for (const formato of ["pdf", "docx"]) {
+  await page.click('[data-accion="ficha-leccion"]');
+  await page.waitForSelector('#dlg-cuerpo input[name="formato"]');
+  await page.check(`#dlg-cuerpo input[name="formato"][value="${formato}"]`);
+  const [descarga] = await Promise.all([page.waitForEvent("download"), page.click("#dlg-aceptar")]);
+  const bytes = await leerArchivo(await descarga.path());
+  check(`la ficha se descarga en ${formato.toUpperCase()}`,
+    descarga.suggestedFilename() === `ficha-tema-2-la-materia.${formato}`
+    && (formato === "pdf" ? bytes.subarray(0, 5).toString() === "%PDF-" : bytes[0] === 0x50 && bytes[1] === 0x4b));
+}
+await page.click('[data-accion="minitest-leccion"]');
+await page.waitForSelector(".opcion");
+check("el mini test de la lección arranca", (await page.locator(".opcion").count()) === 4);
+await page.click('.opcion >> nth=1');
+check("al fallar explica por qué", (await page.locator(".explicacion-test").textContent()).includes("kilogramos"));
+await page.click('[data-accion="cerrar-test"]');
+await page.click('#nav button[data-vista="hoy"]');
+check("en Hoy sale el mini test del día", (await page.locator('[data-accion="minitest-dia"]').count()) === 1);
+await page.click('[data-accion="minitest-dia"]');
+await page.waitForSelector(".opcion");
+check("y se puede hacer", (await page.locator("header h2").first().textContent()).includes("Pregunta 1 de 6"));
+await page.click('[data-accion="cerrar-test"]');
+await page.click('#nav button[data-vista="estudiar"]');
+await page.click('[data-accion="sub"][data-sub="lecciones"]');
+if (await page.locator('[data-accion="abrir-leccion"]').count()) await page.click('[data-accion="abrir-leccion"]');
 
 await page.click('[data-accion="tarjetas-leccion"]');
 await page.click("#dlg-aceptar");
