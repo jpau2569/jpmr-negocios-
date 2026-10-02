@@ -188,7 +188,8 @@ export function fichaPdf(piezas) {
         break;
       }
       case 'h2': {
-        asegura(70);
+        // Un título nunca se queda solo al pie de página: pide sitio para él y algo de contenido.
+        asegura(140);
         y += 12;
         const c = COLOR[p.color] || COLOR.azul;
         doc.rect(MARGEN, y, 5, 20, { relleno: c });
