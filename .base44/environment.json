@@ -1,0 +1,67 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/api/health",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "SUPABASE_URL",
+      "description": "URL del proyecto Supabase (p. ej. https://xxxxx.supabase.co). Opcional: sin ella la memoria de Clara y los leads no funcionan, pero la app arranca.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "SUPABASE_ANON_KEY",
+      "description": "Clave 'anon' de Supabase. Opcional, va junto con SUPABASE_URL.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "SUPABASE_SERVICE_KEY",
+      "description": "Clave 'service_role' de Supabase para escrituras del servidor. Opcional.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "ANTHROPIC_API_KEY",
+      "description": "Clave de la API de Anthropic (Claude) para Clara y CasteBot. Opcional: sin ella los asistentes IA no responden, pero la app arranca.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "CLIPDROP_API_KEY",
+      "description": "Clave de Clipdrop API para LimpiaFotos (quitar fondo, texto, escalado). Opcional.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "OPENROUTER_API_KEY",
+      "description": "Clave de OpenRouter para segunda opinión de otros modelos de IA. Opcional.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "GEMINI_API_KEY",
+      "description": "Clave de Google Gemini. Opcional.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "AEMET_API_KEY",
+      "description": "Clave de la API de AEMET para el endpoint de tiempo. Opcional.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "TELEGRAM_BOT_TOKEN",
+      "description": "Token del bot de Telegram para el chivato. Opcional.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "TELEGRAM_CHAT_ID",
+      "description": "ID de chat de Telegram para el chivato. Opcional.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "CRON_SECRET",
+      "description": "Secreto para los cron jobs de Vercel. Opcional.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "CEREBRO_CLAVE",
+      "description": "Clave de acceso al cerebro. Opcional.",
+      "requiredAtBoot": false
+    }
+  ]
+}
