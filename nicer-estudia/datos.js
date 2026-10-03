@@ -38,7 +38,8 @@ export function estadoInicial() {
     version: VERSION_DATOS,
     alumno: { nombre: 'Nicer', curso: '2º ESO', centro: 'Colegio Lastra · Mieres' },
     ajustes: {
-      pomodoro: 25,          // minutos de concentración
+      pomodoro: 30,          // minutos de concentración
+      bloque: 15,            // cada cuántos minutos cambia de asignatura (0 = no cambia)
       descanso: 5,
       objetivoDiario: 45,    // minutos de estudio al día
       tarjetasPorDia: 20,    // tope de repaso diario, para que nunca agobie
@@ -77,7 +78,11 @@ export function normaliza(bruto) {
   // el 26/27. Solo se cambia si seguía el valor de fábrica y solo una vez.
   if ((Number(bruto.version) || 1) < 3 && alumno.curso === '1º ESO') alumno.curso = '2º ESO';
   const ajustes = {
-    pomodoro: limita(bruto.ajustes?.pomodoro ?? base.ajustes.pomodoro, 5, 60),
+    // Quien tenía los 25 de antes pasa a 30 (dos bloques de 15) una sola vez:
+    // en cuanto se guarda, ya existe «bloque» y se respeta lo que elija.
+    pomodoro: limita(bruto.ajustes && bruto.ajustes.bloque === undefined && Number(bruto.ajustes.pomodoro) === 25
+      ? 30 : bruto.ajustes?.pomodoro ?? base.ajustes.pomodoro, 5, 60),
+    bloque: [0, 10, 15, 20].includes(Number(bruto.ajustes?.bloque)) ? Number(bruto.ajustes.bloque) : base.ajustes.bloque,
     descanso: limita(bruto.ajustes?.descanso ?? base.ajustes.descanso, 1, 30),
     objetivoDiario: limita(bruto.ajustes?.objetivoDiario ?? base.ajustes.objetivoDiario, 10, 240),
     tarjetasPorDia: limita(bruto.ajustes?.tarjetasPorDia ?? base.ajustes.tarjetasPorDia, 5, 100),

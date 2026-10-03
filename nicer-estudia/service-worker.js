@@ -6,7 +6,7 @@
    Al tocar cualquier .js: añádelo a RECURSOS y sube VERSION.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'nicer-v4.3.1';
+const VERSION = 'nicer-v4.4.0';
 const CASCO = `${VERSION}-casco`;
 
 const RECURSOS = [
@@ -26,6 +26,7 @@ const RECURSOS = [
   './calendario.js',
   './lecciones.js',
   './ficha.js',
+  './bloques.js',
   './pdf.js',
   './interfaz.js',
   './manifest.json',

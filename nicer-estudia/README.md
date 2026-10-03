@@ -232,3 +232,10 @@ apunte, el modo concentración con sus ambientes, recargar y comprobar que a
 - **Preparar material con Clara** (en cada lección resumida): explicación fácil por apartados, infografía, ejemplos resueltos paso a paso, ejercicios con pista y solución escondida, y mini test con explicación de cada respuesta. Clara lo hace en dos mitades a la vez (`modo: "material"`, `parte: "teoria" | "practica"`) y se guarda en la lección: luego funciona sin internet.
 - **Mini test del día** en Hoy: sale de los mini tests de sus lecciones (primero las de exámenes en los próximos 14 días), el mismo durante todo el día.
 - **Fichas PDF o Word** (`ficha.js`): de una lección, de un examen (todas sus lecciones con material) o del mini test del día. Se elige qué partes van, si llevan líneas para contestar y si van las soluciones al final (en otra página). Todo se genera en el móvil, sin librerías ni internet.
+
+## Bloques de estudio (v4.4)
+
+- La sesión de concentración es de **30 minutos** partida en **bloques de 15** (se cambia en Yo → «Cambiar de asignatura cada»: no, 10, 15 o 20).
+- En Hoy se ve antes de empezar qué toca en cada bloque y por qué. Lo decide `bloques.js` con su día: examen cercano → deberes para mañana → clase del siguiente día lectivo → clase de hoy → tarjetas pendientes. Tutoría, Atención educativa y Educación Física no entran.
+- Al pasar de bloque suena, vibra y sale «🔁 ¡Cambio de asignatura!» con la siguiente y qué hacer. «🔀 Otra asignatura» cambia el bloque en marcha. Cada asignatura se apunta sus minutos.
+- Sin horario puesto, Hoy le dice que lo meta con Clara → 📷 Foto de mi horario.

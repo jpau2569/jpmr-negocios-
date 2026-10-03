@@ -13,6 +13,7 @@ import { dibujaEsquema } from './esquema.js';
 import { AMBIENTES } from './ambiente.js';
 import * as L from './lecciones.js';
 import { SECCIONES } from './ficha.js';
+import * as B from './bloques.js';
 
 const pct = (n) => `${Math.round(n * 100)}%`;
 
@@ -141,6 +142,7 @@ export function vistaHoy(estado, ctx) {
     <button class="fantasma ancho mini" data-accion="empezar-cinco" style="margin-top:6px">
       ¿No te apetece? Prueba solo 5 minutos
     </button>
+    ${planBloquesHoy(estado, hoy)}
   </section>
 
   <section class="seccion">
@@ -182,6 +184,27 @@ export function vistaHoy(estado, ctx) {
         : '<div class="vacio" style="border:0;padding:4px">Pon tu horario en Yo → Horario y aquí verás qué meter en la mochila.</div>'}
     </div>
   </section>`;
+}
+
+/* Qué toca en cada bloque de la sesión, antes de empezar. */
+function planBloquesHoy(estado, hoy) {
+  const { pomodoro, bloque } = estado.ajustes;
+  if (!bloque) return '';
+  const plan = B.planDeBloques(estado, hoy, { minutos: pomodoro, bloque });
+  const sinHorario = !Object.values(estado.horario || {}).some((d) => d.length);
+  if (!plan.length) {
+    return sinHorario ? `<div class="aviso-caja" style="margin-top:10px">
+      🔁 Cada ${bloque} minutos te diré que cambies de asignatura. Para saber cuál toca, pon tu horario:
+      pestaña <strong>Clara → 📷 Foto de mi horario</strong>.</div>` : '';
+  }
+  return `<div class="plan-bloques">
+    <div class="plan-bloques-titulo">En tus ${pomodoro} minutos · cambias cada ${bloque}</div>
+    ${plan.map((b) => `<div class="bloque-plan">
+      <span class="bloque-min">${b.inicio}-${b.fin}′</span>
+      ${puntoColor(estado, b.asignaturaId)}
+      <div class="bloque-txt"><strong>${escapa(b.nombre)}</strong><span>${escapa(b.motivo)}</span></div>
+    </div>`).join('')}
+  </div>`;
 }
 
 /* Mini test del día: cada día uno distinto, sacado de sus lecciones. */
@@ -1070,6 +1093,11 @@ export function vistaYo(estado, ctx) {
         <div class="campo" style="margin:0"><label for="aj-desc">Descanso (min)</label>
           <input id="aj-desc" type="number" min="1" max="30" data-ajuste="ajustes.descanso" value="${estado.ajustes.descanso}" /></div>
       </div>
+      <div class="campo" style="margin-top:10px"><label for="aj-bloque">Cambiar de asignatura cada</label>
+        <select id="aj-bloque" data-ajuste="ajustes.bloque" data-numero="1">
+          ${[[0, 'No cambiar (todo lo mismo)'], [10, '10 minutos'], [15, '15 minutos'], [20, '20 minutos']]
+            .map(([v, t]) => `<option value="${v}"${estado.ajustes.bloque === v ? ' selected' : ''}>${t}</option>`).join('')}
+        </select></div>
       <div class="campo" style="margin-top:12px">
         <label>Sonido de fondo mientras estudias</label>
         <div class="chips">

@@ -76,7 +76,7 @@ Se sirve por HTTP, no con `file://`.
 ## Separación por capas
 
 `utiles.js` → `datos.js` / `repaso.js` / `cuestionario.js` / `esquema.js` /
-`ambiente.js` / `calendario.js` / `lecciones.js` → `interfaz.js` → `app.js`
+`ambiente.js` / `calendario.js` / `lecciones.js` / `bloques.js` / `ficha.js` → `interfaz.js` → `app.js`
 
 `voz.js` (dictado y lectura en voz alta) y `foto.js` (reducir la foto en el
 móvil) tocan el navegador, pero su lógica pura (`idiomaDe`, `limpiaParaLeer`,

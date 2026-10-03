@@ -18,6 +18,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { icsExamen, escapaIcs, doblaLinea } from "../nicer-estudia/calendario.js";
 import { idiomaDe, limpiaParaLeer } from "../nicer-estudia/voz.js";
 import * as F from "../nicer-estudia/ficha.js";
+import * as B from "../nicer-estudia/bloques.js";
 import { medidas, ajustesPara, escalones, pareceFoto, AJUSTES_CHAT, PRESUPUESTO_B64, MAX_FOTOS } from "../nicer-estudia/foto.js";
 
 let pasados = 0, fallados = 0;
@@ -580,6 +581,41 @@ console.log("\n📚 Material de estudio, mini test del día y fichas");
   await profe({ method: "POST", body: { modo: "material", parte: "teoria", leccion: { titulo: "x" } } }, rV);
   check("sin contenido de la lección se rechaza", rV.code === 400);
   Anthropic.Messages.prototype.create = crearAntes;
+}
+
+console.log("\n🔁 Bloques de estudio (cambiar cada 15 minutos)");
+{
+  check("por defecto: 30 minutos en bloques de 15", D.normaliza({}).ajustes.pomodoro === 30 && D.normaliza({}).ajustes.bloque === 15);
+  check("quien tenía los 25 de antes pasa a 30 una sola vez", D.normaliza({ ajustes: { pomodoro: 25 } }).ajustes.pomodoro === 30);
+  check("pero si ya eligió 25 con bloques, se respeta", D.normaliza({ ajustes: { pomodoro: 25, bloque: 15 } }).ajustes.pomodoro === 25);
+  check("un bloque raro vuelve a 15", D.normaliza({ ajustes: { bloque: 7 } }).ajustes.bloque === 15);
+
+  const horario = { dias: {
+    1: [{ hora: "08:30", asignatura: "Física y Química" }, { hora: "09:30", asignatura: "Matemáticas" }, { hora: "12:45", asignatura: "Educación Física" }],
+    2: [{ hora: "08:30", asignatura: "Lengua Castellana" }, { hora: "09:30", asignatura: "Música" }, { hora: "13:45", asignatura: "Atención educativa" }],
+    5: [{ hora: "08:30", asignatura: "Tecnología y Digitalización" }, { hora: "13:45", asignatura: "Tutoría" }]
+  } };
+  let e = D.aplicaHorario(D.normaliza({}), horario).estado;
+  const id = (n) => e.asignaturas.find((a) => a.nombre === n)?.id;
+  // Lunes 5/10/2026: hoy lunes, mañana martes.
+  const lunes = B.planDeBloques(e, "2026-10-05");
+  check("sin exámenes: primero lo de mañana, luego lo de hoy", lunes.length === 2
+    && lunes[0].nombre === "Lengua Castellana" && lunes[0].motivo.startsWith("Mañana"));
+  check("nunca la misma asignatura dos bloques seguidos", lunes[0].asignaturaId !== lunes[1].asignaturaId);
+  check("Educación Física, Tutoría y Atención educativa no se estudian en casa",
+    !B.candidatas(e, "2026-10-05").some((c) => /Educación Física|Tutoría|Atención/.test(c.nombre)));
+  check("el viernes, «mañana» es el lunes", B.planDeBloques(e, "2026-10-02").some((b) => b.motivo.startsWith("El lunes")));
+  e.examenes.push({ id: "x1", titulo: "Ecuaciones", asignaturaId: id("Matemáticas"), fecha: "2026-10-08", leccionIds: [], temas: "", nota: null });
+  e.tareas.push({ id: "t1", titulo: "Ficha de sintaxis", asignaturaId: id("Lengua Castellana"), tipo: "deber", prioridad: "normal", repetir: "no", para: "2026-10-06", hecha: false, hechaEl: null, creada: "2026-10-01" });
+  const conExamen = B.planDeBloques(e, "2026-10-05");
+  check("un examen cercano va primero", conExamen[0].nombre === "Matemáticas" && conExamen[0].motivo.includes("Examen el jueves"));
+  check("y luego los deberes de mañana", conExamen[1].nombre === "Lengua Castellana" && conExamen[1].accion === "Haz: Ficha de sintaxis");
+  const largo = B.planDeBloques(e, "2026-10-05", { minutos: 60, bloque: 15 });
+  check("60 minutos son 4 bloques con su inicio y su fin", largo.length === 4 && largo[3].inicio === 45 && largo[3].fin === 60);
+  check("con bloques desactivados no hay plan", B.planDeBloques(e, "2026-10-05", { bloque: 0 }).length === 0);
+  check("sin horario, ni deberes ni exámenes, no se inventa nada", B.planDeBloques(D.normaliza({}), "2026-10-05").length === 0);
+  const otra = B.alternativa(e, "2026-10-05", conExamen, 0);
+  check("«Otra asignatura» propone una que no está ya en el plan", otra && !conExamen.some((b) => b.asignaturaId === otra.asignaturaId));
 }
 
 console.log("\n💬 Charla que se manda a Clara");

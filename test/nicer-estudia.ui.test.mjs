@@ -339,7 +339,7 @@ check("se abre la pantalla de concentración", await page.locator("#foco").isVis
 check("el compañero acompaña la sesión", await page.locator("#foco-planta svg").isVisible());
 check("los ambientes se eligen desde ahí", (await page.locator("#foco-ambientes .chip").count()) >= 4);
 check("el reloj arranca en los minutos configurados",
-  (await page.locator("#foco-reloj").textContent()).startsWith("2"));
+  /^(30|29):/.test(await page.locator("#foco-reloj").textContent()));
 await page.waitForTimeout(1200);
 await page.click("#foco-fin");
 check("al terminar se cierra", await page.locator("#foco").isHidden());

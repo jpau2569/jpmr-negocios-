@@ -4,7 +4,7 @@
    Regla de la casa: aquí vive el estado; interfaz.js solo pinta.
    ═══════════════════════════════════════════════════════════════════ */
 
-import { aISO, id, mmss, limita, diasEntre, plural } from './utiles.js';
+import { aISO, id, mmss, limita, diasEntre, plural, escapa } from './utiles.js';
 import * as D from './datos.js';
 import * as R from './repaso.js';
 import * as UI from './interfaz.js';
@@ -16,6 +16,7 @@ import { preparaFotos, ajustesPara, AJUSTES_CHAT, MAX_FOTOS } from './foto.js';
 import { icsExamen } from './calendario.js';
 import * as L from './lecciones.js';
 import * as F from './ficha.js';
+import * as B from './bloques.js';
 
 /* ── Estado ─────────────────────────────────────────────────────── */
 let estado = D.cargar();
@@ -376,7 +377,17 @@ const acciones = {
   },
 
   /* Concentración */
-  'empezar-foco': () => arrancaFoco(estado.ajustes.pomodoro, 'Concentración'),
+  'empezar-foco': () => arrancaFoco(estado.ajustes.pomodoro, 'Concentración',
+    B.planDeBloques(estado, ctx.hoy, { minutos: estado.ajustes.pomodoro, bloque: estado.ajustes.bloque })),
+  // «No me toca / no puedo»: cambia la asignatura del bloque en marcha por la siguiente candidata.
+  'cambiar-bloque': () => {
+    const i = foco.bloqueActual;
+    if (!foco.plan.length || i < 0) return;
+    const otra = B.alternativa(estado, ctx.hoy, foco.plan, i);
+    if (!otra) { foco.aguante.textContent = 'No hay otra asignatura pendiente hoy: sigue con esta.'; return; }
+    foco.plan[i] = { ...otra, inicio: foco.plan[i].inicio, fin: foco.plan[i].fin };
+    pintaBloque(false);
+  },
   'empezar-cinco': () => arrancaFoco(5, 'Solo 5 minutos'),
 
   /* Yo */
@@ -1185,7 +1196,7 @@ document.addEventListener('change', (ev) => {
   const el = ev.target.closest('[data-ajuste]');
   if (!el) return;
   const [grupo, campo] = el.dataset.ajuste.split('.');
-  estado[grupo][campo] = el.type === 'number' ? Number(el.value) : el.value;
+  estado[grupo][campo] = el.type === 'number' || el.dataset.numero ? Number(el.value) : el.value;
   estado = D.normaliza(estado);
   persiste();
   render();
@@ -1195,7 +1206,8 @@ document.addEventListener('change', (ev) => {
 const foco = {
   el: $('#foco'), reloj: $('#foco-reloj'), barra: $('#foco-barra'), que: $('#foco-que'),
   planta: $('#foco-planta'), aguante: $('#foco-aguante'), ambientes: $('#foco-ambientes'),
-  total: 0, restan: 0, tic: null, pausado: false, descanso: false, salidas: 0
+  total: 0, restan: 0, tic: null, pausado: false, descanso: false, salidas: 0,
+  bloque: $('#foco-bloque'), plan: [], bloqueActual: -1, avisoHasta: 0
 };
 
 /* Los ambientes se eligen desde la propia pantalla de concentración: si hay
@@ -1205,7 +1217,10 @@ function pintaAmbientes() {
     data-accion="elegir-ambiente" data-id="${a.id}">${a.emoji}</button>`).join('');
 }
 
-function arrancaFoco(minutos, etiqueta) {
+function arrancaFoco(minutos, etiqueta, plan = []) {
+  foco.plan = plan.map((b) => ({ ...b }));
+  foco.bloqueActual = -1;
+  foco.avisoHasta = 0;
   foco.total = Math.max(1, minutos) * 60;
   foco.restan = foco.total;
   foco.pausado = false;
@@ -1239,13 +1254,70 @@ function latido() {
 function pintaFoco() {
   foco.reloj.textContent = mmss(foco.restan);
   foco.barra.style.width = `${Math.round(((foco.total - foco.restan) / foco.total) * 100)}%`;
+  if (!foco.descanso && foco.plan.length) {
+    const hecho = foco.total - foco.restan;
+    const i = foco.plan.findIndex((b) => hecho < b.fin * 60);
+    const indice = i === -1 ? foco.plan.length - 1 : i;
+    if (indice !== foco.bloqueActual) {
+      const esCambio = foco.bloqueActual !== -1;
+      foco.bloqueActual = indice;
+      pintaBloque(esCambio);
+    } else {
+      actualizaSiguiente();
+    }
+  } else {
+    foco.bloque.hidden = true;
+  }
+}
+
+/* El bloque en marcha: qué asignatura, por qué y qué hacer. Al cambiar de
+   bloque suena, vibra y se ve un aviso grande unos segundos. */
+function pintaBloque(esCambio) {
+  const b = foco.plan[foco.bloqueActual];
+  if (!b) return;
+  const total = foco.plan.length;
+  foco.que.textContent = `Bloque ${foco.bloqueActual + 1} de ${total}`;
+  if (esCambio) {
+    pitido();
+    try { navigator.vibrate?.([250, 120, 250]); } catch { /* sin vibración */ }
+    foco.avisoHasta = Date.now() + 8000;
+  }
+  const aviso = Date.now() < foco.avisoHasta;
+  foco.bloque.hidden = false;
+  foco.bloque.className = `bloque-foco${aviso ? ' cambio' : ''}`;
+  foco.bloque.innerHTML = `
+    ${aviso ? '<div class="cambio-titulo">🔁 ¡Cambio de asignatura!</div>' : ''}
+    <div class="bloque-asig"><span class="punto" style="background:${escapa(D.colorAsignatura(estado, b.asignaturaId))}"></span> ${escapa(b.nombre)}</div>
+    <div class="bloque-por">${escapa(b.motivo)}</div>
+    <div class="bloque-que">👉 ${escapa(b.accion)}</div>
+    <div class="bloque-pie"><span id="foco-siguiente"></span>
+      <button class="mini fantasma" data-accion="cambiar-bloque">🔀 Otra asignatura</button></div>`;
+  actualizaSiguiente();
+  if (aviso) setTimeout(() => { if (Date.now() >= foco.avisoHasta && !foco.el.hidden) pintaBloque(false); }, 8100);
+}
+
+function actualizaSiguiente() {
+  const el = $('#foco-siguiente');
+  if (!el) return;
+  const sig = foco.plan[foco.bloqueActual + 1];
+  const hecho = foco.total - foco.restan;
+  el.textContent = sig ? `Luego ${sig.nombre} en ${mmss(Math.max(0, foco.plan[foco.bloqueActual].fin * 60 - hecho))}` : 'Último bloque';
 }
 
 /** Guarda los minutos hechos (completos o no) y ofrece el descanso. */
 function terminaFoco(completo) {
   const minutos = Math.round((foco.total - foco.restan) / 60);
   clearInterval(foco.tic);
-  if (minutos >= 1) {
+  if (minutos >= 1 && foco.plan.length && !foco.descanso) {
+    // Con bloques, cada asignatura se apunta sus minutos (sirve para ver a qué dedica el tiempo).
+    const hecho = foco.total - foco.restan;
+    foco.plan.forEach((b, k) => {
+      const m = Math.round(Math.max(0, Math.min(hecho, b.fin * 60) - b.inicio * 60) / 60);
+      if (m >= 1) estado.sesiones.push({ fecha: ctx.hoy, minutos: m, asignaturaId: b.asignaturaId, salidas: k === 0 ? foco.salidas : 0 });
+    });
+    marcaActividad();
+    persiste();
+  } else if (minutos >= 1) {
     estado.sesiones.push({ fecha: ctx.hoy, minutos, asignaturaId: null, salidas: foco.salidas });
     marcaActividad();
     persiste();
@@ -1255,6 +1327,7 @@ function terminaFoco(completo) {
     foco.total = estado.ajustes.descanso * 60;
     foco.restan = foco.total;
     foco.que.textContent = 'Descanso: levántate y bebe agua';
+    foco.bloque.hidden = true;
     foco.el.classList.add('descanso');
     pintaFoco();
     foco.tic = setInterval(latido, 1000);

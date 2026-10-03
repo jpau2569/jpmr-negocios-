@@ -547,3 +547,26 @@ kbd {
 .fila-desplegables details > div { font-size: .9rem; padding: 2px 0 6px; }
 .explicacion-test { font-size: .9rem; }
 .opciones-ficha, .formato-ficha { display: grid; gap: 4px; }
+
+/* ── Bloques de estudio (cambiar de asignatura cada 15 min) ── */
+.plan-bloques { margin-top: 12px; display: grid; gap: 6px; }
+.plan-bloques-titulo { font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--tinta-2); }
+.bloque-plan {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; min-width: 0;
+  border: 1px solid var(--borde); border-radius: 12px; background: var(--tarjeta);
+}
+.bloque-min { font-variant-numeric: tabular-nums; font-size: .8rem; font-weight: 700; color: var(--azul); flex: none; min-width: 46px; }
+.bloque-txt { display: grid; min-width: 0; font-size: .9rem; }
+.bloque-txt span { font-size: .78rem; color: var(--tinta-2); }
+.bloque-foco {
+  width: min(420px, 92vw); display: grid; gap: 6px; padding: 12px 14px; text-align: left;
+  border: 1px solid var(--borde); border-radius: 16px; background: var(--tarjeta);
+}
+.bloque-foco[hidden] { display: none; }
+.bloque-foco .bloque-asig { font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.bloque-foco .bloque-por { font-size: .84rem; color: var(--tinta-2); }
+.bloque-foco .bloque-que { font-size: .92rem; font-weight: 600; }
+.bloque-foco .bloque-pie { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .8rem; color: var(--tinta-2); }
+.bloque-foco .bloque-pie span { flex: 1; min-width: 0; }
+.bloque-foco.cambio { border-color: var(--ambar); background: var(--ambar-suave); animation: late 1s 3; }
+.cambio-titulo { font-weight: 800; color: var(--ambar); font-size: 1rem; }
