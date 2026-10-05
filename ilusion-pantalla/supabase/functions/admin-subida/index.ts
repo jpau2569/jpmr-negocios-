@@ -3,7 +3,7 @@
 // Devuelve una URL PUT firmada (10 min) con Content-Type fijado. Tras subir, el panel registra la fila en wallpaper_archivos.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { firmarUrl } from '../_shared/r2.ts';
-import { claveSubida } from '../_shared/acceso.ts';
+import { bucketDe, claveSubida, urlPublica } from '../_shared/acceso.ts';
 import { CORS, json, r2Config } from '../_shared/http.ts';
 
 Deno.serve(async (req) => {
@@ -24,11 +24,18 @@ Deno.serve(async (req) => {
     catch (e) { return json({ error: (e as Error).message }, 400); }
 
     const r2 = r2Config();
+    const destino = bucketDe(b.tipo);
+    const bucket = destino === 'privado' ? r2.bucket : r2.bucketPublico;
+    if (!bucket || (destino === 'publico' && !r2.urlPublicaBase)) return json({ error: 'bucket público sin configurar' }, 500);
     const url = await firmarUrl({
-      metodo: 'PUT', host: r2.host, ruta: `/${r2.bucket}/${clave}`, accessKeyId: r2.accessKeyId, secretAccessKey: r2.secretAccessKey,
+      metodo: 'PUT', host: r2.host, ruta: `/${bucket}/${clave}`, accessKeyId: r2.accessKeyId, secretAccessKey: r2.secretAccessKey,
       caducaSeg: 600, cabecerasFirmadas: { 'content-type': b.mime },
     });
-    return json({ url, clave, cabeceras: { 'Content-Type': b.mime }, caduca_en_s: 600 });
+    return json({
+      url, clave, bucket, cabeceras: { 'Content-Type': b.mime }, caduca_en_s: 600,
+      // Para imágenes: la URL definitiva que el panel guarda en wallpapers.url_thumbnail / url_poster / url_preview
+      url_publica: destino === 'publico' ? urlPublica(r2.urlPublicaBase!, clave) : null,
+    });
   } catch (e) {
     console.error('admin-subida', e instanceof Error ? e.message : 'error');
     return json({ error: 'error interno' }, 500);

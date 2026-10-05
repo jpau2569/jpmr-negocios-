@@ -29,8 +29,8 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v4
-      - name: Tests de rendimiento (JVM puro)
+      - name: Tests de lógica (JVM puro: rendimiento + catálogo/red/descargas)
         working-directory: ilusion-pantalla/android
-        run: gradle :core:rendimiento:test --no-daemon
+        run: gradle :core:rendimiento:test :core:catalogo:test --no-daemon
   # Compilar :app y :core:wallpaper exige Android SDK: se añade (assembleDebug + lint) en cuanto
   # la primera build local en Android Studio confirme las versiones de libs.versions.toml.

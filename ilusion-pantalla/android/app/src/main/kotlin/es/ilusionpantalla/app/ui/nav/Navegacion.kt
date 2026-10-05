@@ -9,7 +9,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.*
+import androidx.navigation.navArgument
+import es.ilusionpantalla.app.CatalogoViewModel
+import es.ilusionpantalla.app.ui.pantallas.*
 
 enum class Destino(val ruta: String, val titulo: String, val icono: ImageVector, val proxima: Boolean = false) {
     INICIO("inicio", "Inicio", Icons.Filled.Home),
@@ -22,6 +27,7 @@ enum class Destino(val ruta: String, val titulo: String, val icono: ImageVector,
 @Composable
 fun Navegacion() {
     val nav = rememberNavController()
+    val vm: CatalogoViewModel = viewModel()   // una sola instancia compartida: catálogo, filtros y favoritos
     val actual = nav.currentBackStackEntryAsState().value?.destination?.route
     Scaffold(
         bottomBar = {
@@ -38,7 +44,14 @@ fun Navegacion() {
         },
     ) { padding ->
         NavHost(nav, startDestination = Destino.INICIO.ruta, modifier = Modifier.padding(padding)) {
-            Destino.entries.forEach { d -> composable(d.ruta) { Marcador(d) } }
+            composable(Destino.INICIO.ruta) { PantallaInicio(vm) { nav.navigate("detalle/$it") } }
+            composable(Destino.EXPLORAR.ruta) { PantallaExplorar(vm) { nav.navigate("detalle/$it") } }
+            composable(Destino.CREAR.ruta) { Marcador(Destino.CREAR) }
+            composable(Destino.FAVORITOS.ruta) { PantallaFavoritos(vm) { nav.navigate("detalle/$it") } }
+            composable(Destino.PERFIL.ruta) { PantallaPerfil() }
+            composable("detalle/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { e ->
+                PantallaDetalle(e.arguments?.getString("id").orEmpty(), vm, atras = { nav.popBackStack() }, abrir = { nav.navigate("detalle/$it") })
+            }
         }
     }
 }

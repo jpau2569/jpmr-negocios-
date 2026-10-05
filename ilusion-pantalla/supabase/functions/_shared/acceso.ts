@@ -35,3 +35,15 @@ export function claveSubida(p: { slug: string; tipo: 'video' | 'preview' | 'thum
   }
   return `imagenes/${p.slug}/${p.tipo}.${ext}`;
 }
+
+/** Los vídeos van al bucket PRIVADO; miniaturas/posters/previews al bucket PÚBLICO de imágenes. */
+export function bucketDe(tipo: 'video' | 'preview' | 'thumb' | 'poster'): 'privado' | 'publico' {
+  return tipo === 'video' ? 'privado' : 'publico';
+}
+
+/** URL pública estable de una imagen (dominio propio con caché de Cloudflare). Sin barras dobles. */
+export function urlPublica(base: string, clave: string): string {
+  if (!/^https:\/\/[a-z0-9.-]+(\/[a-z0-9._-]*)*$/i.test(base)) throw new Error('R2_PUBLIC_BASE_URL debe ser https');
+  if (!clave.startsWith('imagenes/')) throw new Error('solo las imágenes son públicas');
+  return base.replace(/\/+$/, '') + '/' + clave;
+}

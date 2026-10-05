@@ -1,5 +1,5 @@
 import { firmarUrl } from '../functions/_shared/r2.ts';
-import { puedeDescargar, elegirArchivo, claveSubida } from '../functions/_shared/acceso.ts';
+import { puedeDescargar, elegirArchivo, claveSubida, bucketDe, urlPublica } from '../functions/_shared/acceso.ts';
 import assert from 'node:assert/strict';
 
 // 1) Vector OFICIAL de la documentación de AWS S3 (presigned GET) → valida el algoritmo entero.
@@ -44,4 +44,10 @@ for (const mal of [
   { slug: 'ok', tipo: 'video', calidad: 'q720', mime: 'image/png', bytes: 1 },
   { slug: 'ok', tipo: 'thumb', mime: 'image/png', bytes: 0 },
 ] as any[]) assert.throws(() => claveSubida(mal), undefined, JSON.stringify(mal));
+// 5) Bucket público solo para imágenes
+assert.equal(bucketDe('video'), 'privado');
+for (const t of ['thumb', 'poster', 'preview'] as const) assert.equal(bucketDe(t), 'publico');
+assert.equal(urlPublica('https://img.ilusionpantalla.app/', 'imagenes/bosque-1/thumb.webp'), 'https://img.ilusionpantalla.app/imagenes/bosque-1/thumb.webp');
+assert.throws(() => urlPublica('http://img.x.app', 'imagenes/a/b.webp'), undefined, 'http rechazado');
+assert.throws(() => urlPublica('https://img.x.app', 'videos/a/q720.mp4'), undefined, 'un vídeo nunca es público');
 console.log('✓ r2 + acceso: todo OK');

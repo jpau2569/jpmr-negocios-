@@ -8,7 +8,7 @@ dependencyResolutionManagement {
 rootProject.name = "ilusion-pantalla"
 
 // Lógica pura (JVM): se compila y testea en cualquier máquina, también en CI sin Android SDK.
-include(":core:rendimiento")
+include(":core:rendimiento", ":core:catalogo")
 
 // Módulos Android: solo si hay SDK (ANDROID_HOME o local.properties con sdk.dir).
 val hayAndroidSdk = System.getenv("ANDROID_HOME") != null || System.getenv("ANDROID_SDK_ROOT") != null || file("local.properties").exists()

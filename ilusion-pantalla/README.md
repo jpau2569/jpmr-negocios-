@@ -6,6 +6,7 @@ Plataforma de wallpapers animados. V1 = Android (vídeo en bucle, freemium). Ver
 ilusion-pantalla/
 ├─ android/                  Gradle multi-módulo
 │  ├─ core/rendimiento/      Lógica pura (JVM): pausas, FPS, calidad adaptativa, selección de archivo  ✅ testeada
+│  ├─ core/catalogo/         Cliente Supabase, filtros/búsqueda offline, secciones de Inicio, descargas reanudables, caché ✅ testeada
 │  ├─ core/wallpaper/        WallpaperService + Media3                                                  ⚠ sin compilar
 │  └─ app/                   Compose, tema, navegación, intent de "Aplicar"                             ⚠ sin compilar
 ├─ supabase/
@@ -28,7 +29,7 @@ ilusion-pantalla/
 | Validar catálogo | `node ilusion-pantalla/content/validar-catalogo.mjs` |
 | Regenerar seed | `node ilusion-pantalla/content/generar-seed.mjs` |
 | Tokens de diseño | `node ilusion-pantalla/design/verificar-tokens.mjs` |
-| Tests de rendimiento (JDK 17+) | `cd ilusion-pantalla/android && gradle :core:rendimiento:test` |
+| Tests de rendimiento (JDK 17+) | `cd ilusion-pantalla/android && gradle :core:rendimiento:test :core:catalogo:test` |
 | App Android | Abrir `ilusion-pantalla/android` en Android Studio (genera `local.properties` con el SDK) |
 
 ## Puesta en marcha de Supabase
@@ -36,3 +37,11 @@ ilusion-pantalla/
 1. Crear proyecto Supabase (región UE). 2. `supabase db push` (o pegar las 3 migraciones en el SQL Editor, en orden). 3. Pegar `seed.sql`. 4. Variables (`SUPABASE_URL`, `SUPABASE_ANON_KEY` en la app; `SERVICE_ROLE` **solo** en Edge Functions, nunca en el cliente).
 
 Los wallpapers del seed entran como **borrador**: se publican desde el panel cuando el vídeo real está subido.
+
+## Configurar la app contra tu Supabase
+En `android/local.properties` (no versionado):
+```
+SUPABASE_URL=https://TU-PROYECTO.supabase.co
+SUPABASE_ANON_KEY=eyJ...   # la clave ANÓNIMA (pública). Nunca la service_role.
+```
+Sin esto la app muestra "Falta configurar el servidor" en vez de fallar.
