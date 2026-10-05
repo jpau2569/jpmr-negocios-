@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.software.live_wallpaper" android:required="true" />
+    <application>
+        <service
+            android:name=".VideoWallpaperService"
+            android:exported="true"
+            android:label="@string/wallpaper_nombre"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter><action android:name="android.service.wallpaper.WallpaperService" /></intent-filter>
+            <meta-data android:name="android.service.wallpaper" android:resource="@xml/wallpaper_info" />
+        </service>
+    </application>
+</manifest>
