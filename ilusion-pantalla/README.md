@@ -10,6 +10,8 @@ ilusion-pantalla/
 │  └─ app/                   Compose, tema, navegación, intent de "Aplicar"                             ⚠ sin compilar
 ├─ supabase/
 │  ├─ migrations/            0001 núcleo · 0002 Pro · 0003 IA + marketplace (todo con RLS)
+│  ├─ functions/             wallpaper-url (descarga firmada) · admin-subida (subida firmada) · _shared (SigV4, reglas)
+│  ├─ R2.md                  Puesta en marcha de Cloudflare R2
 │  ├─ seed.sql               Generado desde content/
 │  └─ tests/                 run.sh levanta un Postgres temporal y prueba migraciones + RLS
 ├─ content/                  catalogo-inicial.json (40) · validar-catalogo.mjs · generar-seed.mjs
@@ -22,6 +24,7 @@ ilusion-pantalla/
 | Qué | Comando |
 |---|---|
 | Probar BD (necesita PostgreSQL ≥ 14 instalado) | `bash ilusion-pantalla/supabase/tests/run.sh` |
+| Firma R2 + reglas de acceso | `node ilusion-pantalla/supabase/tests/r2.test.ts` |
 | Validar catálogo | `node ilusion-pantalla/content/validar-catalogo.mjs` |
 | Regenerar seed | `node ilusion-pantalla/content/generar-seed.mjs` |
 | Tokens de diseño | `node ilusion-pantalla/design/verificar-tokens.mjs` |

@@ -16,6 +16,8 @@ jobs:
           git diff --exit-code ilusion-pantalla/supabase/seed.sql
       - name: Tokens de diseño
         run: node ilusion-pantalla/design/verificar-tokens.mjs
+      - name: Firma R2 (vector AWS) y reglas de acceso
+        run: node ilusion-pantalla/supabase/tests/r2.test.ts
       - name: Migraciones + RLS (Postgres temporal)
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql >/dev/null
