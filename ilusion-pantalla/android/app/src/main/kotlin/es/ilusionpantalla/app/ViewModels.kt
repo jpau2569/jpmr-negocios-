@@ -3,6 +3,7 @@ package es.ilusionpantalla.app
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import es.ilusionpantalla.analitica.*
 import es.ilusionpantalla.catalogo.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,7 +42,12 @@ class CatalogoViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
     fun filtrar(f: Filtros) { _filtros.value = f }
-    fun alternarFavorito(slug: String) { c.favoritos.alternar(slug); _favoritos.value = c.favoritos.todos() }
+    fun alternarFavorito(slug: String) {
+        val activo = c.favoritos.alternar(slug); _favoritos.value = c.favoritos.todos()
+        c.evento(Evento.FavoritoAlternado(slug, activo))
+    }
+    fun registrarBusqueda(resultados: Int, conFiltros: Boolean) = c.evento(Evento.Busqueda(resultados, conFiltros))
+    fun registrarVista(slug: String, origen: Origen) = c.evento(Evento.WallpaperVisto(slug, origen))
 }
 
 sealed interface EstadoAplicar {
@@ -67,24 +73,31 @@ class DetalleViewModel(app: Application) : AndroidViewModel(app) {
         }
         _estado.value = EstadoAplicar.Descargando(null)
         viewModelScope.launch {
+            val t0 = System.currentTimeMillis()
             val ajustes = c.config.ajustes
             val fps = minOf(ajustes.perfil.fpsMax, ajustes.fpsLimite ?: Int.MAX_VALUE)
             _estado.value = withContext(Dispatchers.IO) {
                 try {
-                    when (val r = c.cliente.pedirUrl(w.id, Contenedor.calidadPara(ajustes.perfil), c.hevcPorHardware, fps, tokenUsuario = null)) {
-                        RespuestaUrl.PremiumRequerido, RespuestaUrl.SesionNoValida -> EstadoAplicar.PremiumRequerido
-                        RespuestaUrl.NoEncontrado -> EstadoAplicar.Error("Este fondo ya no está disponible.")
-                        is RespuestaUrl.Fallo -> EstadoAplicar.Error("No se pudo preparar la descarga (${r.mensaje}). Inténtalo de nuevo.")
+                    val pedida = Contenedor.calidadPara(ajustes.perfil)
+                    val calidadEv = CalidadEv.entries.first { it.codigo == pedida.codigo }
+                    c.evento(Evento.DescargaIniciada(w.slug, calidadEv))
+                    when (val r = c.cliente.pedirUrl(w.id, pedida, c.hevcPorHardware, fps, tokenUsuario = null)) {
+                        RespuestaUrl.PremiumRequerido, RespuestaUrl.SesionNoValida -> { c.evento(Evento.DescargaFallida(w.slug, MotivoDescarga.PREMIUM)); EstadoAplicar.PremiumRequerido }
+                        RespuestaUrl.NoEncontrado -> { c.evento(Evento.DescargaFallida(w.slug, MotivoDescarga.OTRO)); EstadoAplicar.Error("Este fondo ya no está disponible.") }
+                        is RespuestaUrl.Fallo -> { c.evento(Evento.DescargaFallida(w.slug, MotivoDescarga.RED)); EstadoAplicar.Error("No se pudo preparar la descarga (${r.mensaje}). Inténtalo de nuevo.") }
                         is RespuestaUrl.Lista -> {
                             val archivo = c.descargador.descargar(r.url, "${w.slug}_${r.calidad}.mp4", r.tamanoBytes, cancelada = { cancelada },
                                 progreso = { h, t -> if (t != null) _estado.value = EstadoAplicar.Descargando(h.toFloat() / t) })
                             c.config.archivo = archivo
                             c.limpiarCache(1_024L * 1024 * 1024)
+                            val real = CalidadEv.entries.firstOrNull { it.codigo == r.calidad } ?: calidadEv
+                            c.evento(Evento.DescargaCompletada(w.slug, real, System.currentTimeMillis() - t0))
+                            c.evento(Evento.WallpaperAplicado(w.slug))          // se abre la confirmación; «activado» se confirma al volver
                             EstadoAplicar.ListoParaConfirmar
                         }
                     }
-                } catch (e: DescargaCancelada) { EstadoAplicar.Reposo }
-                catch (e: IOException) { EstadoAplicar.Error("Se cortó la descarga. Al reintentar continuará donde se quedó.") }
+                } catch (e: DescargaCancelada) { c.evento(Evento.DescargaFallida(w.slug, MotivoDescarga.CANCELADA)); EstadoAplicar.Reposo }
+                catch (e: IOException) { c.evento(Evento.DescargaFallida(w.slug, MotivoDescarga.RED)); EstadoAplicar.Error("Se cortó la descarga. Al reintentar continuará donde se quedó.") }
             }
         }
     }

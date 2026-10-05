@@ -50,7 +50,7 @@ Ilusión Pantalla empieza como una app Android de **wallpapers de vídeo en bucl
 |---|---|---|
 | 0 | Descubrimiento (este documento) | Decisiones y riesgos acordados |
 | **1 (base entregada)** | Monorepo, esquema BD + RLS + seed, catálogo de 40, tokens, módulo de rendimiento, esqueleto Android, CI | Migraciones y 17 tests de lógica pasan; falta compilar Android en Android Studio |
-| **2 (en curso)** | Catálogo, búsqueda, detalle, favoritos, descargas, perfil, offline ✅ lógica · pantallas ⚠ sin compilar · analítica ⏳ pendiente | App navegable contra Supabase real |
+| **2 (en curso)** | Catálogo, búsqueda, detalle, favoritos, descargas, perfil, offline ✅ lógica · pantallas ⚠ sin compilar · analítica con consentimiento ✅ lógica · UI ⚠ sin compilar | App navegable contra Supabase real |
 | 3 | Motor de wallpaper completo + pruebas en dispositivos | Aplicar, pausar, sobrevivir a reinicio en 5+ móviles |
 | 4 | Billing + paywall + Edge Functions + panel Next.js | Primera suscripción verificada en pruebas internas de Play |
 | 5 | Preparación Pro/IA: endpoints, feature flags, panel oculto | Sin activar al público |
@@ -100,7 +100,7 @@ Android Studio + JDK 17, Gradle 8.14, Supabase CLI, Cloudflare R2, Play Console,
 
 ## 8. Qué está verificado y qué no (esta sesión)
 
-**Verificado ejecutando**: 3 migraciones aplicadas en Postgres 16 + seed (12 categorías, 40 wallpapers); 9 grupos de pruebas de seguridad RLS (no se puede uno auto-dar premium/admin, no hay fuga entre empresas, premium no legible, créditos ajenos protegidos); catálogo con 40 wallpapers validado por script; coherencia y contraste WCAG de los tokens; **37 tests** en JVM: política de rendimiento (17) y catálogo, red con cortes y reanudación de descargas, caché y modo sin conexión (20) contra un servidor HTTP real.
+**Verificado ejecutando**: 3 migraciones aplicadas en Postgres 16 + seed (12 categorías, 40 wallpapers); 9 grupos de pruebas de seguridad RLS (no se puede uno auto-dar premium/admin, no hay fuga entre empresas, premium no legible, créditos ajenos protegidos); catálogo con 40 wallpapers validado por script; coherencia y contraste WCAG de los tokens; **64 tests** en JVM: rendimiento (17), catálogo/red/descargas/caché (20) y analítica con consentimiento (27), contra servidores HTTP reales; más validación estricta de eventos en Node y 20 comprobaciones SQL de consentimiento, borrado, retención y métricas.
 
 **Escrito pero NO compilado** (no hay Android SDK en el entorno): `:core:wallpaper`, `:app` (incluidas las pantallas de la Fase 2) y `libs.versions.toml` (versiones sin contrastar). Primer paso del siguiente bloque: abrir `android/` en Android Studio, sincronizar y corregir lo que aparezca.
 

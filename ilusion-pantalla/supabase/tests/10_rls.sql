@@ -30,14 +30,17 @@ do $$ begin
   assert (select count(*) from feature_flags where clave='pro.inmobiliarias' and activo) = 0, 'pro desactivado';
 end $$; rollback;
 
--- 2. Anónimo no puede escribir catálogo ni leer analítica
+-- 2. Anónimo no puede escribir catálogo, ni leer ni ESCRIBIR analítica/consentimientos (todo va por Edge Function)
 begin; set local role anon;
 do $$ begin
   begin insert into wallpapers (slug,titulo) values ('hack','Hack'); assert false,'anon insertó wallpaper';
   exception when insufficient_privilege then null; end;
   begin perform count(*) from eventos_analitica; assert false,'anon leyó analítica';
   exception when insufficient_privilege then null; end;
-  insert into eventos_analitica (evento,propiedades_evento) values ('app_abierta','{}');   -- sí puede insertar
+  begin insert into eventos_analitica (evento,propiedades_evento) values ('app_abierta','{}'); assert false,'anon escribió evento directo';
+  exception when insufficient_privilege then null; end;
+  begin insert into consentimientos (instalacion_id,finalidad,concedido,version_texto) values (gen_random_uuid(),'analitica',true,'x'); assert false,'anon escribió consentimiento';
+  exception when insufficient_privilege then null; end;
 end $$; rollback;
 
 -- 3. Usuario normal: no se auto-promociona (plan/estado/rol) ni se da premium

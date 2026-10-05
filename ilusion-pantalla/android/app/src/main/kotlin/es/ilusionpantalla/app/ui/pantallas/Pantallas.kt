@@ -20,8 +20,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import es.ilusionpantalla.analitica.AjusteEv
+import es.ilusionpantalla.analitica.Origen
 import es.ilusionpantalla.app.*
 import es.ilusionpantalla.catalogo.*
+import kotlinx.coroutines.delay
 import java.time.LocalDate
 
 @Composable
@@ -36,7 +39,7 @@ private fun conCatalogo(vm: CatalogoViewModel, contenido: @Composable (Catalogo,
 }
 
 @Composable
-fun PantallaInicio(vm: CatalogoViewModel, abrir: (String) -> Unit) = conCatalogo(vm) { cat, copia ->
+fun PantallaInicio(vm: CatalogoViewModel, abrir: (String, Origen) -> Unit) = conCatalogo(vm) { cat, copia ->
     LazyColumn(Modifier.fillMaxSize()) {
         if (copia) item { AvisoCopia() }
         cat.fondoDelDia(LocalDate.now())?.let { w ->
@@ -44,22 +47,27 @@ fun PantallaInicio(vm: CatalogoViewModel, abrir: (String) -> Unit) = conCatalogo
                 Column(Modifier.padding(16.dp)) {
                     Text("Fondo del día", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
-                    TarjetaWallpaper(w, { abrir(w.id) }, Modifier.fillMaxWidth(0.55f))
+                    TarjetaWallpaper(w, { abrir(w.id, Origen.INICIO) }, Modifier.fillMaxWidth(0.55f))
                 }
             }
         }
-        item { Carrusel("Populares", cat.populares()) { abrir(it.id) } }
-        item { Carrusel("Nuevos lanzamientos", cat.nuevos()) { abrir(it.id) } }
-        item { Carrusel("Selección Premium", cat.seleccionPremium()) { abrir(it.id) } }
-        item { Carrusel("Arquitectura e interiores", cat.arquitectura()) { abrir(it.id) } }
+        item { Carrusel("Populares", cat.populares()) { abrir(it.id, Origen.INICIO) } }
+        item { Carrusel("Nuevos lanzamientos", cat.nuevos()) { abrir(it.id, Origen.INICIO) } }
+        item { Carrusel("Selección Premium", cat.seleccionPremium()) { abrir(it.id, Origen.INICIO) } }
+        item { Carrusel("Arquitectura e interiores", cat.arquitectura()) { abrir(it.id, Origen.INICIO) } }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun PantallaExplorar(vm: CatalogoViewModel, abrir: (String) -> Unit) = conCatalogo(vm) { cat, copia ->
+fun PantallaExplorar(vm: CatalogoViewModel, abrir: (String, Origen) -> Unit) = conCatalogo(vm) { cat, copia ->
     val f by vm.filtros.collectAsStateWithLifecycle()
     val resultados = remember(f, cat) { cat.buscar(f) }
+    // Telemetría de búsqueda: espera 1,5 s sin cambios; envía solo nº de resultados y si había filtros (jamás el texto).
+    LaunchedEffect(f) {
+        if (f == Filtros()) return@LaunchedEffect
+        delay(1500); vm.registrarBusqueda(resultados.size, f.categorias.isNotEmpty() || f.acceso != Acceso.TODOS || f.ladoMinimo != null || f.duracionMaxS != null)
+    }
     val categorias = remember(cat) { cat.items.mapNotNull { it.categoriaSlug?.let { s -> s to (it.categoriaNombre ?: s) } }.distinct() }
     Column(Modifier.fillMaxSize()) {
         if (copia) AvisoCopia()
@@ -77,25 +85,26 @@ fun PantallaExplorar(vm: CatalogoViewModel, abrir: (String) -> Unit) = conCatalo
         }
         if (resultados.isEmpty()) EstadoMensaje("Sin resultados", "Prueba con otras palabras o quita algún filtro.", "Quitar filtros") { vm.filtrar(Filtros()) }
         else LazyVerticalGrid(GridCells.Adaptive(120.dp), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(resultados, key = { it.id }) { TarjetaWallpaper(it, { abrir(it.id) }) }
+            items(resultados, key = { it.id }) { TarjetaWallpaper(it, { abrir(it.id, Origen.EXPLORAR) }) }
         }
     }
 }
 
 @Composable
-fun PantallaFavoritos(vm: CatalogoViewModel, abrir: (String) -> Unit) = conCatalogo(vm) { cat, _ ->
+fun PantallaFavoritos(vm: CatalogoViewModel, abrir: (String, Origen) -> Unit) = conCatalogo(vm) { cat, _ ->
     val favs by vm.favoritos.collectAsStateWithLifecycle()
     val lista = remember(favs, cat) { cat.items.filter { it.slug in favs } }
     if (lista.isEmpty()) EstadoMensaje("Aún no tienes favoritos", "Toca el corazón de un fondo para guardarlo aquí.")
     else LazyVerticalGrid(GridCells.Adaptive(120.dp), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        items(lista, key = { it.id }) { TarjetaWallpaper(it, { abrir(it.id) }) }
+        items(lista, key = { it.id }) { TarjetaWallpaper(it, { abrir(it.id, Origen.FAVORITOS) }) }
     }
 }
 
 @Composable
-fun PantallaDetalle(id: String, vm: CatalogoViewModel, atras: () -> Unit, abrir: (String) -> Unit, dvm: DetalleViewModel = viewModel()) = conCatalogo(vm) { cat, _ ->
+fun PantallaDetalle(id: String, origen: Origen, vm: CatalogoViewModel, atras: () -> Unit, abrir: (String) -> Unit, dvm: DetalleViewModel = viewModel()) = conCatalogo(vm) { cat, _ ->
     val w = cat.items.firstOrNull { it.id == id }
     if (w == null) { EstadoMensaje("Fondo no disponible", "Puede que se haya retirado del catálogo.", "Volver", atras); return@conCatalogo }
+    LaunchedEffect(w.id) { vm.registrarVista(w.slug, origen) }
     val ctx = LocalContext.current
     val estado by dvm.estado.collectAsStateWithLifecycle()
     val favs by vm.favoritos.collectAsStateWithLifecycle()
@@ -151,7 +160,14 @@ private fun lanzarConfirmacion(c: Context) {
 fun PantallaPerfil() {
     val ctx = LocalContext.current; val cfg = remember { ctx.contenedor.config }
     var a by remember { mutableStateOf(cfg.ajustes) }
-    fun guardar(n: es.ilusionpantalla.rendimiento.Ajustes) { a = n; cfg.ajustes = n }
+    val analitica = ctx.contenedor
+    fun guardar(n: es.ilusionpantalla.rendimiento.Ajustes) {
+        val cambio = when {
+            n.perfil != a.perfil -> AjusteEv.PERFIL; n.fpsLimite != a.fpsLimite -> AjusteEv.FPS; n.calidadAdaptativa != a.calidadAdaptativa -> AjusteEv.ADAPTATIVA
+            n.pausarBateriaBajaPct != a.pausarBateriaBajaPct -> AjusteEv.BATERIA; n.pausarEnAhorroSistema != a.pausarEnAhorroSistema -> AjusteEv.AHORRO; else -> AjusteEv.WIFI
+        }
+        a = n; cfg.ajustes = n; analitica.evento(es.ilusionpantalla.analitica.Evento.AjusteCambiado(cambio))
+    }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("Ajustes", style = MaterialTheme.typography.headlineSmall) }
         item {
@@ -177,6 +193,7 @@ fun PantallaPerfil() {
             Slider(a.pausarBateriaBajaPct.toFloat(), { guardar(a.copy(pausarBateriaBajaPct = it.toInt())) }, valueRange = 0f..50f, steps = 9)
         }
         item { Text("Sin audio: los fondos nunca reproducen sonido.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { SeccionPrivacidad() }
     }
 }
 

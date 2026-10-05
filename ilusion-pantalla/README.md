@@ -7,12 +7,14 @@ ilusion-pantalla/
 ├─ android/                  Gradle multi-módulo
 │  ├─ core/rendimiento/      Lógica pura (JVM): pausas, FPS, calidad adaptativa, selección de archivo  ✅ testeada
 │  ├─ core/catalogo/         Cliente Supabase, filtros/búsqueda offline, secciones de Inicio, descargas reanudables, caché ✅ testeada
+│  ├─ core/analitica/        Consentimiento, cola persistente, cliente y servicio de analítica ✅ testeada
 │  ├─ core/wallpaper/        WallpaperService + Media3                                                  ⚠ sin compilar
 │  └─ app/                   Compose, tema, navegación, intent de "Aplicar"                             ⚠ sin compilar
 ├─ supabase/
 │  ├─ migrations/            0001 núcleo · 0002 Pro · 0003 IA + marketplace (todo con RLS)
 │  ├─ functions/             wallpaper-url (descarga firmada) · admin-subida (subida firmada) · _shared (SigV4, reglas)
-│  ├─ R2.md                  Puesta en marcha de Cloudflare R2
+│  ├─ R2.md
+│  ├─ (functions/analitica)  analítica con consentimiento → docs/ANALITICA.md                  Puesta en marcha de Cloudflare R2
 │  ├─ seed.sql               Generado desde content/
 │  └─ tests/                 run.sh levanta un Postgres temporal y prueba migraciones + RLS
 ├─ content/                  catalogo-inicial.json (40) · validar-catalogo.mjs · generar-seed.mjs
@@ -25,11 +27,12 @@ ilusion-pantalla/
 | Qué | Comando |
 |---|---|
 | Probar BD (necesita PostgreSQL ≥ 14 instalado) | `bash ilusion-pantalla/supabase/tests/run.sh` |
+| Validación de eventos (servidor) | `node ilusion-pantalla/supabase/tests/analitica.test.ts` |
 | Firma R2 + reglas de acceso | `node ilusion-pantalla/supabase/tests/r2.test.ts` |
 | Validar catálogo | `node ilusion-pantalla/content/validar-catalogo.mjs` |
 | Regenerar seed | `node ilusion-pantalla/content/generar-seed.mjs` |
 | Tokens de diseño | `node ilusion-pantalla/design/verificar-tokens.mjs` |
-| Tests de rendimiento (JDK 17+) | `cd ilusion-pantalla/android && gradle :core:rendimiento:test :core:catalogo:test` |
+| Tests de rendimiento (JDK 17+) | `cd ilusion-pantalla/android && gradle :core:rendimiento:test :core:catalogo:test :core:analitica:test` |
 | App Android | Abrir `ilusion-pantalla/android` en Android Studio (genera `local.properties` con el SDK) |
 
 ## Puesta en marcha de Supabase

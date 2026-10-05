@@ -23,6 +23,7 @@ dependencies {
     implementation(project(":core:rendimiento"))
     implementation(project(":core:wallpaper"))
     implementation(project(":core:catalogo"))
+    implementation(project(":core:analitica"))
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.core.ktx)

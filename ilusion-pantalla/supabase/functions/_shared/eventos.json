@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "consentimiento_version": "2026-10-v1",
+  "limites": { "eventos_por_lote": 50, "cuerpo_max_bytes": 32768, "eventos_por_dia_y_instalacion": 400, "antiguedad_max_s": 604800 },
+  "tipos": {
+    "slug":   { "tipo": "str", "max": 60, "patron": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "version": { "tipo": "str", "max": 20, "patron": "^[0-9A-Za-z.+_-]{1,20}$" },
+    "origen": { "tipo": "enum", "valores": ["inicio", "explorar", "favoritos", "relacionados"] },
+    "calidad": { "tipo": "enum", "valores": ["q720", "q1080", "q1440", "q2160"] },
+    "perfil": { "tipo": "enum", "valores": ["ahorro", "estandar", "alta", "ultra"] },
+    "motivo_descarga": { "tipo": "enum", "valores": ["red", "premium", "cancelada", "otro"] },
+    "ajuste": { "tipo": "enum", "valores": ["perfil", "fps", "adaptativa", "bateria", "ahorro", "wifi"] },
+    "ms": { "tipo": "int", "min": 0, "max": 3600000 },
+    "sdk": { "tipo": "int", "min": 21, "max": 99 },
+    "contador": { "tipo": "int", "min": 0, "max": 100000 },
+    "bool": { "tipo": "bool" }
+  },
+  "eventos": {
+    "app_abierta":          { "version_app": ["version", true], "android_sdk": ["sdk", true], "primera_vez": ["bool", true] },
+    "wallpaper_visto":      { "wallpaper_slug": ["slug", true], "origen": ["origen", true] },
+    "busqueda":             { "resultados": ["contador", true], "con_filtros": ["bool", true] },
+    "favorito_alternado":   { "wallpaper_slug": ["slug", true], "activo": ["bool", true] },
+    "descarga_iniciada":    { "wallpaper_slug": ["slug", true], "calidad": ["calidad", true] },
+    "descarga_completada":  { "wallpaper_slug": ["slug", true], "calidad": ["calidad", true], "duracion_ms": ["ms", true] },
+    "descarga_fallida":     { "wallpaper_slug": ["slug", true], "motivo": ["motivo_descarga", true] },
+    "wallpaper_aplicado":   { "wallpaper_slug": ["slug", true] },
+    "wallpaper_activado":   { "wallpaper_slug": ["slug", true], "perfil": ["perfil", true] },
+    "ajuste_cambiado":      { "ajuste": ["ajuste", true] }
+  }
+}

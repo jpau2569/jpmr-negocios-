@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.media.MediaCodecList
 import android.os.Build
+import es.ilusionpantalla.analitica.*
 import es.ilusionpantalla.catalogo.*
 import es.ilusionpantalla.rendimiento.PerfilCalidad
 import es.ilusionpantalla.wallpaper.ConfigWallpaper
@@ -18,6 +19,19 @@ class Contenedor(private val app: Application) {
     val config = ConfigWallpaper(app)
     val favoritos = Favoritos(app)
     val hevcPorHardware: Boolean = soportaHevcPorHardware()
+
+    /** Analítica: con consentimiento obligatorio. Sin él, `registrar` no hace nada. */
+    val consentimiento = GestorConsentimiento(File(app.filesDir, "analitica/consentimiento.json"), TextoLegal.VERSION)
+    val analitica = ServicioAnalitica(
+        consentimiento, ColaEventos(File(app.filesDir, "analitica/cola.json"), consentimiento),
+        ClienteAnalitica(if (configurado) BuildConfig.SUPABASE_URL else "https://sin-configurar.invalid", BuildConfig.SUPABASE_ANON_KEY),
+    )
+    /** Registrar es barato y no bloquea (solo memoria + un archivo pequeño); el envío va aparte, en [sincronizarAnalitica]. */
+    private val hiloEventos = java.util.concurrent.Executors.newSingleThreadExecutor()
+    fun evento(e: Evento) { if (configurado) hiloEventos.execute { runCatching { analitica.registrar(e) } } }
+    /** Aplica un cambio de privacidad: estado local al instante (hilo actual) y aviso al servidor en segundo plano. */
+    fun privacidad(cambio: ServicioAnalitica.() -> Unit) { analitica.cambio(); hiloEventos.execute { sincronizarAnalitica() } }
+    fun sincronizarAnalitica() { if (configurado) runCatching { analitica.sincronizar() } }
 
     /** true si la red activa es de datos móviles / de pago (o no hay red). */
     fun redMedida(): Boolean = runCatching { app.getSystemService(android.net.ConnectivityManager::class.java).isActiveNetworkMetered }.getOrDefault(true)
