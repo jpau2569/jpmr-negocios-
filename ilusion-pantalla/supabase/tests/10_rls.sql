@@ -68,9 +68,9 @@ do $$ begin
 end $$; rollback;
 
 -- 5. Suscripción verificada (service_role) → premium; vencida → no
-insert into suscripciones (usuario_id,plataforma,producto_id,estado,recibo_verificado,expiracion) values
- ('00000000-0000-0000-0000-00000000000b','google_play','mensual','activa',true, now()+interval '10 days'),
- ('00000000-0000-0000-0000-00000000000c','google_play','mensual','activa',true, now()-interval '1 day');
+insert into suscripciones (usuario_id,plataforma,producto_id,purchase_token_hash,estado,recibo_verificado,expiracion) values
+ ('00000000-0000-0000-0000-00000000000b','google_play','mensual','tb','activa',true, now()+interval '10 days'),
+ ('00000000-0000-0000-0000-00000000000c','google_play','mensual','tc','activa',true, now()-interval '1 day');
 do $$ begin
   assert tiene_premium('00000000-0000-0000-0000-00000000000b'), 'Beto premium';
   assert not tiene_premium('00000000-0000-0000-0000-00000000000c'), 'Cris vencida no premium';

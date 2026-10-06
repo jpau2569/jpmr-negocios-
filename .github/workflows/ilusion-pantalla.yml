@@ -20,6 +20,12 @@ jobs:
         run: node ilusion-pantalla/supabase/tests/r2.test.ts
       - name: Analítica (validación estricta de eventos)
         run: node ilusion-pantalla/supabase/tests/analitica.test.ts
+      - name: Premium (estados de Google Play, JWT, vinculación de cuenta)
+        run: node ilusion-pantalla/supabase/tests/play.test.ts
+      - name: Pipeline de vídeo (ffmpeg real)
+        run: |
+          sudo apt-get install -y -qq ffmpeg >/dev/null
+          node ilusion-pantalla/herramientas/video/tests/video.test.mjs
       - name: Migraciones + RLS (Postgres temporal)
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql >/dev/null

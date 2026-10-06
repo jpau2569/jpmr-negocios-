@@ -23,7 +23,10 @@ export function elegirArchivo(archivos: Archivo[], calidadMax: Calidad, hevc: bo
 export const MIME_PERMITIDOS: Record<string, string> = { 'video/mp4': 'mp4', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 export const MAX_BYTES: Record<string, number> = { 'video/mp4': 150 * 1024 * 1024, 'image/jpeg': 5 * 1024 * 1024, 'image/png': 5 * 1024 * 1024, 'image/webp': 5 * 1024 * 1024 };
 
-export function claveSubida(p: { slug: string; tipo: 'video' | 'preview' | 'thumb' | 'poster'; calidad?: string; mime: string; bytes: number }): string {
+export const CODECS = ['h264', 'hevc'] as const;
+
+/** Un vídeo por (calidad, códec): coincide con unique(wallpaper_id, calidad, codec) de wallpaper_archivos. */
+export function claveSubida(p: { slug: string; tipo: 'video' | 'preview' | 'thumb' | 'poster'; calidad?: string; codec?: string; mime: string; bytes: number }): string {
   if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(p.slug) || p.slug.length > 60) throw new Error('slug inválido');
   const ext = MIME_PERMITIDOS[p.mime];
   if (!ext) throw new Error('formato no permitido');
@@ -31,7 +34,8 @@ export function claveSubida(p: { slug: string; tipo: 'video' | 'preview' | 'thum
   if ((p.tipo === 'video') !== (p.mime === 'video/mp4')) throw new Error('tipo y formato no coinciden');
   if (p.tipo === 'video') {
     if (!CALIDADES.includes(p.calidad as Calidad)) throw new Error('calidad inválida');
-    return `videos/${p.slug}/${p.calidad}.${ext}`;
+    if (!(CODECS as readonly string[]).includes(p.codec ?? '')) throw new Error('códec inválido');
+    return `videos/${p.slug}/${p.calidad}-${p.codec}.${ext}`;
   }
   return `imagenes/${p.slug}/${p.tipo}.${ext}`;
 }

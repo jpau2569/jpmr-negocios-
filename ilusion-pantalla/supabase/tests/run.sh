@@ -13,6 +13,7 @@ $PSQL -f tests/00_stub_supabase.sql
 for f in migrations/*.sql; do echo "→ $f"; $PSQL -f "$f"; done
 echo "→ tests/10_rls.sql"; $PSQL -f tests/10_rls.sql
 echo "→ tests/20_analitica.sql"; $PSQL -f tests/20_analitica.sql
+echo "→ tests/30_premium.sql"; $PSQL -f tests/30_premium.sql
 echo "→ seed.sql"; $PSQL -f seed.sql
 $PSQL -c "do \$\$ begin
   assert (select count(*) from categorias) = 12, 'categorías del seed';

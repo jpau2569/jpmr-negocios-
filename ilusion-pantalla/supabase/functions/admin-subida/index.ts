@@ -1,5 +1,5 @@
 // POST /functions/v1/admin-subida   (solo staff: admin/editor)
-// Body: { slug, tipo: 'video'|'preview'|'thumb'|'poster', calidad?, mime, bytes }
+// Body: { slug, tipo: 'video'|'preview'|'thumb'|'poster', calidad?, codec?: 'h264'|'hevc' (obligatorio en vídeo), mime, bytes }
 // Devuelve una URL PUT firmada (10 min) con Content-Type fijado. Tras subir, el panel registra la fila en wallpaper_archivos.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { firmarUrl } from '../_shared/r2.ts';
@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
 
     const b = await req.json().catch(() => ({}));
     let clave: string;
-    try { clave = claveSubida({ slug: b.slug, tipo: b.tipo, calidad: b.calidad, mime: b.mime, bytes: Number(b.bytes) }); }
+    try { clave = claveSubida({ slug: b.slug, tipo: b.tipo, calidad: b.calidad, codec: b.codec, mime: b.mime, bytes: Number(b.bytes) }); }
     catch (e) { return json({ error: (e as Error).message }, 400); }
 
     const r2 = r2Config();

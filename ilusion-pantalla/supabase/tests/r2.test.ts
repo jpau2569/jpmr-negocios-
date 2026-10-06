@@ -33,15 +33,20 @@ assert.equal(elegirArchivo(lista, 'q2160', true, 30)!.storage_path, 'q1080-hevc'
 assert.equal(elegirArchivo([A('q2160', 'hevc')], 'q720', true), null);
 
 // 4) Validación de subidas
-assert.equal(claveSubida({ slug: 'bosque-1', tipo: 'video', calidad: 'q1080', mime: 'video/mp4', bytes: 9e6 }), 'videos/bosque-1/q1080.mp4');
+assert.equal(claveSubida({ slug: 'bosque-1', tipo: 'video', calidad: 'q1080', codec: 'h264', mime: 'video/mp4', bytes: 9e6 }), 'videos/bosque-1/q1080-h264.mp4');
+assert.notEqual(
+  claveSubida({ slug: 'a', tipo: 'video', calidad: 'q1080', codec: 'h264', mime: 'video/mp4', bytes: 1 }),
+  claveSubida({ slug: 'a', tipo: 'video', calidad: 'q1080', codec: 'hevc', mime: 'video/mp4', bytes: 1 }), 'h264 y hevc de la misma calidad NO pueden compartir clave');
 assert.equal(claveSubida({ slug: 'bosque-1', tipo: 'poster', mime: 'image/webp', bytes: 1e5 }), 'imagenes/bosque-1/poster.webp');
 for (const mal of [
-  { slug: '../etc', tipo: 'video', calidad: 'q720', mime: 'video/mp4', bytes: 1 },
-  { slug: 'ok', tipo: 'video', calidad: 'q720', mime: 'video/x-msvideo', bytes: 1 },
-  { slug: 'ok', tipo: 'video', calidad: 'q720', mime: 'video/mp4', bytes: 151 * 1024 * 1024 },
-  { slug: 'ok', tipo: 'video', calidad: 'q999', mime: 'video/mp4', bytes: 1 },
+  { slug: '../etc', tipo: 'video', calidad: 'q720', codec: 'h264', mime: 'video/mp4', bytes: 1 },
+  { slug: 'ok', tipo: 'video', calidad: 'q720', codec: 'h264', mime: 'video/x-msvideo', bytes: 1 },
+  { slug: 'ok', tipo: 'video', calidad: 'q720', mime: 'video/mp4', bytes: 1 },                    // falta códec
+  { slug: 'ok', tipo: 'video', calidad: 'q720', codec: 'vp9', mime: 'video/mp4', bytes: 1 },
+  { slug: 'ok', tipo: 'video', calidad: 'q720', codec: 'h264', mime: 'video/mp4', bytes: 151 * 1024 * 1024 },
+  { slug: 'ok', tipo: 'video', calidad: 'q999', codec: 'h264', mime: 'video/mp4', bytes: 1 },
   { slug: 'ok', tipo: 'poster', mime: 'video/mp4', bytes: 1 },
-  { slug: 'ok', tipo: 'video', calidad: 'q720', mime: 'image/png', bytes: 1 },
+  { slug: 'ok', tipo: 'video', calidad: 'q720', codec: 'h264', mime: 'image/png', bytes: 1 },
   { slug: 'ok', tipo: 'thumb', mime: 'image/png', bytes: 0 },
 ] as any[]) assert.throws(() => claveSubida(mal), undefined, JSON.stringify(mal));
 // 5) Bucket público solo para imágenes
