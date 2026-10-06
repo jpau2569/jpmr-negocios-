@@ -1,0 +1,38 @@
+# ⚠ Versiones NO verificadas contra Maven en esta sesión (sin Android SDK). Ejecutar
+#   ./gradlew dependencyUpdates  (o abrir en Android Studio) y fijar las vigentes antes de la primera build.
+[versions]
+agp = "8.7.3"
+kotlin = "2.0.21"
+composeBom = "2024.12.01"
+media3 = "1.5.1"
+activityCompose = "1.9.3"
+navigationCompose = "2.8.5"
+coreKtx = "1.15.0"
+lifecycle = "2.8.7"
+datastore = "1.1.1"
+coil = "2.7.0"
+coroutines = "1.9.0"
+billing = "7.1.1"
+
+[libraries]
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "billing" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+androidx-lifecycle-runtime = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-datastore = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-icons = { module = "androidx.compose.material:material-icons-extended" }
+compose-tooling = { module = "androidx.compose.ui:ui-tooling" }
+media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
