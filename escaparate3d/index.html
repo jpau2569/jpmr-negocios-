@@ -27,6 +27,10 @@
      ?op=venta|alquiler          abre filtrado por operación
      ?ref=PIS0160                abre con ese inmueble seleccionado
      ?2d=1                       fuerza la lista 2D (sin 3D)
+     ?ag=pau                     entrada desde la tarjeta digital de esa persona:
+                                 las visitas van a SU WhatsApp y el cliente queda
+                                 apuntado como «escaparate3d-tarjeta-pau». Solo vale
+                                 una clave de CONFIG.equipo (lista cerrada).
 
    Contacto: todo el texto real vive en el HTML (no dentro del canvas) para que
    sea accesible, indexable y clicable. El canvas es decorativo.
@@ -440,6 +444,13 @@ const CONFIG = {
     direccion: "C/ Cabo Noval, 8 Bajo 2 · 33007 Oviedo",
     horario: "L-V 10:00-14:00 y 17:00-19:00",
   },
+  // Personas con tarjeta digital. El enlace de la tarjeta lleva ?ag=<clave> y las
+  // peticiones de visita van al WhatsApp de esa persona. LISTA CERRADA a propósito:
+  // si el número viniera libre en la URL, cualquiera podría mandar un enlace con la
+  // marca de la agencia que desvíe los mensajes de los clientes a otro móvil.
+  equipo: {
+    pau: { nombre: "Pau", whatsapp: "34672775721" },
+  },
   colores: { fondo: 0x0b0f14, tarjeta: 0x18212b, acento: 0xc9a227, contra: 0x2f6bff },
   // Tarjetas que se montan en la escena 3D. El resto siguen accesibles en la lista de abajo.
   maxTarjetas3D: 26,
@@ -469,7 +480,17 @@ const RESPALDO = [
    ========================================================================== */
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
-const miles = (n) => Number(n).toLocaleString("es-ES");
+
+// Entrada desde la tarjeta digital de alguien del equipo (?ag=pau): solo se admite
+// una clave que exista en CONFIG.equipo; cualquier otra cosa se ignora.
+const AGENTE = (() => {
+  const clave = String(params.get("ag") || "").toLowerCase();
+  const persona = Object.prototype.hasOwnProperty.call(CONFIG.equipo, clave) ? CONFIG.equipo[clave] : null;
+  return persona ? { clave, ...persona } : null;
+})();
+if (AGENTE) CONFIG.contacto.whatsapp = AGENTE.whatsapp;
+
+const miles =(n) => Number(n).toLocaleString("es-ES");
 const escapa = (t) => String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;")
   .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const sinTildes = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -646,7 +667,7 @@ function registraLead(datos, lista) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      origen: "escaparate3d",
+      origen: AGENTE ? "escaparate3d-tarjeta-" + AGENTE.clave : "escaparate3d",
       nombre: datos.nombre || "",
       email: datos.email,
       telefono: datos.telefono || "",

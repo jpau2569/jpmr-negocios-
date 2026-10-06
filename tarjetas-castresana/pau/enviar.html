@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#1F2D6B">
+<title>Enviar Tarjeta Pau Rodríguez</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#F1F2F6; --surface:#FFFFFF; --sunk:#F6F7FB; --fg:#18203A; --muted:#5D6580; --line:#DDE1EC;
+  --brand:#1F2D6B; --brand-2:#2E3F96; --brand-fg:#FFFFFF; --steel:#8A8F98; --chip:#E7EBF7; --chip-on:#1F2D6B;
+  --wa:#1C9E4E; --ok:#1C7F45; --warn:#A15C00;
+  --font:'Poppins',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.5;padding:0 16px 56px}
+.top{max-width:1080px;margin:0 auto;padding-block:22px 18px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line)}
+.top .brand{display:flex;align-items:center;gap:12px;min-width:0}
+.top .name small{display:block;font-size:11px;letter-spacing:.32em;color:var(--brand-2);font-weight:400}
+.top .name b{display:block;font-size:19px;letter-spacing:.06em;line-height:1.1}
+.tag{margin-left:auto;font-size:11px;letter-spacing:.14em;font-weight:600;color:var(--muted);border:1px solid var(--line);padding:5px 10px;border-radius:999px;white-space:nowrap}
+.intro{max-width:1080px;margin:0 auto;padding-block:26px 6px}
+h1{font-size:clamp(24px,4.2vw,34px);line-height:1.15;margin:0;font-weight:700;text-wrap:balance}
+.intro p{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.grid{max-width:1080px;margin:22px auto 0;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}.side{order:-1}}
+.flow{display:flex;flex-direction:column;gap:16px;min-width:0}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.step h2{margin:0;font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px}
+.step h2 .n{width:24px;height:24px;border-radius:50%;background:var(--brand);color:var(--brand-fg);font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.fields{grid-template-columns:minmax(0,1fr)}}
+label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--muted);min-width:0}
+input,textarea{font:inherit;font-weight:400;letter-spacing:0;font-size:15px;color:var(--fg);background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;min-width:0}
+input:focus,textarea:focus{outline:2px solid var(--brand-2);outline-offset:1px;border-color:transparent}
+.note{font-size:12.5px;color:var(--muted);margin:-4px 0 0}
+.note.warn{color:var(--warn)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:14px;font-weight:500;border:1px solid transparent;background:var(--chip);color:var(--fg);padding:9px 14px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--chip-on);color:var(--brand-fg)}
+.chip:focus-visible,.btn:focus-visible{outline:3px solid var(--brand-2);outline-offset:2px}
+.subj{font-size:14px}
+textarea{min-height:300px;resize:vertical;line-height:1.55;font-size:14.5px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.toggle{flex-direction:row;align-items:center;gap:8px;font-weight:500;letter-spacing:0;font-size:13.5px;color:var(--fg);cursor:pointer}
+.toggle input{width:auto}
+.link{font:inherit;font-size:13px;background:none;border:0;color:var(--brand-2);cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px}
+.send{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.send{grid-template-columns:minmax(0,1fr)}}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;font:inherit;font-weight:600;font-size:15.5px;padding:15px 16px;border-radius:11px;border:0;cursor:pointer;text-align:center}
+.btn svg{width:20px;height:20px;flex:none}
+.b-alt{background:var(--surface);color:var(--brand-2);border:1.5px solid var(--brand-2)}
+.b-copy{background:var(--chip);color:var(--fg);font-size:13.5px;padding:10px 12px}
+.plan-b{background:var(--sunk);border:1px dashed var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.copies{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:640px){.copies{grid-template-columns:minmax(0,1fr)}}
+.status{font-size:13px;color:var(--ok);min-height:1.2em;margin:-4px 0 0}
+.side{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);display:flex;flex-direction:column;gap:12px;min-width:0}
+@media (max-width:860px){.side{position:static}}
+.facts{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;font-size:13.5px}
+.facts dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px}
+.facts dt{color:var(--muted);font-size:11px;letter-spacing:.14em;font-weight:600;padding-top:2px}
+.facts dd{margin:0;font-variant-numeric:tabular-nums}
+.small{font-size:12.5px;color:var(--muted);margin:0}
+.b-share{background:var(--brand);color:var(--brand-fg);grid-column:1/-1;font-size:16.5px;padding:17px}
+.digi{background:var(--brand);color:#fff;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.digi .k{font-size:11px;letter-spacing:.16em;color:#B9C5FF;font-weight:600}
+.digi .u{font-size:14px;overflow-wrap:anywhere}
+.digi .r{display:flex;gap:8px;flex-wrap:wrap}
+.digi a,.digi button{font:inherit;font-size:13.5px;font-weight:600;border:0;border-radius:9px;padding:9px 12px;cursor:pointer;text-decoration:none}
+.digi a{background:#fff;color:#1F2D6B}
+.digi button{background:rgba(255,255,255,.14);color:#fff}
+</style></head><body>
+<header class="top">
+  <div class="brand">
+    <svg width="38" height="40" viewBox="0 0 190 200" aria-hidden="true"><path d="M150 52 A62 62 0 1 0 150 148" fill="none" stroke="#8A8F98" stroke-width="30"/><path d="M30 18 H92 V128 Q92 186 40 186 Q14 186 4 168" fill="none" stroke="#2E3F96" stroke-width="32" stroke-linejoin="round"/></svg>
+    <div class="name"><small>ASESORÍA</small><b>CASTRESANA</b></div>
+  </div>
+  <span class="tag">USO INTERNO</span>
+</header>
+<section class="intro">
+  <h1>Enviar la tarjeta de Pau Rodríguez</h1>
+  <p>Pon el nombre del cliente, elige el motivo y pulsa <b>Enviar</b>. El mensaje lleva el enlace a la tarjeta digital de Pau.</p>
+</section>
+<div class="grid">
+  <main class="flow">
+    <section class="step">
+      <h2><span class="n">1</span>Cliente</h2>
+      <div class="fields">
+        <label for="f-name">NOMBRE<input id="f-name" placeholder="Ej.: María" autocomplete="off"></label>
+        <label for="f-email">EMAIL<input id="f-email" type="email" placeholder="cliente@correo.com" autocomplete="off"></label>
+      </div>
+      <p class="note" id="mail-note">El email solo hace falta para enviarlo por correo.</p>
+    </section>
+    <section class="step">
+      <h2><span class="n">2</span>Motivo del envío</h2>
+      <div class="chips" id="chips" role="group" aria-label="Motivo"></div>
+      <label for="f-sign" style="max-width:360px">FIRMA<input id="f-sign" placeholder="Pau Rodríguez" autocomplete="off"></label>
+    </section>
+    <section class="step">
+      <h2><span class="n">3</span>Revisa el mensaje</h2>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <label for="f-subject">ASUNTO<input id="f-subject" class="subj"></label>
+        <label for="f-body-mail">TEXTO<textarea id="f-body-mail"></textarea></label>
+        <div class="row">
+          <label class="toggle" for="f-legal"><input type="checkbox" id="f-legal" checked> Incluir aviso legal (RGPD)</label>
+          <label class="toggle" for="f-pisos"><input type="checkbox" id="f-pisos" checked> Incluir enlace a nuestros pisos (escaparate 3D)</label>
+        </div>
+      </div>
+      <div class="row"><button class="link" id="reset" type="button">Volver al texto original</button></div>
+    </section>
+    <section class="step">
+      <h2><span class="n">4</span>Enviar</h2>
+      <div class="send">
+        <button class="btn b-share" id="go-share" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+          Enviar (WhatsApp, Gmail, SMS…)
+        </button>
+        <a class="btn b-alt" id="go-app" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
+          Abrir en el correo
+        </a>
+        <a class="btn b-alt" id="go-web" href="#" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          Abrir en Gmail (ordenador)
+        </a>
+      </div>
+      <p class="status" id="status" aria-live="polite"></p>
+      <div class="plan-b">
+        <p class="small"><b>Si no se abre el correo</b>, copia cada parte y pégala en un correo nuevo:</p>
+        <div class="copies">
+          <button class="btn b-copy" data-copy="to" type="button">Copiar email del cliente</button>
+          <button class="btn b-copy" data-copy="subject" type="button">Copiar asunto</button>
+          <button class="btn b-copy" data-copy="body" type="button">Copiar texto</button>
+        </div>
+      </div>
+      <p class="small">«Enviar» abre el menú de compartir del móvil: elige WhatsApp, Gmail o la app que quieras y el contacto. En el ordenador usa «Abrir en Gmail».</p>
+    </section>
+  </main>
+  <aside class="side">
+    <div class="digi">
+      <span class="k">TARJETA DIGITAL DE PAU</span>
+      <span class="u" id="digi-url"></span>
+      <div class="r"><a id="digi-open" href="./" target="_blank" rel="noopener">Ver tarjeta</a><button type="button" id="digi-copy">Copiar enlace</button></div>
+      <span style="font-size:12.5px;color:#C9D3FF">Va incluida en cada mensaje. El cliente la abre en su móvil y puede llamar a Pau, escribir, ver la web, cómo llegar y guardarlo en sus contactos. En la tarjeta también ve nuestros pisos y puede pedir visita.</span>
+    </div>
+    <div class="facts">
+      <dl>
+        <dt>NOMBRE</dt><dd>Pau Rodríguez</dd>
+        <dt>MÓVIL</dt><dd>672 77 57 21</dd>
+        <dt>TELÉFONO</dt><dd>985 21 04 68</dd>
+        <dt>EMAIL</dt><dd>asesoriacastresana@gmail.com</dd>
+        <dt>WEB</dt><dd>asesoriacastresana.com</dd>
+        <dt>HORARIO</dt><dd>L–V · 10:00–14:00 y 17:00–19:00</dd>
+      </dl>
+    </div>
+  </aside>
+</div>
+<script>
+(function(){
+var T={
+  general:{label:'Presentación',subject:'Asesoría Castresana · Nuestros datos de contacto',
+    mail:'Le enviamos nuestros datos de contacto para que nos tenga siempre a mano. En Asesoría Castresana le acompañamos en asuntos legales, fiscales, laborales, contables, de administración de fincas y gestión inmobiliaria.'},
+  reunion:{label:'Tras una reunión',subject:'Gracias por su visita · Asesoría Castresana',
+    mail:'Muchas gracias por el tiempo que nos ha dedicado. Como le comentamos, le dejamos nuestros datos de contacto para que pueda escribirnos o llamarnos con cualquier duda que le surja.'},
+  inmueble:{label:'Venta o alquiler de inmueble',subject:'Su inmueble · Asesoría Castresana',
+    mail:'Le hacemos llegar nuestros datos de contacto para todo lo relacionado con la venta o el alquiler de su inmueble. Nos encargamos de la gestión completa: valoración, comercialización, documentación y firma.'},
+  asesoria:{label:'Fiscal, laboral y contable',subject:'Asesoramiento fiscal, laboral y contable · Asesoría Castresana',
+    mail:'Le enviamos nuestros datos de contacto para sus gestiones fiscales, laborales y contables. Estaremos encantados de ayudarle con declaraciones, nóminas, contabilidad y cualquier trámite que necesite.'},
+  legal:{label:'Consulta jurídica',subject:'Su consulta · Asesoría Castresana',
+    mail:'En relación con su consulta, le facilitamos nuestros datos de contacto. Nuestro equipo de abogados queda a su disposición para estudiar su caso y orientarle sobre los siguientes pasos.'},
+  seguimiento:{label:'Seguimiento',subject:'Seguimos a su disposición · Asesoría Castresana',
+    mail:'Le escribimos para recordarle que seguimos a su disposición. Si tiene cualquier gestión pendiente o nueva consulta, puede contactarnos por el medio que le resulte más cómodo.'}
+};
+var CARD=location.origin+location.pathname.replace(/enviar(\.html)?\/?$/,'');
+var CONTACT=[
+ 'Pau Rodríguez',
+ 'Asesoría Castresana',
+ 'Abogados · Fiscal · Jurídico · Laboral · Contable · Admón. Fincas · Gestión Inmobiliaria',
+ '',
+ 'Móvil: 672 77 57 21',
+ 'Teléfono oficina: 985 21 04 68',
+ 'Email: asesoriacastresana@gmail.com',
+ 'Web: https://asesoriacastresana.com',
+ 'Tarjeta digital: '+CARD,
+ '',
+ 'Oviedo · C/ Cabo Noval, 8 - bajo · 33007',
+ 'Llanes · C/ Marqués de Canillejas, 10 - bajo · 33500',
+ 'Horario: lunes a viernes, 10:00–14:00 y 17:00–19:00'].join('\n');
+var LEGAL='AVISO DE CONFIDENCIALIDAD: este mensaje y sus anexos son confidenciales y se dirigen exclusivamente a su destinatario. Si lo ha recibido por error, le rogamos que lo comunique al remitente y lo elimine. Sus datos se tratan conforme al Reglamento (UE) 2016/679 (RGPD); puede ejercer sus derechos escribiendo a asesoriacastresana@gmail.com.';
+// Escaparate de pisos: el cliente recorre la cartera, marca los que le gustan y pide visita
+// al WhatsApp de Pau (?ag=pau). En los motivos de consulta fiscal, laboral o jurídica la
+// casilla sale desmarcada: ahí un enlace a pisos sobra.
+var PISOS='https://jpmr-negocios.vercel.app/escaparate3d/?ag=pau';
+var PISOS_TXT='Si quiere ver los pisos que tenemos ahora mismo, aquí puede recorrerlos, marcar los que le interesen y pedirnos visita en un momento:';
+var SIN_PISOS={asesoria:1,legal:1};
+var $=function(id){return document.getElementById(id)};
+var key='general', edited={mail:false,subj:false};
+try{var s=localStorage.getItem('pau-firma');if(s)$('f-sign').value=s;}catch(e){}
+var chips=$('chips');
+Object.keys(T).forEach(function(k){
+  var b=document.createElement('button');b.type='button';b.className='chip';b.textContent=T[k].label;
+  b.setAttribute('aria-pressed',k===key?'true':'false');b.dataset.k=k;
+  b.addEventListener('click',function(){key=k;[].forEach.call(chips.children,function(c){c.setAttribute('aria-pressed',c.dataset.k===k?'true':'false')});$('f-pisos').checked=!SIN_PISOS[k];edited={mail:false,subj:false};gen();});
+  chips.appendChild(b);
+});
+function hi(){var n=$('f-name').value.trim();return n?('Hola, '+n+':'):'Hola:';}
+function sign(){var f=$('f-sign').value.trim()||'Pau Rodríguez';return f+'\nAsesoría Castresana';}
+function genMail(){return hi()+'\n\n'+T[key].mail+($('f-pisos').checked?'\n\n'+PISOS_TXT+'\n'+PISOS:'')+'\n\nQuedamos a su disposición.\n\nUn cordial saludo,\n'+sign()+'\n\n——————————\n'+CONTACT+($('f-legal').checked?'\n\n'+LEGAL:'');}
+function gen(){
+  if(!edited.subj)$('f-subject').value=T[key].subject;
+  if(!edited.mail)$('f-body-mail').value=genMail();
+  links();
+}
+function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);}
+function links(){
+  var em=$('f-email').value.trim(), su=$('f-subject').value, bo=$('f-body-mail').value, note=$('mail-note');
+  if(em&&!validEmail(em)){note.textContent='Revisa el email: parece incompleto (ej.: nombre@gmail.com).';note.className='note warn';}
+  else{note.textContent=em?'El correo saldrá dirigido a '+em+'.':'El email solo hace falta para enviarlo por correo.';note.className='note';}
+  var to=(em&&validEmail(em))?em:'';
+  $('go-app').href='mailto:'+encodeURIComponent(to).replace('%40','@')+'?subject='+encodeURIComponent(su)+'&body='+encodeURIComponent(bo.replace(/\n/g,'\r\n'));
+  $('go-web').href='https://mail.google.com/mail/?view=cm&fs=1&tf=1'+(to?'&to='+encodeURIComponent(to):'')+'&su='+encodeURIComponent(su)+'&body='+encodeURIComponent(bo);
+}
+['f-name','f-sign'].forEach(function(id){$(id).addEventListener('input',function(){if(id==='f-sign'){try{localStorage.setItem('pau-firma',$('f-sign').value)}catch(e){}}gen();});});
+$('f-legal').addEventListener('change',function(){edited.mail=false;gen();});
+$('f-pisos').addEventListener('change',function(){edited.mail=false;gen();});
+$('f-email').addEventListener('input',links);
+$('f-subject').addEventListener('input',function(){edited.subj=true;links();});
+$('f-body-mail').addEventListener('input',function(){edited.mail=true;links();});
+$('reset').addEventListener('click',function(){edited={mail:false,subj:false};gen();$('status').textContent='Texto original restaurado.';});
+[].forEach.call(document.querySelectorAll('[data-copy]'),function(b){
+  b.addEventListener('click',function(){
+    var what=b.dataset.copy, st=$('status');
+    var src=what==='to'?$('f-email'):what==='subject'?$('f-subject'):$('f-body-mail');
+    var txt=src.value; var name={to:'Email del cliente',subject:'Asunto',body:'Texto'}[what];
+    if(!txt.trim()){st.textContent=what==='to'?'Primero escribe el email del cliente.':'No hay nada que copiar.';return;}
+    var fb=function(){src.focus();src.select();try{document.execCommand('copy');st.textContent=name+' copiado.';}catch(e){st.textContent='Selecciona el texto y cópialo a mano.';}};
+    try{navigator.clipboard.writeText(txt).then(function(){st.textContent=name+' copiado. Pégalo en el correo.';},fb);}catch(e){fb();}
+  });
+});
+$('go-app').addEventListener('click',function(){$('status').textContent='Si no se abre tu app de correo, usa los botones de copiar de abajo.';});
+$('go-web').addEventListener('click',function(){$('status').textContent='Gmail se abre en otra pestaña. Comprueba arriba el remitente.';});
+$('digi-url').textContent=CARD.replace(/^https?:\/\//,'');$('digi-open').href=CARD;
+$('digi-copy').addEventListener('click',function(){var b=this;(navigator.clipboard?navigator.clipboard.writeText(CARD):Promise.reject()).then(function(){b.textContent='Enlace copiado';},function(){prompt('Copia el enlace:',CARD);});});
+$('go-share').addEventListener('click',function(){
+  var st=$('status'), body=$('f-body-mail').value;
+  if(navigator.share){navigator.share({title:$('f-subject').value,text:body}).then(function(){st.textContent='Listo.';}).catch(function(){});}
+  else{(navigator.clipboard?navigator.clipboard.writeText(body):Promise.reject()).then(function(){st.textContent='Este navegador no tiene menú de compartir: el mensaje está copiado, pégalo donde quieras.';},function(){st.textContent='Usa «Abrir en Gmail» o los botones de copiar.';});}
+});
+gen();
+})();
+</script>
+</body></html>

@@ -6,3 +6,7 @@ test/
 
 # Fotos y borradores de anuncios de clientes: material de trabajo, no debe ser público.
 fotos-listas/
+
+# Tarjetas digitales de Asesoría Castresana: se publican en su propio proyecto de
+# Vercel (asesoria-castresana-links), no aquí. Ver tarjetas-castresana/README.md.
+tarjetas-castresana/

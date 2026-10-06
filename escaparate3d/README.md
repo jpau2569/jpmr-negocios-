@@ -103,6 +103,15 @@ Forzar un origen concreto para probar: `?fuente=json`, `?fuente=api`,
 `?fuente=respaldo`. Otros parámetros: `?op=venta`, `?ref=PIS0160`, `?2d=1`,
 `?auto=1`, `?secs=6`.
 
+**Entrada desde una tarjeta digital: `?ag=pau`.** Las tarjetas digitales de la
+agencia (`tarjetas-castresana/`) enlazan aquí con la clave de la persona. Esa clave
+tiene que existir en `CONFIG.equipo` (lista cerrada, a propósito: un número libre en
+la URL permitiría mandar un enlace con la marca de la agencia que desviara las
+visitas de los clientes a otro móvil). Con una clave válida, el botón de WhatsApp y
+la petición de visita van al móvil de esa persona y el cliente queda registrado con
+origen `escaparate3d-tarjeta-<clave>`. Una clave desconocida se ignora. Para dar de
+alta a otra persona basta una línea en `CONFIG.equipo`.
+
 Las fotos de cada ficha las sirve `api/fotos.js` con el lector `lib/fotos-ficha.js`,
 que tiene sus propios tests: `npm test`.
 
