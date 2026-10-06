@@ -8,6 +8,7 @@ ilusion-pantalla/
 │  ├─ core/rendimiento/      Lógica pura (JVM): pausas, FPS, calidad adaptativa, selección de archivo  ✅ testeada
 │  ├─ core/catalogo/         Cliente Supabase, filtros/búsqueda offline, secciones de Inicio, descargas reanudables, caché ✅ testeada
 │  ├─ core/analitica/        Consentimiento, cola persistente, cliente y servicio de analítica ✅ testeada
+│  ├─ core/cuenta/           Auth (Supabase), sesión, compras Play, exportar/borrar datos ✅ testeada
 │  ├─ core/wallpaper/        WallpaperService + Media3                                                  ⚠ sin compilar
 │  └─ app/                   Compose, tema, navegación, intent de "Aplicar"                             ⚠ sin compilar
 ├─ supabase/
@@ -17,10 +18,15 @@ ilusion-pantalla/
 │  ├─ (functions/analitica)  analítica con consentimiento → docs/ANALITICA.md                  Puesta en marcha de Cloudflare R2
 │  ├─ seed.sql               Generado desde content/
 │  └─ tests/                 run.sh levanta un Postgres temporal y prueba migraciones + RLS
+├─ admin/                    Panel Next.js (catálogo, subidas a R2, métricas, reportes, flags) ✅ tipos/lint/tests/build
+├─ herramientas/video/       Pipeline ffmpeg: bucle perfecto, variantes, verificación ✅ testeado con vídeo real
 ├─ content/                  catalogo-inicial.json (40) · validar-catalogo.mjs · generar-seed.mjs
 ├─ design/                   tokens.json + verificar-tokens.mjs (coherencia con el tema y contraste WCAG)
 └─ docs/
 ```
+
+## Verificar todo de una vez
+`bash ilusion-pantalla/verificar-todo.sh`
 
 ## Comandos
 

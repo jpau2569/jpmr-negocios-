@@ -11,6 +11,9 @@ enum class PerfilEv(val codigo: String) { AHORRO("ahorro"), ESTANDAR("estandar")
 enum class MotivoDescarga(val codigo: String) { RED("red"), PREMIUM("premium"), CANCELADA("cancelada"), OTRO("otro") }
 enum class AjusteEv(val codigo: String) { PERFIL("perfil"), FPS("fps"), ADAPTATIVA("adaptativa"), BATERIA("bateria"), AHORRO("ahorro"), WIFI("wifi") }
 
+enum class PlanEv(val codigo: String) { MENSUAL("mensual"), ANUAL("anual") }
+enum class MotivoPaywall(val codigo: String) { WALLPAPER_PREMIUM("wallpaper_premium"), PERFIL("perfil") }
+
 private val SLUG = Regex("^[a-z0-9]+(-[a-z0-9]+)*$")
 private val VERSION = Regex("^[0-9A-Za-z.+_-]{1,20}$")
 private fun slug(s: String) = s.also { require(it.length <= 60 && SLUG.matches(it)) { "slug inválido" } }
@@ -30,4 +33,8 @@ sealed class Evento(val nombre: String, val propiedades: Map<String, Any>) {
     class WallpaperAplicado(s: String) : Evento("wallpaper_aplicado", mapOf("wallpaper_slug" to slug(s)))
     class WallpaperActivado(s: String, perfil: PerfilEv) : Evento("wallpaper_activado", mapOf("wallpaper_slug" to slug(s), "perfil" to perfil.codigo))
     class AjusteCambiado(ajuste: AjusteEv) : Evento("ajuste_cambiado", mapOf("ajuste" to ajuste.codigo))
+    class PaywallVisto(motivo: MotivoPaywall) : Evento("paywall_visto", mapOf("motivo" to motivo.codigo))
+    class CompraIniciada(plan: PlanEv) : Evento("compra_iniciada", mapOf("plan" to plan.codigo))
+    /** Solo cuando el servidor ha verificado la compra (no cuando Play dice «ok» en el móvil). */
+    class CompraCompletada(plan: PlanEv) : Evento("compra_completada", mapOf("plan" to plan.codigo))
 }

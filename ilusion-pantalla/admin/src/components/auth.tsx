@@ -10,14 +10,14 @@ export const useAuth = () => useContext(AuthCtx);
 
 /** Puerta de UX: la seguridad real es la RLS. Si no es admin/editor → «Sin permiso» y se cierra sesión. */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [estado, setEstado] = useState<Estado>("cargando");
+  const [estado, setEstado] = useState<Estado>(configurado() ? "cargando" : "sin-config");
   const [rol, setRol] = useState<Rol | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const bloqueado = useRef(false);
 
   useEffect(() => {
-    if (!configurado()) { setEstado("sin-config"); return; }
+    if (!configurado()) return;
     const sb = supabase();
     let vivo = true;
     async function evaluar(uid: string | null, correo: string | null) {

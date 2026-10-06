@@ -101,7 +101,7 @@ fun PantallaFavoritos(vm: CatalogoViewModel, abrir: (String, Origen) -> Unit) = 
 }
 
 @Composable
-fun PantallaDetalle(id: String, origen: Origen, vm: CatalogoViewModel, atras: () -> Unit, abrir: (String) -> Unit, dvm: DetalleViewModel = viewModel()) = conCatalogo(vm) { cat, _ ->
+fun PantallaDetalle(id: String, origen: Origen, vm: CatalogoViewModel, atras: () -> Unit, irPaywall: () -> Unit = {}, abrir: (String) -> Unit, dvm: DetalleViewModel = viewModel()) = conCatalogo(vm) { cat, _ ->
     val w = cat.items.firstOrNull { it.id == id }
     if (w == null) { EstadoMensaje("Fondo no disponible", "Puede que se haya retirado del catálogo.", "Volver", atras); return@conCatalogo }
     LaunchedEffect(w.id) { vm.registrarVista(w.slug, origen) }
@@ -142,7 +142,10 @@ fun PantallaDetalle(id: String, origen: Origen, vm: CatalogoViewModel, atras: ()
                 else -> Button({ dvm.aplicar(w) }, Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text("Aplicar en mi pantalla") }
             }
             when (val e = estado) {
-                EstadoAplicar.PremiumRequerido -> Text("Este fondo es Premium. La suscripción llegará muy pronto.", color = MaterialTheme.colorScheme.tertiary)
+                EstadoAplicar.PremiumRequerido -> Column {
+                    Text("Este fondo es Premium.", color = MaterialTheme.colorScheme.tertiary)
+                    OutlinedButton(irPaywall, Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Ver Premium") }
+                }
                 is EstadoAplicar.Error -> Text(e.mensaje, color = MaterialTheme.colorScheme.error)
                 else -> {}
             }
@@ -157,7 +160,7 @@ private fun lanzarConfirmacion(c: Context) {
 }
 
 @Composable
-fun PantallaPerfil() {
+fun PantallaPerfil(irCuenta: () -> Unit = {}, irPaywall: () -> Unit = {}) {
     val ctx = LocalContext.current; val cfg = remember { ctx.contenedor.config }
     var a by remember { mutableStateOf(cfg.ajustes) }
     val analitica = ctx.contenedor
@@ -169,7 +172,9 @@ fun PantallaPerfil() {
         a = n; cfg.ajustes = n; analitica.evento(es.ilusionpantalla.analitica.Evento.AjusteCambiado(cambio))
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { Text("Ajustes", style = MaterialTheme.typography.headlineSmall) }
+        item { Text("Perfil", style = MaterialTheme.typography.headlineSmall) }
+        item { SeccionCuenta(irCuenta, irPaywall) }
+        item { Text("Ajustes", style = MaterialTheme.typography.titleLarge) }
         item {
             Text("Calidad", style = MaterialTheme.typography.titleMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

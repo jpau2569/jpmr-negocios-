@@ -10,7 +10,7 @@
 ## Qué se mide (lista cerrada)
 Fuente de verdad: [`supabase/functions/_shared/eventos.json`](../supabase/functions/_shared/eventos.json). Un test en Node (servidor) y otro en Kotlin (app) fallan si se desincronizan; añadir un evento exige tocar el JSON, la clase en `Eventos.kt` y subir `consentimiento_version` si cambia lo que se mide.
 
-`app_abierta · wallpaper_visto · busqueda · favorito_alternado · descarga_iniciada · descarga_completada · descarga_fallida · wallpaper_aplicado · wallpaper_activado · ajuste_cambiado`
+`app_abierta · wallpaper_visto · busqueda · favorito_alternado · descarga_iniciada · descarga_completada · descarga_fallida · wallpaper_aplicado · wallpaper_activado · ajuste_cambiado · paywall_visto · compra_iniciada · compra_completada`
 
 ## Flujo
 ```
@@ -34,7 +34,6 @@ Métricas para el panel (solo staff, vistas con RLS): `embudo_activacion`, `rete
 ## Qué NO está resuelto (honesto)
 - **Reenvío en segundo plano**: se sincroniza al abrir y al salir de la app, no con WorkManager. Si el usuario no vuelve a abrirla, lo último queda en la cola.
 - **Tiempo de reproducción del wallpaper** (métrica pedida): requiere que el servicio de wallpaper registre sesiones; no está en esta entrega.
-- **Conversión a Premium / paywall**: llegan con Billing (Fase 4).
 - **Spam de instalaciones falsas**: quien fabrique UUID puede inflar métricas (el límite diario es por instalación). Mitigación recomendada: regla de *rate limiting* por IP en Cloudflare/Supabase delante de la función. Las métricas son orientativas, no contables.
 - **Las Edge Functions no se han ejecutado** (no hay Deno aquí): se prueba la lógica compartida, no el despliegue.
 - **El texto legal es un borrador** ([PRIVACIDAD-BORRADOR.md](PRIVACIDAD-BORRADOR.md)). Lo revisa un profesional antes de publicar en Google Play (Data Safety debe coincidir con esto).

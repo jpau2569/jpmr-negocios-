@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import es.ilusionpantalla.analitica.MotivoPaywall
 import es.ilusionpantalla.analitica.Origen
 import es.ilusionpantalla.app.CatalogoViewModel
 import es.ilusionpantalla.app.ui.pantallas.*
@@ -50,13 +51,18 @@ fun Navegacion() {
             composable(Destino.EXPLORAR.ruta) { PantallaExplorar(vm, abrir) }
             composable(Destino.CREAR.ruta) { Marcador(Destino.CREAR) }
             composable(Destino.FAVORITOS.ruta) { PantallaFavoritos(vm, abrir) }
-            composable(Destino.PERFIL.ruta) { PantallaPerfil() }
+            composable(Destino.PERFIL.ruta) { PantallaPerfil(irCuenta = { nav.navigate("cuenta") }, irPaywall = { nav.navigate("paywall/perfil") }) }
+            composable("cuenta") { PantallaCuenta(alTerminar = { nav.popBackStack() }) }
+            composable("paywall/{motivo}", arguments = listOf(navArgument("motivo") { type = NavType.StringType })) { e ->
+                val motivo = MotivoPaywall.entries.firstOrNull { it.codigo == e.arguments?.getString("motivo") } ?: MotivoPaywall.PERFIL
+                PantallaPaywall(motivo, irCuenta = { nav.navigate("cuenta") }, cerrar = { nav.popBackStack() })
+            }
             composable("detalle/{id}?origen={origen}", arguments = listOf(
                 navArgument("id") { type = NavType.StringType },
                 navArgument("origen") { type = NavType.StringType; defaultValue = "inicio" },
             )) { e ->
                 val origen = Origen.entries.firstOrNull { it.codigo == e.arguments?.getString("origen") } ?: Origen.INICIO
-                PantallaDetalle(e.arguments?.getString("id").orEmpty(), origen, vm, atras = { nav.popBackStack() }, abrir = { abrir(it, Origen.RELACIONADOS) })
+                PantallaDetalle(e.arguments?.getString("id").orEmpty(), origen, vm, atras = { nav.popBackStack() }, irPaywall = { nav.navigate("paywall/wallpaper_premium") }, abrir = { abrir(it, Origen.RELACIONADOS) })
             }
         }
     }

@@ -18,6 +18,7 @@ class EsquemaTest {
         Evento.AppAbierta("0.2.0", 34, true), Evento.WallpaperVisto("bosque-niebla", Origen.INICIO), Evento.Busqueda(7, false),
         Evento.FavoritoAlternado("aurora", true), Evento.DescargaIniciada("aurora", CalidadEv.Q1080), Evento.DescargaCompletada("aurora", CalidadEv.Q1440, 1234),
         Evento.DescargaFallida("aurora", MotivoDescarga.RED), Evento.WallpaperAplicado("aurora"), Evento.WallpaperActivado("aurora", PerfilEv.ULTRA), Evento.AjusteCambiado(AjusteEv.FPS),
+        Evento.PaywallVisto(MotivoPaywall.WALLPAPER_PREMIUM), Evento.CompraIniciada(PlanEv.ANUAL), Evento.CompraCompletada(PlanEv.MENSUAL),
     )
     private val tipos = SPEC["tipos"]!!.jsonObject
     private val eventos = SPEC["eventos"]!!.jsonObject
@@ -50,6 +51,8 @@ class EsquemaTest {
         assertEquals(valores("perfil"), PerfilEv.entries.map { it.codigo }.toSet())
         assertEquals(valores("motivo_descarga"), MotivoDescarga.entries.map { it.codigo }.toSet())
         assertEquals(valores("ajuste"), AjusteEv.entries.map { it.codigo }.toSet())
+        assertEquals(valores("plan"), PlanEv.entries.map { it.codigo }.toSet())
+        assertEquals(valores("motivo_paywall"), MotivoPaywall.entries.map { it.codigo }.toSet())
     }
 
     @Test fun `no existe ningun tipo de texto libre en el esquema`() {

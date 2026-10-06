@@ -21,7 +21,6 @@ export function Shell({ children }: { children: ReactNode }) {
   const [abierto, setAbierto] = useState(false);
 
   useEffect(() => { if (estado === "anonimo" || estado === "sin-permiso") router.replace("/login"); }, [estado, router]);
-  useEffect(() => setAbierto(false), [ruta]);
 
   if (estado === "sin-config") return <main className="p-6"><p role="alert">Panel sin configurar: faltan las variables NEXT_PUBLIC_SUPABASE_*.</p></main>;
   if (estado !== "ok") return <main className="p-6 max-w-xl mx-auto"><Skeleton filas={3} /></main>;
@@ -44,7 +43,7 @@ export function Shell({ children }: { children: ReactNode }) {
               const activo = ruta === m.href || ruta.startsWith(m.href + "/");
               return (
                 <li key={m.href}>
-                  <Link href={m.href} aria-current={activo ? "page" : undefined}
+                  <Link href={m.href} onClick={() => setAbierto(false)} aria-current={activo ? "page" : undefined}
                     className={`flex items-center min-h-11 px-3 rounded-xl ${activo ? "bg-azul text-grafito font-semibold" : "text-suave hover:bg-grafito"}`}>
                     {m.texto}
                   </Link>

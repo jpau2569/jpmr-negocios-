@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export function Skeleton({ filas = 5 }: { filas?: number }) {
   return (
@@ -41,21 +41,26 @@ export function Titulo({ children, acciones }: { children: ReactNode; acciones?:
   );
 }
 
-/** Carga asíncrona con estados. `fn` debe lanzar si falla. */
+/** Carga asíncrona con estados. `fn` debe lanzar si falla. Conserva los datos anteriores mientras recarga. */
 export function useCarga<T>(fn: () => Promise<T>, deps: unknown[]) {
-  const [datos, setDatos] = useState<T | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [cargando, setCargando] = useState(true);
   const [n, setN] = useState(0);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const f = useCallback(fn, deps);
+  const [res, setRes] = useState<{ key: string; datos: T | null; error: string | null } | null>(null);
+  const fnRef = useRef(fn);
+  const key = `${JSON.stringify(deps)}|${n}`;
+  useEffect(() => {
+    fnRef.current = fn;
+  });
   useEffect(() => {
     let vivo = true;
-    setCargando(true);
-    f().then((d) => { if (vivo) { setDatos(d); setError(null); } })
-      .catch((e) => { if (vivo) setError(e instanceof Error ? e.message : (e as { message?: string })?.message ?? "Error"); })
-      .finally(() => { if (vivo) setCargando(false); });
+    fnRef.current().then(
+      (d) => { if (vivo) setRes({ key, datos: d, error: null }); },
+      (e: unknown) => {
+        if (!vivo) return;
+        const m = e instanceof Error ? e.message : (e as { message?: string })?.message ?? "Error";
+        setRes((p) => ({ key, datos: p?.datos ?? null, error: m }));
+      },
+    );
     return () => { vivo = false; };
-  }, [f, n]);
-  return { datos, error, cargando, recargar: () => setN((x) => x + 1), setDatos };
+  }, [key]);
+  return { datos: res?.datos ?? null, error: res?.key === key ? res.error : null, cargando: res?.key !== key, recargar: () => setN((x) => x + 1) };
 }

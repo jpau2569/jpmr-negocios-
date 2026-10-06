@@ -6,6 +6,7 @@ import android.media.MediaCodecList
 import android.os.Build
 import es.ilusionpantalla.analitica.*
 import es.ilusionpantalla.catalogo.*
+import es.ilusionpantalla.cuenta.*
 import es.ilusionpantalla.rendimiento.PerfilCalidad
 import es.ilusionpantalla.wallpaper.ConfigWallpaper
 import java.io.File
@@ -19,6 +20,16 @@ class Contenedor(private val app: Application) {
     val config = ConfigWallpaper(app)
     val favoritos = Favoritos(app)
     val hevcPorHardware: Boolean = soportaHevcPorHardware()
+
+    /** Cuenta y Premium. La sesión se guarda cifrada (Keystore). */
+    private val urlSb get() = if (configurado) BuildConfig.SUPABASE_URL else "https://sin-configurar.invalid"
+    val auth = ClienteAuth(urlSb, BuildConfig.SUPABASE_ANON_KEY)
+    val sesion = GestorSesion(auth, AlmacenSesionKeystore(File(app.filesDir, "cuenta/sesion.bin")))
+    val cuenta = ClienteCuenta(urlSb, BuildConfig.SUPABASE_ANON_KEY)
+    val compras by lazy { GestorCompras(app, this) }
+    /** Plan según el SERVIDOR (null = desconocido/sin sesión). La UI nunca lo deduce de lo que dice Play en el móvil. */
+    val plan = kotlinx.coroutines.flow.MutableStateFlow<PlanUsuario?>(null)
+    fun refrescarPlan() { plan.value = sesion.tokenValido()?.let { cuenta.leerPlan(it) } }
 
     /** Analítica: con consentimiento obligatorio. Sin él, `registrar` no hace nada. */
     val consentimiento = GestorConsentimiento(File(app.filesDir, "analitica/consentimiento.json"), TextoLegal.VERSION)
@@ -48,6 +59,8 @@ class Contenedor(private val app: Application) {
     }
 
     companion object {
+        /** Identificadores en Play Console. DEBEN coincidir con el secreto PLAY_PRODUCTOS de las Edge Functions. */
+        val PRODUCTOS = listOf("ilusion_premium_mensual", "ilusion_premium_anual")
         fun calidadPara(p: PerfilCalidad) = when (p) {
             PerfilCalidad.AHORRO -> CalidadDescarga.Q720; PerfilCalidad.ESTANDAR -> CalidadDescarga.Q1080
             PerfilCalidad.ALTA -> CalidadDescarga.Q1440; PerfilCalidad.ULTRA -> CalidadDescarga.Q2160

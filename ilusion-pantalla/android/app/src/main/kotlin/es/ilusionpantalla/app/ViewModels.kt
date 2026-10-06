@@ -81,7 +81,7 @@ class DetalleViewModel(app: Application) : AndroidViewModel(app) {
                     val pedida = Contenedor.calidadPara(ajustes.perfil)
                     val calidadEv = CalidadEv.entries.first { it.codigo == pedida.codigo }
                     c.evento(Evento.DescargaIniciada(w.slug, calidadEv))
-                    when (val r = c.cliente.pedirUrl(w.id, pedida, c.hevcPorHardware, fps, tokenUsuario = null)) {
+                    when (val r = c.cliente.pedirUrl(w.id, pedida, c.hevcPorHardware, fps, tokenUsuario = c.sesion.tokenValido())) {
                         RespuestaUrl.PremiumRequerido, RespuestaUrl.SesionNoValida -> { c.evento(Evento.DescargaFallida(w.slug, MotivoDescarga.PREMIUM)); EstadoAplicar.PremiumRequerido }
                         RespuestaUrl.NoEncontrado -> { c.evento(Evento.DescargaFallida(w.slug, MotivoDescarga.OTRO)); EstadoAplicar.Error("Este fondo ya no está disponible.") }
                         is RespuestaUrl.Fallo -> { c.evento(Evento.DescargaFallida(w.slug, MotivoDescarga.RED)); EstadoAplicar.Error("No se pudo preparar la descarga (${r.mensaje}). Inténtalo de nuevo.") }

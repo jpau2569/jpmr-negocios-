@@ -51,6 +51,9 @@ export function EditorWallpaper({ id }: { id: string | null }) {
   const cargado = useRef<string | null>(null);
   const sucioRef = useRef(false);
 
+  const sucio = JSON.stringify(form) !== base;
+  useEffect(() => { sucioRef.current = sucio; });
+
   // Rellena el formulario solo cuando llegan datos nuevos del servidor (no pisa lo escrito al subir un archivo).
   useEffect(() => {
     if (!datos?.w) return;
@@ -63,8 +66,6 @@ export function EditorWallpaper({ id }: { id: string | null }) {
     setForm(f); setBase(JSON.stringify(f)); setErrores({});
   }, [datos]);
 
-  const sucio = JSON.stringify(form) !== base;
-  sucioRef.current = sucio;
   const w = datos?.w ?? null;
   const archivos = datos?.archivos ?? [];
   const falta = w ? faltaParaPublicar(w, archivos) : [];
