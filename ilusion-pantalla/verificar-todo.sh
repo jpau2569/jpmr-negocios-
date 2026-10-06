@@ -11,7 +11,7 @@ paso "Validación de eventos de analítica"       node supabase/tests/analitica.
 paso "Premium: estados de Play, JWT, cuenta"    node supabase/tests/play.test.ts
 paso "Pipeline de vídeo (ffmpeg real)"          node herramientas/video/tests/video.test.mjs
 paso "Migraciones + RLS + analítica + premium"  bash supabase/tests/run.sh
-paso "Kotlin puro: rendimiento, catálogo, analítica, cuenta" bash -c 'cd android && gradle --no-daemon -q :core:rendimiento:test :core:catalogo:test :core:analitica:test :core:cuenta:test'
+paso "Kotlin puro: rendimiento, catálogo, analítica, cuenta" bash -c 'cd android && gradle --no-daemon -q -PsoloJvm :core:rendimiento:test :core:catalogo:test :core:analitica:test :core:cuenta:test'
 paso "Panel: tipos"                              bash -c 'cd admin && npx tsc --noEmit'
 paso "Panel: lint"                               bash -c 'cd admin && npm run lint --silent'
 paso "Panel: tests"                              bash -c 'cd admin && npx vitest run --reporter=dot'

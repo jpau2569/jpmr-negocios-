@@ -38,7 +38,7 @@ ilusion-pantalla/
 | Validar catálogo | `node ilusion-pantalla/content/validar-catalogo.mjs` |
 | Regenerar seed | `node ilusion-pantalla/content/generar-seed.mjs` |
 | Tokens de diseño | `node ilusion-pantalla/design/verificar-tokens.mjs` |
-| Tests de rendimiento (JDK 17+) | `cd ilusion-pantalla/android && gradle :core:rendimiento:test :core:catalogo:test :core:analitica:test` |
+| Tests de rendimiento (JDK 17+) | `cd ilusion-pantalla/android && gradle -PsoloJvm :core:rendimiento:test :core:catalogo:test :core:analitica:test :core:cuenta:test` |
 | App Android | Abrir `ilusion-pantalla/android` en Android Studio (genera `local.properties` con el SDK) |
 
 ## Puesta en marcha de Supabase

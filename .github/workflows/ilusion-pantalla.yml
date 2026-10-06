@@ -52,6 +52,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Tests de lógica (JVM puro: rendimiento + catálogo/red/descargas + analítica)
         working-directory: ilusion-pantalla/android
-        run: gradle :core:rendimiento:test :core:catalogo:test :core:analitica:test :core:cuenta:test --no-daemon
+        run: gradle -PsoloJvm :core:rendimiento:test :core:catalogo:test :core:analitica:test :core:cuenta:test --no-daemon
   # Compilar :app y :core:wallpaper exige Android SDK: se añade (assembleDebug + lint) en cuanto
   # la primera build local en Android Studio confirme las versiones de libs.versions.toml.
