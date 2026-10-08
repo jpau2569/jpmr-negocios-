@@ -26,7 +26,7 @@ del chat o de su web):
 | `CRON_SECRET` | la cadena aleatoria que te generó Clara en el chat (o inventa una larga) |
 | `TELEGRAM_BOT_TOKEN` | @BotFather en Telegram → /mybots → tu bot → API Token |
 | `TELEGRAM_CHAT_ID` | @userinfobot en Telegram → Start → tu ID |
-| `CLIPDROP_API_KEY` | clipdrop.co/apis (solo para LimpiaFotos y marca de agua) |
+| `CLIPDROP_API_KEY` | clipdrop.co/apis (solo para LimpiaFotos) |
 | `AEMET_API_KEY` | opendata.aemet.es/centrodedescargas/altaUsuario (opcional, solo para Sol Niebla y Agua) |
 
 Pulsa **Deploy**. Si ya habías desplegado sin variables: Settings →
