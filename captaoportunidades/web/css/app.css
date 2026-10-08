@@ -12,7 +12,7 @@
   --verde: #0f6b3a; --verde-bg: #def2e6;
   --esmeralda: #07604a; --esmeralda-bg: #d2f0e6;
   --ambar: #854300; --ambar-bg: #fcefd2;
-  --rojo: #a8201a; --rojo-bg: #fbe3e0;
+  --rojo: #a8201a; --foco: #1a56db; --rojo-bg: #fbe3e0;
   --radio: 10px; --radio-s: 7px;
   --sombra: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
   --sombra-g: 0 12px 32px rgba(16, 24, 40, .18);
@@ -26,7 +26,7 @@ h1 { font-size: 24px; } h2 { font-size: 18px; } h3 { font-size: 15px; }
 a { color: var(--acento); }
 a:hover { color: var(--acento-h); }
 button, input, select, textarea { font: inherit; color: inherit; }
-:focus-visible { outline: 3px solid #6f9bf0; outline-offset: 2px; border-radius: 4px; }
+:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; border-radius: 4px; }
 [hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
@@ -90,7 +90,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .menu-nuevo li button:hover { background: var(--acento-bg); }
 .campana { position: relative; }
 .campana .n { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 99px; background: var(--rojo); color: #fff; font-size: 11px; display: grid; place-items: center; font-weight: 700; }
-.contenido { padding: 22px 20px 60px; max-width: 1320px; width: 100%; margin: 0 auto; }
+.contenido { padding: 22px 20px 60px; max-width: 1320px; width: 100%; margin: 0 auto; overflow-wrap: anywhere; }
 
 /* ------------------------------------------------------------ componentes */
 .btn {
@@ -108,7 +108,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .btn.suave { background: transparent; border-color: transparent; color: var(--acento); }
 .btn.suave:hover { background: var(--acento-bg); }
 .btn.peq { min-height: 32px; padding: 0 10px; font-size: 13px; }
-.btn.icono { width: 40px; padding: 0; }
+.btn.icono { width: 40px; min-width: 40px; flex: none; padding: 0; }
 .btn.peq.icono { width: 32px; }
 .btn .ico { width: 18px; height: 18px; flex: none; }
 .ico { display: inline-block; vertical-align: middle; }

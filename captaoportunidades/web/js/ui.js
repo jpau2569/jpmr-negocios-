@@ -205,7 +205,8 @@ export function abrirDialogo({ titulo, clase = "", cuerpo, pie = [] }) {
   const cerrado = new Promise((r) => { resolver = r; });
   let valor = null;
   const cerrar = (v = null) => { valor = v; if (dlg.open) dlg.close(); };
-  dlg.addEventListener("close", () => { dlg.remove(); resolver(valor); });
+  const previo = document.activeElement;
+  dlg.addEventListener("close", () => { dlg.remove(); if (previo?.isConnected) previo.focus?.(); resolver(valor); });
   dlg.addEventListener("cancel", () => { valor = null; });
   dlg.append(h("div", { class: "modal-caja" },
     h("header", null, h("h2", { id: `${id}-t` }, titulo), h("button", { type: "button", class: "btn icono suave", "aria-label": "Cerrar", onclick: () => cerrar(null) }, icono("x"))),

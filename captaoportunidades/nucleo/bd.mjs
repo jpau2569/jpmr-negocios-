@@ -90,6 +90,7 @@ export function abrirBd(ruta, { migraciones = MIGRACIONES } = {}) {
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA synchronous = FULL");
   db.exec("PRAGMA foreign_keys = ON");
+  db.exec("PRAGMA secure_delete = ON"); // lo borrado (p. ej. al anonimizar) se sobrescribe en el fichero
   db.exec("PRAGMA busy_timeout = 5000");
   // norm(): comparar y buscar sin tildes ni mayúsculas, siempre al día (no hay columnas derivadas que se desincronicen).
   db.function("norm", { deterministic: true }, (s) => normaliza(s));

@@ -16,6 +16,13 @@ export class ErrorApp extends Error {
 }
 export const noEncontrado = (que) => new ErrorApp(404, "no_encontrado", `${que} no existe o ya se ha eliminado.`);
 export const invalido = (mensaje, campos = {}) => new ErrorApp(422, "validacion", mensaje, { campos });
+/** Control optimista: si el formulario se abrió con una versión anterior a la guardada, no se pisan los cambios de otra pestaña. */
+export function exigeVersion(entrada, actual) {
+  const v = entrada && typeof entrada === "object" ? entrada.version : undefined;
+  if (v && actual?.actualizado_en && v !== actual.actualizado_en) {
+    throw new ErrorApp(409, "conflicto_version", "Este registro se ha modificado desde que abriste el formulario (por ejemplo, en otra pestaña). Ciérralo y vuelve a abrirlo para no perder esos cambios.");
+  }
+}
 export const conflicto = (codigo, mensaje, extra = {}) => new ErrorApp(409, codigo, mensaje, extra);
 
 // ---------------------------------------------------------------- reloj ----
@@ -77,7 +84,8 @@ export function urlNorm(s) {
 export function celdaCsv(v) {
   if (v === null || v === undefined) return "";
   let s = String(v);
-  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  // Un teléfono («+34 600 111 222») no es una fórmula: se deja tal cual; el resto de celdas que empiezan por = + - @ se neutralizan.
+  if (/^[=+\-@\t\r]/.test(s) && !/^\+?[\d ]+$/.test(s)) s = "'" + s;
   return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

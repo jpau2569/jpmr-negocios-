@@ -128,6 +128,7 @@ async function copias(cont) {
       titulo: "Restaurar una copia de seguridad", clase: "estrecho",
       cuerpo: [
         aviso("bloqueo", h("b", null, "Esto sustituye TODOS tus datos actuales"), " por los de la copia. Antes se guarda automáticamente una copia de lo que tienes ahora, por si te arrepientes."),
+        s.vacia ? aviso("aviso", h("b", null, "Esta copia no contiene ningún dato."), " Si la restauras, tu CRM quedará vacío.") : null,
         datosLista([["Archivo", s.nombre], ["Creada", sello(s.creada_en)], ["Contactos", rc.contactos ?? "—"], ["Oportunidades", rc.oportunidades ?? "—"], ["Inmuebles", rc.inmuebles ?? "—"], ["Demandas", rc.demandas ?? "—"], ["Tareas", rc.tareas ?? "—"], ["Archivos adjuntos", s.archivos ?? 0]]),
         h("p", { style: { margin: "14px 0 6px" } }, "Para confirmarlo escribe ", h("b", null, "RESTAURAR"), ":"), campo],
       pie: [boton("Cancelar", { onclick: () => d.cerrar(null) }), ok],

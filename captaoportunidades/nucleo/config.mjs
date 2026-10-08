@@ -27,12 +27,13 @@ export function crearCtx(bd, reloj, modo = "real") {
   /** Devuelve la etiqueta canónica del catálogo para un texto, o null si no existe. */
   ctx.cat = (tipo, texto) => {
     if (!ctx._cat) {
-      ctx._cat = {};
+      ctx._cat = new Map();
       for (const f of ctx.bd.todos("SELECT tipo, etiqueta FROM catalogo")) {
-        (ctx._cat[f.tipo] ??= new Map()).set(normaliza(f.etiqueta), f.etiqueta);
+        if (!ctx._cat.has(f.tipo)) ctx._cat.set(f.tipo, new Map());
+        ctx._cat.get(f.tipo).set(normaliza(f.etiqueta), f.etiqueta);
       }
     }
-    return ctx._cat[tipo]?.get(normaliza(texto)) ?? null;
+    return ctx._cat.get(tipo)?.get(normaliza(texto)) ?? null;
   };
   ctx.refrescarCatalogos = () => { ctx._cat = null; };
   return ctx;
@@ -82,7 +83,7 @@ export function leerConfig(ctx) {
 }
 
 export function guardarConfig(ctx, seccion, entrada) {
-  const def = DEF_CONFIG[seccion];
+  const def = Object.hasOwn(DEF_CONFIG, seccion) ? DEF_CONFIG[seccion] : null;
   if (!def) throw noEncontrado("La sección de configuración");
   const { valores, errores } = limpiar(def, entrada, { parcial: true });
   if (seccion === "referencias") {
@@ -103,7 +104,7 @@ export function guardarConfig(ctx, seccion, entrada) {
 
 // -------------------------------------------------------------- catálogos ----
 export function listarCatalogo(ctx, tipo, { soloActivos = false } = {}) {
-  if (!TIPOS_CATALOGO[tipo]) throw invalido("Tipo de catálogo desconocido.");
+  if (!Object.hasOwn(TIPOS_CATALOGO, tipo)) throw invalido("Tipo de catálogo desconocido.");
   return ctx.bd.todos(
     `SELECT id, tipo, valor, etiqueta, activo, orden FROM catalogo WHERE tipo = ? ${soloActivos ? "AND activo = 1" : ""} ORDER BY orden, etiqueta`,
     [tipo],
@@ -117,7 +118,7 @@ export function todosLosCatalogos(ctx) {
 }
 
 export function anadirCatalogo(ctx, tipo, etiqueta) {
-  if (!TIPOS_CATALOGO[tipo]) throw invalido("Tipo de catálogo desconocido.");
+  if (!Object.hasOwn(TIPOS_CATALOGO, tipo)) throw invalido("Tipo de catálogo desconocido.");
   const texto = String(etiqueta ?? "").replace(/\s+/g, " ").trim();
   if (!texto) throw invalido("Escribe el nombre que quieres añadir.", { etiqueta: "Escribe el nombre que quieres añadir." });
   if (texto.length > 80) throw invalido("El nombre es demasiado largo (máximo 80 caracteres).", { etiqueta: "Demasiado largo." });

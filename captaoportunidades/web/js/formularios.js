@@ -210,7 +210,7 @@ export async function nuevoContacto(defecto = {}) {
 }
 export async function editarContacto(c) {
   return dialogoFormulario({
-    titulo: "Editar contacto", campos: camposContacto(), valores: c, enviar: (v) => api.put(`/api/contactos/${c.id}`, v),
+    titulo: "Editar contacto", campos: camposContacto(), valores: c, enviar: (v) => api.put(`/api/contactos/${c.id}`, { ...v, version: c.actualizado_en }),
   });
 }
 
@@ -227,7 +227,7 @@ export async function editarOportunidad(o) {
   const campos = camposOportunidad({ crearContacto: (q) => nuevoContacto({ nombre: q, es_propietario: true }) });
   return dialogoFormulario({
     titulo: `Editar ${o.identificador}`, campos, clase: "ancho",
-    valores: { ...o, contacto_id: o.contacto?.id ?? null, contacto_id__etq: o.contacto?.nombre_completo }, enviar: (v) => api.put(`/api/oportunidades/${o.id}`, v),
+    valores: { ...o, contacto_id: o.contacto?.id ?? null, contacto_id__etq: o.contacto?.nombre_completo }, enviar: (v) => api.put(`/api/oportunidades/${o.id}`, { ...v, version: o.actualizado_en }),
   });
 }
 
@@ -235,7 +235,7 @@ export async function nuevoInmueble(defecto = {}) {
   return dialogoFormulario({ titulo: "Nuevo inmueble", campos: camposInmueble(), clase: "ancho", valores: { operacion: "venta", estado_comercial: "en_preparacion", tipo_superficie: "desconocida", ...defecto }, textoOk: "Crear inmueble", enviar: (v) => api.post("/api/inmuebles", v) });
 }
 export async function editarInmueble(i) {
-  return dialogoFormulario({ titulo: `Editar ${i.referencia}`, campos: camposInmueble({ edicion: true }), clase: "ancho", valores: i, enviar: (v) => api.put(`/api/inmuebles/${i.id}`, v) });
+  return dialogoFormulario({ titulo: `Editar ${i.referencia}`, campos: camposInmueble({ edicion: true }), clase: "ancho", valores: i, enviar: (v) => api.put(`/api/inmuebles/${i.id}`, { ...v, version: i.actualizado_en }) });
 }
 
 export async function nuevaDemanda(defecto = {}) {
@@ -249,7 +249,7 @@ export async function nuevaDemanda(defecto = {}) {
 export async function editarDemanda(d) {
   return dialogoFormulario({
     titulo: "Editar demanda", campos: camposDemanda({ conComprador: false }), clase: "ancho", valores: d,
-    enviar: (v) => api.put(`/api/demandas/${d.id}`, v),
+    enviar: (v) => api.put(`/api/demandas/${d.id}`, { ...v, version: d.actualizado_en }),
   });
 }
 
@@ -268,7 +268,7 @@ export async function editarTarea(t, etiquetaRelacion) {
   return dialogoFormulario({
     titulo: "Editar tarea", campos: camposTarea({ edicion: true, etiquetaRelacion }), valores: { ...t, aviso_min: t.aviso_min === null || t.aviso_min === undefined ? "" : String(t.aviso_min) },
     enviar: async (v) => {
-      const r = await api.put(`/api/tareas/${t.id}`, { ...v, aviso_min: v.aviso_min === "" ? null : v.aviso_min });
+      const r = await api.put(`/api/tareas/${t.id}`, { ...v, aviso_min: v.aviso_min === "" ? null : v.aviso_min, version: t.actualizado_en });
       for (const a of r.avisos || []) toast(a, { tipo: "aviso", ms: 8000 });
       return r;
     },

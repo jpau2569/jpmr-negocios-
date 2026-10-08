@@ -123,6 +123,24 @@ export async function crearCopia(app, { tipo = "copia" } = {}) {
   }
 }
 
+/** Abre de verdad la base de la copia (solo lectura) y cuenta lo que contiene: el manifiesto lo escribe cada ZIP como quiere. */
+async function recuentosDeBase(ruta, entrada) {
+  const tmp = path.join(path.dirname(ruta), `.comprobar-${process.pid}-${Date.now()}.sqlite`);
+  try {
+    await extraerEntrada(ruta, entrada, tmp);
+    const { DatabaseSync } = await import("node:sqlite");
+    const db = new DatabaseSync(tmp, { readOnly: true });
+    try {
+      if (db.prepare("PRAGMA integrity_check").get().integrity_check !== "ok") throw new ErrorApp(422, "copia_corrupta", "La base de datos de la copia no pasa la comprobación de integridad.");
+      const n = (t) => Number(db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n);
+      return { contactos: n("contactos"), oportunidades: n("oportunidades"), inmuebles: n("inmuebles"), demandas: n("demandas"), tareas: n("tareas"), actividades: n("actividades") };
+    } catch (e) {
+      if (e instanceof ErrorApp) throw e;
+      throw new ErrorApp(422, "copia_invalida", "La base de datos de la copia no tiene la estructura esperada: no es una copia válida de este programa.");
+    } finally { db.close(); }
+  } finally { await fsp.rm(tmp, { force: true }).catch(() => {}); }
+}
+
 async function leerManifiesto(ruta, entradas) {
   const e = entradas.find((x) => x.nombre === "manifiesto.json");
   if (!e) throw new ErrorApp(422, "copia_sin_manifiesto", "Este ZIP no es una copia de CAPTAOPORTUNIDADES (falta el manifiesto).");
@@ -148,6 +166,8 @@ export async function inspeccionarCopia(ruta) {
   const reales = entradas.filter((e) => e.nombre !== "manifiesto.json");
   if (reales.length !== esperadas.size) throw new ErrorApp(422, "copia_invalida", "El contenido del ZIP no coincide con su manifiesto.");
   let bytes = 0;
+  if (reales.reduce((a, e) => a + e.usize, 0) > 4 * 1024 ** 3) throw new ErrorApp(422, "copia_enorme", "La copia se expande a más de 4 GB: se rechaza por seguridad.");
+  let recuentosReales = null;
   for (const e of reales) {
     const c = esperadas.get(e.nombre);
     const permitido = e.nombre === "captao.sqlite" || (e.nombre.startsWith("archivos/") && nombreSeguro(e.nombre));
@@ -155,11 +175,12 @@ export async function inspeccionarCopia(ruta) {
     const r = await extraerEntrada(ruta, e, null, { crypto });
     if (r.sha256 !== c.sha256 || r.bytes !== c.bytes) throw new ErrorApp(422, "copia_corrupta", `La copia está dañada: «${e.nombre}» no coincide con lo que se guardó.`);
     bytes += r.bytes;
+    if (e.nombre === "captao.sqlite") recuentosReales = await recuentosDeBase(ruta, e);
   }
   return {
     valida: true,
     creada_en: m.creada_en, tipo: m.tipo, esquema: m.esquema, version_app: m.version_app,
-    recuentos: m.recuentos || {}, archivos: reales.length - 1, bytes_contenido: bytes,
+    recuentos: recuentosReales, vacia: Object.values(recuentosReales).every((n) => n === 0), archivos: reales.length - 1, bytes_contenido: bytes,
     entradas: reales,
   };
 }
@@ -268,6 +289,9 @@ export async function copiaAutomaticaSiToca(app) {
   const hecha = await crearCopia(app, { tipo: "auto" });
   const autos = listarCopias(app).filter((c) => c.tipo === "auto");
   for (const vieja of autos.slice(cfg.conservar)) await fsp.rm(path.join(app.dirs.copias, vieja.nombre), { force: true });
+  for (const tipo of ["subida", "antes-de-restaurar"]) { // no se acumulan sin límite
+    for (const vieja of listarCopias(app).filter((c) => c.tipo === tipo).slice(5)) await fsp.rm(path.join(app.dirs.copias, vieja.nombre), { force: true });
+  }
   return hecha;
 }
 

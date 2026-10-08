@@ -15,7 +15,7 @@ import * as auditoria from "./auditoria.mjs";
 import { patronLike, paginacion } from "./config.mjs";
 import * as contactos from "./contactos.mjs";
 import * as inmuebles from "./inmuebles.mjs";
-import { noEncontrado, invalido, conflicto, normaliza, urlNorm, sello, hoy } from "./util.mjs";
+import { noEncontrado, invalido, conflicto, normaliza, urlNorm, sello, hoy, exigeVersion } from "./util.mjs";
 import { ESTADOS_OPORTUNIDAD, ESTADOS_CON_CONTACTO, claves } from "./catalogos.mjs";
 
 const ESTADOS = claves(ESTADOS_OPORTUNIDAD);
@@ -216,6 +216,7 @@ export function crear(ctx, entrada, { confirmar_duplicado = false } = {}) {
 
 export function actualizarOportunidad(ctx, id, entrada, { confirmar_duplicado = false } = {}) {
   const actual = obtenerFila(ctx, id);
+  exigeVersion(entrada, actual);
   const { valores, errores } = limpiar(OPORTUNIDAD, entrada, { parcial: true, cat: ctx.cat });
   for (const k of ["fecha_deteccion", "fuente", "tipo_inmueble", "municipio"]) if (valores[k] === null) delete valores[k];
   if (valores.clasificacion_anunciante === null) valores.clasificacion_anunciante = "sin_verificar";
@@ -227,6 +228,10 @@ export function actualizarOportunidad(ctx, id, entrada, { confirmar_duplicado = 
   }
   if (valores.verificacion_contacto && valores.verificacion_contacto !== "permitido" && ESTADOS_CON_CONTACTO.includes(actual.estado)) {
     errores.verificacion_contacto = "La oportunidad ya está en contacto: la verificación debe seguir siendo «permitido». Si ya no es así, cambia antes el estado.";
+  }
+  if (valores.contacto_id && valores.contacto_id !== actual.contacto_id && ESTADOS_CON_CONTACTO.includes(actual.estado)
+    && ctx.bd.valor("SELECT no_contactar FROM contactos WHERE id = ?", [valores.contacto_id]) === 1) {
+    errores.contacto_id = "Esa persona figura como «No contactar»: no se puede asignar a una oportunidad que ya está en contacto.";
   }
   exige(errores);
   if ("enlace" in valores && valores.enlace && valores.enlace !== actual.enlace) {
@@ -281,6 +286,9 @@ export function confirmarEncargo(ctx, id, cuerpo = {}) {
   }
   if (o.estado === "descartada" || o.estado === "no_contactar") {
     throw conflicto("oportunidad_cerrada", "Esta oportunidad está cerrada. Reábrela antes de confirmar un encargo.");
+  }
+  if (o.verificacion_contacto === "no_permitido") {
+    throw conflicto("contacto_no_permitido", "La verificación de contacto de esta oportunidad figura como «contacto no permitido». Revísala antes de confirmar un encargo.");
   }
   // Validar todo antes de escribir nada.
   const { valores: enc, errores } = limpiar(ENCARGO, cuerpo.encargo || {});

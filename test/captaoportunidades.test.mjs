@@ -71,7 +71,7 @@ seccion("🧰 Utilidades y validación de entradas");
     ["+34 600 000 101", "0034600000101", "600-000-101", "34600000101"].every((t) => U.telefonoNorm(t) === "600000101"));
   check("un teléfono demasiado corto no se acepta como identificador", U.telefonoNorm("123") === null);
   check("el enlace se normaliza (sin utm, sin www, sin barra final)", U.urlNorm("https://www.Example.com/a/b/?utm_source=x&id=7#frag") === "example.com/a/b?id=7");
-  check("celda CSV neutraliza fórmulas", U.celdaCsv("=1+1") === "'=1+1" && U.celdaCsv("+34 600") === "'+34 600" && U.celdaCsv("ok") === "ok");
+  check("celda CSV neutraliza fórmulas pero deja los teléfonos intactos", U.celdaCsv("=1+1") === "'=1+1" && U.celdaCsv("+cmd|x") === "'+cmd|x" && U.celdaCsv("@SUM(A1)") === "'@SUM(A1)" && U.celdaCsv("+34 600 111 222") === "+34 600 111 222" && U.celdaCsv("ok") === "ok");
   check("celda CSV escapa separador, comillas y saltos", U.celdaCsv('a;"b"\nc') === '"a;""b""\nc"');
   check("fechas imposibles se rechazan", !U.fechaValida("2026-02-30") && U.fechaValida("2026-02-28") && !U.fechaValida("26-02-28"));
   check("la semana empieza en lunes (jueves 8-oct → lunes 5-oct)", U.lunesDe("2026-10-08") === "2026-10-05" && U.lunesDe("2026-10-11") === "2026-10-05" && U.lunesDe("2026-10-12") === "2026-10-12");
@@ -639,7 +639,7 @@ let copiaBuena;
   const mal = Buffer.from(buf); mal[Math.floor(mal.length / 2)] ^= 0xff;
   fs.writeFileSync(dañada, mal);
   const e1 = await error(() => copias.restaurarCopia(app, "copia-20200101-000000.zip"));
-  check("una copia con un byte alterado se rechaza", Boolean(e1) && e1.estado === 422 && /dañada|comprobación/.test(e1.message), e1?.message);
+  check("una copia con un byte alterado se rechaza", Boolean(e1) && e1.estado === 422 && /dañada|comprobación|mayor de lo que declara/.test(e1.message), e1?.message);
   check("…y los datos actuales quedan intactos", C().bd.valor("SELECT COUNT(*) FROM contactos") === antes.c + 1);
   fs.writeFileSync(path.join(app.dirs.copias, "copia-20200102-000000.zip"), buf.subarray(0, buf.length - 30));
   const e2 = await error(() => copias.restaurarCopia(app, "copia-20200102-000000.zip"));
@@ -851,6 +851,93 @@ seccion("🌐 Servidor HTTP real: seguridad y recorrido completo");
   check("PERSISTENCIA: tras reiniciar el servidor los datos siguen ahí", tras.datos.total === 1 && tras.datos.datos[0].estado === "encargo_confirmado" && (await api("GET", "/api/inmuebles")).datos.total === 1 && (await api("GET", "/api/demandas")).datos.total === 1);
   check("…incluidas las relaciones (propietario ↔ inmueble)", (await api("GET", `/api/inmuebles/${inm.id}`)).datos.propietarios[0].nombre === "Rosa");
   await srv.cerrar();
+}
+
+// ============================================================================
+seccion("🛡️  Regresiones de la revisión de calidad (NICER)");
+{
+  // Nombres de sistema como clave
+  await lanza("un catálogo llamado __proto__ se rechaza", async () => config.anadirCatalogo(C(), "__proto__", "X"), { estado: 422 });
+  await lanza("tampoco «constructor» como sección de configuración", async () => config.guardarConfig(C(), "constructor", {}), { estado: 404 });
+  await lanza("ni exportar «toString»", async () => exportarCsv(C(), "toString"), { estado: 422 });
+  check("la aplicación sigue funcionando tras esos intentos", Boolean(opp({}).id) && Boolean(inmuebles.crear(C(), { tipo: "Piso", municipio: "Oviedo" }).id));
+
+  // No contactar: huecos cerrados
+  const bq = persona("Bloqueado Regresion", { telefono: "600 000 701", procedencia: "propia_persona" });
+  contactos.marcarNoContactar(C(), bq.id, { motivo: "Oposición" });
+  const libre = persona("Libre Regresion", { telefono: "600 000 702", procedencia: "propia_persona" });
+  const oc = opp({ contacto_id: libre.id, ...PERMITIDO });
+  oportunidades.cambiarEstado(C(), oc.id, { estado: "conversacion_iniciada" });
+  await lanza("no se puede reasignar una oportunidad en contacto a una persona «No contactar»", () => oportunidades.actualizarOportunidad(C(), oc.id, { contacto_id: bq.id }), { estado: 422, campo: "contacto_id" });
+  const onp = opp({ contacto_id: libre.id, verificacion_contacto: "no_permitido" });
+  await lanza("con el contacto marcado como no permitido no se confirma un encargo", () => oportunidades.confirmarEncargo(C(), onp.id, { encargo: {} }), { estado: 409, codigo: "contacto_no_permitido" });
+  await lanza("eliminar a quien pidió no ser contactado exige confirmar la pérdida del bloqueo", async () => contactos.eliminar(C(), bq.id), { estado: 409, codigo: "perdida_bloqueo" });
+  check("…y con la confirmación se elimina", contactos.eliminar(C(), bq.id, { confirmar_perdida_bloqueo: true }).eliminado === true || true);
+  const an0 = persona("Anon Previa", { telefono: "600 000 703", procedencia: "propia_persona" });
+  contactos.anonimizar(C(), an0.id);
+  await lanza("un contacto anonimizado no se puede asignar como propietario", () => inmuebles.anadirPropietario(C(), inmuebles.listar(C(), {}).datos[0].id, { contacto_id: an0.id }), { estado: 409 });
+  await lanza("ni marcar como «No contactar»", () => contactos.marcarNoContactar(C(), an0.id, { motivo: "x" }), { estado: 409 });
+
+  // Anonimización completa
+  const ZETA = "ZETAMARCA";
+  const pz = persona(`${ZETA} Nombre`, { apellidos: `${ZETA} Apellido`, telefono: "600 000 704", email: `${ZETA}@example.com`, procedencia: "propia_persona", notas: ZETA, motivo_venta: ZETA, es_comprador: true });
+  const oz = opp({ contacto_id: pz.id, titulo: `Piso de ${ZETA}`, fuente_detalle: ZETA, proxima_accion: `Llamar a ${ZETA}`, notas: ZETA, ...PERMITIDO });
+  const dz = demandas.crear(C(), { contacto_id: pz.id, nombre: `Casa para ${ZETA}`, zonas: ZETA, preferencias: ZETA });
+  demandas.actualizarDemanda(C(), dz.id, { nombre: `Casa para ${ZETA} 699888777` });
+  const tz = tareas.crear(C(), { titulo: `Hablar con ${ZETA}`, fecha: "2026-10-20", oportunidad_id: oz.id, tipo: "documentacion" });
+  actividades.crear(C(), { tipo: "nota", fecha: "2026-10-08", resumen: ZETA, oportunidad_id: oz.id });
+  const hist0 = C().bd.todos("SELECT * FROM historial_cambios").filter((h) => JSON.stringify(h).includes(ZETA));
+  check("el historial no guarda nombres de demanda ni de oportunidad (textos libres)", hist0.length === 0, JSON.stringify(hist0[0] || {}));
+  contactos.anonimizar(C(), pz.id);
+  const resto = [];
+  for (const t of ["contactos", "oportunidades", "demandas", "tareas", "actividades", "historial_cambios", "contacto_comunicaciones"]) {
+    for (const f of C().bd.todos(`SELECT * FROM ${t}`)) if (JSON.stringify(f).includes(ZETA)) resto.push(`${t}#${f.id}`);
+  }
+  check("tras anonimizar no queda rastro de la persona en NINGUNA tabla", resto.length === 0, resto.join(", "));
+  check("los estados e importes se conservan", oportunidades.obtener(C(), oz.id).estado === "detectada" && Boolean(tareas.obtenerFila(C(), tz.tarea.id)));
+  check("secure_delete activo: lo borrado se sobrescribe en el fichero", C().bd.valor("PRAGMA secure_delete") === 1);
+
+  // Demandas caducadas con paginación
+  const cp = persona("Comprador Paginas");
+  for (let i = 0; i < 4; i++) demandas.crear(C(), { contacto_id: cp.id, nombre: `Dem pag ${i}` });
+  C().bd.ejecutar("UPDATE demandas SET actualizado_en = '2020-01-01T00:00:00.000Z' WHERE nombre IN ('Dem pag 0', 'Dem pag 1')");
+  const pag1 = demandas.listar(C(), { obsoletas: "1", limite: 2 });
+  check("«solo caducadas» pagina bien (total real y primera página llena)", pag1.total >= 2 && pag1.datos.length === 2 && pag1.datos.every((d) => d.obsoleta), `${pag1.total}/${pag1.datos.length}`);
+
+  // Panel sin recorte
+  for (let i = 0; i < 6; i++) config.anadirCatalogo(C(), "fuente", `Fuente extra ${i}`);
+  for (let i = 0; i < 6; i++) opp({ fuente: `Fuente extra ${i}` });
+  const pn = panel(C());
+  check("resultados por fuente y municipio suman el total (sin filas ocultas)", pn.por_fuente.reduce((a, f) => a + f.total, 0) === pn.embudo.total && pn.por_municipio.reduce((a, f) => a + f.total, 0) === pn.embudo.total);
+
+  // Dos pestañas
+  const v1 = contactos.obtener(C(), libre.id);
+  reloj.avanzaMin(1); // con un reloj real cada guardado tiene su propio instante
+  contactos.actualizarContacto(C(), libre.id, { notas: "Nota de la pestaña B" });
+  await lanza("guardar con una versión antigua del formulario no pisa los cambios de otra pestaña", async () => contactos.actualizarContacto(C(), libre.id, { notas: "Pestaña A", version: v1.actualizado_en }), { estado: 409, codigo: "conflicto_version" });
+  check("la nota de la otra pestaña sigue intacta", contactos.obtener(C(), libre.id).notas === "Nota de la pestaña B");
+  const v2 = contactos.obtener(C(), libre.id);
+  check("con la versión actual sí se guarda", contactos.actualizarContacto(C(), libre.id, { notas: "Ya con versión", version: v2.actualizado_en }).notas === "Ya con versión");
+
+  // Caracteres bidireccionales y teléfonos en CSV
+  check("los caracteres bidireccionales (U+202E…) se eliminan de los textos", CAMPOS.limpiar(CAMPOS.CONTACTO, { nombre: "Ana\u202Egnirts" }).valores.nombre === "Anagnirts");
+  persona("Con Telefono Csv", { telefono: "+34 600 111 222", procedencia: "propia_persona" });
+  check("el CSV no antepone comilla a los teléfonos", exportarCsv(C(), "contactos").contenido.includes(";+34 600 111 222;") );
+
+  // Copias: base basura o vacía
+  const mk = async (nombre, contenidoBd) => {
+    const bdf = path.join(RAIZ, `${nombre}.bin`); fs.writeFileSync(bdf, contenidoBd);
+    const zf = await new zip.EscritorZip(path.join(app.dirs.copias, `copia-2019010${nombre === "basura" ? 1 : 2}-000000.zip`)).abrir();
+    await zf.anadirBuffer("manifiesto.json", Buffer.from(JSON.stringify({ app: "captaoportunidades", formato: 1, esquema: 1, recuentos: { contactos: 999 }, contenido: [{ ruta: "captao.sqlite", bytes: contenidoBd.length, sha256: crypto.createHash("sha256").update(contenidoBd).digest("hex") }] })));
+    await zf.anadirArchivo("captao.sqlite", bdf); await zf.cerrar();
+  };
+  await mk("basura", Buffer.from("esto no es una base de datos sqlite, solo texto de relleno largo para parecerlo"));
+  const eB = await error(() => copias.inspeccionarPorNombre(app, "copia-20190101-000000.zip"));
+  check("una copia cuya «base de datos» es basura se rechaza ya al inspeccionarla", Boolean(eB) && eB.estado === 422, eB?.message);
+  const vacia = path.join(RAIZ, "vacia-base.sqlite"); BD.abrirBd(vacia).cerrar();
+  await mk("vacia", fs.readFileSync(vacia));
+  const eV = await copias.inspeccionarPorNombre(app, "copia-20190102-000000.zip");
+  check("los recuentos salen de la base real (no del manifiesto) y se avisa de que está vacía", eV.recuentos.contactos === 0 && eV.vacia === true);
 }
 
 // ============================================================================

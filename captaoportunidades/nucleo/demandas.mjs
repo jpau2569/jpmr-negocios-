@@ -10,7 +10,7 @@ import { limpiar, exige, DEMANDA } from "./campos.mjs";
 import * as auditoria from "./auditoria.mjs";
 import { patronLike, paginacion } from "./config.mjs";
 import * as contactos from "./contactos.mjs";
-import { noEncontrado, conflicto, normaliza, sello, diasEntre, hoy } from "./util.mjs";
+import { noEncontrado, conflicto, normaliza, sello, diasEntre, hoy, exigeVersion } from "./util.mjs";
 
 export function obtenerFila(ctx, id) {
   const f = ctx.bd.uno("SELECT * FROM demandas WHERE id = ?", [id]);
@@ -51,6 +51,7 @@ export function crear(ctx, entrada) {
 
 export function actualizarDemanda(ctx, id, entrada) {
   const actual = obtenerFila(ctx, id);
+  exigeVersion(entrada, actual);
   const { valores, errores } = limpiar(DEMANDA, entrada, { parcial: true, cat: ctx.cat });
   delete valores.contacto_id; // la demanda no cambia de comprador
   for (const k of ["operacion", "ascensor", "garaje", "terraza", "plazo_compra", "financiacion", "estado"]) if (valores[k] === null) delete valores[k];
@@ -89,6 +90,10 @@ export function listar(ctx, q = {}) {
   if (q.presupuesto_max) donde.push("(d.presupuesto_max IS NULL OR d.presupuesto_max <= ?)"), p.push(Number(q.presupuesto_max));
   if (q.presupuesto_min) donde.push("(d.presupuesto_max IS NULL OR d.presupuesto_max >= ?)"), p.push(Number(q.presupuesto_min));
   const orden = { presupuesto: "d.presupuesto_max DESC", antiguas: "d.actualizado_en ASC" }[q.orden] || "d.actualizado_en DESC, d.id DESC";
+  if (q.obsoletas === "1") {
+    donde.push("d.estado = 'activa'", "date(d.actualizado_en) < date(?, '-' || ? || ' days')");
+    p.push(hoy(ctx.reloj), ctx.config().avisos.demanda_obsoleta_dias);
+  }
   const where = donde.join(" AND ");
   const total = ctx.bd.valor(`SELECT COUNT(*) FROM demandas d JOIN contactos c ON c.id = d.contacto_id WHERE ${where}`, p);
   const filas = ctx.bd.todos(
@@ -96,9 +101,7 @@ export function listar(ctx, q = {}) {
      FROM demandas d JOIN contactos c ON c.id = d.contacto_id WHERE ${where} ORDER BY ${orden} LIMIT ? OFFSET ?`,
     [...p, limite, offset],
   ).map((f) => { hidratar("demandas", f); return { ...f, obsoleta: obsoleta(ctx, f) }; });
-  let filasFinal = filas;
-  if (q.obsoletas === "1") filasFinal = filas.filter((f) => f.obsoleta);
-  return { datos: filasFinal, total, limite, offset };
+  return { datos: filas, total, limite, offset };
 }
 
 export function obtener(ctx, id) {

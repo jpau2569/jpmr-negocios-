@@ -67,7 +67,7 @@ export async function verificarContacto(o) {
       form.querySelector("select").value = "permitido";
       form.querySelector("textarea").value = "La propia persona se puso en contacto con nosotros (entrante).";
     } })],
-    enviar: (v) => api.put(`/api/oportunidades/${o.id}`, v),
+    enviar: (v) => api.put(`/api/oportunidades/${o.id}`, { ...v, version: o.actualizado_en }),
   });
 }
 
@@ -212,7 +212,7 @@ export async function anonimizarContacto(c) {
   }
   const ok = await confirmar({
     titulo: "Anonimizar contacto", peligro: true, textoOk: "Anonimizar para siempre",
-    mensaje: `Se borrarán el nombre, el teléfono, el correo, las notas y el texto de sus actividades. Los registros (oportunidades, inmuebles, demandas) se conservan sin identificar a la persona. Esta acción no se puede deshacer.`,
+    mensaje: `Se borrarán el nombre, el teléfono, el correo, las notas y los textos libres de sus actividades, tareas, oportunidades y demandas. Se conservan los estados, importes y fechas. Revisa a mano lo que hayas escrito en inmuebles o descripciones que pueda nombrarla. Las copias de seguridad que ya hiciste conservan los datos originales: elimínalas si procede. Esta acción no se puede deshacer.`,
   });
   if (!ok) return null;
   try { return await api.post(`/api/contactos/${c.id}/anonimizar`, extra); }

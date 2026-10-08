@@ -13,7 +13,7 @@ import * as auditoria from "./auditoria.mjs";
 import { patronLike, paginacion } from "./config.mjs";
 import * as contactos from "./contactos.mjs";
 import { exigeRelaciones } from "./actividades.mjs";
-import { noEncontrado, conflicto, invalido, normaliza, sello, hoy, horaAhora, lunesDe, sumaDias, fechaValida } from "./util.mjs";
+import { noEncontrado, conflicto, invalido, normaliza, sello, hoy, horaAhora, lunesDe, sumaDias, fechaValida, exigeVersion } from "./util.mjs";
 import { CANAL_DE_TAREA } from "./catalogos.mjs";
 
 const ABIERTA = "t.estado IN ('pendiente','en_curso')";
@@ -84,6 +84,7 @@ export function crear(ctx, entrada) {
 
 export function actualizarTarea(ctx, id, entrada) {
   const actual = obtenerFila(ctx, id);
+  exigeVersion(entrada, actual);
   const { valores, errores } = limpiar(TAREA, entrada, { parcial: true, cat: ctx.cat });
   for (const k of ["titulo", "fecha", "tipo", "prioridad", "estado"]) if (valores[k] === null) delete valores[k];
   exigeRelaciones(ctx, { ...actual, ...valores }, errores, { minimoUna: false });

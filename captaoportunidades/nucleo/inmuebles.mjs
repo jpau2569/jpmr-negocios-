@@ -12,7 +12,7 @@ import { limpiar, exige, INMUEBLE, ENCARGO } from "./campos.mjs";
 import * as auditoria from "./auditoria.mjs";
 import { patronLike, paginacion } from "./config.mjs";
 import * as contactos from "./contactos.mjs";
-import { noEncontrado, invalido, conflicto, normaliza, sello, hoy, sumaDias, diasEntre } from "./util.mjs";
+import { noEncontrado, invalido, conflicto, normaliza, sello, hoy, sumaDias, diasEntre, exigeVersion } from "./util.mjs";
 import { ESTADOS_COMERCIALES_ACTIVOS } from "./catalogos.mjs";
 
 const fmtFecha = (iso) => (iso ? iso.split("-").reverse().join("/") : "");
@@ -74,6 +74,7 @@ export function crear(ctx, entrada) {
 
 export function actualizarInmueble(ctx, id, entrada) {
   const actual = obtenerFila(ctx, id);
+  exigeVersion(entrada, actual);
   const { valores, errores } = limpiar(INMUEBLE, entrada, { parcial: true, cat: ctx.cat });
   exige(errores);
   if (valores.referencia === null) delete valores.referencia;
@@ -207,6 +208,7 @@ export function eliminar(ctx, id) {
 export function anadirPropietario(ctx, inmuebleId, { contacto_id, porcentaje } = {}) {
   const i = obtenerFila(ctx, inmuebleId);
   const c = contactos.obtenerFila(ctx, Number(contacto_id));
+  if (c.anonimizado_en) throw conflicto("anonimizado", "Ese contacto está anonimizado: no se puede asignar como propietario.");
   let pct = null;
   if (porcentaje !== undefined && porcentaje !== null && porcentaje !== "") {
     pct = Number(porcentaje);

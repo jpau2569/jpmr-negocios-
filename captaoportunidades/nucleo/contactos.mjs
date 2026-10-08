@@ -13,7 +13,7 @@ import { limpiar, exige, CONTACTO, HABILITACION } from "./campos.mjs";
 import * as auditoria from "./auditoria.mjs";
 import { patronLike, paginacion } from "./config.mjs";
 import {
-  noEncontrado, invalido, conflicto, normaliza, telefonoNorm, emailNorm, sello, hoy,
+  noEncontrado, invalido, conflicto, normaliza, telefonoNorm, emailNorm, sello, hoy, exigeVersion,
 } from "./util.mjs";
 import { CANALES, BASES_POR_CANAL, CANAL_DE_TAREA, etiquetaDe, BASES_COMUNICACION } from "./catalogos.mjs";
 
@@ -156,6 +156,7 @@ export function crear(ctx, entrada, { confirmar_duplicado = false } = {}) {
 
 export function actualizarContacto(ctx, id, entrada, { confirmar_duplicado = false } = {}) {
   const actual = obtenerFila(ctx, id);
+  exigeVersion(entrada, actual);
   if (actual.anonimizado_en) throw conflicto("anonimizado", "Este contacto está anonimizado y ya no se puede editar.");
   const { valores, errores } = limpiar(CONTACTO, entrada, { parcial: true, cat: ctx.cat });
   const tocaContacto = ["telefono", "email", "procedencia", "procedencia_detalle"].some((k) => k in valores);
@@ -193,8 +194,11 @@ function relaciones(ctx, id) {
   };
 }
 
-export function eliminar(ctx, id) {
+export function eliminar(ctx, id, { confirmar_perdida_bloqueo = false } = {}) {
   const c = obtenerFila(ctx, id);
+  if (c.no_contactar && !confirmar_perdida_bloqueo) {
+    throw conflicto("perdida_bloqueo", "Esta persona figura como «No contactar». Si la eliminas, ya no podrás reconocerla si vuelve a aparecer y se perderá el bloqueo efectivo. Confirma solo si es lo que quieres.", { requiere: "confirmar_perdida_bloqueo" });
+  }
   const r = relaciones(ctx, id);
   if (r.inmuebles || r.oportunidades || r.demandas) {
     const partes = [];
@@ -238,6 +242,18 @@ export function anonimizar(ctx, id, { confirmar_perdida_bloqueo = false } = {}) 
     ctx.bd.ejecutar("UPDATE contacto_comunicaciones SET evidencia = NULL WHERE contacto_id = ?", [id]);
     ctx.bd.ejecutar("UPDATE actividades SET resumen = '[Contenido eliminado por anonimización]', resultado = NULL WHERE contacto_id = ?", [id]);
     ctx.bd.ejecutar("UPDATE tareas SET titulo = 'Tarea de contacto anonimizado', notas = NULL WHERE contacto_id = ?", [id]);
+    // Los textos libres de lo que cuelga de esta persona también pueden nombrarla: se vacían (estados, importes y fechas se conservan).
+    ctx.bd.ejecutar(`UPDATE tareas SET titulo = 'Tarea de contacto anonimizado', notas = NULL
+      WHERE oportunidad_id IN (SELECT id FROM oportunidades WHERE contacto_id = ?) OR demanda_id IN (SELECT id FROM demandas WHERE contacto_id = ?)`, [id, id]);
+    ctx.bd.ejecutar(`UPDATE oportunidades SET titulo = NULL, fuente_detalle = NULL, proxima_accion = NULL, evidencia_clasificacion = NULL,
+      verificacion_evidencia = NULL, notas = NULL, motivo_descarte = NULL WHERE contacto_id = ?`, [id]);
+    ctx.bd.ejecutar(`UPDATE demandas SET nombre = NULL, zonas = NULL, preferencias = NULL, requisitos_imprescindibles = NULL,
+      financiacion_evidencia = NULL, motivo_cierre = NULL WHERE contacto_id = ?`, [id]);
+    ctx.bd.ejecutar(`UPDATE actividades SET resumen = '[Contenido eliminado por anonimización]', resultado = NULL
+      WHERE oportunidad_id IN (SELECT id FROM oportunidades WHERE contacto_id = ?) OR demanda_id IN (SELECT id FROM demandas WHERE contacto_id = ?)`, [id, id]);
+    ctx.bd.ejecutar(`UPDATE historial_cambios SET valor_anterior = NULL, valor_nuevo = NULL
+      WHERE (entidad = 'oportunidad' AND entidad_id IN (SELECT id FROM oportunidades WHERE contacto_id = ?) AND campo IN ('titulo','fuente_detalle','proxima_accion'))
+         OR (entidad = 'demanda' AND entidad_id IN (SELECT id FROM demandas WHERE contacto_id = ?) AND campo IN ('nombre','zonas'))`, [id, id]);
     auditoria.registrar(ctx, "contacto", id, "anonimizar", { resumen: "Datos personales eliminados; los registros se conservan sin identificar a la persona." });
   });
   return obtener(ctx, id);
@@ -321,6 +337,7 @@ export function guardarHabilitaciones(ctx, id, items) {
 export function marcarNoContactar(ctx, id, { motivo } = {}) {
   const c = obtenerFila(ctx, id);
   const m = String(motivo ?? "").trim();
+  if (c.anonimizado_en) throw conflicto("anonimizado", "Este contacto está anonimizado.");
   if (!m) throw invalido("Indica el motivo (por ejemplo: «ha pedido no ser contactado»).", { motivo: "Indica el motivo." });
   if (m.length > 300) throw invalido("El motivo es demasiado largo (máximo 300 caracteres).", { motivo: "Demasiado largo." });
   if (c.no_contactar) throw conflicto("ya_no_contactar", "Esta persona ya figura como «No contactar».");

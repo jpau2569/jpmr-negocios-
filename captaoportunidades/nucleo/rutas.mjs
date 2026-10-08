@@ -73,7 +73,7 @@ r("POST", "/api/contactos", (c) => creado(contactos.crear(c.ctx(), c.body, { con
 r("POST", "/api/contactos/duplicados", (c) => ({ candidatos: contactos.buscarDuplicados(c.ctx(), c.body || {}, Number(c.body?.excluir_id) || null) }));
 r("GET", "/api/contactos/:id", (c) => contactos.obtener(c.ctx(), id(c)));
 r("PUT", "/api/contactos/:id", (c) => contactos.actualizarContacto(c.ctx(), id(c), c.body, { confirmar_duplicado: c.body?.confirmar_duplicado === true }));
-r("DELETE", "/api/contactos/:id", (c) => contactos.eliminar(c.ctx(), id(c)));
+r("DELETE", "/api/contactos/:id", (c) => contactos.eliminar(c.ctx(), id(c), { confirmar_perdida_bloqueo: c.query.confirmar_perdida_bloqueo === "1" }));
 r("POST", "/api/contactos/:id/anonimizar", (c) => contactos.anonimizar(c.ctx(), id(c), { confirmar_perdida_bloqueo: c.body?.confirmar_perdida_bloqueo === true }));
 r("PUT", "/api/contactos/:id/comunicaciones", (c) => ({ comunicaciones: contactos.guardarHabilitaciones(c.ctx(), id(c), c.body?.canales) }));
 r("POST", "/api/contactos/:id/no-contactar", (c) => contactos.marcarNoContactar(c.ctx(), id(c), c.body));

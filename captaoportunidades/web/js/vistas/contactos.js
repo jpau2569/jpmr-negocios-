@@ -131,7 +131,12 @@ export async function detalle(cont, { partes }) {
       c.anonimizado_en ? null : boton("Anonimizar", { clase: "borde-peligro", onclick: async () => { const r = await anonimizarContacto(c); if (r) { toast("Contacto anonimizado."); refrescar(); } } }),
       boton("Eliminar contacto", { clase: "borde-peligro", icono: "papelera", onclick: async () => {
         if (!(await confirmar({ titulo: "Eliminar contacto", mensaje: `Se eliminará ${c.nombre_completo} y sus actividades y tareas propias. No se puede deshacer.`, textoOk: "Eliminar", peligro: true }))) return;
-        try { await api.del(`/api/contactos/${c.id}`); toast("Contacto eliminado."); location.hash = "#/propietarios"; }
+        let extra = "";
+        if (c.no_contactar) {
+          if (!(await confirmar({ titulo: "Esta persona pidió no ser contactada", peligro: true, textoOk: "Entiendo, eliminar", mensaje: "Si la eliminas ya no podrás reconocerla si vuelve a aparecer y se perderá el bloqueo efectivo." }))) return;
+          extra = "?confirmar_perdida_bloqueo=1";
+        }
+        try { await api.del(`/api/contactos/${c.id}${extra}`); toast("Contacto eliminado."); location.hash = "#/propietarios"; }
         catch (e) { toast(e.message, { tipo: "error", ms: 10000 }); }
       } })),
   ], { clase: "" }));

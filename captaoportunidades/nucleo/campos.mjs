@@ -13,7 +13,8 @@
 import { fechaValida, invalido } from "./util.mjs";
 import * as C from "./catalogos.mjs";
 
-const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+// Controles y caracteres bidireccionales (permiten falsear cómo se ve un texto).
+const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200E\u200F\u202A-\u202E\u2066-\u2069]/g;
 
 /** "245.000" → 245000, "1.234,56" → 1234.56, "95,5" → 95.5, "95.5" → 95.5 */
 export function parseNumeroEs(v) {
@@ -207,13 +208,13 @@ export const HABILITACION = {
 
 export const OPORTUNIDAD = {
   fuente: T("la fuente", { req: true, max: 80, cat: "fuente" }),
-  fuente_detalle: T("el detalle de la fuente", { max: 200 }),
+  fuente_detalle: T("el detalle de la fuente", { max: 200, sens: true }),
   enlace: { t: "url", etq: "el enlace" },
   fecha_deteccion: { t: "fecha", etq: "la fecha de detección" },
   tipo_inmueble: T("el tipo de inmueble", { req: true, max: 80, cat: "tipo_inmueble" }),
   municipio: T("el municipio", { req: true, max: 80, cat: "municipio", libre: true }),
   zona: T("la zona", { max: 160 }),
-  titulo: T("el título", { max: 200 }),
+  titulo: T("el título", { max: 200, sens: true }),
   precio_anunciado: { t: "num", etq: "el precio anunciado" },
   superficie_m2: { t: "num", etq: "la superficie", min: 1, max: 1e6 },
   habitaciones: { t: "int", etq: "las habitaciones", max: 60 },
@@ -223,7 +224,7 @@ export const OPORTUNIDAD = {
   evidencia_clasificacion: L("la evidencia de la clasificación", { max: 500 }),
   contacto_id: { t: "fk", etq: "el propietario relacionado" },
   responsable: T("el responsable", { max: 80 }),
-  proxima_accion: T("la próxima acción", { max: 200 }),
+  proxima_accion: T("la próxima acción", { max: 200, sens: true }),
   proxima_accion_fecha: { t: "fecha", etq: "la fecha de la próxima acción" },
   verificacion_contacto: { t: "enum", etq: "la verificación de contacto", op: ops(C.VERIFICACION_CONTACTO) },
   verificacion_evidencia: L("la evidencia de la verificación", { max: 500 }),
@@ -232,7 +233,7 @@ export const OPORTUNIDAD = {
 
 export const INMUEBLE = {
   referencia: T("la referencia", { max: 40 }),
-  titulo: T("el título", { max: 200 }),
+  titulo: T("el título", { max: 200, sens: true }),
   tipo: T("el tipo de inmueble", { req: true, max: 80, cat: "tipo_inmueble" }),
   operacion: { t: "enum", etq: "la operación", op: ops(C.OPERACIONES), def: "venta" },
   municipio: T("el municipio", { req: true, max: 80, cat: "municipio", libre: true }),
@@ -270,10 +271,10 @@ export const ENCARGO = {
 
 export const DEMANDA = {
   contacto_id: { t: "fk", etq: "el comprador", req: true },
-  nombre: T("el nombre de la demanda", { max: 120 }),
+  nombre: T("el nombre de la demanda", { max: 120, sens: true }),
   operacion: { t: "enum", etq: "la operación", op: ops(C.OPERACIONES_DEMANDA), def: "compra" },
   municipios: { t: "lista", etq: "los municipios", max: 80, cat: "municipio" },
-  zonas: T("las zonas", { max: 300 }),
+  zonas: T("las zonas", { max: 300, sens: true }),
   presupuesto_min: { t: "num", etq: "el presupuesto mínimo" },
   presupuesto_max: { t: "num", etq: "el presupuesto máximo" },
   tipos: { t: "lista", etq: "los tipos de inmueble", max: 80, cat: "tipo_inmueble" },

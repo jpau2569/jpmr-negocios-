@@ -41,7 +41,7 @@ export function panel(ctx, extras = {}) {
        SUM(CASE WHEN estado NOT IN ('encargo_confirmado','descartada','no_contactar') THEN 1 ELSE 0 END) AS abiertas,
        SUM(CASE WHEN estado = 'encargo_confirmado' THEN 1 ELSE 0 END) AS encargos,
        SUM(CASE WHEN estado IN ('descartada','no_contactar') THEN 1 ELSE 0 END) AS cerradas
-     FROM oportunidades GROUP BY ${columna} ORDER BY total DESC, clave LIMIT 15`).map((f) => ({ ...f, abiertas: Number(f.abiertas), encargos: Number(f.encargos), cerradas: Number(f.cerradas) }));
+     FROM oportunidades GROUP BY ${columna} ORDER BY total DESC, clave`).map((f) => ({ ...f, abiertas: Number(f.abiertas), encargos: Number(f.encargos), cerradas: Number(f.cerradas) }));
 
   const hm = horaAhora(ctx.reloj);
   const proximas = bd.todos(

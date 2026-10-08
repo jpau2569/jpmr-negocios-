@@ -69,7 +69,7 @@ const DEFINICIONES = {
 export const ENTIDADES_EXPORTABLES = Object.keys(DEFINICIONES);
 
 export function exportarCsv(ctx, entidad, { sin_personales = false } = {}) {
-  const def = DEFINICIONES[entidad];
+  const def = Object.hasOwn(DEFINICIONES, entidad) ? DEFINICIONES[entidad] : null;
   if (!def) throw invalido(`Solo se puede exportar: ${ENTIDADES_EXPORTABLES.join(", ")}.`);
   const cols = def.cols.filter((c) => !(sin_personales && c[2]));
   const filas = ctx.bd.todos(`SELECT * FROM ${def.tabla} ORDER BY ${def.orden}`);
