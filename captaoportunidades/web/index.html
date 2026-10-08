@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="light">
+  <title>CAPTAOPORTUNIDADES ASTURIAS</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/app.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <a class="sr-only" href="#contenido">Saltar al contenido</a>
+  <div class="app" id="app">
+    <aside class="menu" id="menu" aria-label="Menú principal">
+      <a class="marca" href="#/inicio">
+        <span class="marca-logo" data-ico="marca"></span>
+        <span><b>CAPTAOPORTUNIDADES</b><small>ASTURIAS</small></span>
+      </a>
+      <nav id="nav">
+        <a href="#/inicio" data-ruta="inicio" data-ico="inicio"><span class="etq">Inicio</span></a>
+        <a href="#/oportunidades" data-ruta="oportunidades" data-ico="oportunidades"><span class="etq">Oportunidades</span></a>
+        <a href="#/propietarios" data-ruta="propietarios" data-ico="propietarios"><span class="etq">Propietarios</span></a>
+        <a href="#/inmuebles" data-ruta="inmuebles" data-ico="inmuebles"><span class="etq">Inmuebles</span></a>
+        <a href="#/compradores" data-ruta="compradores" data-ico="compradores"><span class="etq">Compradores</span></a>
+        <a href="#/demandas" data-ruta="demandas" data-ico="demandas"><span class="etq">Demandas</span></a>
+        <a href="#/agenda" data-ruta="agenda" data-ico="agenda"><span class="etq">Agenda y tareas</span></a>
+        <a href="#/visitas" data-ruta="visitas" data-ico="visitas"><span class="etq">Visitas</span><span class="fase">Fase 2</span></a>
+        <a href="#/ofertas" data-ruta="ofertas" data-ico="ofertas"><span class="etq">Ofertas</span><span class="fase">Fase 2</span></a>
+        <a href="#/operaciones" data-ruta="operaciones" data-ico="operaciones"><span class="etq">Operaciones</span><span class="fase">Fase 2</span></a>
+        <a href="#/documentos" data-ruta="documentos" data-ico="documentos"><span class="etq">Documentos</span><span class="fase">Fase 2</span></a>
+        <a href="#/marketing" data-ruta="marketing" data-ico="marketing"><span class="etq">Marketing</span><span class="fase">Fase 3</span></a>
+        <a href="#/asistente" data-ruta="asistente" data-ico="ia"><span class="etq">Asistente IA</span><span class="fase">Fase 3</span></a>
+        <a href="#/informes" data-ruta="informes" data-ico="informes"><span class="etq">Informes</span><span class="fase">Fase 3</span></a>
+        <a href="#/configuracion" data-ruta="configuracion" data-ico="config"><span class="etq">Configuración</span></a>
+      </nav>
+      <div class="menu-pie">
+        <div id="menu-modo">Datos reales</div>
+        <button type="button" class="btn peq" id="btn-demo">Probar con datos de demostración</button>
+      </div>
+    </aside>
+    <div class="velo" id="velo" hidden></div>
+
+    <div class="principal">
+      <div class="banner-demo" id="banner-demo" role="status" hidden></div>
+      <header class="barra">
+        <button type="button" class="btn icono menu-btn" id="btn-menu" aria-label="Abrir el menú" aria-controls="menu" aria-expanded="false" data-ico="menu"></button>
+        <div class="buscador" role="search">
+          <span class="ico" data-ico="buscar"></span>
+          <input type="search" id="buscar" placeholder="Buscar contactos, oportunidades, inmuebles…  ( / )" autocomplete="off" aria-label="Buscador global" aria-controls="resultados" maxlength="80">
+          <div class="resultados" id="resultados" hidden></div>
+        </div>
+        <div class="barra-acciones">
+          <div class="menu-nuevo">
+            <button type="button" class="btn primario" id="btn-nuevo" aria-haspopup="true" aria-expanded="false"><span class="ico" data-ico="mas"></span><span class="texto-btn">Nuevo</span></button>
+            <ul id="lista-nuevo" hidden>
+              <li><button type="button" data-nuevo="oportunidad">Nueva oportunidad</button></li>
+              <li><button type="button" data-nuevo="contacto">Nuevo contacto</button></li>
+              <li><button type="button" data-nuevo="inmueble">Nuevo inmueble</button></li>
+              <li><button type="button" data-nuevo="demanda">Nueva demanda</button></li>
+              <li><button type="button" data-nuevo="tarea">Nueva tarea</button></li>
+            </ul>
+          </div>
+          <a class="btn icono campana" id="campana" href="#/agenda?vista=vencidas" aria-label="Tareas de hoy y vencidas"><span class="ico" data-ico="campana"></span><span class="n" id="campana-n" hidden>0</span></a>
+        </div>
+      </header>
+      <main class="contenido" id="contenido" tabindex="-1"></main>
+    </div>
+  </div>
+  <div id="avisos" role="region" aria-live="polite" aria-label="Avisos"></div>
+</body>
+</html>

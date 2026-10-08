@@ -6,3 +6,6 @@ test/
 
 # Fotos y borradores de anuncios de clientes: material de trabajo, no debe ser público.
 fotos-listas/
+
+# CAPTAOPORTUNIDADES ASTURIAS es un CRM local con datos personales: nunca debe desplegarse en la web.
+captaoportunidades/

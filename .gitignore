@@ -19,3 +19,7 @@ pulso-local-ai/**/*.js.map
 pulso-local-ai/tsconfig.tsbuildinfo
 # Compilaciones temporales de los tests (dentro del proyecto para que resuelvan node_modules)
 pulso-local-ai/.test-build-*/
+
+# CAPTAOPORTUNIDADES: los datos reales viven en ~/.captaoportunidades, pero por si se usa --datos dentro del repo
+captaoportunidades/datos/
+captaoportunidades/*.sqlite*
