@@ -1,5 +1,15 @@
 # Tarjetas digitales de Asesoría Castresana
 
+> **⚠️ Estado a 12-oct-2026: el proyecto de Vercel `asesoria-castresana-links` ya no existe.**
+> El 6-oct estaba (con las cinco tarjetas y la de la agencia). El 12-oct la API de Vercel
+> responde «Project not found», la cuenta solo lista 3 proyectos (de los 19 que había) y
+> `asesoria-castresana-links.vercel.app/pau` da **404 `DEPLOYMENT_NOT_FOUND`**: los
+> enlaces y QR ya enviados no abren. No se sabe si fue un borrado voluntario. Lo único
+> que se conserva de aquellas tarjetas es lo de esta carpeta (tarjeta y `enviar` de Pau,
+> `vercel.json`); **no hay copia de `pau.vcf` ni de las otras cuatro tarjetas** salvo la
+> que tenga Pau en su ordenador (de ahí se publicaban con la CLI). Antes de volver a
+> publicar hay que decidir dónde: ver el final de este archivo.
+
 Las tarjetas digitales (la de la agencia y una por persona: Pau, Javier, Jorge,
 Carolina y Alejandro) **no se publican desde este repositorio**: viven en su propio
 proyecto de Vercel, **`asesoria-castresana-links`**
@@ -26,8 +36,13 @@ trae aquí cuando se toque cada una.
 
 ## Pisos en 3D dentro de la tarjeta
 
-La tarjeta enseña 4 pisos reales (foto, precio, zona) y un botón que abre el
-**escaparate 3D** (`/escaparate3d/`). Qué pasa por dentro:
+La tarjeta enseña pisos reales (foto, precio, zona) y un botón que abre el
+**escaparate 3D** (`/escaparate3d/`). Por defecto son 4 en una franja deslizable; la
+**tarjeta de Pau** usa el **formato reel** (`data-pisos="6" data-reel="1"`): 6 tarjetas
+grandes que **pasan solas cada 3,6 s**, con puntos para saltar a un piso. El reel se
+para al tocar, deslizar o pasar el ratón (y se reanuda a los 8 s quieto), solo avanza
+mientras el bloque está en pantalla y **no avanza nunca** si el aparato pide «reducir
+movimiento». Qué pasa por dentro:
 
 1. `pisos3d.js` lee la cartera en vivo de `https://jpmr-negocios.vercel.app/api/escaparate`
    (la misma que alimenta el escaparate) y reparte la muestra por toda la lista,
@@ -54,14 +69,15 @@ acciones (marcar, comparar, pedir visita). Por eso el botón de la tarjeta solo 
    Es lista cerrada a propósito: ver el comentario del código.
 2. En su `index.html`, tras el botón «Guardar en mis contactos»:
    `<section id="pisos3d" data-agente="javier" aria-label="Nuestros pisos" hidden></section>`
+   (añadir `data-pisos="6" data-reel="1"` para el formato reel; sin ellos, franja de 4)
    y antes de `</body>`: `<script src="/pisos3d.js" defer></script>`.
 3. En su `enviar.html`, cambiar `?ag=pau` por la clave de esa persona (y añadir la casilla
    igual que en la de Pau).
 4. Publicar `pisos3d.js` junto a las tarjetas (va en la raíz del proyecto).
 
-## Cómo se publica
+## Cómo se publicaba (y cómo volver a hacerlo)
 
-Las tarjetas se publican en el proyecto de Vercel `asesoria-castresana-links`.
+Hasta el 6-oct las tarjetas se publicaban en el proyecto de Vercel `asesoria-castresana-links`.
 Como no hay Git conectado, se redespliega **subiendo solo los archivos cambiados y
 reutilizando los demás por su huella** (así no hace falta tener las otras tarjetas en
 local). Los enlaces y QR ya enviados no cambian porque el proyecto y su dominio son
@@ -75,8 +91,21 @@ siempre (que hoy es el de Pau).
 ## Pruebas
 
 ```
-node test/tarjetas-pisos3d.test.mjs     # Chromium real, sin salir a Internet (47 comprobaciones)
+node test/tarjetas-pisos3d.test.mjs     # Chromium real, sin salir a Internet (63 comprobaciones)
 ```
 
-Cubre el bloque (móvil y ancho), los fallos de la cartera, texto malicioso en los
-datos, la casilla de `enviar` por motivo y la lista cerrada de `?ag=` del escaparate.
+Cubre el bloque (móvil y ancho), el reel (ritmo, pausas al tocar y con el ratón, puntos,
+«reducir movimiento», fuera de pantalla), que otra tarjeta sin `data-reel` no cambie,
+los fallos de la cartera, texto malicioso en los datos, la casilla de `enviar` por
+motivo y la lista cerrada de `?ag=` del escaparate.
+
+### Opciones para volver a publicarlas (decide Pau)
+
+1. **Recrear el proyecto `asesoria-castresana-links`** y subir las tarjetas. Si el nombre
+   sigue libre, vuelve el mismo dominio y los QR/enlaces ya enviados vuelven a abrir; si
+   no, el dominio cambia y habría que reimprimir/reenviar. Hace falta tener las tarjetas
+   completas (la carpeta original del ordenador de Pau) o rehacer las que falten.
+2. **Servirlas desde un proyecto que ya existe** (por ejemplo `jpmr-negocios-`), con el
+   enlace nuevo. Es más estable (se publican desde Git), pero los enlaces viejos no
+   vuelven a abrir.
+Ninguna de las dos se hizo sin que Pau lo confirmara.

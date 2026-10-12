@@ -107,18 +107,18 @@ console.log("\n— Tarjeta de Pau: bloque «Nuestros pisos» (móvil, 390 px) �
     ctaHref: document.querySelector("#pisos3d .p3-cta")?.href,
     badge: !!document.querySelector("#pisos3d .p3-badge"),
     primero: document.querySelector("#pisos3d .p3-it")?.href,
-    ultimo: [...document.querySelectorAll("#pisos3d .p3-it")].pop()?.href,
+    refs: [...document.querySelectorAll("#pisos3d .p3-it")].map((a) => new URL(a.href).searchParams.get("ref")),
     precios: [...document.querySelectorAll("#pisos3d .p3-p")].map((e) => e.textContent),
     ops: [...document.querySelectorAll("#pisos3d .p3-op")].map((e) => e.textContent),
     meta: document.querySelector("#pisos3d .p3-m")?.textContent,
     desborda: document.documentElement.scrollWidth > window.innerWidth,
     posicion: [...document.querySelectorAll(".wrap > *")].map((e) => e.id || e.className.split(" ")[0]),
   }));
-  check("el bloque aparece y enseña 4 pisos", r.visible && r.n === 4, JSON.stringify(r));
+  check("el bloque aparece y enseña 6 pisos (formato reel)", r.visible && r.n === 6, JSON.stringify(r));
   check("en el móvil el botón NO promete 3D (el escaparate enseña la lista)", r.cta === "Ver los 9 pisos" && !r.badge, r.cta);
   check("el botón abre el escaparate con la clave de Pau", r.ctaHref === ESC + "?ag=pau", r.ctaHref);
   check("cada piso abre el escaparate con su referencia y la clave de Pau", r.primero === ESC + "?ag=pau&ref=REF1", r.primero);
-  check("se reparten por toda la lista: el último es el más asequible de las ventas", r.ultimo === ESC + "?ag=pau&ref=REF8", r.ultimo);
+  check("se reparten por toda la lista: del más caro (REF1) al más asequible (REF8)", r.refs.join() === "REF1,REF2,REF4,REF5,REF7,REF8", r.refs.join());
   check("solo salen ventas (el alquiler no entra en la muestra)", r.ops.every((o) => o === "Venta"), r.ops.join());
   check("precio con formato español y metros/habitaciones (con espacio duro: «3 hab.» no se parte)", r.precios[0] === "380.000 €" && r.meta === "Oviedo · 81 m² · 3 hab.", `${r.precios[0]} | ${JSON.stringify(r.meta)}`);
   check("la página no se ensancha en el móvil (sin scroll horizontal)", !r.desborda);
@@ -163,7 +163,7 @@ console.log("\n— Texto malicioso en la cartera no se ejecuta —");
     titulo: '<img src=x onerror="window.__pwned=1">', localidad: '<script>window.__pwned=2</script>',
     ref: 'X"><img src=x onerror="window.__pwned=3">',
   });
-  const page = await paginaNueva({ api: { status: 200, body: { items: [malo, item(2), item(3), item(4), item(5)] } } });
+  const page = await paginaNueva({ api: { status: 200, body: { items: [malo, item(2), item(3), item(4), item(5), item(6), item(7)] } } });
   await page.goto(URL_TARJETA);
   await page.waitForSelector("#pisos3d:not([hidden]) .p3-it", { timeout: 5000 }).catch(() => {});
   await page.waitForTimeout(300);
@@ -173,8 +173,120 @@ console.log("\n— Texto malicioso en la cartera no se ejecuta —");
     scripts: document.querySelectorAll("#pisos3d script").length,
     href: document.querySelector("#pisos3d .p3-it")?.getAttribute("href"),
   }));
-  check("no se ejecuta nada y solo hay las 4 fotos esperadas", !r.pwned && r.imgs === 4 && r.scripts === 0, JSON.stringify(r));
+  check("no se ejecuta nada y solo hay las 6 fotos esperadas", !r.pwned && r.imgs === 6 && r.scripts === 0, JSON.stringify(r));
   check("la referencia viaja codificada en el enlace", r.href.includes("ref=X%22%3E%3Cimg"), r.href);
+  await page.context().close();
+}
+
+// ============================================================================
+console.log("\n— Reel: 6 pisos que pasan solos (móvil, 390 px) —");
+{
+  // El reloj falso deja probar el ritmo real (3,6 s) sin esperar. El scroll suave lo anima el navegador.
+  const abre = async (opciones = {}) => {
+    const page = await paginaNueva(opciones.pagina);
+    if (opciones.contexto) { /* reservado */ }
+    await page.clock.install();
+    await page.goto(URL_TARJETA);
+    await page.waitForSelector("#pisos3d:not([hidden]) .p3-it", { timeout: 5000 });
+    return page;
+  };
+  const activo = (page) => page.evaluate(() => [...document.querySelectorAll(".p3-dot")].findIndex((d) => d.classList.contains("on")));
+  const esperaActivo = (page, i) => page.waitForFunction((i) => [...document.querySelectorAll(".p3-dot")].findIndex((d) => d.classList.contains("on")) === i, i, { timeout: 4000, polling: 50 }).then(() => true, () => false);
+
+  const page = await abre();
+  const r0 = await page.evaluate(() => ({
+    puntos: document.querySelectorAll(".p3-dot").length,
+    reel: document.querySelector(".p3")?.classList.contains("p3-reel"),
+    region: document.querySelector(".p3-strip")?.getAttribute("role"),
+    ancho: document.querySelector(".p3-it")?.getBoundingClientRect().width,
+    siguienteAsoma: document.querySelectorAll(".p3-it")[1]?.getBoundingClientRect().left < window.innerWidth,
+  }));
+  check("hay 6 puntos, uno por piso, y es formato reel", r0.puntos === 6 && r0.reel && r0.region === "region", JSON.stringify(r0));
+  check("las tarjetas son grandes y la siguiente asoma para invitar a deslizar", r0.ancho > 200 && r0.siguienteAsoma, JSON.stringify(r0));
+  check("empieza en el primer piso", (await activo(page)) === 0);
+
+  const y0 = await page.evaluate(() => window.scrollY);
+  await page.clock.fastForward(3700);
+  check("a los 3,6 s pasa solo al segundo piso", await esperaActivo(page, 1));
+  await page.clock.fastForward(3700);
+  check("y luego al tercero", await esperaActivo(page, 2));
+  check("la página no salta: solo se mueve la tira, no el scroll vertical", (await page.evaluate(() => window.scrollY)) === y0);
+
+  // Tocar la tira lo para
+  await page.dispatchEvent(".p3-strip", "pointerdown");
+  await page.clock.fastForward(3700);
+  await page.waitForTimeout(500);
+  check("al tocarlo se queda quieto (no avanza a los 3,6 s)", (await activo(page)) === 2);
+  await page.clock.fastForward(8500);
+  check("y retoma solo cuando lleva unos segundos sin tocarse", await esperaActivo(page, 3));
+
+  // Pasar el ratón por encima lo para mientras esté encima
+  await page.hover(".p3-strip");
+  await page.clock.fastForward(12000);
+  await page.waitForTimeout(500);
+  check("con el ratón encima no avanza", (await activo(page)) === 3);
+  await page.mouse.move(2, 2);
+
+  // Un punto lleva a su piso
+  await page.click('.p3-dot[data-i="5"]');
+  check("pulsar un punto lleva a ese piso", await esperaActivo(page, 5));
+  await page.clock.fastForward(9000);
+  await page.clock.fastForward(3700);
+  check("tras el último vuelve al primero", await esperaActivo(page, 0));
+  check("sin errores de JavaScript", page.errores.length === 0, page.errores.join(" | "));
+  await page.context().close();
+}
+
+console.log("\n— Reel: respeta «menos movimiento» y no gasta si no se ve —");
+{
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 900 }, reducedMotion: "reduce" });
+  const page = await ctx.newPage();
+  page.errores = [];
+  page.on("pageerror", (e) => page.errores.push(String(e)));
+  await page.route(/^https?:\/\/(?!localhost)/, (route) => {
+    const u = route.request().url();
+    if (u.startsWith("https://jpmr-negocios.vercel.app/api/escaparate")) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ items: CARTERA }) });
+    if (u.startsWith("https://jpmr-negocios.vercel.app/api/foto")) return route.fulfill({ status: 200, contentType: "image/png", body: PNG });
+    return route.abort();
+  });
+  await page.clock.install();
+  await page.goto(URL_TARJETA);
+  await page.waitForSelector("#pisos3d:not([hidden]) .p3-it", { timeout: 5000 });
+  await page.clock.fastForward(20000);
+  await page.waitForTimeout(500);
+  const i = await page.evaluate(() => [...document.querySelectorAll(".p3-dot")].findIndex((d) => d.classList.contains("on")));
+  check("con «reducir movimiento» el reel no avanza solo", i === 0, "índice " + i);
+  await page.click('.p3-dot[data-i="2"]');
+  await page.waitForFunction(() => document.querySelector('.p3-dot[data-i="2"]').classList.contains("on"), null, { timeout: 4000, polling: 50 });
+  check("pero los puntos siguen funcionando", true);
+  await ctx.close();
+
+  // Bloque fuera de pantalla: no avanza
+  const page2 = await paginaNueva({ ancho: 390 });
+  await page2.setViewportSize({ width: 390, height: 300 }); // el bloque queda por debajo de la primera pantalla
+  await page2.clock.install();
+  await page2.goto(URL_TARJETA);
+  await page2.waitForSelector("#pisos3d:not([hidden]) .p3-it", { state: "attached", timeout: 5000 });
+  await page2.clock.fastForward(15000);
+  await page2.waitForTimeout(500);
+  const j = await page2.evaluate(() => [...document.querySelectorAll(".p3-dot")].findIndex((d) => d.classList.contains("on")));
+  check("si el bloque no está en pantalla, no avanza (no gasta batería)", j === 0, "índice " + j);
+  await page2.context().close();
+}
+
+console.log("\n— «Solo para mi tarjeta»: sin el atributo reel sigue la franja de 4 —");
+{
+  const page = await paginaNueva();
+  // El mismo HTML de Pau pero como lo tendría otra tarjeta: sin data-pisos ni data-reel.
+  await page.route(`http://localhost:${PORT_TARJETA}/pau`, async (route) => {
+    const res = await route.fetch();
+    const html = (await res.text()).replace(' data-pisos="6" data-reel="1"', "");
+    await route.fulfill({ response: res, body: html });
+  });
+  await page.goto(URL_TARJETA);
+  await page.waitForSelector("#pisos3d:not([hidden]) .p3-it", { timeout: 5000 });
+  const r = await page.evaluate(() => ({ n: document.querySelectorAll(".p3-it").length, reel: !!document.querySelector(".p3-reel"), puntos: document.querySelectorAll(".p3-dot").length }));
+  check("otra tarjeta (sin data-reel) enseña 4 pisos, sin reel ni puntos", r.n === 4 && !r.reel && r.puntos === 0, JSON.stringify(r));
   await page.context().close();
 }
 

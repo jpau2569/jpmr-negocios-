@@ -6,9 +6,14 @@
      <section id="pisos3d" data-agente="pau" hidden></section>
      <script src="/pisos3d.js" defer></script>
 
-   Qué hace: lee la cartera real del escaparate (/api/escaparate), enseña 4
-   pisos con foto y precio y un botón que abre el escaparate 3D. Las visitas que
-   pida el cliente llegan al WhatsApp de la persona de la tarjeta (?ag=<clave>).
+   Opciones (atributos del <section>):
+     data-agente="pau"   clave de la persona; las visitas van a SU WhatsApp (?ag=)
+     data-pisos="6"      cuántos pisos enseñar (1-8; por defecto 4)
+     data-reel="1"       formato reel: tarjetas grandes que pasan solas, con
+                         puntos; se paran al tocar o pasar el ratón por encima
+
+   Qué hace: lee la cartera real del escaparate (/api/escaparate), enseña unos
+   pisos con foto y precio y un botón que abre el escaparate.
 
    Si algo falla (sin red, la cartera no responde…) la tarjeta se queda igual que
    antes: el bloque solo se muestra cuando tiene algo que enseñar. Sin dependencias.
@@ -19,10 +24,16 @@
   var ESCAPARATE = 'https://jpmr-negocios.vercel.app/escaparate3d/';
   var API = 'https://jpmr-negocios.vercel.app/api/escaparate';
   var FOTO = 'https://jpmr-negocios.vercel.app/api/foto?u=';
-  var MAX = 4;
+  var CADA = 3600;      // ms entre pisos en el reel
+  var PAUSA = 8000;     // ms que el reel se queda quieto tras tocarlo
 
   var host = document.getElementById('pisos3d');
   if (!host) return;
+
+  var MAX = parseInt(host.getAttribute('data-pisos'), 10);
+  if (!(MAX >= 1)) MAX = 4;
+  if (MAX > 8) MAX = 8;
+  var reel = host.getAttribute('data-reel') === '1';
 
   // La clave de la persona va en la URL del escaparate; solo letras minúsculas.
   var agente = String(host.getAttribute('data-agente') || '').toLowerCase();
@@ -31,6 +42,7 @@
   // El 3D solo se ve en pantallas anchas: en el móvil el escaparate enseña la lista.
   // El texto no promete lo que el cliente no va a ver.
   var ancho = !!(window.matchMedia && window.matchMedia('(min-width: 861px)').matches);
+  var sinMovimiento = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   function enlace(ref) {
     var q = [];
@@ -56,7 +68,7 @@
       '.p3-k{font-size:11px;letter-spacing:.16em;font-weight:600;color:var(--muted,#5D6580)}',
       '.p3-badge{margin-left:auto;background:var(--navy,#1F2D6B);color:#fff;font-size:11px;font-weight:700;letter-spacing:.1em;padding:3px 9px;border-radius:999px}',
       '.p3-t{padding:6px 18px 0;font-size:14px;line-height:1.45;color:var(--fg,#18203A)}',
-      '.p3-strip{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:14px 18px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}',
+      '.p3-strip{position:relative;display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 18px;padding:14px 18px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}',
       '.p3-strip::-webkit-scrollbar{display:none}',
       '.p3-it{flex:0 0 150px;scroll-snap-align:start;text-decoration:none;color:inherit;border:1px solid var(--line,#E2E5EE);border-radius:14px;overflow:hidden;background:#fff;display:block}',
       '.p3-it:active{transform:scale(.98)}',
@@ -66,6 +78,14 @@
       '.p3-b{padding:8px 10px 10px}',
       '.p3-p{font-weight:700;font-size:15px;color:var(--navy,#1F2D6B)}',
       '.p3-m{font-size:11.5px;color:var(--muted,#5D6580);line-height:1.35;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}',
+      /* Formato reel: tarjetas grandes, la siguiente asoma para invitar a deslizar */
+      '.p3-reel .p3-it{flex:0 0 74%;max-width:300px}',
+      '.p3-reel .p3-b{padding:10px 12px 12px}',
+      '.p3-reel .p3-p{font-size:18px}',
+      '.p3-reel .p3-m{font-size:12.5px}',
+      '.p3-dots{display:flex;justify-content:center;gap:7px;padding:10px 18px 0}',
+      '.p3-dot{width:7px;height:7px;padding:0;border:0;border-radius:50%;background:var(--line,#D3D8E6);cursor:pointer;transition:width .25s,background .25s}',
+      '.p3-dot.on{width:20px;border-radius:4px;background:var(--navy,#1F2D6B)}',
       '.p3-cta{display:flex;align-items:center;justify-content:center;gap:10px;margin:14px 18px 0;background:var(--navy,#1F2D6B);color:#fff;text-decoration:none;font-weight:600;font-size:16px;padding:15px;border-radius:14px}',
       '.p3-cta svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}',
       '.p3-cta:active{transform:scale(.99)}'
@@ -73,8 +93,8 @@
     document.head.appendChild(s);
   }
 
-  // Cuatro pisos repartidos por toda la lista (de los más caros a los más
-  // asequibles), para que se vea la variedad de la cartera y no solo la cabecera.
+  // Pisos repartidos por toda la lista (de los más caros a los más asequibles),
+  // para que se vea la variedad de la cartera y no solo la cabecera.
   function elegir(items) {
     var v = items.filter(function (p) {
       return p && typeof p.foto === 'string' && /^https?:\/\//.test(p.foto) && p.precio > 0;
@@ -82,6 +102,7 @@
     var ventas = v.filter(function (p) { return p.operacion !== 'alquiler'; });
     var base = ventas.length >= MAX ? ventas : v;
     if (base.length <= MAX) return base;
+    if (MAX === 1) return [base[0]];
     var out = [];
     for (var i = 0; i < MAX; i++) out.push(base[Math.round(i * (base.length - 1) / (MAX - 1))]);
     return out;
@@ -130,10 +151,64 @@
     return a;
   }
 
+  // Reel: los pisos pasan solos, uno cada pocos segundos, y se paran en cuanto el
+  // cliente toca, desliza o pasa el ratón; se reanuda tras unos segundos quieto.
+  // Solo avanza mientras el bloque está en pantalla (no gasta batería fuera de ella)
+  // y nunca si el aparato pide menos movimiento.
+  function montaReel(tira, puntos) {
+    var slides = [].slice.call(tira.children);
+    var n = slides.length;
+    if (n < 2) return;
+    var activo = 0, pausadoHasta = 0, encima = false, visible = true;
+
+    function marca(i) {
+      activo = i;
+      puntos.forEach(function (d, k) {
+        d.className = 'p3-dot' + (k === i ? ' on' : '');
+        if (k === i) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current');
+      });
+    }
+    function irA(i, suave) {
+      // Se mueve solo la tira (nunca scrollIntoView: haría saltar la página entera).
+      var x = slides[i].offsetLeft - 18;
+      if (typeof tira.scrollTo === 'function') tira.scrollTo({ left: x, behavior: suave ? 'smooth' : 'auto' });
+      else tira.scrollLeft = x;
+    }
+    function pausa() { pausadoHasta = Date.now() + PAUSA; }
+
+    tira.addEventListener('scroll', function () {
+      var paso = slides[1].offsetLeft - slides[0].offsetLeft;
+      var i = paso > 0 ? Math.round(tira.scrollLeft / paso) : 0;
+      if (tira.scrollLeft >= tira.scrollWidth - tira.clientWidth - 2) i = n - 1;
+      i = Math.max(0, Math.min(n - 1, i));
+      if (i !== activo) marca(i);
+    }, { passive: true });
+
+    ['pointerdown', 'touchstart', 'wheel', 'keydown', 'focusin'].forEach(function (ev) {
+      tira.addEventListener(ev, pausa, { passive: true });
+    });
+    tira.addEventListener('mouseenter', function () { encima = true; });
+    tira.addEventListener('mouseleave', function () { encima = false; pausa(); });
+    puntos.forEach(function (d, k) {
+      d.addEventListener('click', function () { pausa(); irA(k, !sinMovimiento); });
+    });
+
+    if (typeof IntersectionObserver === 'function') {
+      new IntersectionObserver(function (es) { visible = es[0].isIntersecting; }, { threshold: 0.4 }).observe(host);
+    }
+
+    marca(0);
+    if (sinMovimiento) return;
+    setInterval(function () {
+      if (encima || !visible || document.hidden || Date.now() < pausadoHasta) return;
+      irA((activo + 1) % n, true);
+    }, CADA);
+  }
+
   function pinta(items, total) {
     estilos();
     host.textContent = '';
-    var sec = h('div', 'p3');
+    var sec = h('div', 'p3' + (reel ? ' p3-reel' : ''));
 
     var cab = h('div', 'p3-head');
     cab.appendChild(h('span', 'p3-k', 'NUESTROS PISOS'));
@@ -145,8 +220,27 @@
       : 'Mira la cartera, marca los que te gusten y pide visita.'));
 
     var tira = h('div', 'p3-strip');
+    if (reel) {
+      tira.setAttribute('role', 'region');
+      tira.setAttribute('aria-label', 'Pisos disponibles, desliza para ver más');
+      tira.tabIndex = 0;
+    }
     items.forEach(function (p) { tira.appendChild(miniatura(p)); });
     sec.appendChild(tira);
+
+    var puntos = [];
+    if (reel && items.length > 1) {
+      var caja = h('div', 'p3-dots');
+      items.forEach(function (_, k) {
+        var d = h('button', 'p3-dot');
+        d.type = 'button';
+        d.setAttribute('aria-label', 'Piso ' + (k + 1) + ' de ' + items.length);
+        d.setAttribute('data-i', String(k));
+        caja.appendChild(d);
+        puntos.push(d);
+      });
+      sec.appendChild(caja);
+    }
 
     var cta = h('a', 'p3-cta');
     cta.href = enlace('');
@@ -159,6 +253,7 @@
 
     host.appendChild(sec);
     host.hidden = false;
+    if (reel && puntos.length) montaReel(tira, puntos);
   }
 
   function carga() {
