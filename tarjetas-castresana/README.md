@@ -92,7 +92,7 @@ siempre (que hoy es el de Pau).
 ## Pruebas
 
 ```
-node test/tarjetas-pisos3d.test.mjs     # Chromium real, sin salir a Internet (69 comprobaciones)
+node test/tarjetas-pisos3d.test.mjs     # Chromium real, sin salir a Internet (72 comprobaciones)
 ```
 
 Cubre el bloque (móvil y ancho), el reel (ritmo, pausas al tocar y con el ratón, puntos,
@@ -119,3 +119,18 @@ No se creó ni se cambió nada en Vercel; solo se subieron dos archivos sueltos
 Para publicar hay que hacerlo desde el ordenador de Pau con la CLI de Vercel, o darle al
 conector un permiso que pueda crear proyectos. Todo lo necesario está en esta carpeta
 (`pau/index.html`, `pau/enviar.html`, `pau/pau.vcf`, `pisos3d.js`, `vercel.json`).
+
+### Publicar en Netlify (futuroianegocio.com)
+
+El dominio `futuroianegocio.com` está en **Netlify** (hoy sirve Chivato AI). No se sube
+la carpeta encima de ese sitio: se crea **un sitio nuevo** y se le pone el subdominio
+`tarjetas.futuroianegocio.com`.
+
+1. Netlify → **Add new site → Deploy manually** → arrastrar la carpeta (o el ZIP) con
+   `_headers`, `_redirects`, `pisos3d.js` y `pau/` (sin `README.md` ni `vercel.json`,
+   que no hacen falta y se verían públicos).
+2. **Domain management → Add a domain** → `tarjetas.futuroianegocio.com`.
+3. Tarjeta: `https://tarjetas.futuroianegocio.com/pau/`.
+
+`_redirects` y `_headers` hacen en Netlify lo que `vercel.json` hacía en Vercel (descarga
+del `.vcf` como contacto, `noindex` en `enviar`, `/pau/enviar` sin `.html`).

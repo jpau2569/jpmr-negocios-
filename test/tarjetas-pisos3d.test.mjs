@@ -196,6 +196,17 @@ console.log("\n— pau.vcf («Guardar en mis contactos») coincide con la tarjet
 }
 
 // ============================================================================
+console.log("\n— Netlify: _redirects y _headers (futuroianegocio.com) —");
+{
+  const red = await readFile(join(TARJETAS, "_redirects"), "utf8");
+  const cab = await readFile(join(TARJETAS, "_headers"), "utf8");
+  const reglas = red.split("\n").filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.trim().split(/\s+/));
+  check("/pau/enviar se sirve desde pau/enviar.html (200, sin redirigir)", reglas.some((r) => r[0] === "/pau/enviar" && r[1] === "/pau/enviar.html" && r[2] === "200"), JSON.stringify(reglas));
+  check("el .vcf se descarga como contacto (tipo y nombre de archivo)", /\/pau\/pau\.vcf\n\s+Content-Type: text\/vcard; charset=utf-8\n\s+Content-Disposition: attachment; filename="Pau_Rodriguez\.vcf"/.test(cab));
+  check("la página de envío lleva noindex (con y sin .html)", /\/pau\/enviar\n\s+X-Robots-Tag: noindex/.test(cab) && /\/pau\/enviar\.html\n\s+X-Robots-Tag: noindex/.test(cab));
+}
+
+// ============================================================================
 console.log("\n— Reel: 6 pisos que pasan solos (móvil, 390 px) —");
 {
   // El reloj falso deja probar el ritmo real (3,6 s) sin esperar. El scroll suave lo anima el navegador.

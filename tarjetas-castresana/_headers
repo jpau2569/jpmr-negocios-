@@ -1,0 +1,11 @@
+# Netlify: lo mismo que hacía vercel.json en Vercel.
+# "Guardar en mis contactos" tiene que descargarse como contacto, no abrirse como texto.
+/pau/pau.vcf
+  Content-Type: text/vcard; charset=utf-8
+  Content-Disposition: attachment; filename="Pau_Rodriguez.vcf"
+
+# La página interna de envío no debe salir en Google.
+/pau/enviar
+  X-Robots-Tag: noindex
+/pau/enviar.html
+  X-Robots-Tag: noindex

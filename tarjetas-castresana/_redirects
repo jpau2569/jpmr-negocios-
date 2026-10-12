@@ -1,0 +1,3 @@
+# Netlify: URLs limpias para las tarjetas. /pau/ ya abre pau/index.html por sí solo;
+# esto deja además que /pau/enviar abra pau/enviar.html (en Vercel lo hacía cleanUrls).
+/pau/enviar    /pau/enviar.html    200
