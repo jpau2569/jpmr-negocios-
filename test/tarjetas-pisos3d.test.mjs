@@ -179,6 +179,23 @@ console.log("\n— Texto malicioso en la cartera no se ejecuta —");
 }
 
 // ============================================================================
+console.log("\n— pau.vcf («Guardar en mis contactos») coincide con la tarjeta —");
+{
+  const vcf = await readFile(join(TARJETAS, "pau", "pau.vcf"), "utf8");
+  const html = await readFile(join(TARJETAS, "pau", "index.html"), "utf8");
+  const lineas = vcf.split("\r\n");
+  check("es una vCard bien formada (BEGIN/END, CRLF, versión 3.0)", lineas[0] === "BEGIN:VCARD" && lineas.includes("VERSION:3.0") && lineas.at(-2) === "END:VCARD" && lineas.at(-1) === "" && !/[^\r]\n/.test(vcf));
+  check("lleva el nombre y la empresa de la tarjeta", vcf.includes("FN:Pau Rodríguez") && vcf.includes("ORG:Asesoría Castresana"));
+  const telsTarjeta = [...html.matchAll(/href="tel:(\+\d+)"/g)].map((m) => m[1]);
+  const telsVcf = [...vcf.matchAll(/^TEL[^:]*:(\+\d+)$/gm)].map((m) => m[1]);
+  check("los teléfonos son exactamente los de la tarjeta", telsTarjeta.length >= 2 && [...new Set(telsTarjeta)].every((t) => telsVcf.includes(t)) && telsVcf.every((t) => telsTarjeta.includes(t)), `${telsTarjeta} | ${telsVcf}`);
+  const mailTarjeta = html.match(/href="mailto:([^"]+)"/)[1];
+  check("el correo y la web son los de la tarjeta", vcf.includes(`EMAIL;TYPE=INTERNET,WORK:${mailTarjeta}`) && vcf.includes("URL:https://asesoriacastresana.com"));
+  check("lleva las dos oficinas (Oviedo y Llanes)", vcf.includes("Cabo Noval") && vcf.includes("Marqués de Canillejas") && vcf.includes("33007") && vcf.includes("33500"));
+  check("el enlace de la tarjeta apunta a este archivo", html.includes('href="/pau/pau.vcf"'));
+}
+
+// ============================================================================
 console.log("\n— Reel: 6 pisos que pasan solos (móvil, 390 px) —");
 {
   // El reloj falso deja probar el ritmo real (3,6 s) sin esperar. El scroll suave lo anima el navegador.

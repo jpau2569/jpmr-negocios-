@@ -27,6 +27,7 @@ Esta carpeta es la copia versionada de lo que se va tocando. **Equivale a la car
 | `pau/index.html` | La tarjeta de Pau. Idéntica a la publicada, más el bloque «Nuestros pisos». |
 | `pau/enviar.html` | Página interna para mandar la tarjeta (asunto, texto, WhatsApp/correo). Idéntica a la publicada, más la casilla del escaparate. |
 | `pisos3d.js` | El bloque «Nuestros pisos». **Un solo archivo para todas las tarjetas.** |
+| `pau/pau.vcf` | El botón «Guardar en mis contactos». **Regenerado el 12-oct-2026** a partir de los datos de la tarjeta (el original se perdió con el proyecto); un test comprueba que teléfonos, correo y oficinas coinciden con la tarjeta. |
 | `vercel.json` | Configuración del proyecto (URLs limpias, cabeceras de los `.vcf`). Sin cambios. |
 
 Las copias de `pau/index.html`, `pau/enviar.html` y `vercel.json` se comprobaron
@@ -91,7 +92,7 @@ siempre (que hoy es el de Pau).
 ## Pruebas
 
 ```
-node test/tarjetas-pisos3d.test.mjs     # Chromium real, sin salir a Internet (63 comprobaciones)
+node test/tarjetas-pisos3d.test.mjs     # Chromium real, sin salir a Internet (69 comprobaciones)
 ```
 
 Cubre el bloque (móvil y ancho), el reel (ritmo, pausas al tocar y con el ratón, puntos,
@@ -109,3 +110,12 @@ motivo y la lista cerrada de `?ag=` del escaparate.
    enlace nuevo. Es más estable (se publican desde Git), pero los enlaces viejos no
    vuelven a abrir.
 Ninguna de las dos se hizo sin que Pau lo confirmara.
+
+**12-oct-2026 — intento de recrear el proyecto:** Pau dio el visto bueno a la opción 1, pero
+la API de Vercel respondió **403 «no tienes permiso para crear un proyecto»** (el conector
+de Vercel de Claude no tiene ese permiso en el equipo `pau-ia-projectos-55s-projects`).
+No se creó ni se cambió nada en Vercel; solo se subieron dos archivos sueltos
+(`pau/index.html` y `pau/enviar.html`) al almacén de Vercel, sin ningún despliegue que los use.
+Para publicar hay que hacerlo desde el ordenador de Pau con la CLI de Vercel, o darle al
+conector un permiso que pueda crear proyectos. Todo lo necesario está en esta carpeta
+(`pau/index.html`, `pau/enviar.html`, `pau/pau.vcf`, `pisos3d.js`, `vercel.json`).

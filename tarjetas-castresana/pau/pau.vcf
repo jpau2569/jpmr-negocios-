@@ -1,0 +1,13 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Rodríguez;Pau;;;
+FN:Pau Rodríguez
+ORG:Asesoría Castresana
+TEL;TYPE=CELL,VOICE:+34672775721
+TEL;TYPE=WORK,VOICE:+34985210468
+EMAIL;TYPE=INTERNET,WORK:asesoriacastresana@gmail.com
+URL:https://asesoriacastresana.com
+ADR;TYPE=WORK:;;C/ Cabo Noval\, 8 - bajo;Oviedo;Asturias;33007;España
+ADR;TYPE=WORK:;;C/ Marqués de Canillejas\, 10 - bajo;Llanes;Asturias;33500;España
+NOTE:Abogados · Fiscal · Jurídico · Laboral · Contable · Admón. Fincas · Gestión Inmobiliaria. Horario: lunes a viernes\, 10:00–14:00 y 17:00–19:00
+END:VCARD
