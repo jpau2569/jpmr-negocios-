@@ -51,7 +51,15 @@
             ".jpeg",
             ".png",
             ".webp",
-            ".pdf"
+            ".pdf",
+            "text/vcard",
+            "text/x-vcard",
+            ".vcf",
+            "text/csv",
+            "text/comma-separated-values",
+            ".csv",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".xlsx"
           ]
         }
       ]

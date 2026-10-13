@@ -6,7 +6,9 @@
 //  Verifica: saludo, los 6 modos, envío y respuesta, formato enriquecido,
 //  persistencia tras recargar, panel 🧠 Memoria (y que viaja en la petición),
 //  botón copiar y nueva conversación, y los botones ⬇ HTML / ⬇ Excel (CSV):
-//  uno por bloque csv, sin duplicados y sin scroll lateral de 360 a 1280 px.
+//  uno por bloque csv, sin duplicados y sin scroll lateral de 360 a 1280 px;
+//  el contador «📊 Uso este mes» con sus avisos del 80 % y el 100 %, y la
+//  agenda (.vcf) y el CSV de clientes como adjuntos.
 // ============================================================================
 
 import http from "node:http";
@@ -264,6 +266,178 @@ try {
       return { doc: document.documentElement.scrollWidth, vw: innerWidth, main: main.scrollWidth - main.clientWidth, est: est.scrollWidth - est.clientWidth, dentro: est.getBoundingClientRect().right <= card.right + 0.5, texto: est.textContent };
     });
     check("360 px: un nombre de 45 «a» no da scroll lateral (overflow-wrap:anywhere)", mLargo.texto.includes(NOMBRE_LARGO) && mLargo.doc <= mLargo.vw && mLargo.main <= 0 && mLargo.est <= 0 && mLargo.dentro, JSON.stringify(mLargo));
+    await page.setViewportSize({ width: 1280, height: 720 });
+  }
+
+  console.log("\n— 📊 contador de gasto y tope (sin nube: por dispositivo) —");
+  {
+    await page.setViewportSize({ width: 360, height: 760 });
+    await page.evaluate(() => { localStorage.removeItem("clara_uso_v1"); localStorage.removeItem("clara_chat_v1"); });
+    await page.reload();
+    await page.waitForSelector(".msg.clara .bubble");
+    const mes = await page.evaluate(() => {
+      const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit" }).formatToParts(new Date());
+      return p.find((x) => x.type === "year").value + "-" + p.find((x) => x.type === "month").value;
+    });
+    const envia = async (coste, texto) => {
+      EVENTOS_EXTRA = [{ uso: { llamadas: 2, entrada: 1000, salida: 100, coste_usd: coste }, uso_estado: { mes, almacen: "local", guardado: false, total: null, tope_usd: 1, nivel: "sin_datos" } }];
+      const antes = await page.$$eval(".msg.clara", (n) => n.length);
+      await page.fill("#input", texto);
+      await page.press("#input", "Enter");
+      await page.waitForFunction((n) => document.querySelectorAll(".msg.clara").length > n && !document.getElementById("typing"), antes);
+      await page.waitForTimeout(100);
+    };
+    await envia(0.5, "uno");
+    check("50 % del tope: ningún aviso", (await page.$$(".avisouso")).length === 0);
+    await envia(0.35, "dos");
+    const avisos = await page.$$eval(".avisouso", (n) => n.map((x) => x.textContent));
+    check("al 80 % Clara avisa en el chat (con el % y el tope)", avisos.length === 1 && avisos[0].includes("85 %") && avisos[0].includes("1,00 $") && avisos[0].includes("solo avisa"), avisos.join(" | "));
+    await envia(0.01, "tres");
+    check("el aviso del 80 % sale una sola vez", (await page.$$(".avisouso")).length === 1);
+    await envia(0.2, "cuatro");
+    const avisos2 = await page.$$eval(".avisouso", (n) => n.map((x) => x.textContent));
+    check("al 100 % sin nube: dice con honestidad que solo puede avisar (por dispositivo)", avisos2.length === 2 && avisos2[1].includes("🛑") && avisos2[1].includes("Sin la nube no puedo cortar el gasto"), avisos2.join(" | "));
+    check("los avisos son de estado accesible (role=status)", await page.$$eval(".avisouso", (n) => n.every((x) => x.getAttribute("role") === "status")));
+    await page.click("#memory");
+    const uso = await page.evaluate(() => ({
+      texto: document.getElementById("usoTexto").textContent,
+      nota: document.getElementById("usoNota").textContent,
+      barra: !document.getElementById("usoBarra").hidden,
+      valor: document.getElementById("usoBarra").getAttribute("aria-valuenow"),
+      agotado: document.getElementById("usoBarra").classList.contains("agotado"),
+      doc: document.documentElement.scrollWidth, vw: innerWidth,
+      panel: (() => { const p = document.querySelector("#memOverlay .panel"); return p.scrollWidth - p.clientWidth; })(),
+    }));
+    check("🧠 → «Este mes: X $ (estimado) · N llamadas»", uso.texto === "Este mes: 1,06 $ (estimado) · 8 llamadas", uso.texto);
+    check("barra frente al tope, llena y en rojo al 100 %", uso.barra && uso.valor === "100" && uso.agotado);
+    check("dice que es solo este dispositivo y que los precios son en dólares", uso.nota.includes("Solo este dispositivo") && uso.nota.includes("dólares") && uso.nota.includes("Tope: 1,00 $"), uso.nota);
+    check("panel con el uso sin scroll lateral a 360 px", uso.doc <= uso.vw && uso.panel <= 0, JSON.stringify(uso));
+    await page.click("#memClose");
+
+    // Con la nube, el total viene del servidor (todos los dispositivos).
+    await page.evaluate(() => localStorage.removeItem("clara_uso_v1"));
+    EVENTOS_EXTRA = [{ uso: { llamadas: 1, coste_usd: 0.01 }, uso_estado: { mes, almacen: "nube", guardado: true, total: { coste_usd: 3, llamadas: 120 }, tope_usd: 20, nivel: "ok", porcentaje: 15 } }];
+    await page.fill("#input", "cinco");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    await page.waitForTimeout(150);
+    await page.click("#memory");
+    const nube = await page.evaluate(() => ({ texto: document.getElementById("usoTexto").textContent, nota: document.getElementById("usoNota").textContent }));
+    check("con la nube: el total del mes de todos los dispositivos", nube.texto === "Este mes: 3,00 $ (estimado) · 120 llamadas" && nube.nota.includes("Total de todos tus dispositivos") && nube.nota.includes("Tope: 20,00 $ (15 %)"), JSON.stringify(nube));
+    check("la nota dice que solo cuenta a Clara", nube.nota.includes("Solo cuenta a Clara (chat, equipo y archivos); las otras apps que usan la misma clave no se suman."), nube.nota);
+    await page.click("#memClose");
+
+    // Sin clave, pero el servidor lo suma en la nube (clara_uso_suma_servidor): solo el nivel, sin cifras.
+    await page.evaluate(() => localStorage.removeItem("clara_uso_v1"));
+    const avisosAntes = (await page.$$(".avisouso")).length;
+    EVENTOS_EXTRA = [{ uso: { llamadas: 1, coste_usd: 0.01 }, uso_estado: { mes, almacen: "local", guardado: false, total: null, tope_usd: 20, nivel: "aviso", porcentaje: null, nube_sin_clave: "sumado" } }];
+    await page.fill("#input", "seis");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    await page.waitForTimeout(150);
+    const avisoSrv = await page.$$eval(".avisouso", (n) => n.map((x) => x.textContent));
+    check("sin clave y al 80 % del total de la nube: avisa sin dar la cifra", avisoSrv.length === avisosAntes + 1 && avisoSrv.at(-1).includes("80 %") && avisoSrv.at(-1).includes("todos tus dispositivos") && avisoSrv.at(-1).includes("clave de sincronización"), avisoSrv.at(-1));
+    await page.click("#memory");
+    const srv = await page.evaluate(() => document.getElementById("usoNota").textContent);
+    check("panel sin clave: dice que lo de este aparato también se suma en la nube para el tope", srv.includes("también se suma en la nube") && srv.includes("ya pasa del 80 %") && !srv.includes("solo avisa"), srv);
+    await page.click("#memClose");
+    // Sin la función en Supabase: lo dice tal cual.
+    EVENTOS_EXTRA = [{ uso: { llamadas: 1, coste_usd: 0.01 }, uso_estado: { mes, almacen: "local", guardado: false, total: null, tope_usd: 20, nivel: "sin_datos", nube_sin_clave: "fallo", motivo: "falta la función clara_uso_suma_servidor en Supabase (vuelve a pegar supabase/clara-uso.sql en el SQL Editor): mientras, el gasto de este dispositivo se cuenta solo aquí y no suma al tope" } }];
+    await page.fill("#input", "siete");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    await page.waitForTimeout(150);
+    await page.click("#memory");
+    const falta = await page.evaluate(() => document.getElementById("usoNota").textContent);
+    check("panel sin la función en Supabase: lo dice y no promete que cuente para el tope", falta.includes("clara_uso_suma_servidor") && falta.includes("no suma al tope") && !falta.includes("también se suma"), falta);
+    await page.click("#memClose");
+    EVENTOS_EXTRA = [];
+  }
+
+  console.log("\n— 📇 CSV de Excel (Windows-1252) y nombre largo en el chip —");
+  {
+    await page.setViewportSize({ width: 360, height: 760 });
+    const NOMBRE = "clientes-de-inmoweb-exportados-desde-excel-el-lunes-por-la-tarde.csv";
+    await page.setInputFiles("#fileattach", [{ name: NOMBRE, mimeType: "text/csv", buffer: Buffer.from("Nombre;Zona;Operación\nJosé Muñiz;Gijón;Venta\n", "latin1") }]);
+    await page.waitForFunction(() => document.querySelectorAll(".attachchip").length === 1);
+    const chip = await page.evaluate(() => {
+      const c = document.querySelector(".attachchip");
+      const n = c.querySelector(".nombre");
+      const b = c.querySelector("button").getBoundingClientRect();
+      return { ancho: c.getBoundingClientRect().width, title: c.title, corta: n.scrollWidth > n.clientWidth, elipsis: getComputedStyle(n).textOverflow, boton: [b.width, b.height], etiqueta: c.querySelector("button").getAttribute("aria-label"), doc: document.documentElement.scrollWidth, vw: innerWidth };
+    });
+    check("chip: como mucho 220 px, con «…» y el nombre completo en title", chip.ancho <= 220.5 && chip.corta && chip.elipsis === "ellipsis" && chip.title === NOMBRE, JSON.stringify(chip));
+    check("chip: botón ✕ de 44 px o más y con etiqueta accesible", chip.boton[0] >= 44 && chip.boton[1] >= 44 && chip.etiqueta === "Quitar " + NOMBRE);
+    check("chip largo sin scroll lateral a 360 px", chip.doc <= chip.vw);
+    await page.fill("#input", "Mis clientes en CSV");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    const enviado = peticiones.at(-1).messages.at(-1).adjuntos?.[0];
+    const texto = Buffer.from(enviado?.data || "", "base64").toString("utf8");
+    check("CSV en Windows-1252: viaja en UTF-8 con «Gijón», «José» y «Operación» bien", texto.includes("Gijón") && texto.includes("José Muñiz") && texto.includes("Operación") && !texto.includes("\uFFFD"), JSON.stringify(texto));
+    const utf = Buffer.from("Nombre;Zona\nLucía;Gijón\n", "utf8");
+    await page.setInputFiles("#fileattach", [{ name: "utf8.csv", mimeType: "text/csv", buffer: Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), utf]) }]);
+    await page.waitForFunction(() => document.querySelectorAll(".attachchip").length === 1);
+    await page.fill("#input", "Otro CSV");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    const texto2 = Buffer.from(peticiones.at(-1).messages.at(-1).adjuntos?.[0]?.data || "", "base64").toString("utf8");
+    check("CSV en UTF-8 (con BOM): igual que antes, sin el BOM", texto2 === "Nombre;Zona\nLucía;Gijón\n", JSON.stringify(texto2));
+    await page.setViewportSize({ width: 1280, height: 720 });
+  }
+
+  console.log("\n— 📇 agenda (.vcf) y clientes (.csv) adjuntos —");
+  {
+    const vcf = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Marcos\r\nTEL:611\r\nPHOTO;ENCODING=b;TYPE=JPEG:QUFBQQ==\r\n QkJCQg==\r\nNOTE:busca comprar en Oviedo\r\nEND:VCARD\r\n";
+    await page.setInputFiles("#fileattach", [
+      { name: "contactos.vcf", mimeType: "text/x-vcard", buffer: Buffer.from(vcf) },
+      { name: "inmoweb.csv", mimeType: "text/csv", buffer: Buffer.from("nombre;zona\nLaura;Oviedo\n") },
+      { name: "clientes.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: Buffer.from("PK") },
+    ]);
+    await page.waitForFunction(() => document.querySelectorAll(".attachchip").length === 2);
+    const chips = await page.$$eval(".attachchip", (n) => n.map((x) => x.textContent));
+    check("la agenda y el CSV se adjuntan como 📇", chips.some((c) => c.includes("📇 contactos.vcf")) && chips.some((c) => c.includes("📇 inmoweb.csv")), chips.join(" | "));
+    const errores = await page.$$eval(".error", (n) => n.map((x) => x.textContent));
+    check("el .xlsx no se adjunta y explica que lo guarde como CSV", errores.some((e) => e.includes("clientes.xlsx") && e.includes("CSV")), errores.join(" | "));
+    await page.fill("#input", "Crúzalos con mi cartera");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    const ultimo = peticiones.at(-1).messages.at(-1);
+    const [aVcf, aCsv] = ultimo.adjuntos || [];
+    const texto = Buffer.from(aVcf?.data || "", "base64").toString("utf8");
+    check("viajan como text/vcard y text/csv", aVcf?.media_type === "text/vcard" && aCsv?.media_type === "text/csv");
+    check("la foto de la agenda se quita antes de enviarla (pesa y no hace falta)", texto.includes("FN:Marcos") && texto.includes("NOTE:busca comprar") && !texto.includes("PHOTO") && !texto.includes("QkJCQg"), texto);
+    check("la agenda no se guarda en el navegador", !(await page.evaluate(() => localStorage.getItem("clara_chat_v1") || "")).includes("FN:Marcos"));
+
+    // La agenda sigue viajando en las preguntas siguientes (antes caía a la 3.ª);
+    // una foto de un mensaje viejo, no.
+    const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64");
+    await page.setInputFiles("#fileattach", [{ name: "foto.png", mimeType: "image/png", buffer: PNG }]);
+    await page.waitForFunction(() => document.querySelectorAll(".attachchip").length === 1);
+    await page.fill("#input", "Y esta foto");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    for (let k = 1; k <= 7; k++) {
+      await page.fill("#input", `¿Y para el piso ${k}?`);
+      await page.press("#input", "Enter");
+      await page.waitForFunction(() => !document.getElementById("typing"));
+    }
+    const ultimaPet = peticiones.at(-1).messages;
+    const conLista = ultimaPet.filter((m) => (m.adjuntos || []).some((a) => a.tipo === "lista" && a.data));
+    const conFoto = ultimaPet.filter((m) => (m.adjuntos || []).some((a) => a.tipo === "imagen"));
+    const idx = ultimaPet.findIndex((m) => m.content === "Crúzalos con mi cartera");
+    check("la agenda y el CSV siguen viajando 8 preguntas después (mientras caben)", idx >= 0 && idx < ultimaPet.length - 6 && (ultimaPet[idx].adjuntos || []).filter((a) => a.tipo === "lista").length === 2, JSON.stringify(ultimaPet.map((m) => (m.adjuntos || []).map((a) => a.tipo))));
+    check("los CSV de antes también siguen (todas las listas de la conversación)", conLista.length >= 3);
+    check("la foto de hace más de 6 mensajes ya no viaja", conFoto.length === 0);
+    const pesoTotal = ultimaPet.reduce((t, m) => t + (m.adjuntos || []).reduce((s2, a) => s2 + (a.data || "").length, 0), 0);
+    check("todo lo que viaja cabe en el límite de envío (3,5 MB en base64)", pesoTotal <= 3_500_000, String(pesoTotal));
+    // Tras recargar, las listas ya no están (no se guardan): por eso el texto dice «hasta que recargues».
+    await page.reload();
+    await page.waitForSelector(".msg.clara .bubble");
+    await page.fill("#input", "¿Sigues teniendo la agenda?");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    check("tras recargar la página, la agenda ya no viaja (no se guarda)", !peticiones.at(-1).messages.some((m) => (m.adjuntos || []).some((a) => a.data)));
     await page.setViewportSize({ width: 1280, height: 720 });
   }
 

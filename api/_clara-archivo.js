@@ -6,6 +6,9 @@
 //      { listo: true, archivo: { nombre, formato, bytes, url } }
 //      { pendiente: true, estado, firmaEstado, intento, max }  → volver a llamar
 //      { error }
+//    Todas las respuestas tras un tramo llevan además { uso, uso_estado } (el
+//    contador de gasto, lib/uso.js); con la nube y el tope mensual
+//    (CLARA_TOPE_MES_USD) alcanzado responde 402 sin gastar nada.
 //  GET ?descargar=<file_id>&e=<caduca>&f=<firma>
 //    Hace de proxy de client.beta.files.download con el Content-Type y el
 //    Content-Disposition correctos. Solo sirve file_id firmados aquí, durante
@@ -40,6 +43,12 @@ import {
   elegirArchivo,
 } from "../lib/archivos.js";
 import { nubeConfigurada, leerMemoria } from "../lib/memoria.js";
+import { MODELO_ARCHIVOS } from "../lib/archivos.js";
+import { crearContador, registrarUso, topeMensual, leerUsoMes, formatoUsd } from "../lib/uso.js";
+
+// Pasado este tiempo desde el inicio, el uso no se guarda en la nube (lo
+// cuenta el navegador): antes que el contador está no pasar del minuto.
+const LIMITE_GUARDAR_USO_MS = 50000;
 
 const AVISO_SIN_CLAVE =
   "La creación de archivos no está activa: falta ANTHROPIC_API_KEY en Vercel (o está apagada con CLARA_ARCHIVOS=no). El chat sigue funcionando: pídele a Clara la tabla en CSV o el documento en HTML.";
@@ -150,6 +159,22 @@ export default async function handler(req, res) {
   const no = await autorizaArchivo(clave);
   if (no) return res.status(no.codigo).json({ error: no.error });
 
+  // Tope mensual de gasto: con la nube (total fiable), al 100 % no se crean
+  // archivos. Sin nube o sin la tabla clara_uso, el tope solo avisa en el chat.
+  const tope = topeMensual();
+  if (tope && nubeConfigurada()) {
+    const mes = await leerUsoMes();
+    if (mes && mes.coste_usd >= tope) {
+      return res.status(402).json({
+        error:
+          `Este mes ya se ha llegado al tope de gasto de Clara (${formatoUsd(mes.coste_usd)} $ estimados de ${formatoUsd(tope)} $). ` +
+          "Por eso no se crean archivos hasta el mes que viene o hasta que subas CLARA_TOPE_MES_USD en Vercel. Mientras, pídele a Clara la tabla en CSV o el documento en HTML.",
+        tope_usd: tope,
+        gastado_usd: mes.coste_usd,
+      });
+    }
+  }
+
   const cliente = crearCliente();
   // Lo que haya tardado la clave se descuenta del tramo.
   const limiteMs = Math.max(5000, LIMITE_TRAMO_MS - (reloj() - inicio));
@@ -159,9 +184,16 @@ export default async function handler(req, res) {
   } catch (e) {
     return errorApi(res, e);
   }
-  if (r.error) return res.status(r.codigo || 422).json({ error: r.error });
+  // Contador de gasto: el tramo se paga salga o no el archivo.
+  const contador = crearContador(MODELO_ARCHIVOS);
+  contador.claude(r.usage);
+  const usoInfo =
+    reloj() - inicio < LIMITE_GUARDAR_USO_MS
+      ? await registrarUso(contador.total, { clave: typeof clave === "string" ? clave.trim() : "", nube: nubeConfigurada(), tope })
+      : await registrarUso(contador.total, { nube: false, tope });
+  if (r.error) return res.status(r.codigo || 422).json({ error: r.error, ...usoInfo });
   if (r.pendiente) {
-    return res.status(200).json({ pendiente: true, intento: r.intento, max: MAX_TRAMOS, motivo: r.motivo, ...empaquetarEstado(r.estado, ficha) });
+    return res.status(200).json({ pendiente: true, intento: r.intento, max: MAX_TRAMOS, motivo: r.motivo, ...empaquetarEstado(r.estado, ficha), ...usoInfo });
   }
 
   // Hay archivo: se elige el de oficina (mejor el del formato pedido) y se firma su descarga.
@@ -170,12 +202,13 @@ export default async function handler(req, res) {
     ahora: reloj,
     alError: (e) => console.error("[clara-archivo] metadatos:", String(e?.message || e).slice(0, 200)),
   });
-  if (!el.ok) return res.status(el.codigo).json({ error: el.error });
+  if (!el.ok) return res.status(el.codigo).json({ error: el.error, ...usoInfo });
   const elegido = el.elegido;
   return res.status(200).json({
     listo: true,
     intento: r.intento,
     max: MAX_TRAMOS,
     archivo: { nombre: elegido.nombre, formato: elegido.formato, bytes: elegido.bytes, url: urlDescarga(elegido.id, process.env, reloj()) },
+    ...usoInfo,
   });
 }
