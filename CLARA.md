@@ -163,6 +163,15 @@ Los proyectos 1 y 2 de la skill `cloudflare-proyectos` ya están hechos en `clou
 - **Comprobar que va:** el propio panel dice qué falta.
 - **Link temporal para enseñar una demo:** `cloudflare/link-temporal.bat` (Quick Tunnel, sin cuenta; se apaga al cerrar la ventana).
 
+## Cloudflare: hojas de visita y de captación firmadas con el dedo
+
+El proyecto 8 de la skill `cloudflare-proyectos` está en `cloudflare/hojas-firmadas/`. Es una PWA servida por un Worker con D1, **una copia por inmobiliaria** (cada una con su Worker y su D1; la marca se cambia en Ajustes, de serie Asesoría Castresana). Probada en local y con `cf dev`; **todavía no está publicada**.
+- **Qué hace:** hoja de visita y hoja de captación (encargo) con firma con el dedo del cliente y del agente, el PDF de Cerebro con la marca y el código SHA-256 al pie, compartir por WhatsApp o correo (a mano), lista con filtros, anular con motivo, CSV y «Borrar datos». Una hoja firmada **no se puede editar** (lo impide también un trigger de D1). Sin cobertura se firma igual: queda «pendiente de subir» y se sube sola, sin duplicar.
+- **Para verla sin Cloudflare:** `node cloudflare/hojas-firmadas/herramientas/probar-en-local.mjs` → http://localhost:8790 (la clave sale en pantalla; «Usuario» vacío = titular).
+- **Para publicarla:** Pau, desde su PC, siguiendo `cloudflare/hojas-firmadas/README.md`. **Cada paso que toca Cloudflare, con su permiso y solo con lo incluido en los 5 USD/mes.** Sin R2.
+- **Secretos:** `PANEL_CLAVE` (obligatorio, 12 caracteres o más: la clave del titular) y, opcionales, `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (aviso con tipo, nombre de pila y referencia) e `IP_SECRETO`. Los demás agentes se dan de alta en Ajustes, con su clave guardada en PBKDF2.
+- **Textos legales:** los BORRADOR de Cerebro, editables en Ajustes; el PDF dice BORRADOR hasta que la inmobiliaria pulsa «Revisados por un profesional».
+
 ## Configuración (dos claves)
 
 En Vercel: **Project → Settings → Environment Variables**, añade estas dos variables y luego **redespliega** (**Deployments → Redeploy**):

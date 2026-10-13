@@ -15,7 +15,7 @@ La hizo el equipo de Clara:
 | `calendario.js` | `.ics` con alarmas: con hora o de día completo, líneas de 75 octetos como máximo. |
 | `firma.js` | Lienzo con eventos de puntero; exporta un JPEG de 600 px con fondo blanco. |
 | `pdf.js` | Generador de PDF propio (IYAN): Helvetica con WinAnsi/CP1252, métricas AFM, JPEG con DCTDecode y xref exacta. Sin dependencias, funciona sin conexión. |
-| `documentos.js` | PDF de la hoja de visita y del informe de valoración, con la marca Castresana. |
+| `documentos.js` | PDF de la hoja de visita, de la hoja de captación y del informe de valoración, con la marca Castresana. Admite además colores, línea legal y pie propios (los usa `cloudflare/hojas-firmadas/`, que lleva una copia exacta: si lo cambias, ejecuta `node cloudflare/hojas-firmadas/herramientas/copiar-cerebro.mjs`). |
 | `visitas.js` | Validación de la visita (firma, RGPD, nombre), limpieza, declaración rellenada y buscador. |
 | `operaciones.js` + `operaciones-datos.js` | Fases, papeles (quién los aporta y su carácter: obligatorio, habitual o según el caso, con fuente), plazos (naturales o hábiles), fechas, eventos y mensajes. Los datos los preparó NURIA el 26/09/2026. |
 | `valoracion.js` | €/m² con ajuste manual, mediana y rango P25-P75 (mínimo-máximo si hay menos de 4). **Sin 3 comparables válidos y superficie no hay precio.** Aviso de dispersión alta. |

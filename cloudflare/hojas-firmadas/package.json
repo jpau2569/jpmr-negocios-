@@ -1,0 +1,20 @@
+{
+  "name": "hojas-firmadas",
+  "private": true,
+  "type": "module",
+  "description": "Worker de Cloudflare con D1: hojas de visita y de captación firmadas con el dedo, para una inmobiliaria (white-label: la marca se cambia en Ajustes).",
+  "scripts": {
+    "probar": "node herramientas/probar-en-local.mjs",
+    "copiar-cerebro": "node herramientas/copiar-cerebro.mjs",
+    "dev": "cf dev",
+    "comprobar": "cf deploy --dry-run --no-provision",
+    "publicar": "cf deploy --no-provision"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "devDependencies": {
+    "cf": "1.0.0-beta.16",
+    "wrangler": "4.150.0"
+  }
+}
