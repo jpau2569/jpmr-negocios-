@@ -25,6 +25,7 @@ import { HERRAMIENTA_EQUIPO, consultarEquipo, estadoEquipo, LIMITE_EQUIPO_MS } f
 import { HERRAMIENTA_ARCHIVO, archivosActivos, crearFicha, textoFicha } from "../lib/archivos.js";
 import { HERRAMIENTA_FICHA_INMUEBLE, fichaInmueble } from "../lib/ficha-inmueble.js";
 import { HERRAMIENTA_CRUZAR, cruzarClientes } from "../lib/cruzar.js";
+import { tipoLista, esExcel, leerListaAdjunta, avisoListaAdjunta, clienteDeContacto } from "../lib/contactos.js";
 import {
   HERRAMIENTAS_CARAS,
   crearContador,
@@ -329,7 +330,7 @@ Si está configurado OpenRouter, tienes la herramienta "segunda_opinion" para co
 Con la nube activa tienes la herramienta "mis_leads", que lee los contactos que han llegado por los embudos de Pau (ebook, formularios…). Úsala cuando pregunte por sus leads, contactos nuevos o a quién llamar: prioriza (quién es más caliente y por qué), propón el primer mensaje personalizado para cada uno y el siguiente paso. Trata esos datos personales con máxima discreción: solo para el trabajo de Pau, nunca los repitas fuera de contexto.
 
 ## Cruzar pisos y clientes (cruzar_clientes)
-Con la nube activa tienes la herramienta "cruzar_clientes", que cruza la cartera publicada con los clientes que buscan: los de Oportunidades Únicas y los hot-leads de CasteBot. Tiene dos modos: «piso» (¿qué clientes encajan con el piso X?, con su referencia) y «cliente» (¿qué pisos le encajan al cliente Y?, con su nombre). Devuelve una puntuación de 0 a 100 con los motivos escritos, lo que no encaja y lo que está sin comprobar: enséñale a Pau los motivos, no solo el número, cita la referencia de cada piso y no inventes nada de los clientes ni de los pisos. Lo que la cartera no publica (garaje, terraza…) es «sin comprobar»; si importa, ábrelo con ficha_inmueble. Solo lee, no cambia nada. Por discreción no recibes teléfonos: pídelos con incluir_telefono solo si Pau los quiere. Si la herramienta dice que falta configurar algo, díselo a Pau con el paso concreto. Después, si Pau quiere, prepara el mensaje para cada cliente con la skill "mensajes-clientes".
+Tienes la herramienta "cruzar_clientes", que cruza la cartera publicada con los clientes que buscan, de tres fuentes: los clientes de Oportunidades Únicas (con la nube activa), la agenda del móvil que Pau te comparta o adjunte como archivo .vcf y la lista de clientes que exporte de Inmoweb a CSV. Tiene dos modos: «piso» (¿qué clientes encajan con el piso X?, con su referencia) y «cliente» (¿qué pisos le encajan al cliente Y?, con su nombre). Devuelve una puntuación de 0 a 100 con los motivos escritos, lo que no encaja y lo que está sin comprobar: enséñale a Pau los motivos, no solo el número, cita la referencia de cada piso y no inventes nada de los clientes ni de los pisos. Lo que la cartera no publica (garaje, terraza…) es «sin comprobar»; si importa, ábrelo con ficha_inmueble. Un contacto que no dice qué busca cuenta como «sin criterios» y no se cruza: no le pongas tú los criterios. La agenda y el CSV solo valen en esta conversación y no se guardan en ningún sitio; en el mensaje solo ves un recuento, los datos los usa la herramienta. Solo lee, no cambia nada. Por discreción no recibes teléfonos: pídelos con incluir_telefono solo si Pau los quiere. Cómo se lo explicas a Pau: la agenda, en Android, desde la app Contactos → menú (según el móvil, «Gestionar contactos» o «Importar/exportar») → Exportar a un archivo .vcf, y después Compartir → Clara o el clip 📎; para que el cruce sirva, la nota de cada contacto tiene que decir lo que busca (zona, presupuesto, habitaciones). De Inmoweb: que busque la opción de exportar clientes a Excel/CSV y te adjunte el CSV; si solo tiene un Excel (.xlsx), que lo guarde como CSV, porque el .xlsx no lo puedes leer. Si la herramienta dice que falta configurar algo, díselo a Pau con el paso concreto. Después, si Pau quiere, prepara el mensaje para cada cliente con la skill "mensajes-clientes".
 
 ## Gasto de la API y tope mensual
 Pau tiene un contador del gasto de la API de Claude (en el chat, 🧠 Memoria → «Uso este mes») y puede fijar un tope mensual en dólares (CLARA_TOPE_MES_USD en Vercel). Si un aviso del sistema te dice que se ha llegado al tope, ya no tienes consultar_equipo, preparar_archivo ni segunda_opinion: díselo en una línea al empezar tu respuesta y sigue con el chat normal; si hace falta un archivo, usa la opción rápida (bloque csv o HTML). No des cifras de gasto de cabeza: las que valen son las del contador, y son una estimación (la factura real está en platform.claude.com). No delegues ni crees archivos por rutina: cada uso cuesta.
@@ -502,7 +503,7 @@ async function ejecutarHerramienta(tu, claveSync, extra = {}) {
     }
     if (tu.name === "ficha_inmueble") return await fichaInmueble(tu.input || {}, { obtenerCartera });
     if (tu.name === "cruzar_clientes") {
-      return await cruzarClientes(tu.input || {}, { claveSync, nube: Boolean(extra.memoriaNube && claveSync && nubeConfigurada()), obtenerCartera, rpc });
+      return await cruzarClientes(tu.input || {}, { claveSync, nube: Boolean(extra.memoriaNube && claveSync && nubeConfigurada()), obtenerCartera, listas: extra.listas || [] });
     }
     if (tu.name === "recordar") {
       if (!claveSync || !nubeConfigurada()) {
@@ -798,6 +799,10 @@ export default async function handler(req, res) {
     )
     .slice(-MAX_HISTORY);
 
+  // Agenda (.vcf) y clientes de Inmoweb (.csv) adjuntos: se leen aquí, solo
+  // para esta petición (no se guardan), y al modelo solo le llega un recuento;
+  // los datos los usa cruzar_clientes.
+  const listas = [];
   const history = await Promise.all(brutos.map(async (m, i) => {
     const texto = m.content.slice(0, 30000);
     const esReciente = i >= brutos.length - 4;
@@ -807,9 +812,21 @@ export default async function handler(req, res) {
     const notasVoz = [];
     if (m.role === "user" && esReciente) {
       for (const a of lista.slice(0, MAX_ADJUNTOS)) {
+        if (tipoLista(a?.media_type, a?.nombre)) {
+          if (typeof a.data !== "string" || a.data.length > MAX_ADJUNTO_B64 || !/^[A-Za-z0-9+/=]+$/.test(a.data)) continue;
+          const l = leerListaAdjunta(a);
+          if (l.ok) listas.push(l);
+          const conCriterios = l.ok ? l.contactos.filter((c) => !clienteDeContacto(c, "").sinCriterios).length : 0;
+          notasVoz.push(avisoListaAdjunta(l, conCriterios));
+          continue;
+        }
+        if (esExcel(a?.media_type, a?.nombre)) {
+          notasVoz.push(`[📇 Excel «${String(a.nombre || "archivo").slice(0, 60)}» NO leído: no tengo lector de .xlsx. Dile a Pau que lo exporte (o lo guarde) como CSV y me lo adjunte.]`);
+          continue;
+        }
         // Oídos: los audios se transcriben y entran como texto (máximo 3 por mensaje).
         if (tipoAudio(a?.media_type)) {
-          if (notasVoz.length >= 3 || typeof a.data !== "string" || a.data.length > MAX_ADJUNTO_B64 || !/^[A-Za-z0-9+/=]+$/.test(a.data)) continue;
+          if (notasVoz.filter((n) => n.startsWith("[🎙")).length >= 3 || typeof a.data !== "string" || a.data.length > MAX_ADJUNTO_B64 || !/^[A-Za-z0-9+/=]+$/.test(a.data)) continue;
           const nombre = String(a.nombre || "audio").slice(0, 60);
           const r = await transcribirAudio(a.data, a.media_type);
           notasVoz.push(r.texto ? `[🎙 Audio "${nombre}", transcrito:\n${r.texto}]` : `[🎙 Audio "${nombre}" NO transcrito: ${r.error}. Díselo a Pau y no supongas su contenido.]`);
@@ -985,8 +1002,9 @@ export default async function handler(req, res) {
         required: ["nombre", "descripcion", "contenido"],
       },
     });
-    request.tools.push(HERRAMIENTA_CRUZAR);
   }
+  // Cruzar pisos y clientes: con la nube (Oportunidades Únicas) o con una agenda / CSV adjunto.
+  if (memoriaNube || listas.length) request.tools.push(HERRAMIENTA_CRUZAR);
   if (limitado) request.tools = request.tools.filter((t) => !HERRAMIENTAS_CARAS.includes(t.name));
 
   // Con conectores, la petición va por la API beta con el conector MCP; sin
@@ -1003,7 +1021,7 @@ export default async function handler(req, res) {
 
   // Contador de gasto: todas las rondas de Clara + equipo + segunda opinión.
   const contador = crearContador(MODEL);
-  const extraBase = { cliente: client, inicio, contador, limitado, memoriaNube };
+  const extraBase = { cliente: client, inicio, contador, limitado, memoriaNube, listas };
   // Guarda el uso (nube si se puede) y devuelve { uso, uso_estado } para el navegador.
   const cierraUso = () =>
     registrarUso(contador.total, {

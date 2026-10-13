@@ -67,6 +67,7 @@ console.log("\n📲 Manifiesto");
 const manifiesto = JSON.parse(await readFile(join(ROOT, "clara.webmanifest"), "utf8"));
 check("declara share_target por POST multipart", manifiesto.share_target?.method === "POST" && manifiesto.share_target?.enctype === "multipart/form-data" && manifiesto.share_target?.action === "/clara-compartir");
 check("acepta fotos y el campo coincide con el service worker", manifiesto.share_target?.params?.files?.[0]?.name === "archivos" && manifiesto.share_target.params.files[0].accept.includes("image/*"));
+check("acepta la agenda (.vcf) y los clientes en CSV (y el .xlsx, para pedir que lo pase a CSV)", ["text/vcard", ".vcf", "text/csv", ".csv", ".xlsx"].every((t) => manifiesto.share_target.params.files[0].accept.includes(t)));
 check("iconos PNG 192 y 512 (los pide Android para instalarla)", ["192x192", "512x512"].every((t) => manifiesto.icons.some((i) => i.sizes === t && i.type === "image/png")));
 
 console.log("\n⚙️ Service worker");
@@ -118,6 +119,20 @@ check("la respuesta de Clara aparece", (await page.textContent("#chat")).include
 
 await page.reload();
 check("tras recargar, la conversación sigue (sin guardar las fotos pesadas)", (await page.textContent("#chat")).includes("Uría 12") && (await page.evaluate(() => !localStorage.getItem("clara_chat_v1").includes("data:image"))));
+
+console.log("\n📇 Compartir la agenda del móvil (.vcf)");
+await page.evaluate(() => localStorage.removeItem("clara_chat_v1"));
+const destinoVcf = await page.evaluate(async () => {
+  const fd = new FormData();
+  fd.append("archivos", new File(["BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Marcos\r\nNOTE:busca comprar en Oviedo\r\nEND:VCARD\r\n"], "contactos.vcf", { type: "text/x-vcard" }));
+  const r = await fetch("/clara-compartir", { method: "POST", body: fd });
+  return r.url;
+});
+await page.goto(destinoVcf);
+await page.waitForFunction(() => document.querySelectorAll("#attachbar .attachchip").length === 1, null, { timeout: 5000 }).catch(() => {});
+check("la agenda compartida queda adjunta como 📇", (await page.locator("#attachbar .attachchip").count()) === 1 && (await page.textContent("#attachbar")).includes("📇 contactos.vcf"));
+const textoVcf = await page.inputValue("#input");
+check("mensaje preparado para cruzar contactos con la cartera", textoVcf.startsWith("📇 Te paso mis contactos/clientes (contactos.vcf)") && textoVcf.includes("Crúzalos con mi cartera"), textoVcf);
 
 console.log("\n🧹 Consola");
 check("ni un error de JavaScript", errores.length === 0, errores.join(" | "));

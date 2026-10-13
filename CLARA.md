@@ -44,6 +44,9 @@ Este mandato vive también en `clara_persona.md` (sección "Lo que sabes de Pau"
 - **`lib/conectores.js`** — **conectores** de Clara: servidores MCP remotos (correo, calendario, Notion, hojas de cálculo, CRM…) que usa la propia API de Claude. Se activan solo desde Vercel con la variable `CLARA_CONECTORES` (ver abajo). Sin esa variable, Clara funciona exactamente igual que antes.
 
 - **`lib/archivos.js` + `api/_clara-archivo.js`** (ruta `/api/clara-archivo`) — **archivos de Word, Excel, PowerPoint y PDF** con las **Agent Skills oficiales de Anthropic** (`docx`, `xlsx`, `pptx`, `pdf`). Ver la sección siguiente.
+- **`lib/uso.js` + `supabase/clara-uso.sql`** — **contador de gasto y tope mensual** de la API de Claude. Ver «Contador de gasto y tope mensual».
+- **`lib/ficha-inmueble.js`** — herramienta `ficha_inmueble`: la ficha completa de un piso de la cartera, con todas sus fotos.
+- **`lib/cruzar.js` + `lib/contactos.js`** — herramienta `cruzar_clientes`: cruza la cartera con los clientes de Oportunidades Únicas, la agenda del móvil (`.vcf`) y los clientes de Inmoweb (`.csv`). Ver «Ficha de un piso y cruce con clientes».
 
 ## Archivos de Word, Excel, PowerPoint y PDF (skills de Anthropic)
 
@@ -60,6 +63,37 @@ Este mandato vive también en `clara_persona.md` (sección "Lo que sabes de Pau"
 - **Cuesta uso de API**: cada archivo son varias llamadas a `claude-sonnet-5` con ejecución de código (más caro que una respuesta normal del chat). Úsalo para lo que de verdad vaya a salir en Word, Excel, PowerPoint o PDF.
 - Vercel no deja pasar respuestas de más de **4,5 MB**: un PowerPoint con muchas fotos puede no descargarse; Clara lo avisa y hay que pedir una versión más ligera.
 - Los archivos quedan guardados en la Files API de la cuenta de Anthropic de Pau hasta que se borren desde la consola.
+
+## Contador de gasto y tope mensual
+
+**Qué ves.** En el chat, **🧠 Memoria → 📊 Uso este mes**: «Este mes: X $ (estimado) · N llamadas» y, si hay tope, una barra. Es una **estimación** con los precios oficiales; la factura real está en [platform.claude.com](https://platform.claude.com/).
+
+**Qué cuenta.** El `usage` real que devuelve la API en cada llamada que pagas: todas las rondas del chat, el equipo (`consultar_equipo`), los tramos de `/api/clara-archivo` y, de `segunda_opinion`, las llamadas y los tokens de OpenRouter (su coste **no** se suma: va a tu saldo de OpenRouter). Incluye la lectura y la escritura de caché. Las horas de contenedor de la ejecución de código no vienen en `usage` (solo el número de ejecuciones) y Anthropic regala 1.550 h al mes, así que no se suman.
+
+**Precios** (en dólares, sin convertir a euros), de [la página oficial](https://platform.claude.com/docs/en/about-claude/pricing), consultada el 13-10-2026, para `claude-sonnet-5`: entrada **$2 / MTok**, salida **$10 / MTok**, escritura de caché 5 min **$2,50**, escritura 1 h **$4**, lectura de caché **$0,20**. Viven en `PRECIOS_USD_MTOK` de `lib/uso.js` con su fuente y fecha. Si cambias el modelo de Clara y no está en esa tabla, el coste sale «sin verificar» (se cuentan solo tokens): nunca se inventa un precio.
+
+**Dónde se guarda.**
+- **Con la nube** (la misma condición que la memoria): tabla `clara_uso` en Supabase. **Paso único:** Supabase → proyecto `clara-memoria` → **SQL Editor** → pega entero **`supabase/clara-uso.sql`** → **Run**. Mismo blindaje que la memoria: RLS sin políticas y solo funciones `security definer`; escribir y leer el detalle exigen tu clave de sincronización (se comprueba con `clara_memoria_lee`). `clara_uso_resumen(mes)` devuelve sin clave solo dos cifras del mes (coste estimado y llamadas), para el chequeo de estado y el tope; el SQL explica cómo cerrarla si no quieres que se vea.
+- **Si la tabla aún no existe**, todo sigue funcionando y el contador se queda en cada dispositivo.
+- **Sin nube**: el servidor devuelve el uso de cada respuesta (en el `done` del streaming y en el JSON) y `clara.html` lo suma por mes en `localStorage` (`clara_uso_v1`).
+
+**Tope.** Variable **`CLARA_TOPE_MES_USD`** en Vercel (por ejemplo `20`). Sin ella no hay tope, solo contador.
+- Al **80 %**, Clara avisa una vez en el chat.
+- Al **100 % con la nube**: el chat sigue, pero sin `consultar_equipo`, `preparar_archivo` ni `segunda_opinion` (Clara lo dice), y `/api/clara-archivo` responde **402** con un mensaje claro.
+- **Sin nube**, el tope es por dispositivo y **solo avisa**: no hay total fiable para cortar.
+
+**Comprobarlo:** `/api/clara?estado=1` enseña el tope, los precios con su fuente y, con la nube, el total del mes.
+
+## Ficha de un piso y cruce con clientes
+
+**`ficha_inmueble`** (siempre activa). Le das a Clara la referencia (la de `mi_cartera`) o el enlace de la ficha y abre esa ficha en asesoriacastresana.com: descripción, características, superficie, precio, planta, extras, certificado energético si aparece, referencia, enlace y todas las fotos. Lo que la ficha no dice sale «no consta». Solo abre fichas de ese dominio (con las mismas protecciones que `leer_web` y lista blanca también en las redirecciones). En el chat: «🏠 Abriendo la ficha…».
+
+**`cruzar_clientes`.** Dos preguntas: *¿qué clientes encajan con el piso X?* y *¿qué pisos le encajan al cliente Y?* Usa la puntuación de Oportunidades Únicas, que escribe los motivos. Solo lee. Fuentes:
+1. **Clientes de Oportunidades Únicas** (Supabase, tabla `ou_clientes`): necesita la nube, la clave de sincronización y **`SUPABASE_SERVICE_KEY`**.
+2. **Agenda del móvil**: el servidor no puede leer tus contactos. En Android, app **Contactos** → menú (según el móvil, «Gestionar contactos» o «Importar/exportar») → **Exportar** a un archivo `.vcf`, y luego **Compartir → Clara** (o el clip 📎). Para que el cruce sirva, la **nota** de cada contacto tiene que decir lo que busca (zona, presupuesto, habitaciones). Las fotos de los contactos se quitan en el móvil antes de enviar.
+3. **Clientes de Inmoweb**: busca en Inmoweb la opción de exportar clientes a Excel/CSV y adjunta el **CSV** (separador «;» o «,», cabecera en la primera fila; se reconocen columnas como nombre, teléfono, zona, presupuesto, habitaciones, metros, operación y observaciones). Un `.xlsx` no se puede leer: guárdalo como CSV. Los nombres exactos de las columnas de Inmoweb no se han podido comprobar.
+
+La agenda y el CSV **solo valen en esa conversación y no se guardan**; a Claude le llega un recuento y, al cruzar, nombre, criterios y (solo si lo pides) el teléfono; el correo y las notas, nunca. Un contacto que no dice qué busca cuenta como «sin criterios» y no se cruza. Topes: 2.000 contactos por archivo y 9.000 caracteres de respuesta. CasteBot no es fuente de este cruce. En el chat: «🤝 Cruzando pisos y clientes…».
 
 ## Conectores (MCP) — configuración
 
@@ -134,7 +168,7 @@ Listo: abre `https://tu-proyecto.vercel.app/clara.html` y habla con Clara.
 
 ## Costes
 
-- **Claude** (`claude-sonnet-5`): buena calidad a precio contenido ($3 por millón de tokens de entrada, $15 de salida — con precio introductorio $2/$10 hasta agosto de 2026). Puedes cambiar el modelo en la constante `MODEL` de `api/clara.js` (`claude-opus-4-8` es más potente pero más caro; `claude-haiku-4-5` es más barato).
+- **Claude** (`claude-sonnet-5`): $2 por millón de tokens de entrada y $10 de salida (el precio de lanzamiento pasó a ser el estándar; ya no sube a $3/$15). Fuente y resto de precios en «Contador de gasto y tope mensual». Puedes cambiar el modelo en la constante `MODEL` de `api/clara.js` (`claude-opus-4-8` es más potente pero más caro; `claude-haiku-4-5` es más barato).
 - **Gemini (búsqueda)**: la búsqueda usa tu cuenta de Google AI Studio, con capa gratuita generosa. Clara hace como máximo 6 rondas de búsqueda por respuesta. Puedes cambiar el modelo en la constante `GEMINI_MODEL` de `api/clara.js` (`gemini-2.5-flash` es rápido y barato; `gemini-2.5-pro` da respuestas más completas).
 - Revisa el consumo de Claude en [platform.claude.com](https://platform.claude.com/) y el de Gemini en [aistudio.google.com](https://aistudio.google.com/).
 

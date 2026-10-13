@@ -6,7 +6,9 @@
 //  Verifica: saludo, los 6 modos, envío y respuesta, formato enriquecido,
 //  persistencia tras recargar, panel 🧠 Memoria (y que viaja en la petición),
 //  botón copiar y nueva conversación, y los botones ⬇ HTML / ⬇ Excel (CSV):
-//  uno por bloque csv, sin duplicados y sin scroll lateral de 360 a 1280 px.
+//  uno por bloque csv, sin duplicados y sin scroll lateral de 360 a 1280 px;
+//  el contador «📊 Uso este mes» con sus avisos del 80 % y el 100 %, y la
+//  agenda (.vcf) y el CSV de clientes como adjuntos.
 // ============================================================================
 
 import http from "node:http";
@@ -264,6 +266,90 @@ try {
       return { doc: document.documentElement.scrollWidth, vw: innerWidth, main: main.scrollWidth - main.clientWidth, est: est.scrollWidth - est.clientWidth, dentro: est.getBoundingClientRect().right <= card.right + 0.5, texto: est.textContent };
     });
     check("360 px: un nombre de 45 «a» no da scroll lateral (overflow-wrap:anywhere)", mLargo.texto.includes(NOMBRE_LARGO) && mLargo.doc <= mLargo.vw && mLargo.main <= 0 && mLargo.est <= 0 && mLargo.dentro, JSON.stringify(mLargo));
+    await page.setViewportSize({ width: 1280, height: 720 });
+  }
+
+  console.log("\n— 📊 contador de gasto y tope (sin nube: por dispositivo) —");
+  {
+    await page.setViewportSize({ width: 360, height: 760 });
+    await page.evaluate(() => { localStorage.removeItem("clara_uso_v1"); localStorage.removeItem("clara_chat_v1"); });
+    await page.reload();
+    await page.waitForSelector(".msg.clara .bubble");
+    const mes = await page.evaluate(() => {
+      const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit" }).formatToParts(new Date());
+      return p.find((x) => x.type === "year").value + "-" + p.find((x) => x.type === "month").value;
+    });
+    const envia = async (coste, texto) => {
+      EVENTOS_EXTRA = [{ uso: { llamadas: 2, entrada: 1000, salida: 100, coste_usd: coste }, uso_estado: { mes, almacen: "local", guardado: false, total: null, tope_usd: 1, nivel: "sin_datos" } }];
+      const antes = await page.$$eval(".msg.clara", (n) => n.length);
+      await page.fill("#input", texto);
+      await page.press("#input", "Enter");
+      await page.waitForFunction((n) => document.querySelectorAll(".msg.clara").length > n && !document.getElementById("typing"), antes);
+      await page.waitForTimeout(100);
+    };
+    await envia(0.5, "uno");
+    check("50 % del tope: ningún aviso", (await page.$$(".avisouso")).length === 0);
+    await envia(0.35, "dos");
+    const avisos = await page.$$eval(".avisouso", (n) => n.map((x) => x.textContent));
+    check("al 80 % Clara avisa en el chat (con el % y el tope)", avisos.length === 1 && avisos[0].includes("85 %") && avisos[0].includes("1,00 $") && avisos[0].includes("solo avisa"), avisos.join(" | "));
+    await envia(0.01, "tres");
+    check("el aviso del 80 % sale una sola vez", (await page.$$(".avisouso")).length === 1);
+    await envia(0.2, "cuatro");
+    const avisos2 = await page.$$eval(".avisouso", (n) => n.map((x) => x.textContent));
+    check("al 100 % sin nube: dice con honestidad que solo puede avisar (por dispositivo)", avisos2.length === 2 && avisos2[1].includes("🛑") && avisos2[1].includes("Sin la nube no puedo cortar el gasto"), avisos2.join(" | "));
+    check("los avisos son de estado accesible (role=status)", await page.$$eval(".avisouso", (n) => n.every((x) => x.getAttribute("role") === "status")));
+    await page.click("#memory");
+    const uso = await page.evaluate(() => ({
+      texto: document.getElementById("usoTexto").textContent,
+      nota: document.getElementById("usoNota").textContent,
+      barra: !document.getElementById("usoBarra").hidden,
+      valor: document.getElementById("usoBarra").getAttribute("aria-valuenow"),
+      agotado: document.getElementById("usoBarra").classList.contains("agotado"),
+      doc: document.documentElement.scrollWidth, vw: innerWidth,
+      panel: (() => { const p = document.querySelector("#memOverlay .panel"); return p.scrollWidth - p.clientWidth; })(),
+    }));
+    check("🧠 → «Este mes: X $ (estimado) · N llamadas»", uso.texto === "Este mes: 1,06 $ (estimado) · 8 llamadas", uso.texto);
+    check("barra frente al tope, llena y en rojo al 100 %", uso.barra && uso.valor === "100" && uso.agotado);
+    check("dice que es solo este dispositivo y que los precios son en dólares", uso.nota.includes("Solo este dispositivo") && uso.nota.includes("dólares") && uso.nota.includes("Tope: 1,00 $"), uso.nota);
+    check("panel con el uso sin scroll lateral a 360 px", uso.doc <= uso.vw && uso.panel <= 0, JSON.stringify(uso));
+    await page.click("#memClose");
+
+    // Con la nube, el total viene del servidor (todos los dispositivos).
+    await page.evaluate(() => localStorage.removeItem("clara_uso_v1"));
+    EVENTOS_EXTRA = [{ uso: { llamadas: 1, coste_usd: 0.01 }, uso_estado: { mes, almacen: "nube", guardado: true, total: { coste_usd: 3, llamadas: 120 }, tope_usd: 20, nivel: "ok", porcentaje: 15 } }];
+    await page.fill("#input", "cinco");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    await page.waitForTimeout(150);
+    await page.click("#memory");
+    const nube = await page.evaluate(() => ({ texto: document.getElementById("usoTexto").textContent, nota: document.getElementById("usoNota").textContent }));
+    check("con la nube: el total del mes de todos los dispositivos", nube.texto === "Este mes: 3,00 $ (estimado) · 120 llamadas" && nube.nota.includes("Total de todos tus dispositivos") && nube.nota.includes("Tope: 20,00 $ (15 %)"), JSON.stringify(nube));
+    await page.click("#memClose");
+    EVENTOS_EXTRA = [];
+  }
+
+  console.log("\n— 📇 agenda (.vcf) y clientes (.csv) adjuntos —");
+  {
+    const vcf = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Marcos\r\nTEL:611\r\nPHOTO;ENCODING=b;TYPE=JPEG:QUFBQQ==\r\n QkJCQg==\r\nNOTE:busca comprar en Oviedo\r\nEND:VCARD\r\n";
+    await page.setInputFiles("#fileattach", [
+      { name: "contactos.vcf", mimeType: "text/x-vcard", buffer: Buffer.from(vcf) },
+      { name: "inmoweb.csv", mimeType: "text/csv", buffer: Buffer.from("nombre;zona\nLaura;Oviedo\n") },
+      { name: "clientes.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: Buffer.from("PK") },
+    ]);
+    await page.waitForFunction(() => document.querySelectorAll(".attachchip").length === 2);
+    const chips = await page.$$eval(".attachchip", (n) => n.map((x) => x.textContent));
+    check("la agenda y el CSV se adjuntan como 📇", chips.some((c) => c.includes("📇 contactos.vcf")) && chips.some((c) => c.includes("📇 inmoweb.csv")), chips.join(" | "));
+    const errores = await page.$$eval(".error", (n) => n.map((x) => x.textContent));
+    check("el .xlsx no se adjunta y explica que lo guarde como CSV", errores.some((e) => e.includes("clientes.xlsx") && e.includes("CSV")), errores.join(" | "));
+    await page.fill("#input", "Crúzalos con mi cartera");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    const ultimo = peticiones.at(-1).messages.at(-1);
+    const [aVcf, aCsv] = ultimo.adjuntos || [];
+    const texto = Buffer.from(aVcf?.data || "", "base64").toString("utf8");
+    check("viajan como text/vcard y text/csv", aVcf?.media_type === "text/vcard" && aCsv?.media_type === "text/csv");
+    check("la foto de la agenda se quita antes de enviarla (pesa y no hace falta)", texto.includes("FN:Marcos") && texto.includes("NOTE:busca comprar") && !texto.includes("PHOTO") && !texto.includes("QkJCQg"), texto);
+    check("la agenda no se guarda en el navegador", !(await page.evaluate(() => localStorage.getItem("clara_chat_v1") || "")).includes("FN:Marcos"));
     await page.setViewportSize({ width: 1280, height: 720 });
   }
 

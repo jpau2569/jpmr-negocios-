@@ -272,12 +272,12 @@
 <footer>
   <div class="attachbar" id="attachbar"></div>
   <div class="inputrow">
-    <button id="attach" title="Adjuntar foto o PDF">📎</button>
+    <button id="attach" title="Adjuntar foto, PDF, audio, agenda (.vcf) o clientes (.csv)" aria-label="Adjuntar archivo">📎</button>
     <button id="mic" title="Dictar por voz (español)">🎙</button>
     <textarea id="input" rows="1" placeholder="Escribe a Clara… (Enter para enviar, Shift+Enter para salto de línea)"></textarea>
     <button id="send">Enviar</button>
   </div>
-  <input type="file" id="fileattach" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,audio/*,.opus,.ogg,.m4a,.mp3,.wav,.aac" multiple hidden />
+  <input type="file" id="fileattach" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,audio/*,.opus,.ogg,.m4a,.mp3,.wav,.aac,.vcf,text/vcard,text/x-vcard,.csv,text/csv,.xlsx" multiple hidden />
   <div class="hint">Clara es una IA y puede equivocarse. En temas graves de salud o emocionales, busca ayuda profesional.</div>
 </footer>
 
@@ -771,7 +771,7 @@
       for (const a of otros.reverse()) {
         const doc = document.createElement("span");
         doc.className = "adjdoc";
-        doc.textContent = (a.tipo === "imagen" ? "🖼 " : a.tipo === "audio" ? "🎙 " : "📎 ") + (a.nombre || "archivo adjunto");
+        doc.textContent = (a.tipo === "imagen" ? "🖼 " : a.tipo === "audio" ? "🎙 " : a.tipo === "lista" ? "📇 " : "📎 ") + (a.nombre || "archivo adjunto");
         bubble.prepend(doc);
       }
     } else {
@@ -836,6 +836,34 @@
       img.src = url;
     });
   }
+  // Agenda (.vcf) y clientes de Inmoweb (.csv): se mandan como texto para que
+  // Clara los cruce con la cartera en esta conversación (no se guardan).
+  const MAX_LISTA_TEXTO = 2_500_000;
+  function tipoLista(file, nombre) {
+    const t = String(file.type || "").toLowerCase();
+    if (/vcard|directory/.test(t) || /\.vcf$/i.test(nombre)) return "text/vcard";
+    if (/csv|comma-separated/.test(t) || /\.csv$/i.test(nombre)) return "text/csv";
+    return null;
+  }
+  // Las agendas de Android llevan la foto de cada contacto: se quita (pesa mucho y no hace falta).
+  function quitaFotosVcf(texto) {
+    const fuera = [];
+    let saltando = false;
+    for (const l of String(texto).split(/\r?\n/)) {
+      if (/^PHOTO[;:]/i.test(l)) { saltando = true; continue; }
+      if (saltando && !/^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)?[;:]/.test(l)) continue;
+      saltando = false;
+      fuera.push(l);
+    }
+    return fuera.join("\n");
+  }
+  async function preparaLista(file, nombre, media) {
+    let texto = await file.text();
+    if (media === "text/vcard") texto = quitaFotosVcf(texto);
+    if (texto.length > MAX_LISTA_TEXTO) throw new Error(`"${nombre}" es demasiado grande (más de ${Math.round(MAX_LISTA_TEXTO / 1e6 * 10) / 10} millones de caracteres). Exporta solo una parte de los contactos o de los clientes.`);
+    return { tipo: "lista", media_type: media, data: await aBase64(new Blob([texto], { type: media })), nombre };
+  }
+
   function pintaAdjunto() {
     attachBar.innerHTML = "";
     attachBar.classList.toggle("show", adjuntos.length > 0);
@@ -847,7 +875,7 @@
         mini.src = "data:" + a.media_type + ";base64," + a.data;
         chip.appendChild(mini);
       }
-      chip.appendChild(document.createTextNode((a.tipo === "pdf" ? "📎 " : a.tipo === "audio" ? "🎙 " : "") + a.nombre));
+      chip.appendChild(document.createTextNode((a.tipo === "pdf" ? "📎 " : a.tipo === "audio" ? "🎙 " : a.tipo === "lista" ? "📇 " : "") + a.nombre));
       const quita = document.createElement("button");
       quita.textContent = "✕";
       quita.title = "Quitar adjunto";
@@ -871,12 +899,16 @@
           if (file.size > 3.4 * 1024 * 1024) { addError(`El audio "${nombre}" supera los 3,4 MB. Grábalo más corto e inténtalo de nuevo.`); continue; }
           const tipoAud = String(file.type || "").startsWith("audio/") ? file.type : /\.(opus|ogg)$/i.test(nombre) ? "audio/ogg" : /\.m4a$/i.test(nombre) ? "audio/mp4" : /\.mp3$/i.test(nombre) ? "audio/mpeg" : /\.wav$/i.test(nombre) ? "audio/wav" : "audio/aac";
           adjuntos.push({ tipo: "audio", media_type: tipoAud, data: await aBase64(file), nombre });
+        } else if (tipoLista(file, nombre)) {
+          adjuntos.push(await preparaLista(file, nombre, tipoLista(file, nombre)));
+        } else if (/\.xlsx?$/i.test(nombre) || /spreadsheetml|ms-excel/.test(String(file.type))) {
+          addError(`"${nombre}" es un Excel y no lo puedo leer. Ábrelo y guárdalo como CSV (Archivo → Guardar como → CSV), o exporta tus clientes a CSV, y adjúntame ese archivo.`);
         } else if (String(file.type).startsWith("image/")) {
           // Con varias fotos se reducen un poco más para no pasar el límite de envío.
           const varias = lista.length > 1 || adjuntos.length > 0;
           adjuntos.push({ tipo: "imagen", media_type: "image/jpeg", data: await comprimirImagen(file, varias ? 1280 : 1600, varias ? 0.8 : 0.85), nombre });
         } else {
-          addError(`"${nombre}": solo puedo leer fotos (JPG, PNG, WebP), PDF o audios.`);
+          addError(`"${nombre}": solo puedo leer fotos (JPG, PNG, WebP), PDF, audios, agendas (.vcf) o listas de clientes (.csv).`);
         }
       } catch (e) {
         addError(e.message || "No se pudo preparar el adjunto.");
@@ -1300,6 +1332,14 @@
       if (files.length) await anadeArchivos(files);
       const partes = [meta.title, meta.text, meta.url].map((x) => String(x || "").trim()).filter(Boolean);
       const unicas = partes.filter((p, i) => !partes.slice(0, i).some((q) => q.includes(p)));
+      // Si lo compartido es la agenda o una lista de clientes, el mensaje va de cruzarla con la cartera.
+      if (files.length && files.every((f) => tipoLista(f, f.name))) {
+        inputEl.value = "📇 Te paso mis contactos/clientes (" + files.map((f) => f.name).join(", ") + "). Crúzalos con mi cartera: ";
+        inputEl.dispatchEvent(new Event("input"));
+        inputEl.focus();
+        inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
+        return;
+      }
       inputEl.value =
         "📲 Compartido desde WhatsApp" + (files.length ? ` (${files.length} archivo${files.length > 1 ? "s" : ""})` : "") + ":\n" +
         (unicas.length ? unicas.join("\n") + "\n" : "") +

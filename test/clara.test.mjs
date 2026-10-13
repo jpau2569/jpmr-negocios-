@@ -2046,10 +2046,52 @@ const FICHA_INMOWEB = `<!doctype html><html><head>
 }
 
 // ---------------------------------------------------------------------------
+console.log("\n— agenda (.vcf) y clientes de Inmoweb (.csv): lib/contactos.js —");
+// ---------------------------------------------------------------------------
+const VCF = [
+  "BEGIN:VCARD", "VERSION:3.0", "FN:Marcos Díaz Ruiz", "N:Díaz Ruiz;Marcos;;;", "TEL;TYPE=CELL:611 222 333", "EMAIL:marcos@correo.es",
+  "NOTE:Busca comprar en Oviedo\\, 3 habitaciones\\, hasta 340.000 €", "PHOTO;ENCODING=b;TYPE=JPEG:AAAA", " BBBB", "END:VCARD",
+  "BEGIN:VCARD", "VERSION:2.1", "N;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:=4E=C3=BA=C3=B1ez;Luc=C3=ADa;;;", "TEL;CELL:699 000 111",
+  "NOTE;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:Quiere alquilar en Gij=C3=B3n hasta 700 =E2=82=AC", "END:VCARD",
+  "BEGIN:VCARD", "VERSION:3.0", "FN:Fontanero Paco", "TEL:600 000 000", "NOTE:Llamar el lunes", "END:VCARD",
+  "BEGIN:VCARD", "VERSION:3.0", "FN:Solo Nombre", "END:VCARD",
+].join("\r\n");
+const CSV = "﻿Nombre;Apellidos;Teléfono;Email;Operación;Zona;Presupuesto;Habitaciones;Observaciones\n" +
+  "Laura;Pérez;600111222;l@x.es;compra;Oviedo;350.000,00 €;3;\"Quiere ascensor; urgente\"\n" +
+  "Pedro;Gómez;611000000;;;;;;\n";
+{
+  const K = await import("../lib/contactos.js");
+  const v = K.leerVcard(VCF);
+  check("vCard: lee FN, TEL, EMAIL y NOTE (con escapes)", v.contactos[0].nombre === "Marcos Díaz Ruiz" && v.contactos[0].telefonos[0] === "611 222 333" && v.contactos[0].emails[0] === "marcos@correo.es" && v.contactos[0].nota.includes("Oviedo, 3 habitaciones"), JSON.stringify(v.contactos[0]));
+  check("vCard 2.1 de Android: quoted-printable y nombre desde N", v.contactos[1].nombre === "Lucía Núñez" && v.contactos[1].nota.includes("Gijón hasta 700 €"), JSON.stringify(v.contactos[1]));
+  check("vCard: los contactos solo con nombre también cuentan (4) y la foto no se cuela", v.contactos.length === 4 && !JSON.stringify(v).includes("BBBB"));
+  const marcos = K.clienteDeContacto(v.contactos[0], "agenda del móvil");
+  check("criterios desde la NOTE: operación, zona, presupuesto y habitaciones", marcos.operacion === "venta" && marcos.zonas.includes("Oviedo") && marcos.presupuesto_max === 340000 && marcos.habitaciones_min === 3 && !marcos.sinCriterios, JSON.stringify(marcos));
+  check("sin teléfono ni correo salvo que se pida (y el correo nunca)", !("telefono" in marcos) && !JSON.stringify(marcos).includes("@") && K.clienteDeContacto(v.contactos[0], "x", true).telefono === "611 222 333");
+  check("contacto que no dice qué busca → «sin criterios» (no se inventa)", K.clienteDeContacto(v.contactos[2], "x").sinCriterios && K.clienteDeContacto(v.contactos[3], "x").sinCriterios && K.clienteDeContacto(v.contactos[2], "x").presupuesto_max === null);
+  check("CSV: separador «;» detectado y «,» también", K.separadorCsv("a;b;c") === ";" && K.separadorCsv("a,b,c") === ",");
+  const c = K.leerCsv(CSV);
+  check("CSV: cabecera en la primera fila, comillas y columnas reconocidas", c.contactos.length === 2 && c.contactos[0].nombre === "Laura Pérez" && c.contactos[0].telefonos[0] === "600111222" && c.columnas.includes("zona") && c.columnas.includes("presupuesto"), JSON.stringify(c));
+  const laura = K.clienteDeContacto(c.contactos[0], "CSV");
+  check("CSV: criterios desde las columnas (350.000,00 € → 350000)", laura.operacion === "venta" && laura.presupuesto_max === 350000 && laura.zonas.includes("Oviedo") && laura.habitaciones_min === 3 && laura.necesita.includes("ascensor"), JSON.stringify(laura));
+  check("CSV: fila sin criterios → «sin criterios»", K.clienteDeContacto(c.contactos[1], "CSV").sinCriterios);
+  check("CSV con «,» y comillas dobles escapadas", K.leerCsv('nombre,zona,notas\n"Ana ""la del 5º""",Gijón,"busca alquilar"\n').contactos[0].nombre === 'Ana "la del 5º"');
+  const muchos = "BEGIN:VCARD\nFN:X\nEND:VCARD\n".repeat(K.MAX_CONTACTOS + 5);
+  check(`tope de ${K.MAX_CONTACTOS} contactos por archivo, con aviso de recorte`, K.leerVcard(muchos).contactos.length === K.MAX_CONTACTOS && K.leerVcard(muchos).recortado);
+  check("tipos: .vcf y .csv por MIME o por extensión; .xlsx no", K.tipoLista("text/x-vcard") === "vcard" && K.tipoLista("", "Contactos.VCF") === "vcard" && K.tipoLista("text/comma-separated-values") === "csv" && K.tipoLista("application/octet-stream", "c.csv") === "csv" && K.tipoLista("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "c.xlsx") === null && K.esExcel("", "clientes.xlsx"));
+  const l = K.leerListaAdjunta({ media_type: "text/vcard", nombre: "contactos.vcf", data: Buffer.from(VCF).toString("base64") });
+  const aviso = K.avisoListaAdjunta(l, 2);
+  check("aviso para Clara: solo recuentos, sin nombres ni teléfonos", aviso.includes("4 contacto(s)") && aviso.includes("2 con criterios") && aviso.includes("2 sin criterios") && !aviso.includes("Marcos") && !aviso.includes("611"));
+}
+
+// ---------------------------------------------------------------------------
 console.log("\n— cruzar_clientes (lib/cruzar.js) —");
 // ---------------------------------------------------------------------------
 {
   const X = await import("../lib/cruzar.js");
+  const K = await import("../lib/contactos.js");
+  const fuenteCruzar = readFileSync(new URL("../lib/cruzar.js", import.meta.url), "utf8");
+  check("CasteBot ya no es fuente del cruce", !fuenteCruzar.includes("castebot_leads_lista") && !/castebot/i.test(JSON.stringify(X.HERRAMIENTA_CRUZAR)));
   const piso = X.inmuebleDeCartera({ ref: "PIS0100", operacion: "venta", titulo: "Piso en Oviedo centro", localidad: "Oviedo", precio: 330000, m2: 99, habitaciones: 3, url: "https://www.asesoriacastresana.com/piso-en-oviedo-centro-es123.html" });
   const laura = X.clienteDeOportunidades({ nombre: "Laura Pérez García", apellidos: "Pérez", telefono: "600111222", email: "l@x.es", notas: "secreto", operacion: "venta", presupuesto_max: 350000, zonas: ["Oviedo"], habitaciones_min: 3, metros_min: 90, necesita: ["garaje", "inventado"] });
   check("cliente de Oportunidades: solo nombre de pila y lo que busca (ni teléfono, ni correo, ni notas)", laura.alias === "Laura" && !("telefono" in laura) && !JSON.stringify(laura).includes("l@x.es") && !JSON.stringify(laura).includes("secreto") && JSON.stringify(laura.necesita) === '["garaje"]');
@@ -2059,19 +2101,14 @@ console.log("\n— cruzar_clientes (lib/cruzar.js) —");
   check("encaje: lo que el listado no publica (garaje) va «sin comprobar», no «no tiene»", e.sinComprobar.includes("garaje") && !e.peros.some((p) => p.includes("garaje")));
   const caro = X.encaje({ ...laura, presupuesto_max: 1000 }, piso);
   check("encaje: el exceso de presupuesto va acotado (nunca «64018%»)", caro.peros.some((p) => p === "999% por encima de su presupuesto"), caro.peros.join(" | "));
-
-  const lead = X.clienteDeLead({ agente: "PAU", resumen: "🔥 HOT-LEAD PAU\nNombre: Marcos Díaz Ruiz\nTeléfono/canal: 611 222 333\nQué quiere: comprar piso en Oviedo de 3 habitaciones hasta 340.000 €\nDato clave: hipoteca preconcedida" });
-  check("lead de CasteBot: saca operación, presupuesto, zona y habitaciones del texto", lead.alias === "Marcos" && lead.operacion === "venta" && lead.presupuesto_max === 340000 && lead.zonas.includes("Oviedo") && lead.habitaciones_min === 3 && !("telefono" in lead), JSON.stringify(lead));
-  check("lead de CasteBot: el teléfono solo si se pide", X.clienteDeLead({ resumen: "Nombre: Ana\nTeléfono/canal: 699\nQué quiere: alquilar en Gijón" }, true).telefono === "699");
-  check("lead de propietario que vende: fuera del cruce", X.clienteDeLead({ resumen: "Nombre: Ana\nQué quiere: vender su piso en Oviedo" }) === null);
-  const sinOp = X.encaje({ ...lead, operacion: null }, piso);
-  check("lead sin operación clara: no se regalan los 35 puntos y se dice", sinOp.sinComprobar.includes("si compra o alquila") && !sinOp.motivos.includes("busca comprar") && sinOp.puntos === X.encaje(lead, piso).puntos - 35);
-
+  const marcos = K.clienteDeContacto(K.leerVcard(VCF).contactos[0], "agenda del móvil");
+  const sinOp = X.encaje({ ...marcos, operacion: null }, piso);
+  check("contacto sin operación clara: no se regalan los 35 puntos y se dice", sinOp.sinComprobar.includes("si compra o alquila") && !sinOp.motivos.includes("busca comprar") && sinOp.puntos === X.encaje(marcos, piso).puntos - 35);
   const otro = X.inmuebleDeCartera({ ref: "PIS0200", operacion: "alquiler", titulo: "Piso en Gijón", localidad: "Gijón", precio: 700, habitaciones: 2 });
   check("modo cliente: ordena los pisos de mejor a peor", X.cruzarPorCliente(laura, [otro, piso])[0].inmueble.referencia === "PIS0100");
-  const ajustado = { ...lead, presupuesto_max: 300000 }; // 10 % por debajo del precio: puntúa menos que Laura
-check("modo piso: ordena los clientes de mejor a peor", X.cruzarPorPiso(piso, [ajustado, laura])[0].cliente.alias === "Laura" && X.cruzarPorPiso(piso, [ajustado, laura])[1].puntos < 90);
-  check("buscar cliente sin tildes ni mayúsculas", X.buscarClientes([laura, lead], "marcos")[0] === lead && X.buscarClientes([laura, lead], "LAURA")[0] === laura);
+  const ajustado = { ...marcos, presupuesto_max: 300000 }; // 10 % por debajo del precio: puntúa menos que Laura
+  check("modo piso: ordena los clientes de mejor a peor", X.cruzarPorPiso(piso, [ajustado, laura])[0].cliente.alias === "Laura" && X.cruzarPorPiso(piso, [ajustado, laura])[1].puntos < 90);
+  check("buscar cliente sin tildes ni mayúsculas", X.buscarClientes([laura, marcos], "marcos diaz ruiz")[0] === marcos && X.buscarClientes([laura, marcos], "LAURA")[0] === laura);
 
   // Lectura de Oportunidades con la clave de servicio (solo lectura, columnas mínimas).
   const vistos = [];
@@ -2083,35 +2120,59 @@ check("modo piso: ordena los clientes de mejor a peor", X.cruzarPorPiso(piso, [a
   check("Oportunidades: sin la tabla lo dice (esquema.sql)", (await X.leerClientesOportunidades({ env: { SUPABASE_URL: "https://t", SUPABASE_SERVICE_KEY: "s" }, fetcher: async () => new Response('{"code":"42P01"}', { status: 404 }) })).motivo.includes("oportunidades/esquema.sql"));
 
   // La herramienta entera
-  const sinNube = await X.cruzarClientes({ modo: "piso", referencia: "PIS0100" }, { nube: false });
-  check("sin nube: lo dice y explica qué configurar", sinNube.includes("hace falta la nube activa") && sinNube.includes("SUPABASE_SERVICE_KEY"));
+  const sinNada = await X.cruzarClientes({ modo: "piso", referencia: "PIS0100" }, { nube: false });
+  check("sin nube ni adjuntos: lo dice y explica los dos caminos (nube o .vcf/CSV)", sinNada.includes("SUPABASE_SERVICE_KEY") && sinNada.includes(".vcf") && sinNada.includes("CSV"));
+  const listaVcf = K.leerListaAdjunta({ media_type: "text/vcard", nombre: "contactos.vcf", data: Buffer.from(VCF).toString("base64") });
+  const listaCsv = K.leerListaAdjunta({ media_type: "text/csv", nombre: "inmoweb.csv", data: Buffer.from(CSV).toString("base64") });
   const deps = {
     claveSync: "clave-ok",
     nube: true,
     obtenerCartera: async () => ({ items: [{ ref: "PIS0100", operacion: "venta", titulo: "Piso en Oviedo centro", localidad: "Oviedo", precio: 330000, m2: 99, habitaciones: 3, url: piso.url }], errores: [] }),
-    rpc: async (fn, a) => (fn === "castebot_leads_lista" && a.clave === "clave-ok" ? [{ agente: "PAU", resumen: "Nombre: Marcos Díaz\nTeléfono/canal: 611 222 333\nQué quiere: comprar en Oviedo hasta 340.000 €" }] : []),
     leerClientes: async ({ conTelefono }) => ({ ok: true, clientes: [X.clienteDeOportunidades({ nombre: "Laura Pérez", telefono: "600111222", operacion: "venta", presupuesto_max: 350000, zonas: ["Oviedo"], habitaciones_min: 3 }, conTelefono)] }),
+    listas: [listaVcf, listaCsv],
   };
   const porPiso = await X.cruzarClientes({ modo: "piso", referencia: "pis0100" }, deps);
-  check("modo piso: lista los clientes de las dos fuentes con puntos y motivos", porPiso.includes("Laura · Oportunidades Únicas") && porPiso.includes("Marcos · CasteBot (PAU)") && /\d+\/100 · encaja:/.test(porPiso) && porPiso.includes("ref PIS0100"), porPiso);
-  check("modo piso: sin teléfonos por defecto", !porPiso.includes("611 222 333") && !porPiso.includes("600111222") && porPiso.includes("incluir_telefono"));
+  check("modo piso: Oportunidades + agenda + CSV, con puntos y motivos", porPiso.includes("Laura · Oportunidades Únicas") && porPiso.includes("Marcos Díaz Ruiz · agenda del móvil (contactos.vcf)") && porPiso.includes("Laura Pérez · CSV de clientes (inmoweb.csv)") && /\d+\/100 · encaja:/.test(porPiso) && porPiso.includes("ref PIS0100"), porPiso);
+  check("modo piso: recuento de «sin criterios» y los sin criterios no se cruzan", porPiso.includes("2 con criterios de búsqueda, 2 sin criterios") && !porPiso.includes("Fontanero") && !porPiso.includes("Pedro"));
+  check("modo piso: sin teléfonos ni correos por defecto", !porPiso.includes("611 222 333") && !porPiso.includes("600111222") && !porPiso.includes("@") && porPiso.includes("incluir_telefono"));
   const conTel = await X.cruzarClientes({ modo: "piso", referencia: "PIS0100", incluir_telefono: true }, deps);
-  check("modo piso: con incluir_telefono salen los teléfonos", conTel.includes("611 222 333") && conTel.includes("600111222"));
-  const porCliente = await X.cruzarClientes({ modo: "cliente", cliente: "laura" }, deps);
-  check("modo cliente: los pisos que le encajan, con referencia y enlace", porCliente.includes("Cliente: Laura") && porCliente.includes("ref PIS0100") && porCliente.includes(piso.url));
-  check("modo cliente: cliente que no existe → lo dice", (await X.cruzarClientes({ modo: "cliente", cliente: "Zacarías" }, deps)).includes("No encuentro a «Zacarías»"));
+  check("modo piso: con incluir_telefono salen los teléfonos (nunca el correo)", conTel.includes("611 222 333") && conTel.includes("600111222") && !conTel.includes("marcos@correo.es"));
+  const porCliente = await X.cruzarClientes({ modo: "cliente", cliente: "marcos" }, deps);
+  check("modo cliente: los pisos que le encajan, con referencia y enlace", porCliente.includes("Cliente: Marcos Díaz Ruiz") && porCliente.includes("ref PIS0100") && porCliente.includes(piso.url));
+  check("modo cliente: contacto sin criterios → dice que no se puede cruzar", (await X.cruzarClientes({ modo: "cliente", cliente: "Fontanero" }, deps)).includes("si está en la agenda sin nota de lo que busca"));
   check("modo piso: referencia que no está → lo dice", (await X.cruzarClientes({ modo: "piso", referencia: "PIS9" }, deps)).includes("No encuentro la referencia"));
   check("sin modo → lo pide", (await X.cruzarClientes({}, deps)).includes("Indica el modo"));
-  const sinFuentes = await X.cruzarClientes({ modo: "piso", referencia: "PIS0100" }, { ...deps, rpc: async () => { throw new Error("Supabase respondió 404"); }, leerClientes: async () => ({ ok: false, motivo: "falta SUPABASE_SERVICE_KEY en Vercel" }) });
-  check("sin ninguna fuente: dice qué falta en cada una y qué hacer", sinFuentes.includes("no disponible — falta SUPABASE_SERVICE_KEY") && sinFuentes.includes("castebot_leads_lista") && sinFuentes.includes("No hay clientes"), sinFuentes);
+  const soloAgenda = await X.cruzarClientes({ modo: "piso", referencia: "PIS0100" }, { ...deps, nube: false, claveSync: "" });
+  check("sin nube pero con agenda adjunta: cruza la agenda y dice que Oportunidades no está", soloAgenda.includes("Marcos Díaz Ruiz") && soloAgenda.includes("Oportunidades Únicas: no disponible — sin la nube activa"));
+  const sinFuentes = await X.cruzarClientes({ modo: "piso", referencia: "PIS0100" }, { ...deps, listas: [], leerClientes: async () => ({ ok: false, motivo: "falta SUPABASE_SERVICE_KEY en Vercel" }) });
+  check("sin clientes: dice qué falta en cada fuente y qué hacer", sinFuentes.includes("no disponible — falta SUPABASE_SERVICE_KEY") && sinFuentes.includes("ninguno adjunto") && sinFuentes.includes("No hay clientes"), sinFuentes);
+  const enorme = { ok: true, tipo: "vcard", nombre: "grande.vcf", contactos: Array.from({ length: 1500 }, (_, i) => ({ nombre: `Cliente ${i} ${"x".repeat(30)}`, telefonos: [], emails: [], nota: "busca comprar en Oviedo hasta 400.000 €" })) };
+  const grande = await X.cruzarClientes({ modo: "cliente", cliente: "cliente" }, { ...deps, listas: [enorme] });
+  check(`la salida nunca pasa de ${X.MAX_SALIDA} caracteres (y avisa si recorta)`, grande.length <= X.MAX_SALIDA + 200 && (grande.length < X.MAX_SALIDA || grande.includes("recortado")), String(grande.length));
 
-  // Por el chat, con la nube: exige la clave validada y no escribe nada.
+  // Por el chat: una agenda adjunta (sin nube) activa cruzar_clientes; a Claude solo le llega el recuento.
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_ANON_KEY;
+  let n = 0;
+  const reg0 = montaFetch({
+    claude: () => (++n === 1 ? msgClaude([{ type: "tool_use", id: "c0", name: "cruzar_clientes", input: { modo: "piso", referencia: "PIS0100" } }], "tool_use") : msgClaude([{ type: "text", text: "Marcos encaja." }])),
+    web: (u) => new Response(u.includes("id_tipo_operacion=1") ? HTML_CARTERA : "<html></html>", { status: 200 }),
+  });
+  const r0 = mockRes();
+  await handler({ method: "POST", body: { messages: [{ role: "user", content: "📇 Te paso mis contactos", adjuntos: [{ tipo: "lista", media_type: "text/vcard", nombre: "contactos.vcf", data: Buffer.from(VCF).toString("base64") }, { tipo: "lista", media_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", nombre: "clientes.xlsx", data: "UEsDBA==" }] }] } }, r0);
+  const primera = JSON.stringify(reg0.claude[0]?.messages || []);
+  check("chat sin nube + agenda adjunta: declara cruzar_clientes", (reg0.claude[0]?.tools || []).some((t) => t.name === "cruzar_clientes"));
+  check("chat: a Claude solo le llega el recuento de la agenda (ni nombres ni teléfonos ni correos)", primera.includes("Agenda del móvil «contactos.vcf» adjunta: 4 contacto(s)") && !primera.includes("Marcos") && !primera.includes("611 222 333") && !primera.includes("marcos@correo.es"), primera.slice(0, 300));
+  check("chat: el .xlsx no se lee y se pide en CSV", primera.includes("Excel «clientes.xlsx» NO leído") && primera.includes("CSV"));
+  check("chat: la herramienta cruza la agenda con la cartera real", JSON.stringify(reg0.claude[1]?.messages || []).includes("Marcos Díaz Ruiz · agenda del móvil"));
+
+  // Por el chat, con la nube: Oportunidades por GET con la clave de servicio; nada se escribe.
   process.env.SUPABASE_URL = "https://test.supabase.co";
   process.env.SUPABASE_ANON_KEY = "anon-test";
   process.env.SUPABASE_SERVICE_KEY = "service-secreta";
-  let n = 0;
+  n = 0;
   const reg = montaFetch({
-    supabase: { clara_memoria_lee: memoriaOk, castebot_leads_lista: (a) => (a.clave === "clave-ok" ? [{ agente: "PAU", resumen: "Nombre: Marcos\nQué quiere: comprar en Oviedo hasta 340.000 €" }] : []) },
+    supabase: { clara_memoria_lee: memoriaOk },
     rest: (u) => jsonResp(u.includes("/ou_clientes?") ? [{ nombre: "Laura Pérez", operacion: "venta", presupuesto_max: 350000, zonas: ["Oviedo"], habitaciones_min: 3 }] : []),
     claude: () => (++n === 1 ? msgClaude([{ type: "tool_use", id: "c1", name: "cruzar_clientes", input: { modo: "piso", referencia: "PIS0100" } }], "tool_use") : msgClaude([{ type: "text", text: "Laura encaja." }])),
     web: (u) => new Response(u.includes("id_tipo_operacion=1") ? HTML_CARTERA : "<html></html>", { status: 200 }),
@@ -2119,8 +2180,8 @@ check("modo piso: ordena los clientes de mejor a peor", X.cruzarPorPiso(piso, [a
   const r = mockRes();
   await handler({ method: "POST", body: { messages: [{ role: "user", content: "¿A quién le encaja el PIS0100?" }], clave: "clave-ok" } }, r);
   const resultado = JSON.stringify(reg.claude[1]?.messages || []);
-  check("chat: cruzar_clientes cruza Oportunidades + CasteBot con la cartera real", r.r.statusCode === 200 && resultado.includes("Laura · Oportunidades Únicas") && resultado.includes("Marcos · CasteBot"), resultado.slice(0, 400));
-  check("chat: solo lectura (GET a ou_clientes, ningún POST/PATCH a tablas)", reg.rest.length === 1 && reg.rest[0].url.includes("/ou_clientes?") && reg.rpc.every((c) => ["clara_memoria_lee", "castebot_leads_lista", "clara_uso_suma"].includes(c.fn)));
+  check("chat con nube: cruza los clientes de Oportunidades con la cartera real", r.r.statusCode === 200 && resultado.includes("Laura · Oportunidades Únicas"), resultado.slice(0, 400));
+  check("chat: solo lectura (un GET a ou_clientes; ninguna RPC de CasteBot)", reg.rest.length === 1 && reg.rest[0].url.includes("/ou_clientes?") && !reg.rpc.some((c) => /castebot/.test(c.fn)));
   check("chat: la clave de servicio no llega a Claude", !JSON.stringify(reg.claude).includes("service-secreta"));
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_ANON_KEY;
@@ -2142,6 +2203,7 @@ console.log("\n— prompt y persona: ficha_inmueble, cruzar_clientes y tope (sin
   check("prompt: sección de cruzar_clientes (dos modos, motivos, sin inventar, teléfonos solo si los pide)", pC.length > 200 && pC.includes("«piso»") && pC.includes("«cliente»") && pC.includes("no inventes") && pC.includes("incluir_telefono"));
   check("prompt: sección del tope (qué herramientas se quitan)", pG.includes("consultar_equipo, preparar_archivo ni segunda_opinion"));
   check("persona §7.9, §7.10 y §7.11: los mismos párrafos que el prompt", seccion("7.9.").includes(pF) && seccion("7.10.").includes(pC) && seccion("7.11.").includes(pG));
+  check("prompt y persona: cómo exportar la agenda (.vcf) y los clientes de Inmoweb (CSV), sin inventar los pasos de Inmoweb", pC.includes("Exportar a un archivo .vcf") && pC.includes("Compartir → Clara") && pC.includes("busque la opción de exportar clientes a Excel/CSV") && pC.includes("el .xlsx no lo puedes leer") && pC.includes("«sin criterios»") && !/castebot/i.test(pC));
   check("persona: los estados que se ven en el chat", seccion("7.9.").includes("🏠 Abriendo la ficha…") && seccion("7.10.").includes("🤝 Cruzando pisos y clientes…"));
 }
 
