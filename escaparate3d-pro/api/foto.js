@@ -23,6 +23,8 @@ export function dominioPermitido(url) {
   try {
     const u = new URL(url);
     if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    // Fotos de Inmoweb en Google Cloud Storage: solo la carpeta del portal.
+    if (u.hostname === "storage.googleapis.com") return u.pathname.startsWith("/static.inmoweb.es/");
     return PERMITIDOS.some((re) => re.test(u.hostname));
   } catch {
     return false;
