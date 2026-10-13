@@ -115,7 +115,7 @@
     font-size:16px;background:linear-gradient(135deg,var(--pink),var(--purple));box-shadow:0 6px 20px rgba(255,92,157,.3)}
   .msg .bubble{background:var(--glass-2);border:1px solid var(--stroke);border-radius:var(--r-md);
     padding:12px 15px;font-size:14.5px;line-height:1.65;white-space:pre-wrap;word-wrap:break-word;
-    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);min-width:0;max-width:100%}
   .msg.clara{align-self:flex-start}
   .msg.user{align-self:flex-end;flex-direction:row-reverse}
   .msg.user .avatar{background:linear-gradient(135deg,#0e7490,#22d3ee);box-shadow:0 6px 20px rgba(34,211,238,.25)}
@@ -134,6 +134,17 @@
     opacity:0;transition:.15s}
   .msg:hover .copy{opacity:1}
   .msg .copy:hover{color:var(--fg);border-color:var(--stroke-2)}
+  /* Botones de la respuesta (copiar y descargas). Sin descargas, «copiar» va a
+     la derecha de la burbuja como siempre; con descargas, la fila pasa debajo
+     de la burbuja (alineada con ella) para no salirse de la pantalla. */
+  .msg .acciones{align-self:flex-end;flex:0 0 auto;display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+  .msg .acciones .copy{align-self:auto}
+  .msg.clara.con-descargas{flex-wrap:wrap;row-gap:6px}
+  .msg.clara.con-descargas .bubble{flex:1 1 calc(100% - 44px)}
+  .msg.clara.con-descargas .acciones{flex:1 1 100%;padding-left:44px}
+  @media (pointer:coarse){
+    .msg .acciones .dl{min-height:44px;padding:0 12px;font-size:12.5px}
+  }
 
   .typing{display:inline-flex;gap:5px;align-items:center;padding:4px 2px}
   .typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
@@ -369,10 +380,12 @@
   function botonDescargaHtml(wrap, texto) {
     if (!wrap) return;
     wrap.querySelector(".dlhtml")?.remove();
+    marcaDescargas(wrap);
     const html = extraeHtml(texto);
     if (!html) return;
     const b = document.createElement("button");
-    b.className = "copy dlhtml";
+    b.type = "button";
+    b.className = "copy dl dlhtml";
     b.style.opacity = "1";
     b.textContent = "⬇ Descargar HTML";
     b.title = "Descarga el documento (ábrelo y usa Ctrl+P → Guardar como PDF)";
@@ -384,34 +397,56 @@
       a.click();
       URL.revokeObjectURL(a.href);
     });
-    wrap.appendChild(b);
+    filaAcciones(wrap).appendChild(b);
+    marcaDescargas(wrap);
   }
 
-  // Si la respuesta trae una tabla en un bloque ```csv (skill hoja-calculo-excel),
-  // se ofrece descargarla como .csv que Excel abre directamente (BOM para los acentos).
-  function extraeCsv(text) {
-    const m = String(text || "").match(/```csv\s*\n([\s\S]*?)```/i);
-    return m && m[1].trim() ? m[1].trim() : null;
+  // Fila de botones de una respuesta (la crea addMessage; si no, el propio mensaje).
+  function filaAcciones(wrap) {
+    return wrap.querySelector(".acciones") || wrap;
+  }
+  // Con algún botón de descarga, la fila de botones pasa debajo de la burbuja.
+  function marcaDescargas(wrap) {
+    wrap.classList.toggle("con-descargas", !!wrap.querySelector(".dl"));
+  }
+
+  // Si la respuesta trae tablas en bloques ```csv (skill hoja-calculo-excel),
+  // se ofrece descargar cada una como .csv que Excel abre directamente (BOM
+  // para los acentos). Un botón por bloque; los vacíos no cuentan.
+  function extraeCsvs(text) {
+    return [...String(text || "").matchAll(/```csv\s*\n([\s\S]*?)```/gi)]
+      .map((m) => m[1].trim())
+      .filter(Boolean);
   }
   function botonDescargaCsv(wrap, texto) {
     if (!wrap) return;
-    wrap.querySelector(".dlcsv")?.remove();
-    const csv = extraeCsv(texto);
-    if (!csv) return;
-    const b = document.createElement("button");
-    b.className = "copy dlcsv";
-    b.style.opacity = "1";
-    b.textContent = "⬇ Descargar Excel (CSV)";
-    b.title = "Descarga la tabla; se abre con Excel o Google Sheets";
-    b.addEventListener("click", () => {
-      const blob = new Blob(["﻿" + csv.replace(/\r?\n/g, "\r\n")], { type: "text/csv;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "clara-" + new Date().toISOString().slice(0, 10) + ".csv";
-      a.click();
-      URL.revokeObjectURL(a.href);
+    // Al volver a pintar (fin del streaming, recarga) se quitan los de antes: nunca duplicados.
+    wrap.querySelectorAll(".dlcsv").forEach((b) => b.remove());
+    marcaDescargas(wrap);
+    const tablas = extraeCsvs(texto);
+    if (!tablas.length) return;
+    const varias = tablas.length > 1;
+    const fecha = new Date().toISOString().slice(0, 10);
+    tablas.forEach((csv, i) => {
+      const n = i + 1;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "copy dl dlcsv";
+      b.style.opacity = "1";
+      b.textContent = varias ? "⬇ Excel (CSV) " + n : "⬇ Descargar Excel (CSV)";
+      b.title = varias ? "Descarga la tabla " + n + "; se abre con Excel o Google Sheets" : "Descarga la tabla; se abre con Excel o Google Sheets";
+      b.setAttribute("aria-label", varias ? "Descargar la tabla " + n + " para Excel (CSV)" : "Descargar la tabla para Excel (CSV)");
+      b.addEventListener("click", () => {
+        const blob = new Blob(["﻿" + csv.replace(/\r?\n/g, "\r\n")], { type: "text/csv;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "clara-" + fecha + (varias ? "-" + n : "") + ".csv";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+      filaAcciones(wrap).appendChild(b);
     });
-    wrap.appendChild(b);
+    marcaDescargas(wrap);
   }
 
   function addMessage(role, text, adj) {
@@ -460,7 +495,10 @@
           setTimeout(() => (copy.textContent = "⧉ copiar"), 1500);
         });
       });
-      wrap.appendChild(copy);
+      const acciones = document.createElement("div");
+      acciones.className = "acciones";
+      acciones.appendChild(copy);
+      wrap.appendChild(acciones);
       botonDescargaHtml(wrap, text);
       botonDescargaCsv(wrap, text);
     }
