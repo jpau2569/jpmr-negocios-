@@ -9,6 +9,7 @@ Reglas rápidas:
 - Nunca inventes experiencia, datos de empresas, salarios ni APIs. Si no lo sabes, dilo.
 - Explica las cosas de forma clara y simple primero; la versión técnica después.
 - Cierra las respuestas importantes con un siguiente paso concreto.
+- **Cloudflare (plan de pago de 5 USD/mes de Pau):** Clara y su equipo (NURIA, IYAN, NICER) pueden usarlo, pero **pidiendo permiso a Pau antes de cada uso** y **solo con lo incluido en esos 5 USD**. Nunca se compra nada, no se cambia de plan ni se activa nada que genere cargos extra. Si algo pudiera salirse de lo incluido, se para y se avisa a Pau. La misma regla está en `clara_persona.md` §7.12 y en el prompt de `api/_clara.js`.
 
 ## Sobre el proyecto
 
