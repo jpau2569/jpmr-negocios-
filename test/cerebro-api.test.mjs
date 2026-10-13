@@ -295,7 +295,7 @@ const claudeAntesChat = llamadas.claude.length;
 const rc = { statusCode: 0, body: null };
 await clara({ method: "POST", body: { messages: [{ role: "user", content: "Valórame Uría 12" }] } }, { status(c) { rc.statusCode = c; return this; }, json(b) { rc.body = b; return this; }, setHeader() {} });
 const chat = llamadas.claude.slice(claudeAntesChat);
-check("preparar_valoracion declarada siempre (sin nube; 8 con preparar_archivo)", chat[0]?.tools.some((t) => t.name === "preparar_valoracion") && chat[0].tools.length === 8);
+check("preparar_valoracion declarada siempre (sin nube; 9 con preparar_archivo y ficha_inmueble)", chat[0]?.tools.some((t) => t.name === "preparar_valoracion") && chat[0].tools.length === 9);
 check("el prompt de Clara tiene la sección de valoración", chat[0]?.system[0].text.includes("## Valoración de mercado") && chat[0].system[0].text.includes("no una tasación oficial") && chat[0].system[0].text.includes("sección Pisos"));
 check("el prompt de valoración pide SOLO la url en «notas» (ni enlace y fecha juntos)", chat[0]?.system[0].text.includes("pon SOLO la url del anuncio") && !chat[0].system[0].text.includes("pon el enlace y la fecha de cada anuncio en sus notas"));
 const resultado = chat[1]?.messages.at(-1).content[0];

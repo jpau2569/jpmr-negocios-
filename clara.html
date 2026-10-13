@@ -61,7 +61,8 @@
     display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
   .overlay.open{display:flex}
   .panel{background:#0d1226;border:1px solid var(--stroke-2);border-radius:var(--r-lg);
-    max-width:560px;width:100%;padding:18px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+    max-width:560px;width:100%;padding:18px;box-shadow:0 30px 80px rgba(0,0,0,.5);
+    max-height:calc(100vh - 32px);overflow-y:auto}
   .panel h2{font-size:16px;margin-bottom:4px}
   .panel p{color:var(--muted);font-size:12.5px;margin-bottom:10px;line-height:1.5}
   .panel textarea{width:100%;min-height:180px;max-height:45vh;resize:vertical;border:1px solid var(--stroke);
@@ -74,6 +75,18 @@
   .panel .row .ghost{background:var(--glass);border:1px solid var(--stroke);color:var(--muted)}
   .panel .row .ghost:hover{color:var(--fg);border-color:var(--stroke-2)}
   .panel .row .save{background:linear-gradient(135deg,var(--pink),var(--purple));border:none;color:#fff}
+
+  /* ---- 📊 Uso este mes (dentro del panel 🧠) ---- */
+  .uso{margin-top:12px;border:1px solid var(--stroke);border-radius:var(--r-md);padding:10px 12px;background:var(--glass)}
+  .uso h3{font-size:13px;margin-bottom:4px;color:var(--fg)}
+  .uso .usotexto{font-size:13.5px;color:var(--fg);overflow-wrap:anywhere}
+  .uso .usonota{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.45;overflow-wrap:anywhere}
+  .uso .usobar{height:8px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:8px}
+  .uso .usobar i{display:block;height:100%;width:0;background:var(--green);transition:width .3s}
+  .uso .usobar.aviso i{background:var(--amber)}
+  .uso .usobar.agotado i{background:var(--danger)}
+  .avisouso{align-self:center;background:rgba(255,200,87,.1);border:1px solid rgba(255,200,87,.45);
+    color:#ffe2a8;border-radius:var(--r-md);padding:10px 16px;font-size:13px;max-width:88%;text-align:center;overflow-wrap:anywhere}
 
   /* ---- Micrófono y adjuntos ---- */
   #mic,#attach{border:1px solid var(--stroke);background:var(--glass);color:var(--muted);cursor:pointer;
@@ -243,6 +256,12 @@
     <input type="password" id="memClave" placeholder="Clave de sincronización (opcional — la misma en todos tus dispositivos)"
       style="width:100%;margin-top:10px;border:1px solid var(--stroke);background:var(--glass);color:var(--fg);border-radius:var(--r-md);padding:10px 14px;font-size:13px;font-family:inherit;outline:none" />
     <div id="memEstado" style="margin-top:8px;font-size:12px;color:var(--muted)"></div>
+    <section class="uso" id="usoCaja" aria-labelledby="usoTit">
+      <h3 id="usoTit">📊 Uso este mes</h3>
+      <div class="usotexto" id="usoTexto">Este mes: 0,00 $ (estimado) · 0 llamadas</div>
+      <div class="usobar" id="usoBarra" role="progressbar" aria-label="Gasto del mes frente al tope" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><i></i></div>
+      <div class="usonota" id="usoNota"></div>
+    </section>
     <div class="row">
       <button class="ghost" id="memClose">Cancelar</button>
       <button class="save" id="memSave">Guardar</button>
@@ -288,6 +307,7 @@
   const MEM_KEY = "clara_memoria_v1";
   const VOICE_KEY = "clara_voz_v1";
   const SYNC_KEY = "clara_sync_v1";
+  const USO_KEY = "clara_uso_v1"; // contador de gasto por mes (y lo último que dijo la nube)
   function saveChat() {
     // Los adjuntos (base64) no se guardan en localStorage: pesan demasiado.
     const ligero = history.map((m) => {
@@ -581,6 +601,7 @@
       } catch {
         return { ok: false, error: "Se cortó la conexión mientras se creaba el archivo. Vuelve a pulsar para reintentarlo." };
       }
+      anotaUso(data); // cada tramo cuenta en el gasto del mes
       if (res.status === 504) return { ok: false, error: "El servidor tardó demasiado; vuelve a pulsar." };
       if (res.status === 401 && !getClave()) {
         return { ok: false, error: "En este dispositivo no está puesta tu clave de sincronización. Escríbela en 🧠 Memoria (la misma de tus otros dispositivos) y vuelve a pulsar." };
@@ -592,6 +613,135 @@
       firmaEstado = data.firmaEstado;
     }
     return { ok: false, error: "El archivo no ha terminado en " + MAX_TRAMOS_ARCHIVO + " intentos. Pídele a Clara una versión más corta." };
+  }
+
+  // ---- 📊 Contador de gasto (lo calcula el servidor con el uso real de la API) ----
+  // Con la nube, el total del mes viene del servidor (todos los dispositivos);
+  // sin ella, cada respuesta trae su uso y aquí se suma por mes. El tope
+  // (CLARA_TOPE_MES_USD) también lo dice el servidor.
+  const CAMPOS_USO = ["entrada", "salida", "cache_lectura", "cache_escritura", "llamadas", "llamadas_openrouter", "tokens_openrouter", "ejecuciones_codigo", "llamadas_sin_precio"];
+  function mesLocal() {
+    try {
+      const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit" }).formatToParts(new Date());
+      return p.find((x) => x.type === "year").value + "-" + p.find((x) => x.type === "month").value;
+    } catch { return new Date().toISOString().slice(0, 7); }
+  }
+  function leeUso() {
+    try { const u = JSON.parse(localStorage.getItem(USO_KEY) || "null"); if (u && typeof u === "object") return { meses: u.meses || {}, nube: u.nube || null, tope: u.tope ?? null, avisos: u.avisos || {} }; } catch {}
+    return { meses: {}, nube: null, tope: null, avisos: {} };
+  }
+  function guardaUso(u) {
+    // Solo los 12 últimos meses.
+    const meses = Object.keys(u.meses).sort().slice(-12);
+    u.meses = Object.fromEntries(meses.map((m) => [m, u.meses[m]]));
+    try { localStorage.setItem(USO_KEY, JSON.stringify(u)); } catch {}
+  }
+  const num = (x) => (Number.isFinite(Number(x)) && Number(x) > 0 ? Number(x) : 0);
+  function dolares(x) {
+    const v = num(x);
+    return v.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: v > 0 && v < 0.1 ? 4 : 2 }) + " $";
+  }
+  // Total del mes: lo de la nube (si hay) + lo que este dispositivo no pudo subir.
+  function totalUso(u = leeUso()) {
+    const mes = mesLocal();
+    const local = u.meses[mes] || {};
+    const nube = u.nube && u.nube.mes === mes ? u.nube : null;
+    const t = { mes, coste_usd: num(local.coste_usd) + num(nube?.coste_usd), almacen: nube ? "nube" : "local", local: num(local.llamadas) > 0 };
+    for (const c of CAMPOS_USO) t[c] = num(local[c]) + num(nube?.[c]);
+    t.tope = num(u.tope) || null;
+    t.porcentaje = t.tope ? Math.round((t.coste_usd / t.tope) * 100) : null;
+    return t;
+  }
+  // Recoge { uso, uso_estado } de cualquier respuesta del servidor.
+  function anotaUso(info) {
+    if (!info || !info.uso_estado) return;
+    const u = leeUso();
+    const est = info.uso_estado;
+    if ("tope_usd" in est) u.tope = num(est.tope_usd) || null;
+    if (est.guardado && est.total) {
+      u.nube = { mes: est.mes, ...est.total };
+    } else if (info.uso) {
+      const mes = est.mes || mesLocal();
+      const previo = u.meses[mes] || {};
+      const suma = {};
+      for (const c of CAMPOS_USO) suma[c] = num(previo[c]) + num(info.uso[c]);
+      suma.coste_usd = Math.round((num(previo.coste_usd) + num(info.uso.coste_usd)) * 1e6) / 1e6;
+      u.meses[mes] = suma;
+    }
+    guardaUso(u);
+    pintaUso();
+    avisaTope(est);
+  }
+  function addAvisoUso(texto) {
+    const div = document.createElement("div");
+    div.className = "avisouso";
+    div.setAttribute("role", "status");
+    div.textContent = texto;
+    chatEl.appendChild(div);
+    mainEl.scrollTop = mainEl.scrollHeight;
+  }
+  // Al 80 % y al 100 % del tope, un aviso en el chat (una sola vez por mes).
+  function avisaTope(est = {}) {
+    const u = leeUso();
+    const t = totalUso(u);
+    if (!t.tope) return;
+    const enNube = t.almacen === "nube";
+    const clave100 = t.mes + "-100", clave80 = t.mes + "-80";
+    if (t.porcentaje >= 100 && !u.avisos[clave100]) {
+      u.avisos[clave100] = true;
+      u.avisos[clave80] = true;
+      guardaUso(u);
+      addAvisoUso(enNube
+        ? "🛑 Pau, este mes ya vas por " + dolares(t.coste_usd) + " (estimado) y has llegado a tu tope de " + dolares(t.tope) + ". Sigo contigo en el chat, pero sin equipo, sin archivos de Word/Excel/PowerPoint/PDF y sin segunda opinión hasta el mes que viene (o hasta que subas CLARA_TOPE_MES_USD en Vercel)."
+        : "🛑 Pau, en este dispositivo llevas " + dolares(t.coste_usd) + " (estimado) este mes y has llegado a tu tope de " + dolares(t.tope) + ". Sin la nube no puedo cortar el gasto: solo te aviso, y cada dispositivo cuenta lo suyo.");
+    } else if (t.porcentaje >= 80 && t.porcentaje < 100 && !u.avisos[clave80]) {
+      u.avisos[clave80] = true;
+      guardaUso(u);
+      addAvisoUso("⚠️ Pau, aviso de gasto: este mes llevas " + dolares(t.coste_usd) + " (estimado), el " + t.porcentaje + " % de tu tope de " + dolares(t.tope) + "." +
+        (enNube ? " Al llegar al 100 % quitaré el equipo, los archivos y la segunda opinión." : " Sin la nube el tope es por dispositivo y solo avisa."));
+    }
+  }
+  function pintaUso(extra) {
+    const t = totalUso();
+    const txt = document.getElementById("usoTexto");
+    const barra = document.getElementById("usoBarra");
+    const nota = document.getElementById("usoNota");
+    if (!txt) return;
+    const llam = t.llamadas + t.llamadas_openrouter;
+    txt.textContent = "Este mes: " + dolares(t.coste_usd) + " (estimado) · " + llam + (llam === 1 ? " llamada" : " llamadas");
+    const notas = [];
+    if (t.tope) {
+      barra.hidden = false;
+      const pc = Math.max(0, Math.min(100, t.porcentaje || 0));
+      barra.querySelector("i").style.width = pc + "%";
+      barra.setAttribute("aria-valuenow", String(pc));
+      barra.classList.toggle("aviso", t.porcentaje >= 80 && t.porcentaje < 100);
+      barra.classList.toggle("agotado", t.porcentaje >= 100);
+      notas.push("Tope: " + dolares(t.tope) + " (" + (t.porcentaje || 0) + " %).");
+    } else {
+      barra.hidden = true;
+      notas.push("Sin tope mensual (se pone en Vercel con CLARA_TOPE_MES_USD).");
+    }
+    notas.push(t.almacen === "nube" ? "☁️ Total de todos tus dispositivos." : "📱 Solo este dispositivo" + (t.tope ? ": aquí el tope solo avisa." : "."));
+    if (t.llamadas_sin_precio) notas.push("Coste sin verificar en " + t.llamadas_sin_precio + " llamada(s) (modelo sin precio comprobado).");
+    if (t.llamadas_openrouter) notas.push("OpenRouter: " + t.llamadas_openrouter + " llamada(s), su coste no se suma (va a su saldo).");
+    if (extra) notas.push(extra);
+    notas.push("Precios oficiales de Anthropic en dólares; la factura real está en platform.claude.com.");
+    nota.textContent = notas.join(" ");
+  }
+  // Al abrir 🧠: con clave, pide el total de la nube al servidor.
+  async function refrescaUso(clave) {
+    pintaUso();
+    if (!clave) return;
+    try {
+      const r = await fetch("/api/clara", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accion: "uso", clave }) });
+      const d = await r.json();
+      const u = leeUso();
+      if ("tope_usd" in d) u.tope = num(d.tope_usd) || null;
+      if (d.almacen === "nube" && d.total) u.nube = { mes: d.mes, ...d.total };
+      guardaUso(u);
+      pintaUso(d.almacen !== "nube" && d.motivo ? "(" + d.motivo + ")" : "");
+    } catch { /* sin red: se queda lo local */ }
   }
 
   function addMessage(role, text, adj, archivos) {
@@ -860,6 +1010,7 @@
               mainEl.scrollTop = mainEl.scrollHeight;
             }
             if (ev.archivo) sumaArchivo(ev.archivo);
+            if (ev.uso_estado) anotaUso(ev);
             if (ev.done) { finalReply = ev.reply; (ev.archivos || []).forEach(sumaArchivo); }
             if (ev.error) errorMsg = ev.error;
           }
@@ -880,6 +1031,7 @@
         // ---- Modo clásico (o error): respuesta JSON de una pieza ----
         const data = await res.json().catch(() => ({}));
         removeTyping();
+        if (data.uso_estado) anotaUso(data);
         if (!res.ok) {
           deshacer(data.error || "Error al hablar con Clara (" + res.status + "). Tu mensaje sigue en el cuadro: reenvíalo cuando quieras.");
         } else if (!data.reply) {
@@ -995,6 +1147,7 @@
     memEstado.textContent = "";
     memOverlay.classList.add("open");
     memText.focus();
+    refrescaUso(memClave.value.trim());
     if (memClave.value) {
       memEstado.textContent = "☁️ Leyendo la memoria de la nube…";
       try {

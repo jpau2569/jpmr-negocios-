@@ -218,7 +218,8 @@ check("system: persona cacheada", sys[0]?.cache_control?.type === "ephemeral");
 check("system: fecha de hoy inyectada", sysTexto.includes("Hoy es"));
 check("system: memoria de Pau inyectada", sysTexto.includes("invertir en Oviedo"));
 check("system: modo inmobiliario activo", sysTexto.includes("NEGOCIO INMOBILIARIO"));
-check("declara las 8 herramientas base (preparar_valoracion, consultar_equipo y preparar_archivo incluidas)", (llamadasAnthropic[0]?.tools || []).length === 8 && ["preparar_valoracion", "consultar_equipo", "preparar_archivo"].every((n) => (llamadasAnthropic[0]?.tools || []).some((t) => t.name === n)));
+check("declara las 9 herramientas base (preparar_valoracion, consultar_equipo, preparar_archivo y ficha_inmueble incluidas)", (llamadasAnthropic[0]?.tools || []).length === 9 && ["preparar_valoracion", "consultar_equipo", "preparar_archivo", "ficha_inmueble"].every((n) => (llamadasAnthropic[0]?.tools || []).some((t) => t.name === n)));
+check("sin nube no se declara cruzar_clientes", !(llamadasAnthropic[0]?.tools || []).some((t) => t.name === "cruzar_clientes"));
 check("mi_cartera, usar_skill y leer_web declaradas", ["mi_cartera", "usar_skill", "leer_web"].every((n) => (llamadasAnthropic[0]?.tools || []).some((t) => t.name === n)));
 
 const segundaRonda = llamadasAnthropic[1]?.messages || [];
@@ -436,7 +437,7 @@ const sysNube = (llamadasAnthropic[0]?.system || []).map((b) => b.text).join("\n
 check("respuesta 200 con nube activa", res.r.statusCode === 200, JSON.stringify(res.r.body));
 check("la memoria de la nube gana a la local", sysNube.includes("Le encanta Cudillero") && !sysNube.includes("no debería usarse"));
 check("el system dice que está sincronizada", sysNube.includes("sincronizada en la nube"));
-check("con nube activa hay 11 herramientas (recordar, crear_skill y mis_leads incluidas)", (llamadasAnthropic[0]?.tools || []).length === 11 && ["recordar", "crear_skill", "mis_leads"].every((n) => llamadasAnthropic[0].tools.some((t) => t.name === n)));
+check("con nube activa hay 13 herramientas (recordar, crear_skill, mis_leads, ficha_inmueble y cruzar_clientes incluidas)", (llamadasAnthropic[0]?.tools || []).length === 13 && ["recordar", "crear_skill", "mis_leads", "ficha_inmueble", "cruzar_clientes"].every((n) => llamadasAnthropic[0].tools.some((t) => t.name === n)));
 check("recordar apuntó la nota en Supabase", llamadasSupabase.some((c) => c.fn === "clara_memoria_apunta" && c.args.nota === "Objetivo 2026: 20 exclusivas"));
 check("el tool_result confirma el guardado", JSON.stringify(llamadasAnthropic[1]?.messages || []).includes("Nota guardada"));
 // ---------------------------------------------------------------------------
@@ -1683,6 +1684,475 @@ console.log("\n— archivos de oficina: preparar_archivo + /api/clara-archivo �
   check("persona §7.8: el mismo párrafo que el prompt de Clara (sincronizados)", parrafo.length > 200 && sec78.includes(parrafo));
   const FRASE_SIN = "Si no tienes la herramienta preparar_archivo, usa la opción rápida (CSV o HTML) y díselo a Pau; nunca anuncies una tarjeta que no has preparado.";
   check("prompt y persona §7.8: la frase de qué hacer sin preparar_archivo", parrafo.includes(FRASE_SIN) && sec78.includes(FRASE_SIN));
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n— contador de gasto y tope mensual (lib/uso.js) —");
+// ---------------------------------------------------------------------------
+{
+  const U = await import("../lib/uso.js");
+  const fuenteClara = readFileSync(new URL("../api/_clara.js", import.meta.url), "utf8");
+  const modeloClara = fuenteClara.match(/const MODEL = "([^"]+)"/)?.[1];
+  const fuenteArchivos = readFileSync(new URL("../lib/archivos.js", import.meta.url), "utf8");
+  const modeloArchivos = fuenteArchivos.match(/export const MODELO_ARCHIVOS = "([^"]+)"/)?.[1];
+  check("precios: hay precio verificado para el modelo de Clara y el de los archivos", Boolean(modeloClara && U.PRECIOS_USD_MTOK[modeloClara] && U.PRECIOS_USD_MTOK[modeloArchivos]), modeloClara);
+  check("precios: fuente oficial y fecha de consulta", U.FUENTE_PRECIOS.url.startsWith("https://platform.claude.com/") && /^\d{4}-\d{2}-\d{2}$/.test(U.FUENTE_PRECIOS.consultado));
+  const P = U.PRECIOS_USD_MTOK["claude-sonnet-5"];
+  check("precios de Sonnet 5 (USD/MTok): 2 · 2,50 · 4 · 0,20 · 10", P.entrada === 2 && P.escritura_5m === 2.5 && P.escritura_1h === 4 && P.lectura_cache === 0.2 && P.salida === 10);
+
+  const u1 = U.usoDeRespuesta({ input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 10000, cache_creation_input_tokens: 2000 }, "claude-sonnet-5");
+  check("uso: suma entrada, salida y caché (lectura y escritura)", u1.entrada === 1000 && u1.salida === 500 && u1.cache_lectura === 10000 && u1.cache_escritura === 2000 && u1.llamadas === 1);
+  check("coste: (1000×2 + 500×10 + 10000×0,2 + 2000×2,5) / 1e6 = 0,014 $", Math.abs(u1.coste_usd - 0.014) < 1e-12, String(u1.coste_usd));
+  const u2 = U.usoDeRespuesta({ input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 1000, cache_creation: { ephemeral_5m_input_tokens: 0, ephemeral_1h_input_tokens: 1000 } }, "claude-sonnet-5");
+  check("coste: la escritura de caché de 1 h va a 4 $/MTok", Math.abs(u2.coste_usd - 0.004) < 1e-12, String(u2.coste_usd));
+  const u3 = U.usoDeRespuesta({ input_tokens: 5, output_tokens: 5, server_tool_use: { code_execution_requests: 2, web_search_requests: 0 } }, "modelo-inventado");
+  check("modelo sin precio verificado → coste 0 y «sin precio» contado (no se inventa)", u3.coste_usd === 0 && u3.llamadas_sin_precio === 1 && u3.ejecuciones_codigo === 2);
+  check("uso vacío o raro no rompe", U.usoDeRespuesta(null, "claude-sonnet-5").llamadas === 0 && U.usoDeRespuesta({ input_tokens: -5, output_tokens: "x" }, "claude-sonnet-5").entrada === 0);
+  const or = U.usoDeOpenRouter({ prompt_tokens: 100, completion_tokens: 23 });
+  check("OpenRouter: cuenta llamada y tokens, sin sumar coste", or.llamadas_openrouter === 1 && or.tokens_openrouter === 123 && or.coste_usd === 0);
+  check("OpenRouter sin usage: cuenta solo la llamada", U.usoDeOpenRouter(undefined).llamadas_openrouter === 1 && U.usoDeOpenRouter(undefined).tokens_openrouter === 0);
+  const c = U.crearContador("claude-sonnet-5");
+  c.claude({ input_tokens: 100, output_tokens: 10 });
+  c.claude({ input_tokens: 200, output_tokens: 20 });
+  c.openrouter({ total_tokens: 50 });
+  check("contador: acumula llamadas de Claude y de OpenRouter", c.total.llamadas === 2 && c.total.entrada === 300 && c.total.llamadas_openrouter === 1 && Math.abs(c.total.coste_usd - 0.0009) < 1e-12, JSON.stringify(c.total));
+
+  check("tope: sin variable no hay tope", U.topeMensual({}) === null && U.topeMensual({ CLARA_TOPE_MES_USD: "abc" }) === null && U.topeMensual({ CLARA_TOPE_MES_USD: "-3" }) === null);
+  check("tope: «20» y «12,5» valen", U.topeMensual({ CLARA_TOPE_MES_USD: "20" }) === 20 && U.topeMensual({ CLARA_TOPE_MES_USD: "12,5" }) === 12.5);
+  check("nivel: 79 % ok · 80 % aviso · 100 % agotado · sin tope", U.nivelTope(15.8, 20).nivel === "ok" && U.nivelTope(16, 20).nivel === "aviso" && U.nivelTope(20, 20).nivel === "agotado" && U.nivelTope(5, null).nivel === "sin_tope");
+  check("mes en hora de Madrid (31-10 a las 23:30 UTC ya es noviembre)", U.mesActual(new Date("2026-10-31T23:30:00Z")) === "2026-11" && U.mesActual(new Date("2026-10-13T10:00:00Z")) === "2026-10");
+  const g = U.usoParaGuardar({ entrada: 1e12, salida: -3, coste_usd: 1e9, raro: 7 });
+  check("lo que se guarda va acotado y sin campos extra", g.entrada === 50_000_000 && g.salida === 0 && g.coste_usd === 50 && !("raro" in g));
+
+  const sinNube = await U.registrarUso(c.total, { nube: false, tope: 20, mes: "2026-10" });
+  check("registrarUso sin nube: cuenta el navegador (guardado=false) y no inventa total", sinNube.uso_estado.guardado === false && sinNube.uso_estado.almacen === "local" && sinNube.uso_estado.nivel === "sin_datos" && sinNube.uso.llamadas === 2);
+  const llamadasGuardar = [];
+  const conNube = await U.registrarUso(c.total, { nube: true, clave: "k", tope: 20, mes: "2026-10", guardar: async (cl, uso, mes) => { llamadasGuardar.push([cl, uso, mes]); return { coste_usd: 17, llamadas: 40 }; } });
+  check("registrarUso con nube: guarda con la clave y devuelve el total del mes y el nivel (85 % → aviso)", conNube.uso_estado.guardado && conNube.uso_estado.total.coste_usd === 17 && conNube.uso_estado.nivel === "aviso" && conNube.uso_estado.porcentaje === 85 && llamadasGuardar[0][0] === "k" && llamadasGuardar[0][2] === "2026-10");
+  const sinTabla = await U.registrarUso(c.total, { nube: true, clave: "k", tope: null, guardar: async () => { const e = new Error("Supabase respondió 404"); e.status = 404; throw e; } });
+  check("registrarUso sin la tabla clara_uso: no rompe, cae a local y dice qué falta", !sinTabla.uso_estado.guardado && sinTabla.uso_estado.motivo.includes("supabase/clara-uso.sql"));
+  check("registrarUso sin uso no llama a la nube", (await U.registrarUso(U.usoVacio(), { nube: true, clave: "k", guardar: async () => { throw new Error("no debería"); } })).uso_estado.motivo === undefined);
+
+  const sql = readFileSync(new URL("../supabase/clara-uso.sql", import.meta.url), "utf8");
+  check("SQL: tabla clara_uso con RLS y sin acceso directo", sql.includes("create table if not exists public.clara_uso") && sql.includes("alter table public.clara_uso enable row level security") && /revoke all on table public\.clara_uso from anon, authenticated/.test(sql) && !/create policy/i.test(sql));
+  check("SQL: tres funciones security definer con search_path fijo", (sql.match(/security definer\s+set search_path = public/g) || []).length === 3);
+  check("SQL: escribir y leer el detalle exigen la clave (con clara_memoria_lee)", (sql.match(/perform public\.clara_memoria_lee\(clave\)/g) || []).length === 2);
+  check("SQL: los nombres de las RPC coinciden con los de lib/uso.js", ["clara_uso_suma", "clara_uso_lee", "clara_uso_resumen"].every((f) => sql.includes(`function public.${f}(`) && readFileSync(new URL("../lib/uso.js", import.meta.url), "utf8").includes(`"${f}"`)));
+  const fuenteRpc = readFileSync(new URL("../lib/memoria.js", import.meta.url), "utf8");
+  check("rpc() admite un tiempo máximo propio (y sigue en 15 s por defecto)", fuenteRpc.includes("{ tiempo = 15000 } = {}"));
+}
+
+// Fetch simulado común a las pruebas del contador, la ficha y el cruce.
+const jsonResp = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { "content-type": "application/json" } });
+const msgClaude = (content, stop = "end_turn", usage = { input_tokens: 100, output_tokens: 50 }) =>
+  ({ id: "m", type: "message", role: "assistant", model: "claude-sonnet-5", content, stop_reason: stop, usage });
+// Mensaje completo → eventos SSE de la API (para las peticiones con stream).
+function aEventos(m) {
+  const { output_tokens, ...inicioUso } = m.usage;
+  const ev = [["message_start", { type: "message_start", message: { ...m, content: [], stop_reason: null, stop_sequence: null, usage: { ...inicioUso, output_tokens: 1 } } }]];
+  m.content.forEach((b, index) => {
+    if (b.type === "text") {
+      ev.push(["content_block_start", { type: "content_block_start", index, content_block: { type: "text", text: "" } }]);
+      ev.push(["content_block_delta", { type: "content_block_delta", index, delta: { type: "text_delta", text: b.text } }]);
+    } else {
+      ev.push(["content_block_start", { type: "content_block_start", index, content_block: { ...b, input: {} } }]);
+      ev.push(["content_block_delta", { type: "content_block_delta", index, delta: { type: "input_json_delta", partial_json: JSON.stringify(b.input) } }]);
+    }
+    ev.push(["content_block_stop", { type: "content_block_stop", index }]);
+  });
+  ev.push(["message_delta", { type: "message_delta", delta: { stop_reason: m.stop_reason, stop_sequence: null }, usage: { output_tokens } }]);
+  ev.push(["message_stop", { type: "message_stop" }]);
+  return ev;
+}
+function montaFetch({ claude, supabase = {}, rest, openrouter, web }) {
+  const reg = { claude: [], rpc: [], rest: [], openrouter: [], web: [] };
+  globalThis.fetch = async (url, init = {}) => {
+    const u = String(url);
+    if (u.includes("anthropic.com")) {
+      const body = JSON.parse(init.body);
+      reg.claude.push(body);
+      const msg = claude(body, reg.claude.length);
+      return body.stream ? new Response(sseBody(aEventos(msg)), { status: 200, headers: { "content-type": "text/event-stream" } }) : jsonResp(msg);
+    }
+    if (u.includes("test.supabase.co/rest/v1/rpc/")) {
+      const fn = u.split("/rpc/")[1];
+      const args = JSON.parse(init.body || "{}");
+      reg.rpc.push({ fn, args });
+      if (!supabase[fn]) return new Response('{"code":"PGRST202"}', { status: 404 });
+      const r = supabase[fn](args);
+      return r instanceof Response ? r : jsonResp(r);
+    }
+    if (u.includes("test.supabase.co/rest/v1/")) {
+      reg.rest.push({ url: u, headers: init.headers || {} });
+      return rest ? rest(u, init) : new Response('{"code":"42P01"}', { status: 404 });
+    }
+    if (u.includes("openrouter.ai")) {
+      reg.openrouter.push(JSON.parse(init.body));
+      return jsonResp(openrouter());
+    }
+    if (u.includes("asesoriacastresana.com")) {
+      reg.web.push(u);
+      return web ? web(u) : new Response("no", { status: 404 });
+    }
+    throw new Error("fetch inesperado: " + u);
+  };
+  return reg;
+}
+const memoriaOk = (a) => (a.clave === "clave-ok" ? "- nota" : new Response('{"message":"clave de sincronización incorrecta"}', { status: 400 }));
+
+// ---------------------------------------------------------------------------
+console.log("\n— contador de gasto en /api/clara (todas las rondas, equipo y segunda opinión) —");
+// ---------------------------------------------------------------------------
+{
+  process.env.ANTHROPIC_API_KEY = "sk-ant-test";
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_ANON_KEY;
+  delete process.env.CLARA_TOPE_MES_USD;
+  process.env.OPENROUTER_API_KEY = "or-test";
+
+  // Ronda 1: Clara pide a IYAN y una segunda opinión; IYAN contesta; ronda 2: respuesta final.
+  const reg = montaFetch({
+    claude: (body, n) => {
+      if (JSON.stringify(body.system).includes("Eres IYAN")) return msgClaude([{ type: "text", text: "=SUMA(A1:A3)" }], "end_turn", { input_tokens: 1000, output_tokens: 100 });
+      return n === 1
+        ? msgClaude([
+            { type: "tool_use", id: "e1", name: "consultar_equipo", input: { agente: "iyan", encargo: "Fórmula para sumar A1:A3" } },
+            { type: "tool_use", id: "o1", name: "segunda_opinion", input: { pregunta: "¿Suma o SUMA?" } },
+          ], "tool_use", { input_tokens: 2000, output_tokens: 200, cache_read_input_tokens: 5000, cache_creation_input_tokens: 1000 })
+        : msgClaude([{ type: "text", text: "Usa =SUMA(A1:A3)." }], "end_turn", { input_tokens: 3000, output_tokens: 300 });
+    },
+    openrouter: () => ({ model: "openai/gpt-x", choices: [{ message: { content: "SUMA" } }], usage: { prompt_tokens: 40, completion_tokens: 2, total_tokens: 42 } }),
+  });
+  const r = mockRes();
+  await handler({ method: "POST", body: { messages: [{ role: "user", content: "fórmula" }] } }, r);
+  const uso = r.r.body?.uso || {};
+  check("JSON: devuelve el uso sumando Clara (2 rondas) + IYAN", uso.llamadas === 3 && uso.entrada === 6000 && uso.salida === 600 && uso.cache_lectura === 5000 && uso.cache_escritura === 1000, JSON.stringify(uso));
+  const esperado = (6000 * 2 + 600 * 10 + 5000 * 0.2 + 1000 * 2.5) / 1e6;
+  check("JSON: coste estimado con los precios oficiales", Math.abs(uso.coste_usd - esperado) < 1e-9, `${uso.coste_usd} vs ${esperado}`);
+  check("JSON: segunda_opinion cuenta como llamada de OpenRouter con sus tokens", uso.llamadas_openrouter === 1 && uso.tokens_openrouter === 42);
+  check("sin nube: uso_estado local y sin tope", r.r.body?.uso_estado?.almacen === "local" && r.r.body.uso_estado.guardado === false && r.r.body.uso_estado.nivel === "sin_tope");
+  check("sin nube no se llama a Supabase", reg.rpc.length === 0);
+
+  // SSE: el done lleva el uso
+  let n = 0;
+  montaFetch({ claude: () => (++n, msgClaude([{ type: "text", text: "Hola" }], "end_turn", { input_tokens: 10, output_tokens: 5 })) });
+  const rs = mockRes();
+  await handler({ method: "POST", body: { messages: [{ role: "user", content: "hola" }], stream: true } }, rs);
+  const done = rs.r.chunks.map((c) => { try { return JSON.parse(c.replace(/^data: /, "")); } catch { return null; } }).find((e) => e?.done);
+  check("SSE: el evento done lleva uso y uso_estado", done?.uso?.llamadas === 1 && done.uso.entrada === 10 && done.uso_estado?.almacen === "local", JSON.stringify(done));
+  delete process.env.OPENROUTER_API_KEY;
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n— tope mensual con la nube (80 % avisa, 100 % quita herramientas caras) —");
+// ---------------------------------------------------------------------------
+{
+  process.env.SUPABASE_URL = "https://test.supabase.co";
+  process.env.SUPABASE_ANON_KEY = "anon-test";
+  process.env.OPENROUTER_API_KEY = "or-test";
+  process.env.CLARA_TOPE_MES_USD = "20";
+  let gastado = 25;
+  const sumas = [];
+  const supa = {
+    clara_memoria_lee: memoriaOk,
+    clara_uso_resumen: (a) => ({ mes: a.mes_uso, coste_usd: gastado, llamadas: 99 }),
+    clara_uso_suma: (a) => { sumas.push(a); return { mes: a.mes_uso, coste_usd: gastado + a.uso.coste_usd, llamadas: 100 }; },
+  };
+  let n = 0;
+  const reg = montaFetch({
+    supabase: supa,
+    claude: () => (++n === 1
+      ? msgClaude([{ type: "tool_use", id: "x1", name: "consultar_equipo", input: { agente: "nuria", encargo: "ITP" } }], "tool_use")
+      : msgClaude([{ type: "text", text: "Hoy sin equipo: he llegado al tope." }])),
+  });
+  const r = mockRes();
+  await handler({ method: "POST", body: { messages: [{ role: "user", content: "Pregunta a NURIA" }], clave: "clave-ok" } }, r);
+  const nombres = (reg.claude[0]?.tools || []).map((t) => t.name);
+  check("100 %: sin consultar_equipo, preparar_archivo ni segunda_opinion", !["consultar_equipo", "preparar_archivo", "segunda_opinion"].some((x) => nombres.includes(x)) && nombres.includes("buscar_web") && nombres.includes("cruzar_clientes"), nombres.join(","));
+  check("100 %: el system le dice a Clara que se ha llegado al tope", JSON.stringify(reg.claude[0]?.system).includes("Tope de gasto alcanzado"));
+  check("100 %: si Clara la pide igual, la herramienta no se ejecuta", JSON.stringify(reg.claude[1]?.messages).includes("está desactivada hasta el mes que viene") && !reg.claude.some((b) => JSON.stringify(b.system).includes("Eres NURIA")));
+  check("100 %: el chat sigue respondiendo (200)", r.r.statusCode === 200 && r.r.body.reply.includes("tope"));
+  check("el uso se guarda en la nube con la clave y el mes", sumas.length === 1 && sumas[0].clave === "clave-ok" && /^\d{4}-\d{2}$/.test(sumas[0].mes_uso) && sumas[0].uso.llamadas === 2);
+  check("uso_estado: nube, agotado y limitado", r.r.body.uso_estado?.almacen === "nube" && r.r.body.uso_estado.nivel === "agotado" && r.r.body.uso_estado.limitado === true, JSON.stringify(r.r.body.uso_estado));
+
+  gastado = 17; n = 1; // al 85 %: todo sigue, el aviso lo da el chat
+  const reg2 = montaFetch({ supabase: supa, claude: () => msgClaude([{ type: "text", text: "Vale." }]) });
+  const r2 = mockRes();
+  await handler({ method: "POST", body: { messages: [{ role: "user", content: "hola" }], clave: "clave-ok" } }, r2);
+  const nombres2 = (reg2.claude[0]?.tools || []).map((t) => t.name);
+  check("85 %: siguen todas las herramientas y uso_estado dice «aviso»", ["consultar_equipo", "preparar_archivo", "segunda_opinion"].every((x) => nombres2.includes(x)) && r2.r.body.uso_estado.nivel === "aviso", r2.r.body.uso_estado?.nivel);
+
+  // Sin la tabla clara_uso: el chat sigue igual y el contador cae a local.
+  const reg3 = montaFetch({ supabase: { clara_memoria_lee: memoriaOk }, claude: () => msgClaude([{ type: "text", text: "Vale." }]) });
+  const r3 = mockRes();
+  await handler({ method: "POST", body: { messages: [{ role: "user", content: "hola" }], clave: "clave-ok" } }, r3);
+  check("sin tabla clara_uso: 200, todas las herramientas y contador local con el motivo", r3.r.statusCode === 200 && (reg3.claude[0]?.tools || []).some((t) => t.name === "consultar_equipo") && r3.r.body.uso_estado.guardado === false && r3.r.body.uso_estado.motivo.includes("clara-uso.sql"), JSON.stringify(r3.r.body.uso_estado));
+
+  // Panel «Uso este mes»
+  gastado = 3;
+  montaFetch({ supabase: { ...supa, clara_uso_lee: (a) => (a.clave === "clave-ok" ? { mes: a.mes_uso, coste_usd: 3, llamadas: 12, entrada: 1000 } : new Response('{"message":"clave de sincronización incorrecta"}', { status: 400 })) }, claude: () => { throw new Error("no debe llamar a Claude"); } });
+  let ru = mockRes();
+  await handler({ method: "POST", body: { accion: "uso", clave: "clave-ok" } }, ru);
+  check("accion uso con clave: total de la nube, tope y nivel, sin llamar a Claude", ru.r.statusCode === 200 && ru.r.body.almacen === "nube" && ru.r.body.total.llamadas === 12 && ru.r.body.tope_usd === 20 && ru.r.body.nivel === "ok", JSON.stringify(ru.r.body));
+  ru = mockRes();
+  await handler({ method: "POST", body: { accion: "uso", clave: "mala" } }, ru);
+  check("accion uso con clave incorrecta → 401", ru.r.statusCode === 401);
+  ru = mockRes();
+  await handler({ method: "POST", body: { accion: "uso" } }, ru);
+  check("accion uso sin clave → local, con el motivo", ru.r.statusCode === 200 && ru.r.body.almacen === "local" && ru.r.body.motivo.includes("clave"));
+
+  // Chequeo de estado
+  const re = mockRes();
+  await handler({ method: "GET", query: { estado: "1" } }, re);
+  check("?estado=1 enseña el tope, los precios con su fuente y el total del mes", re.r.body?.uso?.tope_usd === 20 && re.r.body.uso.fuente_precios?.url?.includes("pricing") && re.r.body.uso.total?.coste_usd === 3 && re.r.body.uso.nivel === "ok", JSON.stringify(re.r.body?.uso).slice(0, 300));
+  check("?estado=1 no enseña ninguna clave", !JSON.stringify(re.r.body).includes("anon-test") && !JSON.stringify(re.r.body).includes("sk-ant-test"));
+
+  // /api/clara-archivo: 402 al 100 % (sin gastar API)
+  const A = await import("../lib/archivos.js");
+  const archivoApi = (await import("../api/_clara-archivo.js")).default;
+  const { _usarCliente } = await import("../api/_clara-archivo.js");
+  let pedidas = 0;
+  _usarCliente(() => ({ beta: { messages: { stream() { pedidas++; throw new Error("no debe llamar"); } } } }));
+  gastado = 21;
+  montaFetch({ supabase: supa, claude: () => { throw new Error("no"); } });
+  const ficha = A.crearFicha({ formato: "docx", titulo: "Carta", instrucciones: "Carta a la propietaria para confirmar la visita del martes." }).ficha;
+  const ra = mockRes();
+  await archivoApi({ method: "POST", body: { ficha, clave: "clave-ok" } }, ra);
+  check("clara-archivo al 100 % del tope → 402 con mensaje claro y sin llamar a Claude", ra.r.statusCode === 402 && ra.r.body.error.includes("tope") && ra.r.body.error.includes("CSV") && pedidas === 0, JSON.stringify(ra.r.body));
+
+  // Tramo con uso real → se cuenta (y con la nube se guarda)
+  gastado = 1;
+  sumas.length = 0;
+  _usarCliente(() => ({
+    beta: {
+      messages: {
+        stream() {
+          const oyentes = {};
+          return {
+            on(ev, f) { (oyentes[ev] ||= []).push(f); return this; },
+            finalMessage: async () => ({ content: [{ type: "text", text: "sigo" }], stop_reason: "pause_turn", container: { id: "c1" }, usage: { input_tokens: 4000, output_tokens: 1000, server_tool_use: { code_execution_requests: 3 } } }),
+            abort() {},
+            get currentMessage() { return undefined; },
+          };
+        },
+      },
+    },
+  }));
+  const ra2 = mockRes();
+  await archivoApi({ method: "POST", body: { ficha, clave: "clave-ok" } }, ra2);
+  check("clara-archivo: el tramo pendiente lleva su uso (tokens y ejecuciones de código)", ra2.r.body?.pendiente === true && ra2.r.body.uso?.entrada === 4000 && ra2.r.body.uso.ejecuciones_codigo === 3 && Math.abs(ra2.r.body.uso.coste_usd - 0.018) < 1e-9, JSON.stringify(ra2.r.body?.uso));
+  check("clara-archivo: con la nube y la clave, el tramo se guarda en clara_uso", sumas.length === 1 && sumas[0].uso.entrada === 4000 && ra2.r.body.uso_estado.guardado === true);
+  _usarCliente(null);
+
+  delete process.env.CLARA_TOPE_MES_USD;
+  delete process.env.OPENROUTER_API_KEY;
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_ANON_KEY;
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n— ficha_inmueble (lib/ficha-inmueble.js) —");
+// ---------------------------------------------------------------------------
+// Ficha con la forma de la plantilla Inmoweb (la real no se ha podido leer desde aquí).
+const FICHA_INMOWEB = `<!doctype html><html><head>
+<title>Piso en venta en Oviedo centro - Asesoría Castresana</title>
+<meta property="og:title" content="Piso en Oviedo centro">
+<meta name="description" content="Piso luminoso en el centro de Oviedo">
+</head><body>
+<header><nav><ul><li>Inicio</li><li>Ascensor</li><li>Contacto: 985 210 468</li></ul></nav></header>
+<h1>Piso en venta en Oviedo centro</h1>
+<div class="referencia">Ref: <span class="numeroRef">PIS0100</span></div>
+<div class="precio"><p><span class="actual"> 330.000€ </span></p></div>
+<div id="descripcion" class="descripcion"><p>Piso luminoso en pleno centro de Oviedo, reformado en 2019.</p><p>Tres dormitorios, dos baños y cocina equipada.</p></div>
+<ul class="caracteristicas">
+  <li class="supConstruida"><span>Sup. Construida:</span> 99 m²</li>
+  <li class="supUtil"><span>Sup. Útil:</span> 85 m²</li>
+  <li class="habitaciones"><span>Habitaciones:</span> 3</li>
+  <li class="banos"><span>Baños:</span> 2</li>
+  <li class="planta"><span>Planta:</span> 4ª</li>
+  <li class="ascensor"><span>Ascensor:</span> Sí</li>
+  <li class="orientacion"><span>Orientación:</span> Sur</li>
+</ul>
+<ul class="extras"><li>Trastero</li><li>Calefacción central</li><li>Ver más pisos</li></ul>
+<table class="energia"><tr><td>Calificación energética</td><td>E</td></tr></table>
+<div class="galeria">
+  <a href="https://fotos15.apinmo.com/1234/56789/1-g.jpg"><img src="https://fotos15.apinmo.com/1234/56789/1-p.jpg"></a>
+  <img data-src="https://fotos15.apinmo.com/1234/56789/2.jpg">
+  <img src="/img/logo-castresana.png">
+</div>
+<footer><ul><li>Aviso legal</li></ul></footer>
+<script>var x = "<li>Garaje</li>";</script>
+</body></html>`;
+{
+  const F = await import("../lib/ficha-inmueble.js");
+  const url = "https://www.asesoriacastresana.com/piso-en-oviedo-centro-es123.html";
+  const f = F.parsearFicha(FICHA_INMOWEB, url);
+  check("ficha: referencia, título y precio", f.referencia === "PIS0100" && f.titulo === "Piso en venta en Oviedo centro" && f.precio?.valor === 330000, JSON.stringify([f.referencia, f.titulo, f.precio]));
+  check("ficha: superficies, habitaciones, baños y planta", f.superficie_construida === "99 m²" && f.superficie_util === "85 m²" && f.habitaciones === 3 && f.banos === 2 && f.planta === "4ª", JSON.stringify(f));
+  check("ficha: certificado energético de la tabla", f.certificado_energetico === "Calificación energética: E", f.certificado_energetico);
+  check("ficha: extras de la lista cerrada y los «Sí» (sin colar el menú ni el script)", f.extras.includes("Trastero") && f.extras.includes("Calefacción central") && f.extras.includes("Ascensor") && !f.extras.includes("Ver más pisos") && !f.extras.some((e) => /garaje/i.test(e)), f.extras.join(", "));
+  check("ficha: descripción completa (los dos párrafos)", f.descripcion.includes("reformado en 2019") && f.descripcion.includes("cocina equipada"));
+  check("ficha: todas las fotos en tamaño grande y sin logos", f.fotos.length === 2 && f.fotos[0].endsWith("1-g.jpg") && !f.fotos.some((u) => u.includes("logo")), f.fotos.join(" "));
+  check("ficha: operación sacada del título", f.operacion === "venta");
+  const texto = F.resumenFicha(f);
+  check("resumen: cita referencia y enlace, y otras características publicadas", texto.includes("Referencia: PIS0100") && texto.includes(url) && texto.includes("Orientación: Sur"));
+  const vacia = F.resumenFicha(F.parsearFicha("<html><body><h1>Piso</h1></body></html>", url));
+  check("lo que la ficha no dice sale «no consta» (nada inventado)", vacia.includes("Precio: no consta") && vacia.includes("Certificado energético: no consta") && vacia.includes("Superficie útil: no consta") && vacia.includes("Extras que publica: no consta"));
+
+  check("enlaces: solo fichas de asesoriacastresana.com por https", F.enlaceFichaValido("http://asesoriacastresana.com/piso-es123.html") === "https://asesoriacastresana.com/piso-es123.html" && F.enlaceFichaValido("https://www.idealista.com/piso-es123.html") === null && F.enlaceFichaValido("https://www.asesoriacastresana.com/contacto.html") === null && F.enlaceFichaValido("https://user:pw@www.asesoriacastresana.com/piso-es123.html") === null && F.enlaceFichaValido("https://www.asesoriacastresana.com.evil.com/piso-es123.html") === null);
+  const cartera = [{ ref: "PIS0100", url, operacion: "venta" }, { ref: "es999", url: "https://www.asesoriacastresana.com/casa-es999.html" }];
+  check("buscar en la cartera por referencia, por número y por enlace", F.buscarEnCartera(cartera, "pis0100")?.ref === "PIS0100" && F.buscarEnCartera(cartera, "es123")?.ref === "PIS0100" && F.buscarEnCartera(cartera, "999")?.ref === "es999" && F.buscarEnCartera(cartera, url)?.ref === "PIS0100" && F.buscarEnCartera(cartera, "XX1") === null);
+
+  // La herramienta entera, con descarga simulada.
+  const pedidas = [];
+  const descargar = async (enlace, op) => { pedidas.push([enlace, op]); return { ok: true, url: new URL(enlace), tipo: "text/html", bruto: FICHA_INMOWEB }; };
+  const obtener = async () => ({ items: cartera, errores: [] });
+  const t1 = await F.fichaInmueble({ referencia: "PIS0100" }, { obtenerCartera: obtener, descargar });
+  check("herramienta: por referencia abre la ficha de la cartera", t1.includes("Referencia: PIS0100") && pedidas[0][0] === url && typeof pedidas[0][1].hostPermitido === "function");
+  check("herramienta: la descarga solo deja pasar el dominio oficial (también tras redirección)", pedidas[0][1].hostPermitido("www.asesoriacastresana.com") && !pedidas[0][1].hostPermitido("evil.com"));
+  const t2 = await F.fichaInmueble({ enlace: "https://www.idealista.com/inmueble/1/" }, { obtenerCartera: obtener, descargar });
+  check("herramienta: un enlace de otro portal se rechaza sin descargar nada", t2.includes("solo abre fichas de la web oficial") && pedidas.length === 1);
+  const t3 = await F.fichaInmueble({ referencia: "PIS9999" }, { obtenerCartera: obtener, descargar });
+  check("herramienta: referencia que no está → lo dice y da las publicadas", t3.includes("No encuentro la referencia") && t3.includes("PIS0100") && pedidas.length === 1);
+  check("herramienta: sin referencia ni enlace → lo pide", (await F.fichaInmueble({}, { obtenerCartera: obtener, descargar })).includes("Dime la referencia"));
+  const t4 = await F.fichaInmueble({ referencia: "PIS0100" }, { obtenerCartera: obtener, descargar: async () => ({ ok: false, texto: "No se pudo leer la página (404)." }) });
+  check("herramienta: ficha caída → lo dice con el enlace", t4.includes("No he podido abrir la ficha") && t4.includes("404"));
+
+  // Con el lector de verdad (descargarPagina) y fetch simulado: redirección a otro dominio bloqueada.
+  const resolverPublico = async () => [{ address: "93.184.216.34" }];
+  globalThis.fetch = async (u) => (String(u).includes("asesoriacastresana.com")
+    ? new Response("", { status: 302, headers: { location: "https://evil.example.com/robo" } })
+    : new Response("<h1>no debería</h1>", { status: 200, headers: { "content-type": "text/html" } }));
+  const t5 = await F.fichaInmueble({ enlace: url }, { resolver: resolverPublico });
+  check("herramienta: una redirección fuera de asesoriacastresana.com se corta", t5.includes("solo lee páginas de su web permitida") && t5.includes("evil.example.com"), t5);
+  globalThis.fetch = async () => new Response(FICHA_INMOWEB, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
+  const t6 = await F.fichaInmueble({ enlace: url }, { resolver: resolverPublico });
+  check("herramienta: con descargarPagina real lee la ficha entera", t6.includes("Referencia: PIS0100") && t6.includes("Fotos (2"));
+  const t7 = await F.fichaInmueble({ enlace: url }, { resolver: async () => [{ address: "10.0.0.5" }] });
+  check("herramienta: mantiene el bloqueo de direcciones internas de leer_web", t7.includes("internas o privadas"), t7);
+
+  // Por el chat: declarada sin nube y con su estado.
+  check("estado en el chat: «🏠 Abriendo la ficha…»", estadoHerramienta({ name: "ficha_inmueble" }) === "🏠 Abriendo la ficha…" && ESTADO_HERRAMIENTA.cruzar_clientes === "🤝 Cruzando pisos y clientes…");
+  let n = 0;
+  const reg = montaFetch({
+    claude: () => (++n === 1 ? msgClaude([{ type: "tool_use", id: "f1", name: "ficha_inmueble", input: { referencia: "NOEXISTE" } }], "tool_use") : msgClaude([{ type: "text", text: "Hecho." }])),
+    web: (u) => new Response(u.includes("id_tipo_operacion=1") ? HTML_CARTERA : "<html></html>", { status: 200 }),
+  });
+  const rs = mockRes();
+  await handler({ method: "POST", body: { messages: [{ role: "user", content: "ficha de NOEXISTE" }], stream: true } }, rs);
+  const sse = rs.r.chunks.join("");
+  check("chat: ficha_inmueble declarada sin nube y su estado sale en el SSE", (reg.claude[0]?.tools || []).some((t) => t.name === "ficha_inmueble") && sse.includes("🏠 Abriendo la ficha…"));
+  check("chat: la herramienta busca en la cartera real y contesta sin inventar", JSON.stringify(reg.claude[1]?.messages).includes("No encuentro la referencia") && JSON.stringify(reg.claude[1]?.messages).includes("PIS0100"));
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n— cruzar_clientes (lib/cruzar.js) —");
+// ---------------------------------------------------------------------------
+{
+  const X = await import("../lib/cruzar.js");
+  const piso = X.inmuebleDeCartera({ ref: "PIS0100", operacion: "venta", titulo: "Piso en Oviedo centro", localidad: "Oviedo", precio: 330000, m2: 99, habitaciones: 3, url: "https://www.asesoriacastresana.com/piso-en-oviedo-centro-es123.html" });
+  const laura = X.clienteDeOportunidades({ nombre: "Laura Pérez García", apellidos: "Pérez", telefono: "600111222", email: "l@x.es", notas: "secreto", operacion: "venta", presupuesto_max: 350000, zonas: ["Oviedo"], habitaciones_min: 3, metros_min: 90, necesita: ["garaje", "inventado"] });
+  check("cliente de Oportunidades: solo nombre de pila y lo que busca (ni teléfono, ni correo, ni notas)", laura.alias === "Laura" && !("telefono" in laura) && !JSON.stringify(laura).includes("l@x.es") && !JSON.stringify(laura).includes("secreto") && JSON.stringify(laura.necesita) === '["garaje"]');
+  check("cliente de Oportunidades: teléfono solo si se pide", X.clienteDeOportunidades({ nombre: "Laura", telefono: "600111222" }, true).telefono === "600111222");
+  const e = X.encaje(laura, piso);
+  check("encaje: reutiliza coincidencia() con sus motivos (operación, presupuesto, zona, habitaciones) y añade metros", e.puntos === 90 && e.motivos.includes("busca comprar") && e.motivos.some((m) => m.includes("por debajo de su presupuesto")) && e.motivos.some((m) => m.includes("99 m²")), JSON.stringify(e));
+  check("encaje: lo que el listado no publica (garaje) va «sin comprobar», no «no tiene»", e.sinComprobar.includes("garaje") && !e.peros.some((p) => p.includes("garaje")));
+  const caro = X.encaje({ ...laura, presupuesto_max: 1000 }, piso);
+  check("encaje: el exceso de presupuesto va acotado (nunca «64018%»)", caro.peros.some((p) => p === "999% por encima de su presupuesto"), caro.peros.join(" | "));
+
+  const lead = X.clienteDeLead({ agente: "PAU", resumen: "🔥 HOT-LEAD PAU\nNombre: Marcos Díaz Ruiz\nTeléfono/canal: 611 222 333\nQué quiere: comprar piso en Oviedo de 3 habitaciones hasta 340.000 €\nDato clave: hipoteca preconcedida" });
+  check("lead de CasteBot: saca operación, presupuesto, zona y habitaciones del texto", lead.alias === "Marcos" && lead.operacion === "venta" && lead.presupuesto_max === 340000 && lead.zonas.includes("Oviedo") && lead.habitaciones_min === 3 && !("telefono" in lead), JSON.stringify(lead));
+  check("lead de CasteBot: el teléfono solo si se pide", X.clienteDeLead({ resumen: "Nombre: Ana\nTeléfono/canal: 699\nQué quiere: alquilar en Gijón" }, true).telefono === "699");
+  check("lead de propietario que vende: fuera del cruce", X.clienteDeLead({ resumen: "Nombre: Ana\nQué quiere: vender su piso en Oviedo" }) === null);
+  const sinOp = X.encaje({ ...lead, operacion: null }, piso);
+  check("lead sin operación clara: no se regalan los 35 puntos y se dice", sinOp.sinComprobar.includes("si compra o alquila") && !sinOp.motivos.includes("busca comprar") && sinOp.puntos === X.encaje(lead, piso).puntos - 35);
+
+  const otro = X.inmuebleDeCartera({ ref: "PIS0200", operacion: "alquiler", titulo: "Piso en Gijón", localidad: "Gijón", precio: 700, habitaciones: 2 });
+  check("modo cliente: ordena los pisos de mejor a peor", X.cruzarPorCliente(laura, [otro, piso])[0].inmueble.referencia === "PIS0100");
+  const ajustado = { ...lead, presupuesto_max: 300000 }; // 10 % por debajo del precio: puntúa menos que Laura
+check("modo piso: ordena los clientes de mejor a peor", X.cruzarPorPiso(piso, [ajustado, laura])[0].cliente.alias === "Laura" && X.cruzarPorPiso(piso, [ajustado, laura])[1].puntos < 90);
+  check("buscar cliente sin tildes ni mayúsculas", X.buscarClientes([laura, lead], "marcos")[0] === lead && X.buscarClientes([laura, lead], "LAURA")[0] === laura);
+
+  // Lectura de Oportunidades con la clave de servicio (solo lectura, columnas mínimas).
+  const vistos = [];
+  const ou = await X.leerClientesOportunidades({ env: { SUPABASE_URL: "https://test.supabase.co", SUPABASE_SERVICE_KEY: "srv" }, fetcher: async (u, init) => { vistos.push([u, init]); return jsonResp([{ nombre: "Laura Pérez", operacion: "venta", presupuesto_max: 350000, zonas: ["Oviedo"] }]); } });
+  const [urlOu, initOu] = vistos[0];
+  check("Oportunidades: GET de solo lectura con la clave de servicio", ou.ok && ou.clientes[0].alias === "Laura" && initOu.method === "GET" && initOu.headers.Authorization === "Bearer srv");
+  check("Oportunidades: pide solo las columnas necesarias (sin teléfono, correo ni notas) y sin anonimizados", urlOu.includes("select=nombre,tipo,operacion,presupuesto_max,zonas,habitaciones_min,metros_min,necesita&") && !/telefono|email|notas|apellidos/.test(urlOu.split("&")[0]) && urlOu.includes("anonimizado=eq.false"));
+  check("Oportunidades: sin SUPABASE_SERVICE_KEY lo dice", (await X.leerClientesOportunidades({ env: { SUPABASE_URL: "x" } })).motivo.includes("SUPABASE_SERVICE_KEY"));
+  check("Oportunidades: sin la tabla lo dice (esquema.sql)", (await X.leerClientesOportunidades({ env: { SUPABASE_URL: "https://t", SUPABASE_SERVICE_KEY: "s" }, fetcher: async () => new Response('{"code":"42P01"}', { status: 404 }) })).motivo.includes("oportunidades/esquema.sql"));
+
+  // La herramienta entera
+  const sinNube = await X.cruzarClientes({ modo: "piso", referencia: "PIS0100" }, { nube: false });
+  check("sin nube: lo dice y explica qué configurar", sinNube.includes("hace falta la nube activa") && sinNube.includes("SUPABASE_SERVICE_KEY"));
+  const deps = {
+    claveSync: "clave-ok",
+    nube: true,
+    obtenerCartera: async () => ({ items: [{ ref: "PIS0100", operacion: "venta", titulo: "Piso en Oviedo centro", localidad: "Oviedo", precio: 330000, m2: 99, habitaciones: 3, url: piso.url }], errores: [] }),
+    rpc: async (fn, a) => (fn === "castebot_leads_lista" && a.clave === "clave-ok" ? [{ agente: "PAU", resumen: "Nombre: Marcos Díaz\nTeléfono/canal: 611 222 333\nQué quiere: comprar en Oviedo hasta 340.000 €" }] : []),
+    leerClientes: async ({ conTelefono }) => ({ ok: true, clientes: [X.clienteDeOportunidades({ nombre: "Laura Pérez", telefono: "600111222", operacion: "venta", presupuesto_max: 350000, zonas: ["Oviedo"], habitaciones_min: 3 }, conTelefono)] }),
+  };
+  const porPiso = await X.cruzarClientes({ modo: "piso", referencia: "pis0100" }, deps);
+  check("modo piso: lista los clientes de las dos fuentes con puntos y motivos", porPiso.includes("Laura · Oportunidades Únicas") && porPiso.includes("Marcos · CasteBot (PAU)") && /\d+\/100 · encaja:/.test(porPiso) && porPiso.includes("ref PIS0100"), porPiso);
+  check("modo piso: sin teléfonos por defecto", !porPiso.includes("611 222 333") && !porPiso.includes("600111222") && porPiso.includes("incluir_telefono"));
+  const conTel = await X.cruzarClientes({ modo: "piso", referencia: "PIS0100", incluir_telefono: true }, deps);
+  check("modo piso: con incluir_telefono salen los teléfonos", conTel.includes("611 222 333") && conTel.includes("600111222"));
+  const porCliente = await X.cruzarClientes({ modo: "cliente", cliente: "laura" }, deps);
+  check("modo cliente: los pisos que le encajan, con referencia y enlace", porCliente.includes("Cliente: Laura") && porCliente.includes("ref PIS0100") && porCliente.includes(piso.url));
+  check("modo cliente: cliente que no existe → lo dice", (await X.cruzarClientes({ modo: "cliente", cliente: "Zacarías" }, deps)).includes("No encuentro a «Zacarías»"));
+  check("modo piso: referencia que no está → lo dice", (await X.cruzarClientes({ modo: "piso", referencia: "PIS9" }, deps)).includes("No encuentro la referencia"));
+  check("sin modo → lo pide", (await X.cruzarClientes({}, deps)).includes("Indica el modo"));
+  const sinFuentes = await X.cruzarClientes({ modo: "piso", referencia: "PIS0100" }, { ...deps, rpc: async () => { throw new Error("Supabase respondió 404"); }, leerClientes: async () => ({ ok: false, motivo: "falta SUPABASE_SERVICE_KEY en Vercel" }) });
+  check("sin ninguna fuente: dice qué falta en cada una y qué hacer", sinFuentes.includes("no disponible — falta SUPABASE_SERVICE_KEY") && sinFuentes.includes("castebot_leads_lista") && sinFuentes.includes("No hay clientes"), sinFuentes);
+
+  // Por el chat, con la nube: exige la clave validada y no escribe nada.
+  process.env.SUPABASE_URL = "https://test.supabase.co";
+  process.env.SUPABASE_ANON_KEY = "anon-test";
+  process.env.SUPABASE_SERVICE_KEY = "service-secreta";
+  let n = 0;
+  const reg = montaFetch({
+    supabase: { clara_memoria_lee: memoriaOk, castebot_leads_lista: (a) => (a.clave === "clave-ok" ? [{ agente: "PAU", resumen: "Nombre: Marcos\nQué quiere: comprar en Oviedo hasta 340.000 €" }] : []) },
+    rest: (u) => jsonResp(u.includes("/ou_clientes?") ? [{ nombre: "Laura Pérez", operacion: "venta", presupuesto_max: 350000, zonas: ["Oviedo"], habitaciones_min: 3 }] : []),
+    claude: () => (++n === 1 ? msgClaude([{ type: "tool_use", id: "c1", name: "cruzar_clientes", input: { modo: "piso", referencia: "PIS0100" } }], "tool_use") : msgClaude([{ type: "text", text: "Laura encaja." }])),
+    web: (u) => new Response(u.includes("id_tipo_operacion=1") ? HTML_CARTERA : "<html></html>", { status: 200 }),
+  });
+  const r = mockRes();
+  await handler({ method: "POST", body: { messages: [{ role: "user", content: "¿A quién le encaja el PIS0100?" }], clave: "clave-ok" } }, r);
+  const resultado = JSON.stringify(reg.claude[1]?.messages || []);
+  check("chat: cruzar_clientes cruza Oportunidades + CasteBot con la cartera real", r.r.statusCode === 200 && resultado.includes("Laura · Oportunidades Únicas") && resultado.includes("Marcos · CasteBot"), resultado.slice(0, 400));
+  check("chat: solo lectura (GET a ou_clientes, ningún POST/PATCH a tablas)", reg.rest.length === 1 && reg.rest[0].url.includes("/ou_clientes?") && reg.rpc.every((c) => ["clara_memoria_lee", "castebot_leads_lista", "clara_uso_suma"].includes(c.fn)));
+  check("chat: la clave de servicio no llega a Claude", !JSON.stringify(reg.claude).includes("service-secreta"));
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_ANON_KEY;
+  delete process.env.SUPABASE_SERVICE_KEY;
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n— prompt y persona: ficha_inmueble, cruzar_clientes y tope (sincronizados) —");
+// ---------------------------------------------------------------------------
+{
+  const fuente = readFileSync(new URL("../api/_clara.js", import.meta.url), "utf8");
+  const persona = readFileSync(new URL("../clara_persona.md", import.meta.url), "utf8");
+  const parrafo = (titulo) => fuente.match(new RegExp(`## ${titulo}\\n(.+?)\\n\\n## `, "s"))?.[1] || "";
+  const seccion = (n) => persona.slice(persona.indexOf(`## ${n}`), persona.indexOf("\n## ", persona.indexOf(`## ${n}`) + 5));
+  const pF = parrafo("Ficha completa de un piso \\(ficha_inmueble\\)");
+  const pC = parrafo("Cruzar pisos y clientes \\(cruzar_clientes\\)");
+  const pG = parrafo("Gasto de la API y tope mensual");
+  check("prompt: sección de ficha_inmueble (cuándo usarla, referencia y «no consta»)", pF.length > 200 && pF.includes("Cita siempre la referencia") && pF.includes("«no consta»") && pF.includes("paquete para Inmoweb"));
+  check("prompt: sección de cruzar_clientes (dos modos, motivos, sin inventar, teléfonos solo si los pide)", pC.length > 200 && pC.includes("«piso»") && pC.includes("«cliente»") && pC.includes("no inventes") && pC.includes("incluir_telefono"));
+  check("prompt: sección del tope (qué herramientas se quitan)", pG.includes("consultar_equipo, preparar_archivo ni segunda_opinion"));
+  check("persona §7.9, §7.10 y §7.11: los mismos párrafos que el prompt", seccion("7.9.").includes(pF) && seccion("7.10.").includes(pC) && seccion("7.11.").includes(pG));
+  check("persona: los estados que se ven en el chat", seccion("7.9.").includes("🏠 Abriendo la ficha…") && seccion("7.10.").includes("🤝 Cruzando pisos y clientes…"));
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n— clara.html: contador «Uso este mes» (estático; la prueba real está en test/ui.test.mjs) —");
+// ---------------------------------------------------------------------------
+{
+  const html = readFileSync(new URL("../clara.html", import.meta.url), "utf8");
+  check("panel 🧠 con el bloque «📊 Uso este mes» y barra accesible", html.includes('id="usoCaja"') && html.includes("📊 Uso este mes") && /role="progressbar"[^>]*aria-label=/.test(html));
+  check("recoge el uso del SSE, del JSON y de los tramos de archivo", html.includes("if (ev.uso_estado) anotaUso(ev);") && html.includes("if (data.uso_estado) anotaUso(data);") && html.includes("anotaUso(data); // cada tramo"));
+  check("guarda el contador en localStorage por mes", html.includes('const USO_KEY = "clara_uso_v1"'));
 }
 
 // ---------------------------------------------------------------------------
