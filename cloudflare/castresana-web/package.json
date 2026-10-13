@@ -1,0 +1,19 @@
+{
+  "name": "castresana-web",
+  "private": true,
+  "type": "module",
+  "description": "Worker de Cloudflare de Asesoría Castresana: «Valora tu piso», reservas de visitas sin choques y panel privado (D1).",
+  "scripts": {
+    "probar": "node herramientas/probar-en-local.mjs",
+    "dev": "cf dev",
+    "comprobar": "cf deploy --dry-run --no-provision",
+    "publicar": "cf deploy --no-provision"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "devDependencies": {
+    "cf": "1.0.0-beta.16",
+    "wrangler": "4.150.0"
+  }
+}

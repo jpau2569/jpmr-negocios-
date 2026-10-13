@@ -39,6 +39,13 @@ function abreNavegador(url) {
   execFile(orden, args, () => { /* si no se puede abrir, el usuario copia la URL */ });
 }
 
+/**
+ * Dirección con la que se abre la pantalla en el propio PC. Tiene que ser
+ * «localhost»: es uno de los nombres que `Seguridad.esLocal` acepta como el
+ * propio ordenador (con la IP de la red se pediría el PIN).
+ */
+export const urlPantallaPc = (puerto) => `http://localhost:${puerto}/`;
+
 const AZUL = "\x1b[36m", VERDE = "\x1b[32m", GRIS = "\x1b[90m", FUERTE = "\x1b[1m", FIN = "\x1b[0m";
 
 /** ¿Hay ya un Fotos Fáciles escuchando en ese puerto de este ordenador? */
@@ -77,7 +84,7 @@ export async function principal() {
   // Windows), no se levanta una segunda en otro puerto: se avisa y se abre.
   const yaEnMarcha = await estaEnMarcha(config.puerto);
   if (yaEnMarcha) {
-    const url = `http://localhost:${config.puerto}/`;
+    const url = urlPantallaPc(config.puerto);
     console.log(`\n${VERDE}✔  Fotos Fáciles ya está funcionando${FIN} en ${AZUL}${url}${FIN}`);
     console.log(`${GRIS}   (se abre la pantalla; para apagarlo, pulsa «Salir» ahí dentro)${FIN}\n`);
     if (args.abrirNavegador !== false) abreNavegador(url);
@@ -87,7 +94,7 @@ export async function principal() {
   const { estado, seguridad, puerto } = await arranca({ puerto: args.puerto || config.puerto });
   const direcciones = direccionesLocales();
   const ip = direcciones[0]?.ip;
-  const urlPc = `http://localhost:${puerto}/`;
+  const urlPc = urlPantallaPc(puerto);
   const urlMovil = ip ? `http://${ip}:${puerto}/m#t=${encodeURIComponent(seguridad.token)}` : null;
 
   console.log(`\n${FUERTE}📷  Fotos Fáciles — Pasar a Ordenador${FIN}  ${GRIS}v${VERSION}${FIN}`);

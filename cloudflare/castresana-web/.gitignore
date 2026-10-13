@@ -1,0 +1,10 @@
+node_modules/
+# Salida de `cf build` / `cf dev`
+.cloudflare/
+.wrangler/
+# Secretos para subir con `cf deploy --secrets-file` o para `cf dev`: NUNCA al repo
+.secretos.env
+.dev.vars
+.env
+# Base de datos de `node herramientas/probar-en-local.mjs`
+.local/

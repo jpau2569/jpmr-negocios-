@@ -6,3 +6,7 @@ test/
 
 # Fotos y borradores de anuncios de clientes: material de trabajo, no debe ser público.
 fotos-listas/
+
+# Worker de Cloudflare (castresana-web) y link temporal: se publican con `cf`
+# desde el PC de Pau, no en Vercel.
+cloudflare/
