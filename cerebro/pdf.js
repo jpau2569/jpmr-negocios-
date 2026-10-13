@@ -184,7 +184,7 @@ function leeJpeg(bytes) {
 
 /* ── El documento ─────────────────────────────────────────────────────── */
 
-export function nuevoPdf({ titulo = '', autor = '' } = {}) {
+export function nuevoPdf({ titulo = '', autor = '', productor = PRODUCTOR } = {}) {
   const paginas = [];   // cada una: { contenido: [líneas], imagenes: [{ nombre, datos }] }
   let contadorImagenes = 0;
 
@@ -282,7 +282,7 @@ export function nuevoPdf({ titulo = '', autor = '' } = {}) {
       objetos[F1 - 1] = ['<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>'];
       objetos[F2 - 1] = ['<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>'];
       objetos[INFO - 1] = [`<< /Title ${textoInfo(titulo)} /Author ${textoInfo(autor)} ` +
-        `/Producer ${textoInfo(PRODUCTOR)} /Creator ${textoInfo(PRODUCTOR)} /CreationDate (${fechaPdf(new Date())}) >>`];
+        `/Producer ${textoInfo(productor || PRODUCTOR)} /Creator ${textoInfo(productor || PRODUCTOR)} /CreationDate (${fechaPdf(new Date())}) >>`];
 
       const hijos = [];
       for (const pagina of paginas) {

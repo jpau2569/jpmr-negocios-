@@ -6,6 +6,15 @@
    (si se pasa en `opciones.logo`) y bloque de firmas encabezado por
    «ASESORIA CASTRESANA INMO».
    Funciones puras: entran datos, sale un Uint8Array con el PDF.
+
+   Marca: Cerebro no pasa colores ni pie y todo sale como siempre. Hojas
+   firmadas (cloudflare/hojas-firmadas, white-label) usa además
+   `ajustes.colorPrincipal` / `colorAcento` / `lineaLegal` y las opciones
+   `textoPie` (texto o lista de dos líneas), `productor` y, en la hoja de
+   visita, `notaFirmas` (la nota de debajo de las firmas). Esa carpeta
+   lleva una COPIA EXACTA de este archivo, vigilada por
+   test/hojas-firmadas.test.mjs: si lo cambias, ejecuta
+   `node cloudflare/hojas-firmadas/herramientas/copiar-cerebro.mjs`.
    ═══════════════════════════════════════════════════════════════════ */
 
 import { A4, anchoTexto, nuevoPdf, partirTexto } from './pdf.js';
@@ -20,33 +29,79 @@ const GRIS = [90, 90, 90];
 const GRIS_CLARO = [225, 222, 214];
 const CREMA = [247, 245, 240];
 const ROJO = [180, 60, 40];
+const BLANCO = [255, 255, 255];
 const M = 48; // margen
 const ANCHO = A4.ancho - 2 * M;
 const LIMITE = A4.alto - 80; // por encima del aviso de BORRADOR y del pie
 export const ENCABEZADO_FIRMAS = 'ASESORIA CASTRESANA INMO';
 
+/* ── Colores de la marca ──────────────────────────────────────────────
+   Cerebro no los pasa y salen los de Asesoría Castresana (azul marino y
+   dorado). Hojas firmadas (cloudflare/hojas-firmadas) es white-label y
+   pasa `ajustes.colorPrincipal` y `ajustes.colorAcento` en hexadecimal. */
+export function rgbDeHex(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/** Contraste WCAG 2.x entre dos colores [r, g, b] (de 1 a 21). */
+export function contrasteRgb(a, b) {
+  const lum = ([r, g, bl]) => {
+    const c = [r, g, bl].map((v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  };
+  const [l1, l2] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (l1 + 0.05) / (l2 + 0.05);
+}
+
+/**
+ * Tema de colores del documento. Los títulos van en el color principal
+ * solo si se leen sobre el papel blanco (contraste 4,5 o más); si no, en
+ * gris casi negro. Sobre un relleno del color principal se escribe en
+ * blanco o en negro, el que más contraste dé.
+ */
+export function temaDe(ajustes = {}) {
+  const principal = rgbDeHex(ajustes.colorPrincipal) || MARINO;
+  const acento = rgbDeHex(ajustes.colorAcento) || DORADO;
+  return {
+    principal,
+    acento,
+    titulos: contrasteRgb(principal, BLANCO) >= 4.5 ? principal : [33, 33, 33],
+    sobrePrincipal: contrasteRgb(principal, BLANCO) >= contrasteRgb(principal, [0, 0, 0]) ? BLANCO : [0, 0, 0],
+  };
+}
+
 /* Cabecera blanca con el logo a la izquierda, título a la derecha y
-   filete dorado. Sin logo, el nombre de la empresa en azul marino. */
+   filete dorado. Sin logo, el nombre de la empresa en azul marino.
+   Con `ajustes.lineaLegal` (razón social, CIF, dirección…) se añade una
+   línea pequeña bajo el filete. */
 function cabecera(doc, ajustes, titulo, subtitulo, logo) {
+  const tema = temaDe(ajustes);
   if (logo?.bytes) {
     const alto = 54;
     const ancho = (alto * (logo.ancho || 500)) / (logo.alto || 201);
     doc.imagenJpeg(logo.bytes, logo.ancho || 500, logo.alto || 201, M - 4, 20, ancho, alto);
   } else {
     const hueco = ANCHO - anchoTexto(titulo, 13, true) - 16;
-    doc.texto(M, 50, partirTexto(ajustes.empresa || 'Asesoría Castresana', hueco, 15, true)[0] || '', { tam: 15, negrita: true, color: MARINO });
+    doc.texto(M, 50, partirTexto(ajustes.empresa || 'Asesoría Castresana', hueco, 15, true)[0] || '', { tam: 15, negrita: true, color: tema.titulos });
   }
   const derecha = ANCHO - 170; // lo que deja libre el logo
-  doc.texto(A4.ancho - M, 44, titulo, { tam: 13, negrita: true, color: MARINO, alinear: 'derecha' });
+  doc.texto(A4.ancho - M, 44, titulo, { tam: 13, negrita: true, color: tema.titulos, alinear: 'derecha' });
   if (subtitulo) doc.texto(A4.ancho - M, 60, partirTexto(subtitulo, derecha, 9)[0] || '', { tam: 9, color: GRIS, alinear: 'derecha' });
   doc.texto(A4.ancho - M, 76, partirTexto([ajustes.ciudad, ajustes.telefono && `Tel. ${ajustes.telefono}`, ajustes.web].filter(Boolean).join('  ·  '), derecha, 8)[0] || '', { tam: 8, color: GRIS, alinear: 'derecha' });
-  doc.rect(M, 90, ANCHO, 2.5, { relleno: DORADO });
+  doc.rect(M, 90, ANCHO, 2.5, { relleno: tema.acento });
+  if (ajustes.lineaLegal) doc.texto(M + ANCHO / 2, 104, partirTexto(ajustes.lineaLegal, ANCHO, 7)[0] || '', { tam: 7, color: GRIS, alinear: 'centro' });
 }
 
+/* El pie admite un texto (una línea, como siempre) o una lista de hasta
+   dos líneas: Hojas firmadas pone ahí el código SHA-256 y las fechas. */
 function pie(doc, texto, borrador) {
   const y = A4.alto - 36;
   doc.linea(M, y - 14, A4.ancho - M, y - 14, { grosor: 0.5, color: GRIS_CLARO });
-  doc.texto(M, y, partirTexto(texto, ANCHO, 7.5)[0] || '', { tam: 7.5, color: GRIS });
+  const lineas = Array.isArray(texto) ? texto.slice(0, 2) : [texto];
+  lineas.forEach((l, i) => doc.texto(M, y + i * 9, partirTexto(l, ANCHO, 7.5)[0] || '', { tam: 7.5, color: GRIS }));
   if (borrador) doc.texto(M, y - 22, 'BORRADOR — textos legales pendientes de revisar con gestor o abogado', { tam: 7.5, negrita: true, color: ROJO });
 }
 
@@ -54,7 +109,7 @@ function pie(doc, texto, borrador) {
  * Escritor con paso de página automático: todo lo que escribe respeta
  * LIMITE, y al cambiar de página pone el pie en la que deja.
  */
-function escritor(doc, { textoPie, borrador, yInicial = 118 }) {
+function escritor(doc, { textoPie, borrador, yInicial = 118, tema = temaDe() }) {
   const e = {
     y: yInicial,
     cabe(alto) {
@@ -62,7 +117,7 @@ function escritor(doc, { textoPie, borrador, yInicial = 118 }) {
     },
     seccion(texto) {
       e.cabe(44);
-      doc.texto(M, e.y, texto.toUpperCase(), { tam: 9, negrita: true, color: DORADO });
+      doc.texto(M, e.y, texto.toUpperCase(), { tam: 9, negrita: true, color: tema.acento });
       doc.linea(M, e.y + 5, A4.ancho - M, e.y + 5, { grosor: 0.6, color: GRIS_CLARO });
       e.y += 22;
     },
@@ -111,10 +166,10 @@ function escritor(doc, { textoPie, borrador, yInicial = 118 }) {
     },
     casilla(texto, marcada) {
       e.cabe(20);
-      doc.rect(M, e.y - 9, 11, 11, { borde: MARINO, grosor: 1 });
+      doc.rect(M, e.y - 9, 11, 11, { borde: tema.titulos, grosor: 1 });
       if (marcada) {
-        doc.linea(M + 2, e.y - 3, M + 5, e.y, { grosor: 1.4, color: MARINO });
-        doc.linea(M + 5, e.y, M + 10, e.y - 8, { grosor: 1.4, color: MARINO });
+        doc.linea(M + 2, e.y - 3, M + 5, e.y, { grosor: 1.4, color: tema.titulos });
+        doc.linea(M + 5, e.y, M + 10, e.y - 8, { grosor: 1.4, color: tema.titulos });
       }
       doc.texto(M + 18, e.y, texto, { tam: 9 });
       e.y += 18;
@@ -127,8 +182,8 @@ function escritor(doc, { textoPie, borrador, yInicial = 118 }) {
     firmas(firmas, encabezado = ENCABEZADO_FIRMAS, nota = '') {
       const alto = 104;
       e.cabe(30 + alto + 34 + (nota ? 16 : 0));
-      doc.texto(M + ANCHO / 2, e.y, partirTexto(String(encabezado).slice(0, 60), ANCHO, 12, true)[0] || '', { tam: 12, negrita: true, color: MARINO, alinear: 'centro' });
-      doc.linea(M + ANCHO / 2 - 110, e.y + 6, M + ANCHO / 2 + 110, e.y + 6, { grosor: 1.2, color: DORADO });
+      doc.texto(M + ANCHO / 2, e.y, partirTexto(String(encabezado).slice(0, 60), ANCHO, 12, true)[0] || '', { tam: 12, negrita: true, color: tema.titulos, alinear: 'centro' });
+      doc.linea(M + ANCHO / 2 - 110, e.y + 6, M + ANCHO / 2 + 110, e.y + 6, { grosor: 1.2, color: tema.acento });
       e.y += 26;
       const hueco = 16;
       const ancho = (ANCHO - hueco * (firmas.length - 1)) / firmas.length;
@@ -158,12 +213,12 @@ function firmaAgente(ajustes) {
 /* ─────────────────────────── Hoja de visita ─────────────────────────── */
 
 export function pdfHojaVisita(visita, ajustes, opciones = {}) {
-  const { logo, ahora = new Date() } = opciones instanceof Date ? { ahora: opciones } : opciones;
-  const doc = nuevoPdf({ titulo: `Hoja de visita · ${visita.inmueble}`, autor: ajustes.agente });
+  const { logo, ahora = new Date(), textoPie, productor, notaFirmas } = opciones instanceof Date ? { ahora: opciones } : opciones;
+  const doc = nuevoPdf({ titulo: `Hoja de visita · ${visita.inmueble}`, autor: ajustes.agente, productor });
   doc.pagina();
   const borrador = !ajustes.textosRevisados;
   cabecera(doc, ajustes, 'HOJA DE VISITA', `Registro ${String(visita.id || '').slice(-8).toUpperCase()}`, logo);
-  const e = escritor(doc, { textoPie: `Hoja de visita · ${visita.inmueble} · ${ajustes.empresa}`, borrador });
+  const e = escritor(doc, { textoPie: textoPie || `Hoja de visita · ${visita.inmueble} · ${ajustes.empresa}`, borrador, tema: temaDe(ajustes), yInicial: ajustes.lineaLegal ? 128 : 118 });
 
   e.seccion('Datos de la visita');
   e.filas([
@@ -206,10 +261,13 @@ export function pdfHojaVisita(visita, ajustes, opciones = {}) {
   e.y += 10;
   const firmas = [{ etiqueta: 'Firma del visitante', nombre: visita.visitante.nombre, firma: visita.firma, ancho: visita.firmaAncho, alto: visita.firmaAlto }];
   if (ajustes.firmaAgente) firmas.push(firmaAgente(ajustes));
+  // `opciones.notaFirmas` (Hojas firmadas) sustituye la nota de debajo de
+  // las firmas: allí la hora de la firma y la del registro son distintas
+  // de la de la visita. Sin ella, la nota de siempre.
   e.firmas(firmas, ajustes.encabezadoFirmas || ENCABEZADO_FIRMAS,
-    `Firmado en el dispositivo del agente el ${fechaCorta(visita.fecha)} a las ${visita.hora}. Registrada: ${new Date(visita.registrada || ahora).toLocaleString('es-ES')}.`);
+    notaFirmas ?? `Firmado en el dispositivo del agente el ${fechaCorta(visita.fecha)} a las ${visita.hora}. Registrada: ${new Date(visita.registrada || ahora).toLocaleString('es-ES')}.`);
 
-  pie(doc, `Documento generado con Cerebro Útil Pau · ${ajustes.empresa}`, borrador);
+  pie(doc, textoPie || `Documento generado con Cerebro Útil Pau · ${ajustes.empresa}`, borrador);
   return doc.bytes();
 }
 
@@ -224,14 +282,15 @@ export function textoConformidad(piso, ajustes, hoy) {
 }
 
 export function pdfCaptacion(piso, ajustes, opciones = {}) {
-  const { logo, hoy } = opciones;
-  const doc = nuevoPdf({ titulo: `Hoja de captación · ${nombrePiso(piso)}`, autor: ajustes.agente });
+  const { logo, hoy, textoPie, productor } = opciones;
+  const doc = nuevoPdf({ titulo: `Hoja de captación · ${nombrePiso(piso)}`, autor: ajustes.agente, productor });
   doc.pagina();
   const borrador = !ajustes.textosCaptacionRevisados;
   cabecera(doc, ajustes, 'HOJA DE CAPTACIÓN', piso.referencia ? `Ref. ${piso.referencia}` : fechaCorta(piso.fechaCaptacion || hoy), logo);
-  const e = escritor(doc, { textoPie: `Hoja de captación · ${nombrePiso(piso)} · ${ajustes.empresa}`, borrador });
+  const tema = temaDe(ajustes);
+  const e = escritor(doc, { textoPie: textoPie || `Hoja de captación · ${nombrePiso(piso)} · ${ajustes.empresa}`, borrador, tema, yInicial: ajustes.lineaLegal ? 128 : 118 });
 
-  e.parrafo(nombrePiso(piso), { tam: 15, negrita: true, color: MARINO, interlineado: 1.2 });
+  e.parrafo(nombrePiso(piso), { tam: 15, negrita: true, color: tema.titulos, interlineado: 1.2 });
   e.y += 6;
   for (const g of GRUPOS_PISO) {
     const pares = paresFicha(piso, CAMPOS_PISO.filter((c) => c.grupo === g.id));
@@ -268,7 +327,7 @@ export function pdfCaptacion(piso, ajustes, opciones = {}) {
     firmaAgente(ajustes),
   ], ajustes.encabezadoFirmas || ENCABEZADO_FIRMAS, `En ${ajustes.ciudad || 'Oviedo'}, a ${fechaLarga(piso.fechaCaptacion || hoy)}.`);
 
-  pie(doc, `Documento generado con Cerebro Útil Pau · ${ajustes.empresa}`, borrador);
+  pie(doc, textoPie || `Documento generado con Cerebro Útil Pau · ${ajustes.empresa}`, borrador);
   return doc.bytes();
 }
 
