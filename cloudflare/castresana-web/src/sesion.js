@@ -38,6 +38,17 @@ export async function igualesSeguro(a, b) {
   return diferencia === 0;
 }
 
+/**
+ * HMAC-SHA256 en hexadecimal. Para las IP: sin la clave secreta no se puede
+ * saber qué IP era (con un SHA-256 a secas bastaría con probar los 4.300
+ * millones de IPv4 para deshacerlo).
+ */
+export async function hmacHex(clave, mensaje) {
+  const llave = await crypto.subtle.importKey("raw", codifica(String(clave)), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const bytes = new Uint8Array(await crypto.subtle.sign("HMAC", llave, codifica(String(mensaje))));
+  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 async function firma(clavePanel, mensaje) {
   const llave = await crypto.subtle.importKey(
     "raw", codifica(`castresana-web/sesion/v1|${clavePanel}`),

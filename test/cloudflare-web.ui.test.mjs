@@ -89,7 +89,10 @@ async function recorrido(ancho) {
   await p.fill("#telefono", "611223344");
   await p.check("#privacidad");
   await Promise.all([p.waitForLoadState("load"), p.click("#reservar button[type=submit]")]);
-  check("la reserva se confirma", (await p.textContent("main")).includes("Visita reservada"));
+  const confirmacion = await p.textContent("main");
+  check("la reserva se recibe sin darla por confirmada («Reserva recibida», «Pau te confirmará la visita»)",
+    confirmacion.includes("Reserva recibida") && confirmacion.includes("Pau te confirmará la visita") && !/te esperamos/i.test(confirmacion));
+  check("la página de reserva recibida no tiene scroll lateral", await sinScrollLateral(p));
 
   // ---- Panel ----
   await p.goto(`${BASE}/panel`);
@@ -98,6 +101,14 @@ async function recorrido(ancho) {
   check("se entra al panel y se ve la valoración", (await p.textContent("main")).includes("Ana Pérez"));
   check("panel sin scroll lateral", await sinScrollLateral(p));
   check("el enlace de WhatsApp está preparado (no envía nada solo)", (await p.locator("a.whatsapp").first().getAttribute("href")).startsWith("https://wa.me/34600112233?text="));
+  const pequenosVal = await tactilesPequenos(p);
+  check("valoraciones (con «Borrar datos»): todo lo táctil mide 44 px o más", pequenosVal.length === 0, JSON.stringify(pequenosVal));
+  // Derecho de supresión: si se cancela el aviso, no se borra nada.
+  const antesVal = await p.locator("form.borrar-datos").count();
+  p.once("dialog", (d) => d.dismiss());
+  await p.locator("form.borrar-datos button").first().click();
+  await p.waitForTimeout(300);
+  check("«Borrar datos» pide confirmación y, si dices que no, no borra", (await p.locator("form.borrar-datos").count()) === antesVal && antesVal > 0);
   await p.click(".pestanas a:has-text('Visitas')");
   check("las visitas del día aparecen", (await p.textContent("main")).includes("Luis Gómez"));
   check("panel de visitas sin scroll lateral", await sinScrollLateral(p));
@@ -106,6 +117,21 @@ async function recorrido(ancho) {
   p.once("dialog", (d) => d.accept());
   await Promise.all([p.waitForURL(/ok=cancelada/), p.locator("button:has-text('Cancelar visita')").first().click()]);
   check("cancelar pide confirmación y libera el hueco", (await p.textContent("main")).includes("Visita cancelada"));
+  // Y ahora se borra del todo (derecho de supresión).
+  const pequenosBorrar = await tactilesPequenos(p);
+  check("panel de visitas (cancelada con «Borrar datos»): todo lo táctil mide 44 px o más", pequenosBorrar.length === 0, JSON.stringify(pequenosBorrar));
+  const contraste = await p.evaluate(() => {
+    const b = document.querySelector(".ficha.cancelada form.borrar-datos button");
+    if (!b) return null;
+    let el = b, op = 1;
+    while (el) { op *= Number(getComputedStyle(el).opacity); el = el.parentElement; }
+    return { op, color: getComputedStyle(b).color };
+  });
+  check("el botón «Borrar datos» de una visita cancelada no sale apagado (opacidad 1, rojo)", contraste && contraste.op === 1 && contraste.color === "rgb(164, 22, 26)", JSON.stringify(contraste));
+  p.once("dialog", (d) => d.accept());
+  await Promise.all([p.waitForURL(/ok=visita-borrada/), p.locator(".ficha.cancelada form.borrar-datos button").first().click()]);
+  const trasBorrar = await p.textContent("main");
+  check("«Borrar datos» quita la visita del panel y recuerda Telegram", trasBorrar.includes("Visita borrada del todo") && trasBorrar.includes("bórralo también allí a mano") && !trasBorrar.includes("Luis Gómez"));
 
   check("ningún error en consola (ni de CSP)", errores.length === 0, errores.join(" | "));
   await contexto.close();

@@ -231,6 +231,23 @@ export function compruebaHueco(fechaHora, { ahoraMs, cfg, bloqueos = [] }) {
   return { ok: true, fecha: p.fecha, hora: p.hora, utc: hueco.utc, motivo: "" };
 }
 
+/**
+ * ¿Se puede bloquear esa hora? Solo si es uno de los huecos de ese día según
+ * el horario: un bloqueo a las 10:15 con bloques de 30 minutos (o a las 15:00,
+ * fuera del horario) no taparía nada y Pau creería que sí. Sin hora (día
+ * entero) siempre vale. Devuelve { ok, motivo }.
+ */
+export function compruebaHoraBloqueo(fecha, hora, cfg) {
+  if (!hora) return { ok: true, motivo: "" };
+  const huecos = huecosDelDia(fecha, cfg);
+  if (huecos.some((h) => h.hora === hora)) return { ok: true, motivo: "" };
+  if (!huecos.length) {
+    return { ok: false, motivo: `El ${etiquetaLarga(fecha)} no hay visitas según el horario, así que no hace falta bloquear las ${hora}. Si quieres, deja la hora vacía para bloquear el día entero.` };
+  }
+  const lista = huecos.map((h) => h.hora).join(", ");
+  return { ok: false, motivo: `Las ${hora} no es una hora de visita del ${etiquetaLarga(fecha)}. Las horas de ese día son: ${lista}. Elige una de ellas o deja la hora vacía para bloquear el día entero.` };
+}
+
 // ---- Textos de fechas ------------------------------------------------------
 export function etiquetaLarga(fecha) {
   const [y, m, d] = fecha.split("-").map(Number);

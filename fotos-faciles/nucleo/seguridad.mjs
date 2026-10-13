@@ -17,6 +17,9 @@ const CASTIGO_MS = 120_000;
 // Cabeceras que pone un proxy o un túnel (Cloudflare añade cf-connecting-ip y
 // cf-ray; ngrok y otros, x-forwarded-for). Node las da en minúsculas.
 const CABECERAS_PROXY = ["cf-connecting-ip", "cf-ray", "x-forwarded-for", "forwarded", "x-real-ip", "cdn-loop"];
+// Nombres con los que el propio PC se llama a sí mismo (con o sin puerto).
+// `iniciar.mjs` abre siempre http://localhost:<puerto>/.
+const HOST_LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])(:\d{1,5})?$/;
 
 export class Seguridad {
   /**
@@ -65,8 +68,17 @@ export class Seguridad {
     // que su tráfico llega desde 127.0.0.1 aunque venga de internet. Si la
     // petición trae cabeceras de proxy, NO es del propio PC: tiene que entrar
     // con token o PIN como cualquier otro. Esto solo quita privilegios.
+    //
+    // Además, la dirección escrita en el navegador (cabecera Host) tiene que
+    // ser localhost, 127.0.0.1 o [::1]. Eso para el «DNS rebinding»: una web
+    // maliciosa abierta en este PC puede hacer que su dominio apunte a
+    // 127.0.0.1 y hablar con el programa como si fuera la pantalla propia; en
+    // ese caso el Host es el de esa web y aquí se le trata como a un extraño.
+    // Abrir el programa con la IP de la red (http://192.168.x.x:puerto) desde
+    // el propio PC ya pedía PIN antes (la conexión no llega por 127.0.0.1).
     const h = req.headers || {};
     if (CABECERAS_PROXY.some((c) => h[c] !== undefined)) return false;
+    if (!HOST_LOCAL.test(String(h.host || "").trim().toLowerCase())) return false;
     const ip = String(req.socket?.remoteAddress || "");
     return ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
   }

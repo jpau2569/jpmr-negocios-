@@ -8,21 +8,24 @@
 // ============================================================================
 import {
   madridAUtc, enMadrid, desfaseMinutos, huecosDelDia, huecosLibres, diasConHuecos, compruebaHueco,
-  configVisitas, leeHorario, estaBloqueado, sumaDias, etiquetaLarga, hoyEnMadrid,
+  configVisitas, leeHorario, estaBloqueado, sumaDias, etiquetaLarga, hoyEnMadrid, compruebaHoraBloqueo,
 } from "../cloudflare/castresana-web/src/horario.js";
 import {
   telefonoEspanol, validaValoracion, validaReserva, limpia, leeListaInmuebles, enlaceSeguro, esReferencia, correoValido,
 } from "../cloudflare/castresana-web/src/validacion.js";
 import { aCsv, celda, BOM } from "../cloudflare/castresana-web/src/csv.js";
 import {
-  creaSesion, sesionValida, igualesSeguro, cabeceraCookie, leeCookie, COOKIE,
+  creaSesion, sesionValida, igualesSeguro, cabeceraCookie, leeCookie, COOKIE, hmacHex, sha256Hex,
 } from "../cloudflare/castresana-web/src/sesion.js";
-import { textoValoracion, textoVisita, avisaTelegram } from "../cloudflare/castresana-web/src/telegram.js";
+import { textoValoracion, textoVisita, avisaTelegram, conTelefono, nombreDePila } from "../cloudflare/castresana-web/src/telegram.js";
 import { enlaceWhatsapp, textoWhatsappVisita } from "../cloudflare/castresana-web/src/mensajes.js";
 import { esc, paginaValora } from "../cloudflare/castresana-web/src/html.js";
-import { crearManejador, LIMITE } from "../cloudflare/castresana-web/src/index.js";
+import { crearManejador, LIMITE, secretoIp } from "../cloudflare/castresana-web/src/index.js";
 import { creaD1, creaAssets } from "../cloudflare/castresana-web/herramientas/d1-local.mjs";
+import { servidorLocal, claveDelPanel } from "../cloudflare/castresana-web/herramientas/probar-en-local.mjs";
 import { readFileSync, readdirSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 let pasados = 0, fallados = 0;
 function check(nombre, cond, detalle = "") {
@@ -180,10 +183,23 @@ console.log("\n🧼 HTML escapado, Telegram y WhatsApp");
   check("sin estilos ni scripts en línea (la CSP los bloquearía)", !/<script>(?!<\/script>)|style="|<style|\son[a-z]+="/i.test(pag.replace(/<script src="[^"]+"( async)? defer><\/script>/g, "")));
   check("la página dice que no da precio y que Pau llamará", /No damos precios automáticos/.test(pag) && /Pau te llamará/.test(pag));
   check("privacidad: BORRADOR, Asesoría Castresana y [PENDIENTE: CIF y dirección]", pag.includes("BORRADOR") && pag.includes("Asesoría Castresana. [PENDIENTE: CIF y dirección]"));
-  const tv = textoValoracion({ nombre: "Ana", telefono: "600112233", correo: "", operacion: "vender", tipo: "piso", zona: "Uría", metros: 85, habitaciones: null, comentario: "" });
-  check("aviso de valoración legible y sin líneas vacías sobrantes", tv.includes("Teléfono: 600 11 22 33") && tv.includes("vender · Piso") && !tv.includes("Correo") && !tv.includes("Habitaciones") && !tv.includes("\n\n\n"), tv);
-  const tvis = textoVisita({ fechaHora: "2026-01-14T11:00", referencia: "PIS0190", titulo: "Piso en Uría", nombre: "Luis", telefono: "611223344", comentario: "" });
-  check("aviso de visita con fecha en español", tvis.includes("miércoles 14 de enero de 2026 a las 11:00") && tvis.includes("PIS0190 · Piso en Uría"));
+  const val = { nombre: "Ana María Pérez Gil", telefono: "600112233", correo: "ana@ejemplo.es", operacion: "vender", tipo: "piso", zona: "Uría", metros: 85, habitaciones: 3, comentario: "Llamadme por la tarde, mi DNI es 12345678Z" };
+  const tv = textoValoracion(val);
+  check("Telegram (valoración): solo nombre de pila, operación, tipo, zona y «Detalles en el panel»",
+    tv === "🏠 Nueva solicitud de VALORACIÓN\nNombre: Ana\nQuiere: vender · Piso\nZona: Uría\n\nDetalles en el panel.", tv);
+  check("Telegram (valoración): ni teléfono, ni correo, ni comentario, ni apellidos",
+    !/600|ana@|DNI|Pérez|Teléfono|Correo|Comentario|Metros|Habitaciones/.test(tv));
+  const tvTel = textoValoracion(val, { telefono: true });
+  check("Telegram (valoración) con teléfono pedido: lo añade, pero nunca correo ni comentario",
+    tvTel.includes("Teléfono: 600 11 22 33") && !/ana@|DNI/.test(tvTel));
+  const vis = { fechaHora: "2026-01-14T11:00", referencia: "PIS0190", titulo: "Piso en Uría", nombre: "Luis Gómez", telefono: "611223344", comentario: "Voy con mi madre" };
+  const tvis = textoVisita(vis);
+  check("Telegram (visita): nombre de pila, referencia, fecha y hora en español y «Detalles en el panel»",
+    tvis === "📅 Nueva VISITA reservada\nNombre: Luis\nInmueble: PIS0190\nmiércoles 14 de enero de 2026 a las 11:00\n\nDetalles en el panel.", tvis);
+  check("Telegram (visita) con teléfono pedido: lo añade, sin comentario", textoVisita(vis, { telefono: true }).includes("Teléfono: 611 22 33 44") && !textoVisita(vis, { telefono: true }).includes("madre"));
+  check("TELEGRAM_CON_TELEFONO: solo «si» (o «sí») lo activa",
+    conTelefono({ TELEGRAM_CON_TELEFONO: "si" }) && conTelefono({ TELEGRAM_CON_TELEFONO: " SÍ " }) && !conTelefono({}) && !conTelefono({ TELEGRAM_CON_TELEFONO: "no" }) && !conTelefono({ TELEGRAM_CON_TELEFONO: "1" }));
+  check("nombre de pila: primera palabra, sin espacios", nombreDePila("  José   Luis ") === "José" && nombreDePila("") === "");
   let llamadas = 0;
   const falso = async () => { llamadas++; return new Response("{}", { status: 200 }); };
   check("sin secretos de Telegram no se llama a nadie", (await avisaTelegram({}, "x", falso)) === false && llamadas === 0);
@@ -208,7 +224,9 @@ const fetchFalso = async (url, opciones) => {
   if (String(url).includes("api.telegram.org")) { telegramEnviados.push(JSON.parse(opciones.body)); return new Response('{"ok":true}'); }
   if (String(url).includes("turnstile")) {
     const b = JSON.parse(opciones.body);
-    return new Response(JSON.stringify({ success: b.response === "token-bueno" && b.secret === "secreto-ts" }));
+    // Como Turnstile de verdad: devuelve el hostname donde se resolvió el reto.
+    const ok = ["token-bueno", "token-otra-web"].includes(b.response) && b.secret === "secreto-ts";
+    return new Response(JSON.stringify({ success: ok, hostname: b.response === "token-otra-web" ? "otra-web.example" : "castresana-web.ejemplo.workers.dev" }));
   }
   throw new Error("Red no permitida en las pruebas: " + url);
 };
@@ -252,6 +270,8 @@ async function entra(env, ip = "198.51.100.9") {
   check("POST /valora válido → 200, guardado y «Pau te llamará»", ok.status === 200 && filas.length === 1 && html.includes("Pau te llamará") && filas[0].telefono === "600112233");
   check("no da ningún precio", !/€|euros/i.test(html));
   check("aviso a Telegram enviado en texto plano", telegramEnviados.length === 1 && telegramEnviados[0].text.includes("VALORACIÓN") && !("parse_mode" in telegramEnviados[0]));
+  check("el aviso real del Worker no lleva teléfono, correo, comentario ni apellido",
+    !/600|ana@|Reformado|Pérez/.test(telegramEnviados[0].text) && telegramEnviados[0].text.includes("Nombre: Ana") && telegramEnviados[0].text.includes("Detalles en el panel."), telegramEnviados[0].text);
 
   const mal = await pide(env, "/valora", { metodo: "POST", form: { ...valoracionBuena, telefono: "123", nombre: "<script>x</script>" } });
   const htmlMal = await mal.text();
@@ -280,6 +300,17 @@ async function entra(env, ip = "198.51.100.9") {
   ahora = LUNES;
   const limites = env.DB._base.prepare("SELECT clave FROM limites").all();
   check("la IP no se guarda en claro", limites.length > 0 && limites.every((l) => !l.clave.includes("203.0.113")));
+  // La IP se guarda como HMAC con una clave secreta, no como SHA-256 con un
+  // prefijo que está en el código (público): eso se deshace probando IPs.
+  const hmacEsperado = (await hmacHex(secretoIp(env), "203.0.113.1")).slice(0, 32);
+  const shaViejo = (await sha256Hex("castresana-web|203.0.113.1")).slice(0, 32);
+  check("la IP se guarda como HMAC con la clave secreta (no SHA-256 con prefijo fijo)",
+    limites.some((l) => l.clave === `valora:${hmacEsperado}`) && !limites.some((l) => l.clave.includes(shaViejo)));
+  check("la clave del HMAC sale de IP_SECRETO si existe, si no de PANEL_CLAVE, y cambia con ellas",
+    secretoIp({ PANEL_CLAVE: "a".repeat(12) }) !== secretoIp({ PANEL_CLAVE: "b".repeat(12) }) &&
+    secretoIp({ PANEL_CLAVE: "a".repeat(12), IP_SECRETO: "s".repeat(16) }).includes("propio") &&
+    secretoIp({ PANEL_CLAVE: "a".repeat(12), IP_SECRETO: "corto" }).includes("panel") &&
+    !secretoIp({}).includes("undefined") && secretoIp({}).length > 40);
 
   const estatico = await pide(env, "/static/estilos.css");
   check("/static/* sale de ASSETS con cabeceras de seguridad", estatico.status === 200 && estatico.headers.get("x-content-type-options") === "nosniff" && (await estatico.text()).includes("--azul"));
@@ -317,6 +348,33 @@ console.log("\n🔐 Panel");
   ahora += 16 * 60 * 1000;
   check("a los 15 minutos esa IP vuelve a poder", (await pide(env, "/panel/entrar", { metodo: "POST", form: { clave: CLAVE }, ip: "198.51.100.77" })).status === 303);
   ahora = LUNES;
+
+  // Carrera: 40 claves a la vez desde la misma IP. Antes se miraba el
+  // contador, se comparaba y luego se sumaba: las 40 leían «0» y se probaban.
+  const carrera = await Promise.all(Array.from({ length: 40 }, (_, i) =>
+    pide(env, "/panel/entrar", { metodo: "POST", form: { clave: `mala-${i}` }, ip: "198.51.100.200" }).then((r) => r.status)));
+  const n401 = carrera.filter((x) => x === 401).length;
+  const n429 = carrera.filter((x) => x === 429).length;
+  check(`40 claves en paralelo desde una IP: como mucho ${LIMITE.fallosLoginIp} se comparan, el resto 429`,
+    n401 <= LIMITE.fallosLoginIp && n401 + n429 === 40, `401: ${n401}, 429: ${n429}`);
+  check("con la clave buena el intento no cuenta: 10 entradas seguidas de Pau no le bloquean", await (async () => {
+    for (let i = 0; i < 10; i++) if ((await pide(env, "/panel/entrar", { metodo: "POST", form: { clave: CLAVE }, ip: "198.51.100.201" })).status !== 303) return false;
+    return true;
+  })());
+  check("tope global subido a 200 (bloquear a Pau exige al menos 40 IP cada 15 min)", LIMITE.fallosLoginTotal === 200 && LIMITE.fallosLoginTotal / LIMITE.fallosLoginIp >= 40);
+  {
+    const envG = creaEntorno();
+    const ips = Math.ceil(LIMITE.fallosLoginTotal / LIMITE.fallosLoginIp);
+    for (let i = 0; i < ips; i++) {
+      await Promise.all(Array.from({ length: LIMITE.fallosLoginIp }, (_, k) => pide(envG, "/panel/entrar", { metodo: "POST", form: { clave: `x${k}` }, ip: `192.0.2.${i + 1}` })));
+    }
+    check(`tras ${LIMITE.fallosLoginTotal} fallos desde ${ips} IP, el tope global cierra el panel 15 min (429), también para Pau`,
+      (await pide(envG, "/panel/entrar", { metodo: "POST", form: { clave: CLAVE }, ip: "198.51.100.9" })).status === 429);
+    ahora += 16 * 60 * 1000;
+    check("y a los 15 minutos vuelve a abrirse", (await pide(envG, "/panel/entrar", { metodo: "POST", form: { clave: CLAVE }, ip: "198.51.100.9" })).status === 303);
+    ahora = LUNES;
+  }
+
   check("POST del panel desde otra web → 403 aunque haya cookie", (await pide(env, "/panel/bloqueos/quitar", { metodo: "POST", form: { id: "1" }, cookie, origen: "https://malo.example" })).status === 403);
   const salir = await pide(env, "/panel/salir", { metodo: "POST", form: {}, cookie });
   check("salir borra la cookie", salir.status === 303 && /Max-Age=0/.test(salir.headers.get("set-cookie") || ""));
@@ -378,6 +436,19 @@ console.log("\n🏠 Visitas sin choques");
   check("el día bloqueado no sale en la lista de días", !conBloqueo.includes('value="2026-01-15"'));
   check("reservar un hueco bloqueado → 409", (await pide(env, "/visitas", { metodo: "POST", form: reserva({ fecha: "2026-01-14", fecha_hora: "2026-01-14T11:00" }), ip: "203.0.113.30" })).status === 409);
   check("bloqueo con hora mal escrita → 422", (await pide(env, "/panel/bloqueos/nuevo", { metodo: "POST", cookie, form: { fecha: "2026-01-16", hora: "25:00" } })).status === 422);
+  const desalineado = await pide(env, "/panel/bloqueos/nuevo", { metodo: "POST", cookie, form: { fecha: "2026-01-16", hora: "10:15" } });
+  const textoDesalineado = await desalineado.text();
+  check("bloqueo a una hora que no es hueco (10:15 con bloques de 30) → 422 con las horas válidas",
+    desalineado.status === 422 && textoDesalineado.includes("no es una hora de visita") && textoDesalineado.includes("10:00, 10:30"), textoDesalineado.match(/Las 10:15[^<]*/)?.[0]);
+  check("bloqueo fuera del horario (15:00) → 422", (await pide(env, "/panel/bloqueos/nuevo", { metodo: "POST", cookie, form: { fecha: "2026-01-16", hora: "15:00" } })).status === 422);
+  const domingo = await pide(env, "/panel/bloqueos/nuevo", { metodo: "POST", cookie, form: { fecha: "2026-01-18", hora: "10:00" } });
+  check("bloqueo a una hora de un domingo (sin visitas) → 422 explicando que ese día no hay visitas",
+    domingo.status === 422 && (await domingo.text()).includes("no hay visitas según el horario"));
+  check("ninguno de esos bloqueos inválidos se ha guardado",
+    env.DB._base.prepare("SELECT COUNT(*) n FROM bloqueos WHERE (fecha = '2026-01-16' AND hora IN ('10:15','15:00')) OR fecha = '2026-01-18'").get().n === 0);
+  check("bloqueo de día entero en domingo sí se acepta (no molesta)", (await pide(env, "/panel/bloqueos/nuevo", { metodo: "POST", cookie, form: { fecha: "2026-01-25", hora: "" } })).status === 303);
+  check("compruebaHoraBloqueo: sábado 12:30 sí, sábado 13:00 no (el último hueco es 12:30)",
+    compruebaHoraBloqueo("2026-01-17", "12:30", cfgDefecto).ok && !compruebaHoraBloqueo("2026-01-17", "13:00", cfgDefecto).ok && compruebaHoraBloqueo("2026-01-17", "", cfgDefecto).ok);
   const conVisita = await pide(env, "/panel/bloqueos/nuevo", { metodo: "POST", cookie, form: { fecha: "2026-01-13", hora: "10:30" } });
   check("bloquear un hueco que ya tiene visita avisa", conVisita.headers.get("location")?.includes("bloqueo-con-visita"));
 
@@ -388,7 +459,10 @@ console.log("\n🏠 Visitas sin choques");
   const cancela = await pide(env, "/panel/visitas/cancelar", { metodo: "POST", cookie, form: { id: String(id) } });
   check("cancelar → 303 y queda como cancelada (no se borra)", cancela.status === 303 && env.DB._base.prepare("SELECT estado FROM visitas WHERE id = ?").get(id).estado === "cancelada");
   const otraVez = await pide(env, "/visitas", { metodo: "POST", form: reserva({ nombre: "Nuevo", telefono: "633445566" }), ip: "203.0.113.40" });
-  check("tras cancelar, el hueco se puede volver a reservar", otraVez.status === 200 && (await otraVez.text()).includes("Visita reservada"));
+  const textoReserva = await otraVez.text();
+  check("tras cancelar, el hueco se puede volver a reservar", otraVez.status === 200 && textoReserva.includes("Reserva recibida"));
+  check("la confirmación no da la visita por hecha: «Pau te confirmará la visita…», sin «te esperamos»",
+    textoReserva.includes("<title>Reserva recibida") && textoReserva.includes("Pau te confirmará la visita") && !/te esperamos/i.test(textoReserva) && !textoReserva.includes("Visita reservada"));
   check("cancelar dos veces no rompe nada", (await pide(env, "/panel/visitas/cancelar", { metodo: "POST", cookie, form: { id: String(id) } })).headers.get("location").includes("ya-cancelada"));
   check("id de visita no válido → 400", (await pide(env, "/panel/visitas/cancelar", { metodo: "POST", cookie, form: { id: "1 OR 1=1" } })).status === 400);
 
@@ -404,6 +478,23 @@ console.log("\n🏠 Visitas sin choques");
   for (const h of horas) est.push((await pide(env, "/visitas", { metodo: "POST", form: reserva({ fecha: "2026-01-16", fecha_hora: `2026-01-16T${h}` }), ip: "203.0.113.99" })).status);
   check(`límite por IP en reservas: la ${LIMITE.visitasPorHora + 1}.ª → 429`, est.slice(0, 5).every((x) => x === 200) && est[5] === 429, est.join(","));
 
+  // Una reserva que choca (409) no gasta el límite: quien llega tarde varias
+  // veces sigue pudiendo reservar.
+  const choques = [];
+  for (let i = 0; i < 7; i++) choques.push((await pide(env, "/visitas", { metodo: "POST", form: reserva({ fecha: "2026-01-16", fecha_hora: "2026-01-16T10:00" }), ip: "203.0.113.98" })).status);
+  check("7 intentos sobre una hora ya cogida: todos 409, ninguno 429", choques.every((x) => x === 409), choques.join(","));
+  check("y después esa IP reserva una hora libre sin problema",
+    (await pide(env, "/visitas", { metodo: "POST", form: reserva({ fecha: "2026-01-16", fecha_hora: "2026-01-16T16:30" }), ip: "203.0.113.98" })).status === 200);
+  // Los envíos con datos mal sí cuentan (lo típico de un robot).
+  const malos = [];
+  for (let i = 0; i < 6; i++) malos.push((await pide(env, "/visitas", { metodo: "POST", form: reserva({ telefono: "1", fecha: "2026-01-16", fecha_hora: "2026-01-16T17:00" }), ip: "203.0.113.97" })).status);
+  check(`los envíos con datos mal cuentan: ${LIMITE.visitasPorHora} × 422 y luego 429`, malos.slice(0, 5).every((x) => x === 422) && malos[5] === 429, malos.join(","));
+  // Carrera: 8 reservas en paralelo desde una IP en horas distintas: el límite aguanta.
+  const horasCarrera = ["16:30", "17:00", "17:30", "18:00", "18:30", "19:00"].map((h) => `2026-01-19T${h}`).concat(["2026-01-20T10:00", "2026-01-20T10:30"]);
+  const enCarrera = await Promise.all(horasCarrera.map((fh) => pide(env, "/visitas", { metodo: "POST", form: reserva({ fecha: fh.slice(0, 10), fecha_hora: fh }), ip: "203.0.113.96" }).then((r) => r.status)));
+  check(`8 reservas en paralelo desde una IP: como mucho ${LIMITE.visitasPorHora} entran`,
+    enCarrera.filter((x) => x === 200).length === LIMITE.visitasPorHora && enCarrera.filter((x) => x === 429).length === 3, enCarrera.join(","));
+
   // CSV.
   const csvV = await pide(env, "/panel/exportar?que=visitas", { cookie });
   // Ojo: Response.text() quita el BOM al decodificar; hay que mirar los bytes.
@@ -418,6 +509,50 @@ console.log("\n🏠 Visitas sin choques");
   check("CSV de valoraciones con BOM y la fórmula neutralizada", bytesVal[0] === 0xEF && textoVal.includes(";'=Pepe;") && !textoVal.includes(";=Pepe"));
 }
 
+console.log("\n🗑️  Derecho de supresión (RGPD)");
+{
+  const env = creaEntorno();
+  const cookie = await entra(env);
+  await pide(env, "/panel/inmuebles/cargar", { metodo: "POST", cookie, form: { lista: "PIS0190; Piso en Uría; Centro" } });
+  await pide(env, "/valora", { metodo: "POST", form: valoracionBuena });
+  await pide(env, "/valora", { metodo: "POST", form: { ...valoracionBuena, nombre: "Otro Cliente", telefono: "622334455" }, ip: "203.0.113.61" });
+  const reservaR = { referencia: "PIS0190", fecha: "2026-01-13", fecha_hora: "2026-01-13T10:00", nombre: "Luis Gómez", telefono: "611 22 33 44", comentario: "Voy con mi madre", privacidad: "on" };
+  check("preparación: una visita activa", (await pide(env, "/visitas", { metodo: "POST", form: reservaR })).status === 200);
+  const idVal = env.DB._base.prepare("SELECT id FROM valoraciones WHERE nombre = 'Ana Pérez'").get().id;
+  const idVis = env.DB._base.prepare("SELECT id FROM visitas WHERE nombre = 'Luis Gómez'").get().id;
+
+  const panelVal = await (await pide(env, "/panel", { cookie })).text();
+  check("cada valoración tiene «Borrar datos» con confirmación",
+    (panelVal.match(/action="\/panel\/valoraciones\/borrar"/g) || []).length === 2 && /class="borrar-datos" data-confirmar="¿Borrar del todo la solicitud de Ana Pérez\?/.test(panelVal));
+  const panelVis = await (await pide(env, "/panel?vista=visitas&desde=2026-01-12", { cookie })).text();
+  check("cada visita tiene «Borrar datos» con confirmación", /action="\/panel\/visitas\/borrar"[^>]*data-confirmar="¿Borrar del todo la visita de Luis Gómez/.test(panelVis));
+
+  check("borrar sin sesión → 401 y no borra nada",
+    (await pide(env, "/panel/valoraciones/borrar", { metodo: "POST", form: { id: String(idVal) } })).status === 401 &&
+    env.DB._base.prepare("SELECT COUNT(*) n FROM valoraciones").get().n === 2);
+  check("borrar desde otra web → 403 aunque haya cookie",
+    (await pide(env, "/panel/valoraciones/borrar", { metodo: "POST", form: { id: String(idVal) }, cookie, origen: "https://malo.example" })).status === 403 &&
+    (await pide(env, "/panel/visitas/borrar", { metodo: "POST", form: { id: String(idVis) }, cookie, origen: "", cabeceras: { "sec-fetch-site": "cross-site" } })).status === 403);
+  check("id no válido → 400", (await pide(env, "/panel/valoraciones/borrar", { metodo: "POST", form: { id: "1 OR 1=1" }, cookie })).status === 400 &&
+    (await pide(env, "/panel/visitas/borrar", { metodo: "POST", form: { id: "-3" }, cookie })).status === 400);
+
+  const bv = await pide(env, "/panel/valoraciones/borrar", { metodo: "POST", form: { id: String(idVal) }, cookie });
+  check("borrar una valoración → 303 y desaparece de la base de datos (solo esa)",
+    bv.status === 303 && bv.headers.get("location") === "/panel?vista=valoraciones&ok=valoracion-borrada" &&
+    !env.DB._base.prepare("SELECT 1 FROM valoraciones WHERE id = ?").get(idVal) && env.DB._base.prepare("SELECT COUNT(*) n FROM valoraciones").get().n === 1);
+  const csvTras = new TextDecoder().decode(new Uint8Array(await (await pide(env, "/panel/exportar?que=valoraciones", { cookie })).arrayBuffer()));
+  check("y ya no sale en el CSV", !csvTras.includes("Ana Pérez") && csvTras.includes("Otro Cliente"));
+  const avisoBorrado = await (await pide(env, "/panel?vista=valoraciones&ok=valoracion-borrada", { cookie })).text();
+  check("el panel recuerda borrar a mano el aviso de Telegram", avisoBorrado.includes("bórralo también allí a mano"));
+
+  const bvi = await pide(env, "/panel/visitas/borrar", { metodo: "POST", form: { id: String(idVis), desde: "2026-01-12" }, cookie });
+  check("borrar una visita → 303, desaparece del todo (no queda «cancelada») y el hueco queda libre",
+    bvi.status === 303 && bvi.headers.get("location") === "/panel?vista=visitas&ok=visita-borrada&desde=2026-01-12" &&
+    env.DB._base.prepare("SELECT COUNT(*) n FROM visitas").get().n === 0 &&
+    (await (await pide(env, "/visitas?ref=PIS0190&fecha=2026-01-13")).text()).includes('value="2026-01-13T10:00"'));
+  check("borrar dos veces no rompe nada", (await pide(env, "/panel/visitas/borrar", { metodo: "POST", form: { id: String(idVis) }, cookie })).headers.get("location").includes("ok=ya-borrada"));
+}
+
 console.log("\n🤖 Turnstile (opcional)");
 {
   const env = creaEntorno({ TURNSTILE_SITEKEY: "1x00000000000000000000AA", TURNSTILE_SECRET: "secreto-ts" });
@@ -429,6 +564,8 @@ console.log("\n🤖 Turnstile (opcional)");
   check("sin token → 400 y no se guarda", (await pide(env, "/valora", { metodo: "POST", form: valoracionBuena })).status === 400 && env.DB._base.prepare("SELECT COUNT(*) n FROM valoraciones").get().n === 0);
   check("token malo → 400", (await pide(env, "/valora", { metodo: "POST", form: { ...valoracionBuena, "cf-turnstile-response": "malo" } })).status === 400);
   check("token bueno → 200", (await pide(env, "/valora", { metodo: "POST", form: { ...valoracionBuena, "cf-turnstile-response": "token-bueno" } })).status === 200);
+  check("token válido pero resuelto en otra web (hostname distinto) → 400",
+    (await pide(env, "/valora", { metodo: "POST", form: { ...valoracionBuena, "cf-turnstile-response": "token-otra-web" } })).status === 400);
   const solo = creaEntorno({ TURNSTILE_SECRET: "secreto-ts" });
   check("solo con el secreto (sin clave pública) no se activa: el formulario sigue funcionando", (await pide(solo, "/valora", { metodo: "POST", form: valoracionBuena })).status === 200);
 }
@@ -445,6 +582,88 @@ console.log("\n🔒 Nada de claves en el código");
   check(".gitignore protege los archivos de secretos", /\.secretos\.env/.test(readFileSync(new URL(".gitignore", carpeta), "utf8")) && /\.dev\.vars/.test(readFileSync(new URL(".gitignore", carpeta), "utf8")));
   check("el horario por defecto de cloudflare.config.ts es el pedido", readFileSync(new URL("cloudflare.config.ts", carpeta), "utf8").includes('HORARIO: bindings.text("L-V 10:00-14:00 16:30-19:30; S 10:00-13:00")'));
   check("hoyEnMadrid de medianoche UTC en verano ya es el día siguiente", hoyEnMadrid(Date.parse("2026-07-14T22:30:00Z")) === "2026-07-15");
+
+  // probar-en-local: el repositorio es público; nada de claves fijas.
+  const local = readFileSync(new URL("herramientas/probar-en-local.mjs", carpeta), "utf8");
+  check("probar-en-local no trae ninguna clave fija", !local.includes("clave-de-prueba-local") && !/PANEL_CLAVE\s*\|\|\s*["'`]/.test(local));
+  const k1 = claveDelPanel({}), k2 = claveDelPanel({});
+  check("sin PANEL_CLAVE genera una clave aleatoria (16 caracteres base64url) distinta cada vez",
+    /^[A-Za-z0-9_-]{16}$/.test(k1) && k1 !== k2 && claveDelPanel({ PANEL_CLAVE: "la-mia-de-verdad" }) === "la-mia-de-verdad");
+  check("README: ni rastro de la clave fija de antes", !readFileSync(new URL("README.md", carpeta), "utf8").includes("clave-de-prueba-local"));
+}
+
+console.log("\n🧰 Servidor local, publicación y link temporal");
+{
+  const carpeta = new URL("../cloudflare/castresana-web/", import.meta.url);
+  // Arranca el script de verdad sin PANEL_CLAVE, lee la clave de la pantalla y entra con ella.
+  const puerto = 20000 + Math.floor(Math.random() * 20000);
+  const entorno = { ...process.env };
+  for (const k of ["PANEL_CLAVE", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TURNSTILE_SECRET", "TURNSTILE_SITEKEY"]) delete entorno[k];
+  const hijo = spawn(process.execPath, [fileURLToPath(new URL("herramientas/probar-en-local.mjs", carpeta)), "--memoria", "--puerto", String(puerto)], { env: entorno });
+  let salida = "";
+  const clave = await new Promise((ok) => {
+    const fin = setTimeout(() => ok(""), 8000);
+    hijo.stdout.on("data", (t) => { salida += t; const m = /Clave del panel: (\S+)/.exec(salida); if (m) { clearTimeout(fin); ok(m[1]); } });
+  });
+  try {
+    check("probar-en-local enseña en pantalla una clave aleatoria nueva", /^[A-Za-z0-9_-]{16}$/.test(clave), salida.slice(0, 300));
+    const entrar = (c) => fetch(`http://127.0.0.1:${puerto}/panel/entrar`, { method: "POST", redirect: "manual", headers: { "content-type": "application/x-www-form-urlencoded", "sec-fetch-site": "same-origin" }, body: `clave=${encodeURIComponent(c)}` });
+    check("con la clave de la pantalla se entra; con la fija de antes, no",
+      (await entrar("clave-de-prueba-local")).status === 401 && (await entrar(clave)).status === 303);
+  } finally { hijo.kill(); }
+
+  // cf-connecting-ip: si ya viene (túnel de Cloudflare), no se pisa.
+  const envLocal = creaEntorno({ TELEGRAM_BOT_TOKEN: undefined, TELEGRAM_CHAT_ID: undefined }); // sin red: nada de Telegram
+  const srv2 = servidorLocal({ env: envLocal, ip: "127.0.0.1" });
+  await new Promise((r) => srv2.listen(0, "127.0.0.1", r));
+  const p2 = srv2.address().port;
+  const postValora = (puertoX, cabeceras = {}) => fetch(`http://127.0.0.1:${puertoX}/valora`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", "sec-fetch-site": "same-origin", ...cabeceras }, body: new URLSearchParams(valoracionBuena).toString() });
+  await postValora(p2, { "cf-connecting-ip": "203.0.113.77" });
+  await postValora(p2);
+  const claves = envLocal.DB._base.prepare("SELECT clave FROM limites").all().map((f) => f.clave);
+  const deIp = async (ip) => `valora:${(await hmacHex(secretoIp(envLocal), ip)).slice(0, 32)}`;
+  check("probar-en-local respeta la cf-connecting-ip que ya viene y pone 127.0.0.1 si no viene",
+    claves.includes(await deIp("203.0.113.77")) && claves.includes(await deIp("127.0.0.1")), claves.join(","));
+  srv2.close();
+
+  // --no-provision: que `cf deploy` no cree recursos de pago por su cuenta.
+  const pkg = JSON.parse(readFileSync(new URL("package.json", carpeta), "utf8"));
+  check("package.json: «publicar» y «comprobar» llevan --no-provision",
+    pkg.scripts.publicar === "cf deploy --no-provision" && pkg.scripts.comprobar.includes("--no-provision"));
+  const readme = readFileSync(new URL("README.md", carpeta), "utf8");
+  const paso = (n) => readme.slice(readme.indexOf(`### Paso ${n}`), readme.indexOf("###", readme.indexOf(`### Paso ${n}`) + 5));
+  const deploys = (t) => (t.match(/npx cf deploy[^\n`]*/g) || []);
+  check("README pasos 6 y 7: todos los «npx cf deploy» llevan --no-provision",
+    deploys(paso(6)).length >= 2 && deploys(paso(7)).length >= 1 && [...deploys(paso(6)), ...deploys(paso(7))].every((l) => l.includes("--no-provision")),
+    [...deploys(paso(6)), ...deploys(paso(7))].join(" | "));
+  check("README: apartado «Si un cliente pide que borres sus datos» con Telegram a mano",
+    /## [^\n]*Si un cliente pide que borres sus datos/.test(readme) && /a mano los avisos que ya estén en Telegram/.test(readme.slice(readme.indexOf("Si un cliente pide que borres sus datos"))));
+  check("README: qué hacer si el panel queda bloqueado", /Si el panel queda bloqueado/.test(readme));
+  check("README: la IP se describe sin prometer de más", readme.includes("La IP no se guarda tal cual: se guarda un código que no permite saber cuál era sin la clave secreta"));
+
+  // link-temporal.bat (no hay cmd.exe aquí: se revisa el archivo y se imita su validación).
+  const bruto = readFileSync(new URL("../link-temporal.bat", carpeta));
+  const bat = bruto.toString("latin1");
+  check("link-temporal.bat: solo ASCII y saltos CRLF", [...bruto].every((b) => b < 128) && !/[^\r]\n/.test(bat) && bat.includes("\r\n"));
+  check("link-temporal.bat: expansión retardada y nunca %PUERTO%",
+    bat.includes("setlocal EnableExtensions EnableDelayedExpansion") && !bat.includes("%PUERTO%") && bat.includes('"!CFD!" tunnel --url http://localhost:!PUERTO!'));
+  const lineas = bat.split("\r\n").filter((l) => !/^\s*rem\b/i.test(l));
+  const pos = (re) => lineas.findIndex((l) => re.test(l));
+  const iDefinido = pos(/^if not defined PUERTO goto :malpuerto$/), iCifras = pos(/^if not "!RESTO!"=="x" goto :malpuerto$/);
+  const iCinco = pos(/^if not "!PUERTO:~5!"=="" goto :malpuerto$/), iCero = pos(/^if "!PUERTO:~0,1!"=="0" goto :malpuerto$/);
+  const iComparar = pos(/LSS|GTR/);
+  check("link-temporal.bat: primero «hay algo», luego solo cifras, sin cero delante y hasta 5, y solo después LSS/GTR",
+    iDefinido > 0 && iDefinido < iCifras && iCifras < iCinco && iCero < iComparar && iCinco < iComparar && lineas.filter((l) => /LSS|GTR/.test(l)).every((l) => l.includes("!PUERTO!")));
+  check("link-temporal.bat: sin tuberías con el puerto (en una tubería se pierde la expansión retardada)", !lineas.some((l) => l.includes("PUERTO") && l.includes("|")));
+  // Imitación de la validación del .bat, para documentar qué deja pasar.
+  const pasa = (v) => {
+    if (!v) return false;
+    if ("x" + v.replace(/[0-9]/g, "") !== "x") return false;
+    if (v[0] === "0" || v.length > 5) return false;
+    return Number(v) >= 1 && Number(v) <= 65535;
+  };
+  check("validación del puerto: 8788 y 65535 sí; «1&calc&rem», 08080, 123456, 65536, vacío y « 80» no",
+    pasa("8788") && pasa("65535") && ["1&calc&rem", "08080", "123456", "65536", "", " 80", "80\"", "!PATH!"].every((v) => !pasa(v)));
 }
 
 console.log(`\n${fallados ? "❌" : "✅"} cloudflare-web: ${pasados} correctas, ${fallados} fallidas\n`);

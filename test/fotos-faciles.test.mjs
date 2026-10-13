@@ -12,6 +12,7 @@ import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
+import http from "node:http";
 
 let pasados = 0, fallados = 0;
 function check(nombre, cond, detalle = "") {
@@ -262,9 +263,21 @@ console.log("\n🔐 Seguridad");
   check("bloquea al que prueba PINes a lo bruto", bloqueado);
 
   const falsa = { socket: { remoteAddress: "192.168.1.99" }, headers: {} };
-  const propia = { socket: { remoteAddress: "127.0.0.1" }, headers: {} };
+  const propia = { socket: { remoteAddress: "127.0.0.1" }, headers: { host: "localhost:4321" } };
   check("desde la red hace falta token", !s.autorizada(falsa, new URL("http://x/api/estado")));
   check("desde el propio ordenador no hace falta", s.autorizada(propia, new URL("http://x/api/estado")));
+  // Host: solo localhost, 127.0.0.1 o [::1], con o sin puerto (DNS rebinding).
+  const conHost = (host, ip = "127.0.0.1") => ({ socket: { remoteAddress: ip }, headers: host === undefined ? {} : { host } });
+  check("cuentan como el propio PC: localhost, 127.0.0.1 y [::1], con o sin puerto (y en mayúsculas)",
+    ["localhost", "localhost:4321", "127.0.0.1", "127.0.0.1:4321", "[::1]", "[::1]:4321", "LOCALHOST:4321"].every((h) => s.esLocal(conHost(h))) &&
+    s.esLocal(conHost("[::1]:4321", "::1")) && s.esLocal(conHost("localhost:4321", "::ffff:127.0.0.1")));
+  check("DNS rebinding: desde 127.0.0.1 pero con el Host de otra web → no es local",
+    !s.esLocal(conHost("malo.example:4321")) && !s.esLocal(conHost("malo.example")) && !s.autorizada(conHost("malo.example:4321"), new URL("http://x/api/estado")));
+  check("sin Host, con Host raro o casi local → no es local",
+    !s.esLocal(conHost(undefined)) && !s.esLocal(conHost("")) && !s.esLocal(conHost("localhost.malo.example")) &&
+    !s.esLocal(conHost("127.0.0.1.nip.io:4321")) && !s.esLocal(conHost("localhost:4321@malo")) && !s.esLocal(conHost("::1")));
+  check("el PC con su IP de la red (192.168.x.x) sigue pidiendo PIN, como antes",
+    !s.esLocal(conHost("192.168.1.40:4321", "192.168.1.40")) && !s.esLocal(conHost("192.168.1.40:4321")));
   // Un túnel (cloudflared tunnel --url) llega desde 127.0.0.1 pero viene de internet.
   const tunel = { socket: { remoteAddress: "127.0.0.1" }, headers: { "cf-connecting-ip": "203.0.113.7", "cf-ray": "x" } };
   const proxy = { socket: { remoteAddress: "::1" }, headers: { "x-forwarded-for": "203.0.113.7" } };
@@ -413,6 +426,22 @@ console.log("\n🌐 Servidor completo (subida desde el móvil, corte incluido)")
   check("la pantalla del PC recibe QR, PIN y destino",
     estado.cuerpo.qr.startsWith("<svg") && /^\d{4}$/.test(estado.cuerpo.pin) && estado.cuerpo.destino === DESTINO);
   check("la URL del móvil lleva el token en el fragmento", estado.cuerpo.urlMovil.includes("/m#t="));
+
+  // La URL que abre iniciar.mjs en el propio PC tiene que seguir entrando sin PIN.
+  const { urlPantallaPc } = await import("../fotos-faciles/iniciar.mjs");
+  const urlPc = urlPantallaPc(puerto);
+  const desdePc = await (await fetch(new URL("api/estado", urlPc))).json();
+  check(`la pantalla que abre iniciar.mjs (${urlPc}) entra sin PIN y ve el PIN`,
+    urlPc === `http://localhost:${puerto}/` && /^\d{4}$/.test(desdePc.pin) && typeof desdePc.token === "string");
+  const conHostAjeno = await new Promise((ok, mal) => {
+    const r = http.request({ host: "127.0.0.1", port: puerto, path: "/api/estado", headers: { host: `malo.example:${puerto}` } }, (res) => {
+      let t = ""; res.on("data", (c) => { t += c; }); res.on("end", () => ok({ status: res.statusCode, t }));
+    });
+    r.on("error", mal); r.end();
+  });
+  check("la misma petición con el Host de otra web (DNS rebinding) no recibe ni PIN ni token",
+    conHostAjeno.status === 401 || (() => { try { const j = JSON.parse(conHostAjeno.t); return j.pin == null && j.token == null; } catch { return false; } })(),
+    `${conHostAjeno.status} ${conHostAjeno.t.slice(0, 80)}`);
 
   const pagina = await pide("/");
   check("sirve la pantalla del ordenador", pagina.res.status === 200 && String(pagina.cuerpo).includes("Fotos Fáciles"));

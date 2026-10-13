@@ -272,11 +272,13 @@ ${paso2.includes("<form") ? bloquePrivacidad() : ""}`,
 export function paginaVisitaReservada({ referencia, fechaHora, nombre }) {
   const [fecha, hora] = fechaHora.split("T");
   return pagina({
-    titulo: "Visita reservada",
+    titulo: "Reserva recibida",
+    // Ojo: la visita todavía no está confirmada (Pau la confirma a mano), así
+    // que nada de «te esperamos».
     cuerpo: `<div class="aviso ok" role="status">
-  <h1>Visita reservada</h1>
-  <p>${esc(String(nombre).split(" ")[0])}, te esperamos el <strong>${esc(etiquetaLarga(fecha))} a las ${esc(hora)}</strong> para ver el inmueble <strong>${esc(referencia)}</strong>.</p>
-  <p>Pau se pondrá en contacto contigo para confirmarla. Si no puedes ir, avísanos.</p>
+  <h1>Reserva recibida</h1>
+  <p>Gracias, ${esc(String(nombre).split(" ")[0])}. Hemos apartado para ti el <strong>${esc(etiquetaLarga(fecha))} a las ${esc(hora)}</strong> para ver el inmueble <strong>${esc(referencia)}</strong>.</p>
+  <p>Pau te confirmará la visita por teléfono o WhatsApp. Hasta entonces no está confirmada. Si no puedes ir, avísanos.</p>
 </div>
 <p><a class="boton secundario" href="/visitas">Reservar otra visita</a></p>`,
   });
@@ -321,7 +323,18 @@ export const MENSAJES_PANEL = {
   activado: "Inmueble activado: ya se puede reservar.",
   desactivado: "Inmueble desactivado: ya no sale en las reservas.",
   borrado: "Inmueble borrado de la lista (sus visitas siguen en el historial).",
+  "valoracion-borrada": "Solicitud borrada del todo. Si llegó aviso a Telegram, bórralo también allí a mano.",
+  "visita-borrada": "Visita borrada del todo (si estaba activa, el hueco queda libre). Si llegó aviso a Telegram, bórralo también allí a mano.",
+  "ya-borrada": "Eso ya estaba borrado.",
 };
+
+/** Botón de borrar datos personales (derecho de supresión), con confirmación. */
+function botonBorrar(accion, id, pregunta, ocultos = "") {
+  return `<form method="post" action="${esc(accion)}" class="borrar-datos" data-confirmar="${esc(pregunta)}">
+    <input type="hidden" name="id" value="${esc(id)}">${ocultos}
+    <button type="submit" class="boton pequeno peligro">Borrar datos</button>
+  </form>`;
+}
 
 function cabeceraPanel(activa, { avisos = [], mensaje = "", errores = [] }) {
   const nav = PESTANAS.map((p) => `<a href="/panel?vista=${p.id}"${p.id === activa ? ' aria-current="page" class="activa"' : ""}>${esc(p.texto)}</a>`).join("");
@@ -355,6 +368,7 @@ export function panelValoraciones({ valoraciones, total, ...extra }) {
   ${v.correo ? `<p>Correo: <a href="mailto:${esc(v.correo)}">${esc(v.correo)}</a></p>` : ""}
   ${v.comentario ? `<p class="comentario">${esc(v.comentario)}</p>` : ""}
   <p class="acciones">${enlacesContacto(v.telefono, textoWhatsappValoracion(v))}</p>
+  ${botonBorrar("/panel/valoraciones/borrar", v.id, `¿Borrar del todo la solicitud de ${v.nombre}? No se puede deshacer. Úsalo cuando el cliente pida que borres sus datos (descarga antes el CSV si lo necesitas).`)}
 </article>`).join("")
     : `<p>Todavía no hay solicitudes de valoración.</p>`;
   return pagina({
@@ -379,6 +393,7 @@ export function panelVisitas({ porDia, desde, hasta, ...extra }) {
       <input type="hidden" name="id" value="${esc(v.id)}"><input type="hidden" name="desde" value="${esc(desde)}">
       <button type="submit" class="boton pequeno peligro">Cancelar visita</button>
     </form>` : ""}
+    ${botonBorrar("/panel/visitas/borrar", v.id, `¿Borrar del todo la visita de ${v.nombre} (${v.fecha_hora.replace("T", " ")})? No se puede deshacer y no queda en el historial. Úsalo cuando el cliente pida que borres sus datos.`, `<input type="hidden" name="desde" value="${esc(desde)}">`)}
   </article>`).join("")}
 </section>`).join("")
     : `<p>No hay visitas entre el ${esc(etiquetaLarga(desde))} y el ${esc(etiquetaLarga(hasta))}.</p>`;

@@ -10,7 +10,7 @@
 //  Lo ÚNICO que Pau tiene que tocar aquí: el `id` de la base de datos D1,
 //  que le da `cf d1 create` (paso 4 del README). Las claves NO van aquí:
 //  van como secretos (PANEL_CLAVE, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
-//  TURNSTILE_SECRET).
+//  TURNSTILE_SECRET y, opcional, IP_SECRETO).
 // ============================================================================
 import { bindings, defineConfig } from "cf/config";
 
@@ -50,6 +50,10 @@ export default defineConfig({
 			// Teléfono del despacho para el botón «Escríbenos» cuando no hay
 			// huecos (9 cifras). Vacío = no se enseña.
 			TELEFONO_CONTACTO: bindings.text(""),
+			// Avisos de Telegram con datos mínimos (nombre de pila, qué quiere,
+			// tipo y zona; o inmueble, día y hora). Con "si" también llevan el
+			// teléfono. Nunca llevan el correo ni el comentario.
+			TELEGRAM_CON_TELEFONO: bindings.text("no"),
 		},
 	},
 });

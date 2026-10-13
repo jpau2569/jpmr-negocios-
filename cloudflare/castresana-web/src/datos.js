@@ -23,6 +23,16 @@ export async function sumaIntento(db, clave, ventanaS, ahoraMs) {
   return Number(fila?.cuenta || 0);
 }
 
+/**
+ * Devuelve un intento sumado con sumaIntento (mismo ahoraMs = misma ventana).
+ * Sirve para «reservar» el intento antes de hacer algo y devolverlo si al
+ * final no cuenta (una reserva que choca, una clave correcta).
+ */
+export async function restaIntento(db, clave, ventanaS, ahoraMs) {
+  const ventana = Math.floor(ahoraMs / 1000 / ventanaS) * ventanaS;
+  await db.prepare("UPDATE limites SET cuenta = cuenta - 1 WHERE clave = ? AND ventana = ? AND cuenta > 0").bind(clave, ventana).run();
+}
+
 export async function intentosEnVentana(db, clave, ventanaS, ahoraMs) {
   const ventana = Math.floor(ahoraMs / 1000 / ventanaS) * ventanaS;
   const fila = await db.prepare("SELECT cuenta FROM limites WHERE clave = ? AND ventana = ?").bind(clave, ventana).first();
@@ -42,6 +52,11 @@ export async function guardaValoracion(db, v, ahoraIso) {
     .bind(ahoraIso, v.nombre, v.telefono, v.correo, v.operacion, v.tipo, v.zona, v.metros ?? null, v.habitaciones ?? null, v.comentario, v.privacidad)
     .run();
   return r.meta?.last_row_id ?? null;
+}
+
+/** Derecho de supresión (RGPD): borra de verdad la solicitud. */
+export async function borraValoracion(db, id) {
+  return (await db.prepare("DELETE FROM valoraciones WHERE id = ?").bind(id).run()).meta?.changes || 0;
 }
 
 export async function listaValoraciones(db, limite = 300) {
@@ -147,6 +162,14 @@ export async function cancelaVisita(db, id, ahoraIso) {
   const r = await db.prepare("UPDATE visitas SET estado = 'cancelada', cancelada = ? WHERE id = ? AND estado = 'activa'")
     .bind(ahoraIso, id).run();
   return r.meta?.changes || 0;
+}
+
+/**
+ * Derecho de supresión (RGPD): borra la visita de verdad, no la cancela. Si
+ * estaba activa, el hueco queda libre.
+ */
+export async function borraVisita(db, id) {
+  return (await db.prepare("DELETE FROM visitas WHERE id = ?").bind(id).run()).meta?.changes || 0;
 }
 
 export async function creaBloqueo(db, b, ahoraIso) {

@@ -14,16 +14,16 @@
 //  el Worker entero con Node y una D1 simulada sobre SQLite.
 // ============================================================================
 import {
-  configVisitas, hoyEnMadrid, sumaDias, diasConHuecos, huecosLibres, compruebaHueco, esFecha, esHora, enMadrid,
+  configVisitas, hoyEnMadrid, sumaDias, diasConHuecos, huecosLibres, compruebaHueco, compruebaHoraBloqueo, esFecha, esHora, enMadrid,
 } from "./horario.js";
 import {
   validaValoracion, validaReserva, leeListaInmuebles, validaBloqueo, esReferencia, OPERACIONES, TIPOS, textoDe,
 } from "./validacion.js";
 import { aCsv } from "./csv.js";
 import {
-  COOKIE, LARGO_MINIMO_CLAVE, igualesSeguro, creaSesion, sesionValida, cabeceraCookie, cabeceraBorrarCookie, leeCookie, sha256Hex,
+  COOKIE, LARGO_MINIMO_CLAVE, igualesSeguro, creaSesion, sesionValida, cabeceraCookie, cabeceraBorrarCookie, leeCookie, hmacHex,
 } from "./sesion.js";
-import { avisaTelegram, textoValoracion, textoVisita } from "./telegram.js";
+import { avisaTelegram, textoValoracion, textoVisita, conTelefono } from "./telegram.js";
 import * as db from "./datos.js";
 import * as vistas from "./html.js";
 
@@ -32,7 +32,13 @@ export const LIMITE = {
   valoraPorHora: 5,
   visitasPorHora: 5,
   fallosLoginIp: 5,          // por IP en 15 minutos
-  fallosLoginTotal: 50,      // entre todas las IP en 15 minutos
+  // Entre todas las IP en 15 minutos. Es el freno contra quien prueba claves
+  // desde muchas IP a la vez, pero también es la forma de dejar a Pau fuera:
+  // basta con gastarlo. Con 200, y 5 por IP, hacen falta al menos 40 IP
+  // distintas cada 15 minutos para bloquearle; a la vez, 200 intentos cada
+  // 15 minutos (unos 19.000 al día) no sirven para adivinar una clave de 12
+  // caracteres o más. Si aun así se bloquea, el README explica qué hacer.
+  fallosLoginTotal: 200,
   ventanaLoginS: 900,
   cuerpoPublico: 16 * 1024,
   cuerpoPanel: 128 * 1024,
@@ -119,8 +125,27 @@ function compruebaOrigen(request, url) {
 }
 
 const ipDe = (request) => request.headers.get("cf-connecting-ip") || "sin-ip";
-// La IP no se guarda en claro: solo un resumen SHA-256 para contar envíos.
-const claveIp = async (prefijo, request) => `${prefijo}:${(await sha256Hex(`castresana-web|${ipDe(request)}`)).slice(0, 32)}`;
+
+// La IP no se guarda tal cual: se guarda un HMAC-SHA256 con una clave secreta.
+// Un SHA-256 con un prefijo fijo (lo de antes) se deshace probando todas las
+// IPv4, porque el prefijo está en el código, que es público. La clave sale
+// del secreto IP_SECRETO si existe o, si no, de PANEL_CLAVE (derivada con su
+// propia etiqueta, así no es la misma que firma las cookies). Cambiar la
+// clave del panel pone los contadores a cero, que no es ningún problema.
+// Sin ninguno de los dos (panel apagado) se usa una clave aleatoria de esta
+// instancia: los límites cuentan peor, pero nunca se guarda algo reversible.
+// Se crea la primera vez que hace falta: en Workers no se puede generar nada
+// aleatorio en el ámbito global, solo dentro de una petición.
+let claveIpTemporal = "";
+export function secretoIp(env) {
+  const propio = String(env.IP_SECRETO || "");
+  if (propio.length >= 16) return `castresana-web/ip/v1|propio|${propio}`;
+  const panel = String(env.PANEL_CLAVE || "");
+  if (panel) return `castresana-web/ip/v1|panel|${panel}`;
+  if (!claveIpTemporal) claveIpTemporal = Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, "0")).join("");
+  return `castresana-web/ip/v1|temporal|${claveIpTemporal}`;
+}
+const claveIp = async (prefijo, request, env) => `${prefijo}:${(await hmacHex(secretoIp(env), ipDe(request))).slice(0, 32)}`;
 
 function enSegundoPlano(ctx, promesa) {
   const p = Promise.resolve(promesa).catch((e) => console.warn("Tarea en segundo plano:", e?.message || e));
@@ -128,6 +153,11 @@ function enSegundoPlano(ctx, promesa) {
   return p;
 }
 
+/**
+ * Turnstile: además de «success», el token tiene que haberse resuelto en ESTA
+ * web (hostname). Si no, un token conseguido en otra página con la misma
+ * clave pública valdría aquí.
+ */
 async function compruebaTurnstile(env, token, request, hazFetch) {
   if (!turnstileActivo(env)) return true;
   if (!token || token.length > 2048) return false;
@@ -138,7 +168,7 @@ async function compruebaTurnstile(env, token, request, hazFetch) {
       body: JSON.stringify({ secret: env.TURNSTILE_SECRET, response: token, remoteip: ipDe(request) }),
     });
     const j = await r.json();
-    return j?.success === true;
+    return j?.success === true && typeof j.hostname === "string" && j.hostname.toLowerCase() === new URL(request.url).hostname.toLowerCase();
   } catch {
     return false;
   }
@@ -201,13 +231,13 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
         return html(entorno, vistas.paginaValora({ valores: datos, errores: { turnstile: "No hemos podido comprobar que no eres un robot. Vuelve a intentarlo." }, sitekey }), 400);
       }
       const ahora = reloj();
-      const cuenta = await db.sumaIntento(entorno.DB, await claveIp("valora", req), 3600, ahora);
+      const cuenta = await db.sumaIntento(entorno.DB, await claveIp("valora", req, entorno), 3600, ahora);
       if (cuenta > LIMITE.valoraPorHora) {
         return html(entorno, vistas.paginaMensaje({ titulo: "Demasiados envíos", texto: "Has enviado varias solicitudes en poco tiempo. Inténtalo dentro de una hora o llámanos." }), 429);
       }
       await db.guardaValoracion(entorno.DB, r.valor, new Date(ahora).toISOString());
       enSegundoPlano(contexto, db.limpiaLimites(entorno.DB, ahora));
-      enSegundoPlano(contexto, avisaTelegram(entorno, textoValoracion(r.valor), hazFetch));
+      enSegundoPlano(contexto, avisaTelegram(entorno, textoValoracion(r.valor, { telefono: conTelefono(entorno) }), hazFetch));
       return html(entorno, vistas.paginaValoraGracias(r.valor));
     }
 
@@ -259,8 +289,20 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
       const fecha = String(datos.fecha || String(datos.fecha_hora || "").slice(0, 10));
       const repinta = (extra, estado) => pintaVisitas(entorno, est, { referencia, fecha, valores: datos, ...extra }, estado);
 
+      // Límite por IP (5 por hora). Cuentan los intentos que llegan a guardarse
+      // y los que fallan por validación (lo típico de un robot que prueba).
+      // NO cuentan los que chocan con otra reserva (409): la persona no tiene
+      // la culpa de que alguien cogiera esa hora antes, y si contaran, quien
+      // llega tarde dos o tres veces se quedaría sin poder reservar.
+      // El intento se suma ANTES de guardar (sumaIntento es atómico, así
+      // aguanta peticiones en paralelo) y se devuelve si al final choca.
+      const claveVisita = await claveIp("visita", req, entorno);
+      const demasiadas = () => html(entorno, vistas.paginaMensaje({ titulo: "Demasiadas reservas", texto: "Has hecho varias reservas en poco tiempo. Inténtalo dentro de una hora o llámanos.", enlace: "/visitas" }), 429);
       const r = validaReserva(datos);
-      if (!r.ok) return repinta({ errores: r.errores }, 422);
+      if (!r.ok) {
+        if ((await db.sumaIntento(entorno.DB, claveVisita, 3600, est.ahoraMs)) > LIMITE.visitasPorHora) return demasiadas();
+        return repinta({ errores: r.errores }, 422);
+      }
       const inm = est.inmuebles.find((i) => i.referencia.toLowerCase() === r.valor.referencia.toLowerCase());
       if (!inm) return repinta({ errores: { referencia: "Ese inmueble ya no tiene visitas abiertas. Elige otro." } }, 409);
       const hueco = compruebaHueco(r.valor.fechaHora, { ahoraMs: est.ahoraMs, cfg: est.cfg, bloqueos: est.bloqueos });
@@ -268,13 +310,12 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
       if (!(await compruebaTurnstile(entorno, datos["cf-turnstile-response"], req, hazFetch))) {
         return repinta({ errores: { turnstile: "No hemos podido comprobar que no eres un robot. Vuelve a intentarlo." } }, 400);
       }
-      const cuenta = await db.sumaIntento(entorno.DB, await claveIp("visita", req), 3600, est.ahoraMs);
-      if (cuenta > LIMITE.visitasPorHora) {
-        return html(entorno, vistas.paginaMensaje({ titulo: "Demasiadas reservas", texto: "Has hecho varias reservas en poco tiempo. Inténtalo dentro de una hora o llámanos.", enlace: "/visitas" }), 429);
-      }
+      if ((await db.sumaIntento(entorno.DB, claveVisita, 3600, est.ahoraMs)) > LIMITE.visitasPorHora) return demasiadas();
+      const devuelve = () => db.restaIntento(entorno.DB, claveVisita, 3600, est.ahoraMs);
       const ocupada = "Esa hora acaba de reservarla otra persona. Elige otra, por favor.";
       // 1) Comprobación amable (para dar un mensaje claro)…
       if (await db.hayVisitaActiva(entorno.DB, r.valor.fechaHora)) {
+        await devuelve();
         est.ocupados.add(r.valor.fechaHora);
         return repinta({ aviso: ocupada, valores: { ...datos, fecha_hora: "" } }, 409);
       }
@@ -282,11 +323,12 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
       const visita = { ...r.valor, referencia: inm.referencia, inicioUtc: new Date(hueco.utc).toISOString() };
       const res = await db.reservaVisita(entorno.DB, visita, new Date(est.ahoraMs).toISOString());
       if (!res.ok) {
+        await devuelve();
         est.ocupados.add(r.valor.fechaHora);
         return repinta({ aviso: res.motivo === "choque" ? ocupada : "Esa hora ya no está disponible. Elige otra, por favor.", valores: { ...datos, fecha_hora: "" } }, 409);
       }
       enSegundoPlano(contexto, db.limpiaLimites(entorno.DB, est.ahoraMs));
-      enSegundoPlano(contexto, avisaTelegram(entorno, textoVisita({ ...visita, titulo: inm.titulo }), hazFetch));
+      enSegundoPlano(contexto, avisaTelegram(entorno, textoVisita(visita, { telefono: conTelefono(entorno) }), hazFetch));
       return html(entorno, vistas.paginaVisitaReservada(visita));
     }
 
@@ -304,22 +346,27 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
       if (r === "/panel/entrar") {
         if (met !== "POST") return redirige(entorno, "/panel");
         compruebaOrigen(req, u);
-        const claveIpLogin = await claveIp("login", req);
-        const [fallosIp, fallosTodos] = await Promise.all([
-          db.intentosEnVentana(entorno.DB, claveIpLogin, LIMITE.ventanaLoginS, ahora),
-          db.intentosEnVentana(entorno.DB, "login:todos", LIMITE.ventanaLoginS, ahora),
-        ]);
-        if (fallosIp >= LIMITE.fallosLoginIp || fallosTodos >= LIMITE.fallosLoginTotal) {
-          return html(entorno, vistas.paginaEntrar({ error: "Demasiados intentos fallidos. Espera 15 minutos y vuelve a probar." }), 429, { privada: true });
-        }
         const datos = await leeFormulario(req, 4096);
-        if (await igualesSeguro(String(datos.clave || ""), clave)) {
-          return redirige(entorno, "/panel", { cookie: cabeceraCookie(await creaSesion(clave, ahora)) });
-        }
-        await Promise.all([
+        // PRIMERO se suma el intento y DESPUÉS se decide. Si se mirara el
+        // contador, se comparara la clave y luego se sumara, 40 peticiones en
+        // paralelo leerían todas «0 fallos» y se probarían las 40 claves.
+        // sumaIntento es un único INSERT … ON CONFLICT … RETURNING: atómico.
+        const claveIpLogin = await claveIp("login", req, entorno);
+        const [nIp, nTodos] = await Promise.all([
           db.sumaIntento(entorno.DB, claveIpLogin, LIMITE.ventanaLoginS, ahora),
           db.sumaIntento(entorno.DB, "login:todos", LIMITE.ventanaLoginS, ahora),
         ]);
+        if (nIp > LIMITE.fallosLoginIp || nTodos > LIMITE.fallosLoginTotal) {
+          return html(entorno, vistas.paginaEntrar({ error: "Demasiados intentos fallidos. Espera 15 minutos y vuelve a probar." }), 429, { privada: true });
+        }
+        if (await igualesSeguro(String(datos.clave || ""), clave)) {
+          // Con la clave buena el intento no cuenta como fallo: se devuelve.
+          await Promise.all([
+            db.restaIntento(entorno.DB, claveIpLogin, LIMITE.ventanaLoginS, ahora),
+            db.restaIntento(entorno.DB, "login:todos", LIMITE.ventanaLoginS, ahora),
+          ]);
+          return redirige(entorno, "/panel", { cookie: cabeceraCookie(await creaSesion(clave, ahora)) });
+        }
         return html(entorno, vistas.paginaEntrar({ error: "Clave incorrecta." }), 401, { privada: true });
       }
 
@@ -348,8 +395,24 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
         const desde = esFecha(datos.desde) ? `&desde=${datos.desde}` : "";
         return redirige(entorno, `/panel?vista=visitas&ok=${n ? "cancelada" : "ya-cancelada"}${desde}`);
       }
+      // Derecho de supresión (RGPD): borrar de verdad, no cancelar.
+      if (r === "/panel/visitas/borrar") {
+        if (!Number.isSafeInteger(id) || id <= 0) throw new ErrorHttp(400, "Visita no válida.");
+        const n = await db.borraVisita(entorno.DB, id);
+        const desde = esFecha(datos.desde) ? `&desde=${datos.desde}` : "";
+        return redirige(entorno, `/panel?vista=visitas&ok=${n ? "visita-borrada" : "ya-borrada"}${desde}`);
+      }
+      if (r === "/panel/valoraciones/borrar") {
+        if (!Number.isSafeInteger(id) || id <= 0) throw new ErrorHttp(400, "Valoración no válida.");
+        const n = await db.borraValoracion(entorno.DB, id);
+        return redirige(entorno, `/panel?vista=valoraciones&ok=${n ? "valoracion-borrada" : "ya-borrada"}`);
+      }
       if (r === "/panel/bloqueos/nuevo") {
         const b = validaBloqueo(datos, esFecha, esHora);
+        if (b.ok && b.valor.hora) {
+          const h = compruebaHoraBloqueo(b.valor.fecha, b.valor.hora, configVisitas(entorno));
+          if (!h.ok) { b.ok = false; b.errores.push(h.motivo); }
+        }
         if (!b.ok) return panelVista(entorno, new URL("/panel?vista=bloqueos", u), ahora, { errores: b.errores }, 422);
         const creado = await db.creaBloqueo(entorno.DB, b.valor, iso);
         let clave2 = creado ? "bloqueado" : "bloqueo-repetido";

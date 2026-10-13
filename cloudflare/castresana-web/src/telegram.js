@@ -6,41 +6,48 @@
 //  Se manda TEXTO PLANO (sin parse_mode), así nada de lo que escriba el
 //  cliente puede inyectar formato ni enlaces disfrazados.
 //  Al cliente no se le envía nada automático.
+//
+//  DATOS MÍNIMOS: Telegram es un tercero y los mensajes se quedan en el móvil
+//  de Pau aunque luego se borren del panel. Por eso solo viaja lo justo para
+//  saber que hay algo nuevo: nombre de pila, qué quiere, tipo y zona (o, en
+//  las visitas, inmueble, día y hora). Nunca el correo ni el comentario. El
+//  teléfono solo si Pau lo pide con la variable TELEGRAM_CON_TELEFONO=si.
 // ============================================================================
 import { TIPOS, OPERACIONES, textoDe, telefonoBonito } from "./validacion.js";
 import { etiquetaLarga } from "./horario.js";
 
-const MAX = 3500; // Telegram admite 4096; dejamos margen
+const MAX = 1000; // Telegram admite 4096; con datos mínimos sobra
 
 const recorta = (t, n) => (t.length > n ? t.slice(0, n - 1) + "…" : t);
 
-export function textoValoracion(v) {
+/** Solo el nombre de pila (la primera palabra). */
+export const nombreDePila = (nombre) => recorta(String(nombre || "").trim().split(/\s+/)[0] || "", 40);
+
+/** ¿Pau ha pedido que el teléfono vaya en el aviso? Solo con «si» exacto (o «sí»). */
+export const conTelefono = (env) => ["si", "sí"].includes(String(env?.TELEGRAM_CON_TELEFONO || "").trim().toLowerCase());
+
+export function textoValoracion(v, { telefono = false } = {}) {
   return recorta([
     "🏠 Nueva solicitud de VALORACIÓN",
-    `Nombre: ${v.nombre}`,
-    `Teléfono: ${telefonoBonito(v.telefono)}`,
-    v.correo ? `Correo: ${v.correo}` : null,
+    `Nombre: ${nombreDePila(v.nombre)}`,
     `Quiere: ${textoDe(OPERACIONES, v.operacion).toLowerCase()} · ${textoDe(TIPOS, v.tipo)}`,
-    `Zona: ${v.zona}`,
-    v.metros ? `Metros: ${v.metros} m²` : null,
-    v.habitaciones !== null && v.habitaciones !== undefined ? `Habitaciones: ${v.habitaciones}` : null,
-    v.comentario ? `Comentario: ${recorta(v.comentario, 1200)}` : null,
+    `Zona: ${recorta(String(v.zona || ""), 120)}`,
+    telefono ? `Teléfono: ${telefonoBonito(v.telefono)}` : null,
     "",
-    "Está en el panel → Valoraciones.",
+    "Detalles en el panel.",
   ].filter((l) => l !== null).join("\n"), MAX);
 }
 
-export function textoVisita(v) {
+export function textoVisita(v, { telefono = false } = {}) {
   const [fecha, hora] = v.fechaHora.split("T");
   return recorta([
     "📅 Nueva VISITA reservada",
+    `Nombre: ${nombreDePila(v.nombre)}`,
+    `Inmueble: ${v.referencia}`,
     `${etiquetaLarga(fecha)} a las ${hora}`,
-    `Inmueble: ${v.referencia}${v.titulo ? ` · ${v.titulo}` : ""}`,
-    `Nombre: ${v.nombre}`,
-    `Teléfono: ${telefonoBonito(v.telefono)}`,
-    v.comentario ? `Comentario: ${recorta(v.comentario, 600)}` : null,
+    telefono ? `Teléfono: ${telefonoBonito(v.telefono)}` : null,
     "",
-    "Está en el panel → Visitas.",
+    "Detalles en el panel.",
   ].filter((l) => l !== null).join("\n"), MAX);
 }
 

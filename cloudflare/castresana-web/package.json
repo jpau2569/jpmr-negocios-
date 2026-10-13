@@ -6,8 +6,8 @@
   "scripts": {
     "probar": "node herramientas/probar-en-local.mjs",
     "dev": "cf dev",
-    "comprobar": "cf deploy --dry-run",
-    "publicar": "cf deploy"
+    "comprobar": "cf deploy --dry-run --no-provision",
+    "publicar": "cf deploy --no-provision"
   },
   "engines": {
     "node": ">=22.18"

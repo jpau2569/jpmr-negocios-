@@ -100,6 +100,9 @@ textarea { resize: vertical; min-height: 96px; }
 .boton.peligro { color: var(--blanco); background: var(--rojo); border-color: var(--rojo); }
 .boton.whatsapp { color: var(--blanco); background: #11734b; border-color: #11734b; }
 .boton.enviando { opacity: .7; }
+/* Borrar datos (derecho de supresión): rojo de contorno, para no confundirlo con «Cancelar visita». */
+.borrar-datos .boton { color: var(--rojo); background: var(--blanco); border-color: var(--rojo); }
+.borrar-datos .boton:hover { background: var(--rojo-fondo); }
 
 /* ---- Avisos ---- */
 .aviso { background: var(--dorado-claro); border-left: 5px solid var(--dorado); border-radius: 8px; padding: .75rem 1rem; margin: 1rem 0; }
@@ -136,7 +139,9 @@ textarea { resize: vertical; min-height: 96px; }
 .ficha h2 { margin: 0; font-size: 1.1rem; }
 .ficha p { margin: .35rem 0; }
 .ficha .fecha { color: var(--suave); font-size: .9rem; margin: 0; }
-.ficha.cancelada { opacity: .65; border-left-color: #8a8f98; }
+/* La opacidad solo al contenido: el botón «Borrar datos» mantiene su contraste. */
+.ficha.cancelada { border-left-color: #8a8f98; }
+.ficha.cancelada > :not(form) { opacity: .65; }
 .comentario { white-space: pre-line; color: var(--suave); }
 .acciones { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .ficha form { margin-top: .5rem; }
