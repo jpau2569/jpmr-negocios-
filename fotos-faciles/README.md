@@ -166,6 +166,10 @@ originales**: no los copia, no los mueve y no los renombra.
   ngrok o Tailscale Funnel), pon su dominio en Ajustes → *Dominio propio para enlaces fuera de casa*
   y los enlaces se generarán también con esa dirección, para mandarlos por WhatsApp.
   **Las fotos las sigue sirviendo tu PC**: no se suben a ninguna nube.
+  Lo que llega por un túnel trae cabeceras de proxy (`cf-connecting-ip`, `x-forwarded-for`…) y **no cuenta
+  como «el propio ordenador»**: pide token o PIN como cualquier otro móvil. Antes pasaba sin PIN, porque el
+  túnel se conecta desde `localhost`. Aun así, comparte solo enlaces de álbum y cierra el túnel al acabar.
+  Para una demo rápida: `cloudflare/link-temporal.bat` (ver `cloudflare/castresana-web/README.md`, sección 7).
 
 Si no configuras el túnel, la app te lo dice claramente en vez de darte un enlace que no funcionaría.
 

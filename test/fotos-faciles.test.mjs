@@ -265,6 +265,13 @@ console.log("\n🔐 Seguridad");
   const propia = { socket: { remoteAddress: "127.0.0.1" }, headers: {} };
   check("desde la red hace falta token", !s.autorizada(falsa, new URL("http://x/api/estado")));
   check("desde el propio ordenador no hace falta", s.autorizada(propia, new URL("http://x/api/estado")));
+  // Un túnel (cloudflared tunnel --url) llega desde 127.0.0.1 pero viene de internet.
+  const tunel = { socket: { remoteAddress: "127.0.0.1" }, headers: { "cf-connecting-ip": "203.0.113.7", "cf-ray": "x" } };
+  const proxy = { socket: { remoteAddress: "::1" }, headers: { "x-forwarded-for": "203.0.113.7" } };
+  check("lo que entra por un túnel no cuenta como el propio ordenador",
+    !s.esLocal(tunel) && !s.autorizada(tunel, new URL("http://x/api/estado")) && !s.autorizada(proxy, new URL("http://x/api/estado")));
+  check("por el túnel sí entra con el token del QR",
+    s.autorizada({ ...tunel, headers: { ...tunel.headers, "x-fotos-token": s.token } }, new URL("http://x/api/estado")));
   check("con el token del QR entra",
     s.autorizada({ socket: { remoteAddress: "192.168.1.99" }, headers: { "x-fotos-token": s.token } }, new URL("http://x/api/estado")));
 

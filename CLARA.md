@@ -154,6 +154,15 @@ Después, en el chat de Clara: pulsa **🧠 Memoria**, escribe tu **clave de sin
 - **`package.json`** — añade la dependencia `@anthropic-ai/sdk` (Vercel la instala automáticamente al desplegar).
 - **`vercel.json`** — amplía el tiempo máximo de la función a 60 segundos (las búsquedas web y respuestas largas tardan).
 
+## Cloudflare: «Valora tu piso» y reservas de visitas
+
+Los proyectos 1 y 2 de la skill `cloudflare-proyectos` ya están hechos en `cloudflare/castresana-web/`. Es un Worker con D1: `/valora`, `/visitas` y `/panel`. Está probado en local y **todavía no está publicado**.
+- **Para publicarlo:** Pau lo hace desde su PC con el CLI `cf`, siguiendo `cloudflare/castresana-web/README.md`. **Cada paso que toca Cloudflare, con su permiso y solo con lo incluido en los 5 USD/mes.**
+- **Para verlo sin Cloudflare:** `node cloudflare/castresana-web/herramientas/probar-en-local.mjs` → http://localhost:8788.
+- **Secretos:** `PANEL_CLAVE` (obligatorio, de 12 caracteres o más) y, opcionales, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` y `TURNSTILE_SECRET` (este último con la variable `TURNSTILE_SITEKEY`).
+- **Comprobar que va:** el propio panel dice qué falta.
+- **Link temporal para enseñar una demo:** `cloudflare/link-temporal.bat` (Quick Tunnel, sin cuenta; se apaga al cerrar la ventana).
+
 ## Configuración (dos claves)
 
 En Vercel: **Project → Settings → Environment Variables**, añade estas dos variables y luego **redespliega** (**Deployments → Redeploy**):

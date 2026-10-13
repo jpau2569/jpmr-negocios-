@@ -14,6 +14,9 @@ import crypto from "node:crypto";
 const MAX_INTENTOS = 6;
 const VENTANA_MS = 60_000;
 const CASTIGO_MS = 120_000;
+// Cabeceras que pone un proxy o un túnel (Cloudflare añade cf-connecting-ip y
+// cf-ray; ngrok y otros, x-forwarded-for). Node las da en minúsculas.
+const CABECERAS_PROXY = ["cf-connecting-ip", "cf-ray", "x-forwarded-for", "forwarded", "x-real-ip", "cdn-loop"];
 
 export class Seguridad {
   /**
@@ -58,6 +61,12 @@ export class Seguridad {
   }
 
   esLocal(req) {
+    // Un túnel (cloudflared, ngrok…) se conecta desde el propio ordenador, así
+    // que su tráfico llega desde 127.0.0.1 aunque venga de internet. Si la
+    // petición trae cabeceras de proxy, NO es del propio PC: tiene que entrar
+    // con token o PIN como cualquier otro. Esto solo quita privilegios.
+    const h = req.headers || {};
+    if (CABECERAS_PROXY.some((c) => h[c] !== undefined)) return false;
     const ip = String(req.socket?.remoteAddress || "");
     return ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
   }
