@@ -240,7 +240,7 @@ Sirve para que un cliente vea en su móvil algo que tienes en tu PC, sin publica
 - En Windows no se actualiza solo: de vez en cuando, vuelve a instalar la última versión.
 
 **Usarlo:**
-1. Doble clic en `cloudflare/link-temporal.bat`.
+1. Doble clic en `cloudflare/link-temporal.bat` (en **Mac**, `cloudflare/probar-en-mac.command`, que arranca la app y el link a la vez).
 2. Escribe el puerto de lo que quieres enseñar. Solo admite cifras (de 1 a 65535, sin cero delante); cualquier otra cosa la rechaza sin ejecutar nada.
 3. Copia la dirección `https://….trycloudflare.com` que sale y mándasela al cliente.
 4. Cierra la ventana para apagarlo.
