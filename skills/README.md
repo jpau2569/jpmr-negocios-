@@ -63,4 +63,5 @@ Se combinan así: la skill propia decide **qué** se escribe (por ejemplo, `docu
 | `acta-y-tareas` | De una reunión, llamada, nota de voz o hilo de mensajes a acta con tareas, responsables y fechas. |
 | `plan-semanal` | Organizar el día o la semana con prioridades reales y bloques de tiempo. |
 | `presupuesto-servicios` | Presupuesto u hoja de encargo; nunca inventa precios y el IVA lo calcula con `calcular`. |
+| `cloudflare-proyectos` | Prompts listos para Claude Code con el CLI `cf`: «valora tu piso», reservas de visitas, links cortos, lista de espera, resumen diario y link temporal. Siempre con permiso de Pau y dentro de su plan de 5 USD/mes. |
 | `mejora-continua` | Detecta tareas que se repiten y propone crear o mejorar una skill (con `crear_skill`) o guardar una preferencia (con `recordar`). No cambia el código de Clara. |
