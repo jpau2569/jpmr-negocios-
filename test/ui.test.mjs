@@ -44,12 +44,14 @@ const page = await browser.newPage();
 let RESPUESTA =
   "¡Hecho, Pau! La rentabilidad **bruta** es del `7,96%`. ✅\n\n```html\n<!doctype html><html><body><h1>Mini ebook</h1></body></html>\n```";
 const peticiones = [];
+let EVENTOS_EXTRA = []; // p. ej. la ficha de preparar_archivo
 await page.route("**/api/clara", async (route) => {
   peticiones.push(route.request().postDataJSON());
   await route.fulfill({
     contentType: "text/event-stream",
     body:
       'data: {"estado":"🧮 Calculando…"}\n\n' +
+      EVENTOS_EXTRA.map((e) => `data: ${JSON.stringify(e)}\n\n`).join("") +
       `data: ${JSON.stringify({ t: RESPUESTA.slice(0, 20) })}\n\n` +
       `data: ${JSON.stringify({ t: RESPUESTA.slice(20) })}\n\n` +
       `data: ${JSON.stringify({ done: true, reply: RESPUESTA })}\n\n`,
@@ -165,6 +167,105 @@ try {
     check(`${ancho} px: sin scroll lateral y ningún botón fuera de la pantalla`, m.doc <= m.vw && m.main <= 0 && m.fuera === 0, JSON.stringify(m));
   }
   await page.setViewportSize({ width: 1280, height: 720 });
+
+  console.log("\n— 📄 archivos de oficina (preparar_archivo) —");
+  {
+    const FICHA = { formato: "docx", titulo: "Carta de visita a la propietaria de Uría 12, 3ºB con un título largo de verdad", instrucciones: "Carta a la propietaria para confirmar la visita del martes.", caduca: Date.now() + 864e5, firma: "f".repeat(64) };
+    const pedidosArchivo = [];
+    let MODO_ARCHIVO = "normal"; // normal | 401 | 504 | largo
+    const NOMBRE_LARGO = "a".repeat(45) + ".docx";
+    await page.route("**/api/clara-archivo", async (route) => {
+      const cuerpo = route.request().postDataJSON();
+      pedidosArchivo.push(cuerpo);
+      if (MODO_ARCHIVO === "401") {
+        await route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "Para crear archivos hace falta tu clave de sincronización." }) });
+        return;
+      }
+      if (MODO_ARCHIVO === "504") {
+        await route.fulfill({ status: 504, contentType: "text/plain", body: "An error occurred with your deployment\n\nFUNCTION_INVOCATION_TIMEOUT" });
+        return;
+      }
+      const r = MODO_ARCHIVO === "largo"
+        ? { listo: true, intento: 1, max: 6, archivo: { nombre: NOMBRE_LARGO, formato: "docx", bytes: 18432, url: "/api/clara-archivo?descargar=file_2&e=1&f=" + "b".repeat(64) } }
+        : pedidosArchivo.length === 1
+        ? { pendiente: true, intento: 1, max: 6, estado: "ZXN0YWRv", firmaEstado: "e".repeat(64) }
+        : { listo: true, intento: 2, max: 6, archivo: { nombre: "carta-de-visita.docx", formato: "docx", bytes: 18432, url: "/api/clara-archivo?descargar=file_1&e=1&f=" + "a".repeat(64) } };
+      await new Promise((ok) => setTimeout(ok, 400)); // deja ver la barra de estado
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify(r) });
+    });
+    // La clave de sincronización ya guardada para la 🧠 Memoria viaja también aquí.
+    await page.evaluate(() => localStorage.setItem("clara_sync_v1", "clave-de-pau"));
+    await page.setViewportSize({ width: 360, height: 760 });
+    RESPUESTA = "Te he preparado la carta: pulsa la tarjeta para crear el Word.";
+    EVENTOS_EXTRA = [{ estado: "📄 Preparando el archivo…" }, { archivo: FICHA }];
+    await page.fill("#input", "Hazme la carta en Word");
+    await page.press("#input", "Enter");
+    await page.waitForSelector(".msg.clara .archivo .acrear");
+    EVENTOS_EXTRA = [];
+    const boton = page.locator(".msg.clara .archivo .acrear").last();
+    check("aparece la tarjeta «📄 Crear Word: …»", (await boton.textContent()).startsWith("📄 Crear Word: Carta de visita"));
+    const alto = await boton.evaluate((b) => b.getBoundingClientRect().height);
+    check("el botón de la tarjeta mide 44 px o más", alto >= 44, String(alto));
+    await boton.click();
+    await page.waitForFunction(() => (document.querySelector(".archivo .aestado")?.textContent || "") === "Creando el Word… (suele tardar 1-3 min)");
+    check("primer tramo: «Creando el Word… (suele tardar 1-3 min)», sin «parte»", true);
+    await page.waitForFunction(() => (document.querySelector(".archivo .aestado")?.textContent || "") === "Creando el Word… parte 2 (suele tardar 1-3 min)");
+    check("segundo tramo: «Creando el Word… parte 2 (suele tardar 1-3 min)»", true);
+    await page.waitForSelector(".msg.clara .archivo a.adl");
+    const enlace = page.locator(".msg.clara .archivo a.adl").last();
+    check("tras pendiente → listo sale «⬇ Descargar Word»", (await enlace.textContent()) === "⬇ Descargar Word");
+    check("el enlace apunta a la descarga firmada", (await enlace.getAttribute("href")).startsWith("/api/clara-archivo?descargar=file_1&e="));
+    check("se llamó dos veces y la segunda con el estado firmado", pedidosArchivo.length === 2 && pedidosArchivo[1].estado === "ZXN0YWRv" && pedidosArchivo[1].firmaEstado === "e".repeat(64) && pedidosArchivo[1].ficha.firma === FICHA.firma);
+    check("cada llamada lleva la clave de sincronización de la 🧠 Memoria", pedidosArchivo.every((p) => p.clave === "clave-de-pau"), JSON.stringify(pedidosArchivo.map((p) => p.clave)));
+    check("se enseña el nombre y el tamaño", (await page.locator(".msg.clara .archivo .aestado").last().textContent()).includes("carta-de-visita.docx · 18 KB"));
+    const m360 = await page.evaluate(() => {
+      const main = document.querySelector("main");
+      const fuera = [...document.querySelectorAll(".archivo, .archivo a, .archivo button")].filter((e) => { const r = e.getBoundingClientRect(); return r.right > innerWidth + 0.5 || r.left < -0.5; }).length;
+      return { doc: document.documentElement.scrollWidth, vw: innerWidth, main: main.scrollWidth - main.clientWidth, fuera };
+    });
+    check("360 px: la tarjeta no provoca scroll lateral", m360.doc <= m360.vw && m360.main <= 0 && m360.fuera === 0, JSON.stringify(m360));
+    await page.reload();
+    await page.waitForSelector(".msg.clara .archivo a.adl");
+    check("tras recargar sigue el botón de descarga (sin volver a crear)", (await page.locator(".msg.clara .archivo .acrear").count()) === 0);
+    await page.fill("#input", "gracias");
+    await page.press("#input", "Enter");
+    await page.waitForTimeout(400);
+    check("las fichas no viajan de vuelta en el historial del chat", !JSON.stringify(peticiones.at(-1)?.messages || []).includes(FICHA.firma));
+
+    // Segunda tarjeta: sin clave en este dispositivo (con nube → 401), 504 y nombre muy largo.
+    const FICHA2 = { ...FICHA, titulo: "Informe", firma: "9".repeat(64) };
+    await page.evaluate(() => localStorage.removeItem("clara_sync_v1"));
+    MODO_ARCHIVO = "401";
+    RESPUESTA = "Pulsa la tarjeta para crear el informe.";
+    EVENTOS_EXTRA = [{ archivo: FICHA2 }];
+    await page.fill("#input", "Hazme el informe en Word");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => [...document.querySelectorAll(".msg.clara")].at(-1).querySelector(".archivo .acrear"));
+    EVENTOS_EXTRA = [];
+    const tarjeta2 = page.locator(".msg.clara").last().locator(".archivo");
+    await tarjeta2.locator(".acrear").click();
+    await page.waitForFunction(() => [...document.querySelectorAll(".msg.clara")].at(-1).querySelector(".archivo .aestado.mal"));
+    const sinClave = await tarjeta2.locator(".aestado").textContent();
+    check("sin clave en el dispositivo → mensaje claro de ponerla en 🧠 Memoria", sinClave.includes("no está puesta tu clave de sincronización") && sinClave.includes("🧠 Memoria"), sinClave);
+    check("tras el error, el botón queda para reintentar", (await tarjeta2.locator(".acrear").textContent()).startsWith("↻ Reintentar") && !(await tarjeta2.locator(".acrear").isDisabled()));
+    MODO_ARCHIVO = "504";
+    await tarjeta2.locator(".acrear").click();
+    await page.waitForFunction(() => /tardó demasiado/.test([...document.querySelectorAll(".msg.clara")].at(-1).querySelector(".archivo .aestado")?.textContent || ""));
+    check("504 → «El servidor tardó demasiado; vuelve a pulsar»", (await tarjeta2.locator(".aestado").textContent()) === "❌ El servidor tardó demasiado; vuelve a pulsar.");
+    MODO_ARCHIVO = "largo";
+    await page.evaluate(() => localStorage.setItem("clara_sync_v1", "clave-de-pau"));
+    await tarjeta2.locator(".acrear").click();
+    await tarjeta2.locator("a.adl").waitFor();
+    check("con la clave puesta, viaja en la petición", pedidosArchivo.at(-1).clave === "clave-de-pau");
+    const mLargo = await page.evaluate(() => {
+      const main = document.querySelector("main");
+      const est = [...document.querySelectorAll(".msg.clara")].at(-1).querySelector(".archivo .aestado");
+      const card = est.closest(".archivo").getBoundingClientRect();
+      return { doc: document.documentElement.scrollWidth, vw: innerWidth, main: main.scrollWidth - main.clientWidth, est: est.scrollWidth - est.clientWidth, dentro: est.getBoundingClientRect().right <= card.right + 0.5, texto: est.textContent };
+    });
+    check("360 px: un nombre de 45 «a» no da scroll lateral (overflow-wrap:anywhere)", mLargo.texto.includes(NOMBRE_LARGO) && mLargo.doc <= mLargo.vw && mLargo.main <= 0 && mLargo.est <= 0 && mLargo.dentro, JSON.stringify(mLargo));
+    await page.setViewportSize({ width: 1280, height: 720 });
+  }
 
   console.log("\n— landing del ebook (ebook.html) —");
   let leadRecibido = null;

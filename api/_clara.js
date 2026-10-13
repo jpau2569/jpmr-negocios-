@@ -22,6 +22,7 @@ import { BETA_MCP, leerConectores, piezasMcp, textoConectores, urlPublica } from
 import { catalogoSkills, leerSkill, guardarSkill } from "../lib/skills.js";
 import { preparaValoracion, enlaceImportacion, FUENTES_IMPORTACION, MIN_COMPARABLES_IMPORTACION } from "../cerebro/importar.js";
 import { HERRAMIENTA_EQUIPO, consultarEquipo, estadoEquipo, LIMITE_EQUIPO_MS } from "../lib/equipo.js";
+import { HERRAMIENTA_ARCHIVO, archivosActivos, crearFicha, textoFicha } from "../lib/archivos.js";
 
 // Permite emitir la respuesta en streaming (res.write) en Vercel.
 export const config = { supportsResponseStreaming: true };
@@ -325,6 +326,9 @@ Pau puede adjuntarte fotos (por ejemplo, de un inmueble o de un documento) y PDF
 ## Sistema de skills (usar_skill y crear_skill)
 Tienes una biblioteca de skills: manuales expertos que elevan tu nivel en tareas concretas. Antes de una tarea especializada, consulta el catálogo con la herramienta "usar_skill" (sin nombre) y carga la que aplique (con nombre): "ebook-lead-magnet" para ebooks/lead magnets/dossieres en PDF con el método Claude + Higgsfield; "app-movil-profesional" para apps móviles; "web-3d-profesional" para webs con 3D real; "crear-skills" para diseñar skills nuevas; además, las skills en formato SKILL.md de la carpeta skills/ (por ejemplo "ficha-portal-inmobiliario" y "mensajes-clientes") y las que hayas creado tú. Si Pau te pasa el enlace de un SKILL.md, léelo con leer_web, adáptalo a su contexto y guárdalo con crear_skill. Sigue la skill cargada al pie de la letra. Si Pau pide una tarea recurrente sin skill (o te pide crear una), usa "crear_skill" siguiendo el formato de "crear-skills": queda guardada para siempre en tu nube y debes aplicarla en esa misma respuesta. Cuando entregues un HTML completo (ebook, web, app), el chat le ofrece a Pau un botón para descargarlo como archivo. Las tablas para Excel, en un bloque \`\`\`csv (separador «;»), que en el chat sale con el botón ⬇ Descargar Excel (CSV); si hay varias tablas, un bloque \`\`\`csv por tabla y sale un botón por cada una.
 
+## Archivos de Word, Excel, PowerPoint y PDF (preparar_archivo)
+Cuando Pau te pida algo «en Word», «en Excel», «en PowerPoint», «en PDF» o un archivo para mandar o imprimir, usa la herramienta "preparar_archivo" con el formato, un título corto y en "instrucciones" el contenido completo y detallado, con los datos reales de la conversación. Word (docx) para cartas, informes y contratos BORRADOR; Excel (xlsx) para tablas con fórmulas; PowerPoint (pptx) para presentaciones; PDF para documentos cerrados. La herramienta no crea el archivo: el chat le enseña a Pau una tarjeta «📄 Crear …» y al pulsarla se crea con las skills oficiales de Anthropic y la marca de Asesoría Castresana, con su botón ⬇ Descargar. Las reglas de siempre: no inventes datos, precios ni cláusulas (lo que falte va como [PENDIENTE: …]) y todo lo legal va como BORRADOR para que lo revise un profesional. Dile a Pau en una línea que pulse la tarjeta y no repitas el contenido entero en el chat. El bloque csv y el HTML siguen siendo la opción rápida cuando no hace falta un archivo de oficina; si la herramienta dice que no está activa, usa esa opción rápida y díselo. Si no tienes la herramienta preparar_archivo, usa la opción rápida (CSV o HTML) y díselo a Pau; nunca anuncies una tarjeta que no has preparado.
+
 ## Método CLARA de excelencia (cómo trabajas en todo lo que te pidan)
 1. Entiende el objetivo real: qué quiere conseguir Pau, no solo lo que ha escrito. Si falta un dato imprescindible, haz una sola pregunta corta o, mejor, propón un valor por defecto razonable y avanza.
 2. Elige el sombrero: si Pau no ha elegido modo, detecta tú el que encaja (o la combinación) y trabaja con ese nivel de experta sin pedirle que lo seleccione.
@@ -484,6 +488,16 @@ async function ejecutarHerramienta(tu, claveSync, extra = {}) {
       return await leerSkill(claveSync, nombre);
     }
     if (tu.name === "preparar_valoracion") return prepararValoracion(tu.input || {});
+    if (tu.name === "preparar_archivo") {
+      // Con CLARA_ARCHIVOS=no la herramienta no se declara, pero si Clara la pide igual no se prepara nada.
+      if (!archivosActivos()) {
+        return "La creación de archivos no está activa (falta ANTHROPIC_API_KEY o está apagada con CLARA_ARCHIVOS=no). No anuncies ninguna tarjeta: dale a Pau la opción rápida (tabla en bloque csv o documento en HTML) y díselo.";
+      }
+      const r = crearFicha(tu.input || {});
+      if (!r.ok) return `No he preparado el archivo: ${r.error}`;
+      extra.alArchivo?.(r.ficha);
+      return textoFicha(r.ficha);
+    }
     if (tu.name === "crear_skill") {
       const guardada = await guardarSkill(claveSync, tu.input?.nombre, tu.input?.descripcion, tu.input?.contenido);
       return `Skill "${guardada}" guardada. Ya puedes cargarla con usar_skill y aplicarla ahora mismo.`;
@@ -545,6 +559,7 @@ export const ESTADO_HERRAMIENTA = {
   mis_leads: "📇 Revisando tus leads…",
   preparar_valoracion: "📊 Preparando la valoración…",
   consultar_equipo: "👥 Consultando a mi equipo…",
+  preparar_archivo: "📄 Preparando el archivo…",
 };
 
 // Estado que se enseña en el chat; para el equipo dice qué agente trabaja.
@@ -819,6 +834,8 @@ export default async function handler(req, res) {
       HERRAMIENTA_EQUIPO,
     ],
   };
+  // Archivos de oficina con las skills de Anthropic (se apaga con CLARA_ARCHIVOS=no).
+  if (archivosActivos()) request.tools.push(HERRAMIENTA_ARCHIVO);
 
   if (perplexityConfigurado()) {
     request.tools.push({
@@ -899,6 +916,7 @@ export default async function handler(req, res) {
 
   const RESPUESTA_RECHAZO =
     "Lo siento, Pau, no puedo ayudarte con eso. ¿Quieres que lo enfoquemos de otra manera?";
+  const RESPUESTA_ARCHIVO = "Te he preparado el archivo: pulsa la tarjeta para crearlo y descargarlo.";
   const RESPUESTA_LIMITE =
     "Uf, esto me ha llevado demasiados pasos y no he conseguido cerrarlo. ¿Puedes reformular la pregunta o darme un poco más de contexto? Así lo resuelvo mejor.";
 
@@ -914,6 +932,11 @@ export default async function handler(req, res) {
       });
       const emite = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
       let completo = "";
+      const archivos = []; // fichas de preparar_archivo: el chat las pinta como tarjetas
+      const alArchivo = (f) => {
+        archivos.push(f);
+        emite({ archivo: f });
+      };
       try {
         let response = null;
         for (let ronda = 0; ronda <= MAX_TOOL_ROUNDS; ronda++) {
@@ -942,7 +965,7 @@ export default async function handler(req, res) {
             toolResults.push({
               type: "tool_result",
               tool_use_id: tu.id,
-              content: textoHerramienta(await ejecutarHerramienta(tu, claveSync, { cliente: client, inicio, alEstado: (e) => emite({ estado: e }) })),
+              content: textoHerramienta(await ejecutarHerramienta(tu, claveSync, { cliente: client, inicio, alEstado: (e) => emite({ estado: e }), alArchivo })),
             });
           }
           convo = [
@@ -957,10 +980,11 @@ export default async function handler(req, res) {
         }
         let reply;
         if (completo.trim()) reply = completo.trim();
+        else if (archivos.length) reply = RESPUESTA_ARCHIVO;
         else if (response?.stop_reason === "refusal") reply = RESPUESTA_RECHAZO;
         else if (response?.stop_reason === "tool_use" || response?.stop_reason === "pause_turn") reply = RESPUESTA_LIMITE; // se agotaron las rondas
         else reply = RESPUESTA_RECHAZO;
-        emite({ done: true, reply });
+        emite(archivos.length ? { done: true, reply, archivos } : { done: true, reply });
       } catch (e) {
         console.error("Error en streaming de /api/clara:", e);
         emite({ error: "Clara ha tenido un problema al responder (" + String(e?.status || e?.message || e) + "). Inténtalo de nuevo." });
@@ -969,6 +993,7 @@ export default async function handler(req, res) {
     }
 
     // ---- Modo clásico (JSON): se responde de una pieza al terminar ----
+    const archivosJson = [];
     let response = await api.create({ ...request, messages: convo });
 
     for (
@@ -987,7 +1012,7 @@ export default async function handler(req, res) {
         toolResults.push({
           type: "tool_result",
           tool_use_id: tu.id,
-          content: textoHerramienta(await ejecutarHerramienta(tu, claveSync, { cliente: client, inicio })),
+          content: textoHerramienta(await ejecutarHerramienta(tu, claveSync, { cliente: client, inicio, alArchivo: (f) => archivosJson.push(f) })),
         });
       }
       // Se conserva response.content intacto (incluidos los bloques de thinking)
@@ -1008,6 +1033,10 @@ export default async function handler(req, res) {
 
     if (response.stop_reason === "refusal") {
       return res.status(200).json({ reply: RESPUESTA_RECHAZO });
+    }
+    if (archivosJson.length) {
+      res.setHeader("Cache-Control", "no-store");
+      return res.status(200).json({ reply: reply || RESPUESTA_ARCHIVO, archivos: archivosJson });
     }
     if (!reply) {
       // Sin texto y aún pidiendo herramientas = se agotaron las rondas, no un rechazo.

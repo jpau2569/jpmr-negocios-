@@ -2,7 +2,7 @@
 //  Enrutador único de /api/<nombre>
 // ----------------------------------------------------------------------------
 //  El plan Hobby de Vercel admite como máximo 12 funciones por despliegue y
-//  aquí hay 17 endpoints. Vercel no convierte en función los archivos que
+//  aquí hay más de 20 endpoints. Vercel no convierte en función los archivos que
 //  empiezan por "_", así que cada endpoint vive en api/_<nombre>.js y esta
 //  única función los despacha. Las URLs no cambian: /api/clara sigue siendo
 //  /api/clara.
@@ -19,6 +19,7 @@ const RUTAS = {
   cerebro: () => import("./_cerebro.js"),
   chivato: () => import("./_chivato.js"),
   clara: () => import("./_clara.js"),
+  "clara-archivo": () => import("./_clara-archivo.js"),
   escaparate: () => import("./_escaparate.js"),
   foto: () => import("./_foto.js"),
   fotos: () => import("./_fotos.js"),
