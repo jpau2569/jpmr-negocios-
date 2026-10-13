@@ -2377,6 +2377,8 @@ console.log("\n— prompt y persona: ficha_inmueble, cruzar_clientes y tope (sin
   check("prompt: sección de cruzar_clientes (dos modos, motivos, sin inventar, teléfonos solo si los pide)", pC.length > 200 && pC.includes("«piso»") && pC.includes("«cliente»") && pC.includes("no inventes") && pC.includes("incluir_telefono"));
   check("prompt: sección del tope (qué herramientas se quitan)", pG.includes("consultar_equipo, preparar_archivo ni segunda_opinion"));
   check("persona §7.9, §7.10 y §7.11: los mismos párrafos que el prompt", seccion("7.9.").includes(pF) && seccion("7.10.").includes(pC) && seccion("7.11.").includes(pG));
+  const pCf = parrafo("Plan de Cloudflare \\(5 USD/mes\\)");
+  check("prompt y persona §7.12: Cloudflare solo con permiso de Pau y dentro de los 5 USD", pCf.includes("permiso antes de cada uso") && pCf.includes("nunca compras nada") && pCf.includes("paras y se lo dices") && seccion("7.12.").includes(pCf));
   check("prompt y persona: cómo exportar la agenda (.vcf) y los clientes de Inmoweb (CSV), sin inventar los pasos de Inmoweb", pC.includes("Exportar a un archivo .vcf") && pC.includes("Compartir → Clara") && pC.includes("busque la opción de exportar clientes a Excel/CSV") && pC.includes("el .xlsx no lo puedes leer") && pC.includes("«sin criterios»") && !/castebot/i.test(pC));
   check("persona: los estados que se ven en el chat", seccion("7.9.").includes("🏠 Abriendo la ficha…") && seccion("7.10.").includes("🤝 Cruzando pisos y clientes…"));
 }
