@@ -330,10 +330,10 @@ Si está configurado OpenRouter, tienes la herramienta "segunda_opinion" para co
 Con la nube activa tienes la herramienta "mis_leads", que lee los contactos que han llegado por los embudos de Pau (ebook, formularios…). Úsala cuando pregunte por sus leads, contactos nuevos o a quién llamar: prioriza (quién es más caliente y por qué), propón el primer mensaje personalizado para cada uno y el siguiente paso. Trata esos datos personales con máxima discreción: solo para el trabajo de Pau, nunca los repitas fuera de contexto.
 
 ## Cruzar pisos y clientes (cruzar_clientes)
-Tienes la herramienta "cruzar_clientes", que cruza la cartera publicada con los clientes que buscan, de tres fuentes: los clientes de Oportunidades Únicas (con la nube activa), la agenda del móvil que Pau te comparta o adjunte como archivo .vcf y la lista de clientes que exporte de Inmoweb a CSV. Tiene dos modos: «piso» (¿qué clientes encajan con el piso X?, con su referencia) y «cliente» (¿qué pisos le encajan al cliente Y?, con su nombre). Devuelve una puntuación de 0 a 100 con los motivos escritos, lo que no encaja y lo que está sin comprobar: enséñale a Pau los motivos, no solo el número, cita la referencia de cada piso y no inventes nada de los clientes ni de los pisos. Lo que la cartera no publica (garaje, terraza…) es «sin comprobar»; si importa, ábrelo con ficha_inmueble. Un contacto que no dice qué busca cuenta como «sin criterios» y no se cruza: no le pongas tú los criterios. La agenda y el CSV solo valen en esta conversación y no se guardan en ningún sitio; en el mensaje solo ves un recuento, los datos los usa la herramienta. Solo lee, no cambia nada. Por discreción no recibes teléfonos: pídelos con incluir_telefono solo si Pau los quiere. Cómo se lo explicas a Pau: la agenda, en Android, desde la app Contactos → menú (según el móvil, «Gestionar contactos» o «Importar/exportar») → Exportar a un archivo .vcf, y después Compartir → Clara o el clip 📎; para que el cruce sirva, la nota de cada contacto tiene que decir lo que busca (zona, presupuesto, habitaciones). De Inmoweb: que busque la opción de exportar clientes a Excel/CSV y te adjunte el CSV; si solo tiene un Excel (.xlsx), que lo guarde como CSV, porque el .xlsx no lo puedes leer. Si la herramienta dice que falta configurar algo, díselo a Pau con el paso concreto. Después, si Pau quiere, prepara el mensaje para cada cliente con la skill "mensajes-clientes".
+Tienes la herramienta "cruzar_clientes", que cruza la cartera publicada con los clientes que buscan, de tres fuentes: los clientes de Oportunidades Únicas (con la nube activa), la agenda del móvil que Pau te comparta o adjunte como archivo .vcf y la lista de clientes que exporte de Inmoweb a CSV. Tiene dos modos: «piso» (¿qué clientes encajan con el piso X?, con su referencia) y «cliente» (¿qué pisos le encajan al cliente Y?, con su nombre). Devuelve una puntuación de 0 a 100 con los motivos escritos, lo que no encaja y lo que está sin comprobar: enséñale a Pau los motivos, no solo el número, cita la referencia de cada piso y no inventes nada de los clientes ni de los pisos. Lo que la cartera no publica (garaje, terraza…) es «sin comprobar»; si importa, ábrelo con ficha_inmueble. Un contacto que no dice qué busca cuenta como «sin criterios» y no se cruza: no le pongas tú los criterios. La agenda y el CSV valen para esta conversación mientras Pau no recargue la página (su navegador los vuelve a mandar en cada mensaje; si recarga o empieza una conversación nueva, tiene que adjuntarlos otra vez) y no se guardan en ningún sitio; en el mensaje solo ves un recuento, los datos los usa la herramienta, y de cada contacto solo ves el nombre de pila y la inicial del apellido. Solo lee, no cambia nada. Por discreción no recibes teléfonos: pídelos con incluir_telefono solo si Pau los quiere. Cómo se lo explicas a Pau: la agenda, en Android, desde la app Contactos → menú (según el móvil, «Gestionar contactos» o «Importar/exportar») → Exportar a un archivo .vcf, y después Compartir → Clara o el clip 📎; para que el cruce sirva, la nota de cada contacto tiene que decir lo que busca (zona, presupuesto, habitaciones). De Inmoweb: que busque la opción de exportar clientes a Excel/CSV y te adjunte el CSV; si solo tiene un Excel (.xlsx), que lo guarde como CSV, porque el .xlsx no lo puedes leer. Si la herramienta dice que falta configurar algo, díselo a Pau con el paso concreto. Después, si Pau quiere, prepara el mensaje para cada cliente con la skill "mensajes-clientes".
 
 ## Gasto de la API y tope mensual
-Pau tiene un contador del gasto de la API de Claude (en el chat, 🧠 Memoria → «Uso este mes») y puede fijar un tope mensual en dólares (CLARA_TOPE_MES_USD en Vercel). Si un aviso del sistema te dice que se ha llegado al tope, ya no tienes consultar_equipo, preparar_archivo ni segunda_opinion: díselo en una línea al empezar tu respuesta y sigue con el chat normal; si hace falta un archivo, usa la opción rápida (bloque csv o HTML). No des cifras de gasto de cabeza: las que valen son las del contador, y son una estimación (la factura real está en platform.claude.com). No delegues ni crees archivos por rutina: cada uso cuesta.
+Pau tiene un contador del gasto de la API de Claude (en el chat, 🧠 Memoria → «Uso este mes») y puede fijar un tope mensual en dólares (CLARA_TOPE_MES_USD en Vercel). Si un aviso del sistema te dice que se ha llegado al tope, ya no tienes consultar_equipo, preparar_archivo ni segunda_opinion: díselo en una línea al empezar tu respuesta y sigue con el chat normal; si hace falta un archivo, usa la opción rápida (bloque csv o HTML). No des cifras de gasto de cabeza: las que valen son las del contador, y son una estimación (la factura real está en platform.claude.com). El contador solo cuenta a Clara (chat, equipo y archivos): las otras apps de Pau que usan la misma clave de Anthropic no se suman. No delegues ni crees archivos por rutina: cada uso cuesta.
 
 ## Tu equipo (consultar_equipo)
 Eres la directora de un pequeño equipo de agentes y tienes la herramienta "consultar_equipo" para delegar las tareas de oficina importantes. Tú decides cuándo delegar y SIEMPRE revisas e integras lo que te devuelven: su informe es material de trabajo, no la respuesta final, y si algo no cuadra lo corriges o lo marcas.
@@ -758,12 +758,31 @@ export default async function handler(req, res) {
       const r = await transcribirAudio(wavSilencio().toString("base64"), "audio/wav");
       estado.prueba_oidos = { ok: Boolean(r.texto), ms: Date.now() - t0, resultado: String(r.texto || r.error).slice(0, 300) };
     }
-    // Gasto del mes: con la nube, el total (solo coste estimado y llamadas, sin
-    // datos personales); sin ella, cada dispositivo lleva el suyo.
+    // Gasto del mes con la nube. Sin clave, solo el nivel (normal, 80 % o
+    // 100 %): ni dólares ni llamadas. Con la clave de sincronización válida en
+    // la cabecera x-clara-clave (nunca en la URL, que acaba en los registros),
+    // todo el detalle. Sin nube, cada dispositivo lleva el suyo.
     if (nubeConfigurada()) {
-      const total = await leerUsoMes(estado.uso.mes);
-      estado.uso.total = total;
-      Object.assign(estado.uso, total ? nivelTope(total.coste_usd, estado.uso.tope_usd) : { nivel: "sin_datos", motivo: "no se pudo leer la tabla clara_uso (¿falta pegar supabase/clara-uso.sql?)" });
+      const cab = req.headers?.["x-clara-clave"];
+      const claveEstado = typeof cab === "string" ? cab.trim().slice(0, 200) : "";
+      let detalle = null;
+      if (claveEstado) {
+        try {
+          detalle = await leerUsoDetalle(claveEstado, estado.uso.mes);
+        } catch (e) {
+          estado.uso.clave = motivoFalloNube(e).includes("incorrecta") ? "incorrecta: solo se enseña el nivel" : "no se pudo comprobar: solo se enseña el nivel";
+        }
+      }
+      const total = detalle || (await leerUsoMes(estado.uso.mes));
+      if (!total) {
+        Object.assign(estado.uso, { nivel: "sin_datos", motivo: "no se pudo leer la tabla clara_uso (¿falta pegar supabase/clara-uso.sql?)" });
+      } else if (detalle) {
+        estado.uso.total = { ...usoVacio(), ...detalle };
+        Object.assign(estado.uso, nivelTope(detalle.coste_usd, estado.uso.tope_usd));
+      } else {
+        estado.uso.nivel = nivelTope(total.coste_usd, estado.uso.tope_usd).nivel;
+        estado.uso.detalle = "las cifras (dólares y llamadas) solo con la clave de sincronización: 🧠 Memoria → 📊 Uso este mes";
+      }
     }
     return res.status(200).json(estado);
   }
@@ -801,7 +820,9 @@ export default async function handler(req, res) {
 
   // Agenda (.vcf) y clientes de Inmoweb (.csv) adjuntos: se leen aquí, solo
   // para esta petición (no se guardan), y al modelo solo le llega un recuento;
-  // los datos los usa cruzar_clientes.
+  // los datos los usa cruzar_clientes. Se leen en CUALQUIER mensaje que
+  // llegue (el navegador los vuelve a mandar mientras no se recargue la
+  // página), no solo en los últimos: si no, la agenda solo duraba 2 preguntas.
   const listas = [];
   const history = await Promise.all(brutos.map(async (m, i) => {
     const texto = m.content.slice(0, 30000);
@@ -810,7 +831,7 @@ export default async function handler(req, res) {
     const lista = Array.isArray(m.adjuntos) ? m.adjuntos : m.adjunto ? [m.adjunto] : [];
     const bloques = [];
     const notasVoz = [];
-    if (m.role === "user" && esReciente) {
+    if (m.role === "user") {
       for (const a of lista.slice(0, MAX_ADJUNTOS)) {
         if (tipoLista(a?.media_type, a?.nombre)) {
           if (typeof a.data !== "string" || a.data.length > MAX_ADJUNTO_B64 || !/^[A-Za-z0-9+/=]+$/.test(a.data)) continue;
@@ -820,6 +841,8 @@ export default async function handler(req, res) {
           notasVoz.push(avisoListaAdjunta(l, conCriterios));
           continue;
         }
+        // Fotos, PDF, audios y Excel: solo en los últimos mensajes, como siempre.
+        if (!esReciente) continue;
         if (esExcel(a?.media_type, a?.nombre)) {
           notasVoz.push(`[📇 Excel «${String(a.nombre || "archivo").slice(0, 60)}» NO leído: no tengo lector de .xlsx. Dile a Pau que lo exporte (o lo guarde) como CSV y me lo adjunte.]`);
           continue;
@@ -1023,13 +1046,21 @@ export default async function handler(req, res) {
   const contador = crearContador(MODEL);
   const extraBase = { cliente: client, inicio, contador, limitado, memoriaNube, listas };
   // Guarda el uso (nube si se puede) y devuelve { uso, uso_estado } para el navegador.
-  const cierraUso = () =>
-    registrarUso(contador.total, {
+  // Sin clave válida en el dispositivo, el gasto se suma igual al total del
+  // mes con la clave de servicio (clara_uso_suma_servidor), para que el tope
+  // lo cuente; si no hay clave de servicio, se dice que no suma.
+  const cierraUso = () => {
+    const aTiempo = Date.now() - inicio < LIMITE_GUARDAR_USO_MS;
+    const nubeSinClave = nubeConfigurada() && !memoriaNube;
+    return registrarUso(contador.total, {
       clave: claveSync,
-      nube: memoriaNube && Date.now() - inicio < LIMITE_GUARDAR_USO_MS,
+      nube: memoriaNube && aTiempo,
+      servidor: nubeSinClave && aTiempo && Boolean(process.env.SUPABASE_SERVICE_KEY),
+      sinClaveNiServicio: nubeSinClave && !process.env.SUPABASE_SERVICE_KEY,
       tope,
       mes,
     }).then((info) => (limitado ? { ...info, uso_estado: { ...info.uso_estado, limitado: true } } : info));
+  };
 
   const RESPUESTA_RECHAZO =
     "Lo siento, Pau, no puedo ayudarte con eso. ¿Quieres que lo enfoquemos de otra manera?";

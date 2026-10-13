@@ -94,12 +94,15 @@
   #mic:hover,#attach:hover{color:var(--fg);border-color:var(--stroke-2)}
   #mic.rec{color:#fff;border-color:transparent;background:linear-gradient(135deg,#b91c1c,#ff6b6b);animation:pulse 1.2s infinite}
   @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,.45)}50%{box-shadow:0 0 0 8px rgba(255,107,107,0)}}
-  .attachbar{max-width:820px;margin:0 auto 8px;display:none;gap:8px;align-items:center}
+  .attachbar{max-width:820px;margin:0 auto 8px;display:none;gap:8px;align-items:center;flex-wrap:wrap}
   .attachbar.show{display:flex}
-  .attachchip{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(139,124,247,.5);
-    background:rgba(139,124,247,.12);color:var(--fg);border-radius:999px;padding:6px 12px;font-size:12.5px}
-  .attachchip img{width:26px;height:26px;object-fit:cover;border-radius:6px}
-  .attachchip button{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;font-family:inherit}
+  /* Nombres largos: se cortan con «…» y el completo va en title. */
+  .attachchip{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(139,124,247,.5);max-width:220px;min-width:0;
+    background:rgba(139,124,247,.12);color:var(--fg);border-radius:999px;padding:0 0 0 12px;font-size:12.5px}
+  .attachchip .nombre{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .attachchip img{width:26px;height:26px;object-fit:cover;border-radius:6px;flex:none}
+  .attachchip button{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;font-family:inherit;
+    min-width:44px;min-height:44px;flex:none;border-radius:999px}
   .attachchip button:hover{color:#ff6b6b}
   .bubble img.adj{max-width:220px;max-height:180px;border-radius:10px;display:block;margin-bottom:8px}
   .bubble .adjs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
@@ -627,8 +630,8 @@
     } catch { return new Date().toISOString().slice(0, 7); }
   }
   function leeUso() {
-    try { const u = JSON.parse(localStorage.getItem(USO_KEY) || "null"); if (u && typeof u === "object") return { meses: u.meses || {}, nube: u.nube || null, tope: u.tope ?? null, avisos: u.avisos || {} }; } catch {}
-    return { meses: {}, nube: null, tope: null, avisos: {} };
+    try { const u = JSON.parse(localStorage.getItem(USO_KEY) || "null"); if (u && typeof u === "object") return { meses: u.meses || {}, nube: u.nube || null, servidor: u.servidor || null, tope: u.tope ?? null, avisos: u.avisos || {} }; } catch {}
+    return { meses: {}, nube: null, servidor: null, tope: null, avisos: {} };
   }
   function guardaUso(u) {
     // Solo los 12 últimos meses.
@@ -658,6 +661,8 @@
     const u = leeUso();
     const est = info.uso_estado;
     if ("tope_usd" in est) u.tope = num(est.tope_usd) || null;
+    // Sin clave: ¿el servidor ha sumado este gasto al total de la nube (para el tope)?
+    u.servidor = est.nube_sin_clave ? { mes: est.mes, sumado: est.nube_sin_clave === "sumado", nivel: est.nivel || "", motivo: est.motivo || "" } : null;
     if (est.guardado && est.total) {
       u.nube = { mes: est.mes, ...est.total };
     } else if (info.uso) {
@@ -687,6 +692,19 @@
     if (!t.tope) return;
     const enNube = t.almacen === "nube";
     const clave100 = t.mes + "-100", clave80 = t.mes + "-80";
+    // Sin clave pero sumado en la nube por el servidor: vale el nivel del total
+    // del mes (sin cifras, que solo se enseñan con la clave).
+    const srv = !enNube && u.servidor && u.servidor.sumado && u.servidor.mes === t.mes ? u.servidor : null;
+    if (srv) {
+      if (srv.nivel === "agotado" && !u.avisos[clave100]) {
+        u.avisos[clave100] = true; u.avisos[clave80] = true; guardaUso(u);
+        addAvisoUso("🛑 Pau, este mes se ha llegado a tu tope de " + dolares(t.tope) + " contando todos tus dispositivos. Sigo contigo en el chat, pero sin equipo, sin archivos de Word/Excel/PowerPoint/PDF y sin segunda opinión hasta el mes que viene (o hasta que subas CLARA_TOPE_MES_USD en Vercel). Para ver la cifra, pon tu clave de sincronización en 🧠 Memoria.");
+      } else if (srv.nivel === "aviso" && !u.avisos[clave80]) {
+        u.avisos[clave80] = true; guardaUso(u);
+        addAvisoUso("⚠️ Pau, aviso de gasto: este mes ya se ha pasado del 80 % de tu tope de " + dolares(t.tope) + " contando todos tus dispositivos. Al llegar al 100 % quitaré el equipo, los archivos y la segunda opinión. Para ver la cifra, pon tu clave de sincronización en 🧠 Memoria.");
+      }
+      return;
+    }
     if (t.porcentaje >= 100 && !u.avisos[clave100]) {
       u.avisos[clave100] = true;
       u.avisos[clave80] = true;
@@ -717,12 +735,18 @@
       barra.setAttribute("aria-valuenow", String(pc));
       barra.classList.toggle("aviso", t.porcentaje >= 80 && t.porcentaje < 100);
       barra.classList.toggle("agotado", t.porcentaje >= 100);
-      notas.push("Tope: " + dolares(t.tope) + " (" + (t.porcentaje || 0) + " %).");
+      notas.push("Tope: " + dolares(t.tope) + " (" + (t.porcentaje || 0) + " %" + (t.almacen === "nube" ? "" : " en este dispositivo") + ").");
     } else {
       barra.hidden = true;
       notas.push("Sin tope mensual (se pone en Vercel con CLARA_TOPE_MES_USD).");
     }
-    notas.push(t.almacen === "nube" ? "☁️ Total de todos tus dispositivos." : "📱 Solo este dispositivo" + (t.tope ? ": aquí el tope solo avisa." : "."));
+    const u = leeUso();
+    const srv = u.servidor && u.servidor.mes === t.mes ? u.servidor : null;
+    if (t.almacen === "nube") notas.push("☁️ Total de todos tus dispositivos.");
+    else if (srv && srv.sumado) notas.push("📱 Aquí ves solo lo de este dispositivo. Su gasto también se suma en la nube al total del mes, que es el que cuenta para el tope" + (srv.nivel === "agotado" ? " (ya está al 100 %)" : srv.nivel === "aviso" ? " (ya pasa del 80 %)" : "") + "; para ver ese total, pon tu clave de sincronización.");
+    else if (srv && srv.motivo) notas.push("📱 Solo este dispositivo: " + srv.motivo + ".");
+    else notas.push("📱 Solo este dispositivo" + (t.tope ? ": aquí el tope solo avisa." : "."));
+    notas.push("Solo cuenta a Clara (chat, equipo y archivos); las otras apps que usan la misma clave no se suman.");
     if (t.llamadas_sin_precio) notas.push("Coste sin verificar en " + t.llamadas_sin_precio + " llamada(s) (modelo sin precio comprobado).");
     if (t.llamadas_openrouter) notas.push("OpenRouter: " + t.llamadas_openrouter + " llamada(s), su coste no se suma (va a su saldo).");
     if (extra) notas.push(extra);
@@ -837,7 +861,9 @@
     });
   }
   // Agenda (.vcf) y clientes de Inmoweb (.csv): se mandan como texto para que
-  // Clara los cruce con la cartera en esta conversación (no se guardan).
+  // Clara los cruce con la cartera. Viajan en todos los mensajes de esta
+  // conversación mientras quepan (ver «payload» en send) y no se guardan: al
+  // recargar la página hay que adjuntarlos otra vez.
   const MAX_LISTA_TEXTO = 2_500_000;
   function tipoLista(file, nombre) {
     const t = String(file.type || "").toLowerCase();
@@ -857,8 +883,14 @@
     }
     return fuera.join("\n");
   }
+  // Bytes → texto: UTF-8 estricto y, si no lo es, Windows-1252 (el CSV que
+  // guarda Excel en español). file.text() pondría «Gij�n» en lugar de «Gijón».
+  function decodificaTexto(bytes) {
+    try { return new TextDecoder("utf-8", { fatal: true }).decode(bytes); }
+    catch { return new TextDecoder("windows-1252").decode(bytes); }
+  }
   async function preparaLista(file, nombre, media) {
-    let texto = await file.text();
+    let texto = decodificaTexto(new Uint8Array(await file.arrayBuffer())).replace(/^\uFEFF/, "");
     if (media === "text/vcard") texto = quitaFotosVcf(texto);
     if (texto.length > MAX_LISTA_TEXTO) throw new Error(`"${nombre}" es demasiado grande (más de ${Math.round(MAX_LISTA_TEXTO / 1e6 * 10) / 10} millones de caracteres). Exporta solo una parte de los contactos o de los clientes.`);
     return { tipo: "lista", media_type: media, data: await aBase64(new Blob([texto], { type: media })), nombre };
@@ -875,10 +907,16 @@
         mini.src = "data:" + a.media_type + ";base64," + a.data;
         chip.appendChild(mini);
       }
-      chip.appendChild(document.createTextNode((a.tipo === "pdf" ? "📎 " : a.tipo === "audio" ? "🎙 " : a.tipo === "lista" ? "📇 " : "") + a.nombre));
+      const etiqueta = (a.tipo === "pdf" ? "📎 " : a.tipo === "audio" ? "🎙 " : a.tipo === "lista" ? "📇 " : "") + a.nombre;
+      const nombre = document.createElement("span");
+      nombre.className = "nombre";
+      nombre.textContent = etiqueta;
+      chip.title = a.nombre;
+      chip.appendChild(nombre);
       const quita = document.createElement("button");
       quita.textContent = "✕";
       quita.title = "Quitar adjunto";
+      quita.setAttribute("aria-label", "Quitar " + a.nombre);
       quita.addEventListener("click", () => { adjuntos.splice(i, 1); pintaAdjunto(); });
       chip.appendChild(quita);
       attachBar.appendChild(chip);
@@ -980,11 +1018,28 @@
       addError(mensajeError);
     };
 
-    // Los adjuntos solo viajan en los últimos mensajes (el servidor también lo limita).
+    // Los adjuntos viajan en los últimos 6 mensajes (el servidor también lo
+    // limita). La agenda y el CSV (tipo «lista») viajan además en todos los
+    // anteriores mientras quepan en MAX_B64_TOTAL, de la más reciente a la más
+    // antigua: así Clara puede cruzarlos durante toda la conversación (hasta
+    // que se recargue la página, porque no se guardan).
+    const adjsDe = (m) => (m.adjuntos || (m.adjunto ? [m.adjunto] : null) || []).filter((a) => !a.omitido && a.data);
+    const recientes = history.length - 6;
+    let libre = MAX_B64_TOTAL - history.slice(Math.max(0, recientes)).reduce((t, m) => t + adjsDe(m).reduce((s, a) => s + a.data.length, 0), 0);
+    const vivosAntiguos = new Map();
+    for (let i = recientes - 1; i >= 0; i--) {
+      const listas = [];
+      for (const a of adjsDe(history[i])) {
+        if (a.tipo !== "lista" || a.data.length > libre) continue;
+        libre -= a.data.length;
+        listas.push(a);
+      }
+      if (listas.length) vivosAntiguos.set(i, listas);
+    }
     const payload = history.map((m, i) => {
       const adjs = m.adjuntos || (m.adjunto ? [m.adjunto] : null);
       if (!adjs) return m.archivos ? { role: m.role, content: m.content } : m;
-      const vivos = i < history.length - 6 ? [] : adjs.filter((a) => !a.omitido && a.data);
+      const vivos = i < recientes ? vivosAntiguos.get(i) || [] : adjsDe(m);
       return vivos.length ? { role: m.role, content: m.content, adjuntos: vivos } : { role: m.role, content: m.content };
     });
 

@@ -324,8 +324,66 @@ try {
     await page.click("#memory");
     const nube = await page.evaluate(() => ({ texto: document.getElementById("usoTexto").textContent, nota: document.getElementById("usoNota").textContent }));
     check("con la nube: el total del mes de todos los dispositivos", nube.texto === "Este mes: 3,00 $ (estimado) · 120 llamadas" && nube.nota.includes("Total de todos tus dispositivos") && nube.nota.includes("Tope: 20,00 $ (15 %)"), JSON.stringify(nube));
+    check("la nota dice que solo cuenta a Clara", nube.nota.includes("Solo cuenta a Clara (chat, equipo y archivos); las otras apps que usan la misma clave no se suman."), nube.nota);
+    await page.click("#memClose");
+
+    // Sin clave, pero el servidor lo suma en la nube (clara_uso_suma_servidor): solo el nivel, sin cifras.
+    await page.evaluate(() => localStorage.removeItem("clara_uso_v1"));
+    const avisosAntes = (await page.$$(".avisouso")).length;
+    EVENTOS_EXTRA = [{ uso: { llamadas: 1, coste_usd: 0.01 }, uso_estado: { mes, almacen: "local", guardado: false, total: null, tope_usd: 20, nivel: "aviso", porcentaje: null, nube_sin_clave: "sumado" } }];
+    await page.fill("#input", "seis");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    await page.waitForTimeout(150);
+    const avisoSrv = await page.$$eval(".avisouso", (n) => n.map((x) => x.textContent));
+    check("sin clave y al 80 % del total de la nube: avisa sin dar la cifra", avisoSrv.length === avisosAntes + 1 && avisoSrv.at(-1).includes("80 %") && avisoSrv.at(-1).includes("todos tus dispositivos") && avisoSrv.at(-1).includes("clave de sincronización"), avisoSrv.at(-1));
+    await page.click("#memory");
+    const srv = await page.evaluate(() => document.getElementById("usoNota").textContent);
+    check("panel sin clave: dice que lo de este aparato también se suma en la nube para el tope", srv.includes("también se suma en la nube") && srv.includes("ya pasa del 80 %") && !srv.includes("solo avisa"), srv);
+    await page.click("#memClose");
+    // Sin la función en Supabase: lo dice tal cual.
+    EVENTOS_EXTRA = [{ uso: { llamadas: 1, coste_usd: 0.01 }, uso_estado: { mes, almacen: "local", guardado: false, total: null, tope_usd: 20, nivel: "sin_datos", nube_sin_clave: "fallo", motivo: "falta la función clara_uso_suma_servidor en Supabase (vuelve a pegar supabase/clara-uso.sql en el SQL Editor): mientras, el gasto de este dispositivo se cuenta solo aquí y no suma al tope" } }];
+    await page.fill("#input", "siete");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    await page.waitForTimeout(150);
+    await page.click("#memory");
+    const falta = await page.evaluate(() => document.getElementById("usoNota").textContent);
+    check("panel sin la función en Supabase: lo dice y no promete que cuente para el tope", falta.includes("clara_uso_suma_servidor") && falta.includes("no suma al tope") && !falta.includes("también se suma"), falta);
     await page.click("#memClose");
     EVENTOS_EXTRA = [];
+  }
+
+  console.log("\n— 📇 CSV de Excel (Windows-1252) y nombre largo en el chip —");
+  {
+    await page.setViewportSize({ width: 360, height: 760 });
+    const NOMBRE = "clientes-de-inmoweb-exportados-desde-excel-el-lunes-por-la-tarde.csv";
+    await page.setInputFiles("#fileattach", [{ name: NOMBRE, mimeType: "text/csv", buffer: Buffer.from("Nombre;Zona;Operación\nJosé Muñiz;Gijón;Venta\n", "latin1") }]);
+    await page.waitForFunction(() => document.querySelectorAll(".attachchip").length === 1);
+    const chip = await page.evaluate(() => {
+      const c = document.querySelector(".attachchip");
+      const n = c.querySelector(".nombre");
+      const b = c.querySelector("button").getBoundingClientRect();
+      return { ancho: c.getBoundingClientRect().width, title: c.title, corta: n.scrollWidth > n.clientWidth, elipsis: getComputedStyle(n).textOverflow, boton: [b.width, b.height], etiqueta: c.querySelector("button").getAttribute("aria-label"), doc: document.documentElement.scrollWidth, vw: innerWidth };
+    });
+    check("chip: como mucho 220 px, con «…» y el nombre completo en title", chip.ancho <= 220.5 && chip.corta && chip.elipsis === "ellipsis" && chip.title === NOMBRE, JSON.stringify(chip));
+    check("chip: botón ✕ de 44 px o más y con etiqueta accesible", chip.boton[0] >= 44 && chip.boton[1] >= 44 && chip.etiqueta === "Quitar " + NOMBRE);
+    check("chip largo sin scroll lateral a 360 px", chip.doc <= chip.vw);
+    await page.fill("#input", "Mis clientes en CSV");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    const enviado = peticiones.at(-1).messages.at(-1).adjuntos?.[0];
+    const texto = Buffer.from(enviado?.data || "", "base64").toString("utf8");
+    check("CSV en Windows-1252: viaja en UTF-8 con «Gijón», «José» y «Operación» bien", texto.includes("Gijón") && texto.includes("José Muñiz") && texto.includes("Operación") && !texto.includes("\uFFFD"), JSON.stringify(texto));
+    const utf = Buffer.from("Nombre;Zona\nLucía;Gijón\n", "utf8");
+    await page.setInputFiles("#fileattach", [{ name: "utf8.csv", mimeType: "text/csv", buffer: Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), utf]) }]);
+    await page.waitForFunction(() => document.querySelectorAll(".attachchip").length === 1);
+    await page.fill("#input", "Otro CSV");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    const texto2 = Buffer.from(peticiones.at(-1).messages.at(-1).adjuntos?.[0]?.data || "", "base64").toString("utf8");
+    check("CSV en UTF-8 (con BOM): igual que antes, sin el BOM", texto2 === "Nombre;Zona\nLucía;Gijón\n", JSON.stringify(texto2));
+    await page.setViewportSize({ width: 1280, height: 720 });
   }
 
   console.log("\n— 📇 agenda (.vcf) y clientes (.csv) adjuntos —");
@@ -350,6 +408,36 @@ try {
     check("viajan como text/vcard y text/csv", aVcf?.media_type === "text/vcard" && aCsv?.media_type === "text/csv");
     check("la foto de la agenda se quita antes de enviarla (pesa y no hace falta)", texto.includes("FN:Marcos") && texto.includes("NOTE:busca comprar") && !texto.includes("PHOTO") && !texto.includes("QkJCQg"), texto);
     check("la agenda no se guarda en el navegador", !(await page.evaluate(() => localStorage.getItem("clara_chat_v1") || "")).includes("FN:Marcos"));
+
+    // La agenda sigue viajando en las preguntas siguientes (antes caía a la 3.ª);
+    // una foto de un mensaje viejo, no.
+    const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64");
+    await page.setInputFiles("#fileattach", [{ name: "foto.png", mimeType: "image/png", buffer: PNG }]);
+    await page.waitForFunction(() => document.querySelectorAll(".attachchip").length === 1);
+    await page.fill("#input", "Y esta foto");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    for (let k = 1; k <= 7; k++) {
+      await page.fill("#input", `¿Y para el piso ${k}?`);
+      await page.press("#input", "Enter");
+      await page.waitForFunction(() => !document.getElementById("typing"));
+    }
+    const ultimaPet = peticiones.at(-1).messages;
+    const conLista = ultimaPet.filter((m) => (m.adjuntos || []).some((a) => a.tipo === "lista" && a.data));
+    const conFoto = ultimaPet.filter((m) => (m.adjuntos || []).some((a) => a.tipo === "imagen"));
+    const idx = ultimaPet.findIndex((m) => m.content === "Crúzalos con mi cartera");
+    check("la agenda y el CSV siguen viajando 8 preguntas después (mientras caben)", idx >= 0 && idx < ultimaPet.length - 6 && (ultimaPet[idx].adjuntos || []).filter((a) => a.tipo === "lista").length === 2, JSON.stringify(ultimaPet.map((m) => (m.adjuntos || []).map((a) => a.tipo))));
+    check("los CSV de antes también siguen (todas las listas de la conversación)", conLista.length >= 3);
+    check("la foto de hace más de 6 mensajes ya no viaja", conFoto.length === 0);
+    const pesoTotal = ultimaPet.reduce((t, m) => t + (m.adjuntos || []).reduce((s2, a) => s2 + (a.data || "").length, 0), 0);
+    check("todo lo que viaja cabe en el límite de envío (3,5 MB en base64)", pesoTotal <= 3_500_000, String(pesoTotal));
+    // Tras recargar, las listas ya no están (no se guardan): por eso el texto dice «hasta que recargues».
+    await page.reload();
+    await page.waitForSelector(".msg.clara .bubble");
+    await page.fill("#input", "¿Sigues teniendo la agenda?");
+    await page.press("#input", "Enter");
+    await page.waitForFunction(() => !document.getElementById("typing"));
+    check("tras recargar la página, la agenda ya no viaja (no se guarda)", !peticiones.at(-1).messages.some((m) => (m.adjuntos || []).some((a) => a.data)));
     await page.setViewportSize({ width: 1280, height: 720 });
   }
 
