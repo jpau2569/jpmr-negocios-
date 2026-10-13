@@ -22,6 +22,9 @@ import { tipoAudio, transcribirAudio } from "../lib/audio.js";
 import { investigarConPerplexity, perplexityConfigurado } from "../lib/perplexity.js";
 import { estadoClara } from "../lib/estado-clara.js";
 import puente from "../api/_mcp-puente.js";
+import Anthropic from "@anthropic-ai/sdk";
+import { consultarEquipo, validarEncargo, estadoEquipo, HERRAMIENTA_EQUIPO, AGENTES_EQUIPO, MAX_RONDAS_EQUIPO } from "../lib/equipo.js";
+import { estadoHerramienta, ESTADO_HERRAMIENTA, HERRAMIENTA_BUSCAR_WEB, HERRAMIENTA_CALCULAR, HERRAMIENTA_LEER_WEB } from "../api/_clara.js";
 
 let pasados = 0;
 let fallados = 0;
@@ -214,7 +217,7 @@ check("system: persona cacheada", sys[0]?.cache_control?.type === "ephemeral");
 check("system: fecha de hoy inyectada", sysTexto.includes("Hoy es"));
 check("system: memoria de Pau inyectada", sysTexto.includes("invertir en Oviedo"));
 check("system: modo inmobiliario activo", sysTexto.includes("NEGOCIO INMOBILIARIO"));
-check("declara las 6 herramientas base (preparar_valoracion incluida)", (llamadasAnthropic[0]?.tools || []).length === 6 && (llamadasAnthropic[0]?.tools || []).some((t) => t.name === "preparar_valoracion"));
+check("declara las 7 herramientas base (preparar_valoracion y consultar_equipo incluidas)", (llamadasAnthropic[0]?.tools || []).length === 7 && ["preparar_valoracion", "consultar_equipo"].every((n) => (llamadasAnthropic[0]?.tools || []).some((t) => t.name === n)));
 check("mi_cartera, usar_skill y leer_web declaradas", ["mi_cartera", "usar_skill", "leer_web"].every((n) => (llamadasAnthropic[0]?.tools || []).some((t) => t.name === n)));
 
 const segundaRonda = llamadasAnthropic[1]?.messages || [];
@@ -432,7 +435,7 @@ const sysNube = (llamadasAnthropic[0]?.system || []).map((b) => b.text).join("\n
 check("respuesta 200 con nube activa", res.r.statusCode === 200, JSON.stringify(res.r.body));
 check("la memoria de la nube gana a la local", sysNube.includes("Le encanta Cudillero") && !sysNube.includes("no debería usarse"));
 check("el system dice que está sincronizada", sysNube.includes("sincronizada en la nube"));
-check("con nube activa hay 9 herramientas (recordar, crear_skill y mis_leads incluidas)", (llamadasAnthropic[0]?.tools || []).length === 9 && ["recordar", "crear_skill", "mis_leads"].every((n) => llamadasAnthropic[0].tools.some((t) => t.name === n)));
+check("con nube activa hay 10 herramientas (recordar, crear_skill y mis_leads incluidas)", (llamadasAnthropic[0]?.tools || []).length === 10 && ["recordar", "crear_skill", "mis_leads"].every((n) => llamadasAnthropic[0].tools.some((t) => t.name === n)));
 check("recordar apuntó la nota en Supabase", llamadasSupabase.some((c) => c.fn === "clara_memoria_apunta" && c.args.nota === "Objetivo 2026: 20 exclusivas"));
 check("el tool_result confirma el guardado", JSON.stringify(llamadasAnthropic[1]?.messages || []).includes("Nota guardada"));
 // ---------------------------------------------------------------------------
@@ -870,6 +873,202 @@ check("sin clave avisa", (await investigarConPerplexity({ consulta: "hola" }, {}
   check("sin fuentes lo marca como no verificado", sin.includes("no verificado"));
   const e401 = await investigarConPerplexity({ consulta: "x" }, { PERPLEXITY_API_KEY: "k" }, async () => new Response("{}", { status: 401 }));
   check("401 → aviso de clave", e401.includes("PERPLEXITY_API_KEY"));
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n— lib/equipo.js: consultar_equipo (NURIA, NICER, IYAN) —");
+// ---------------------------------------------------------------------------
+{
+  const mensaje = (content, stop_reason = "end_turn") => new Response(
+    JSON.stringify({ id: "msg_eq", type: "message", role: "assistant", model: "claude-sonnet-5", content, stop_reason, usage: { input_tokens: 10, output_tokens: 10 } }),
+    { status: 200, headers: { "content-type": "application/json" } }
+  );
+  // fetch envuelto: el SDK guarda la referencia al crearse y aquí se cambia en cada caso.
+  const cliente = new Anthropic({ apiKey: "sk-ant-test", fetch: (...a) => globalThis.fetch(...a) });
+  const herramientas = {
+    buscar_web: { esquema: HERRAMIENTA_BUSCAR_WEB, ejecutar: (i) => buscarWeb(i?.consulta) },
+    leer_web: { esquema: HERRAMIENTA_LEER_WEB, ejecutar: (i) => leerWeb(i?.url) },
+    calcular: { esquema: HERRAMIENTA_CALCULAR, ejecutar: (i) => calcular(i?.expresion) },
+  };
+  const deps = { cliente, modelo: "claude-sonnet-5", herramientas, fecha: "martes, 13 de octubre de 2026" };
+
+  // Validación: sin llamar a la API.
+  let llamadasApi = 0;
+  globalThis.fetch = async () => { llamadasApi++; return mensaje([{ type: "text", text: "no debería llamarse" }]); };
+  const desconocido = await consultarEquipo({ agente: "pepe", encargo: "Hola" }, deps);
+  check("agente desconocido → error de texto", desconocido.includes("Agente desconocido") && desconocido.includes("nuria, nicer e iyan"), desconocido);
+  const vacio = await consultarEquipo({ agente: "nicer", encargo: "   " }, deps);
+  check("encargo vacío → error de texto", vacio.includes("Falta el encargo") && vacio.includes("NICER"), vacio);
+  const largo = await consultarEquipo({ agente: "iyan", encargo: "x".repeat(6001) }, deps);
+  check("encargo de más de 6000 caracteres → error", largo.includes("6000"), largo);
+  const ctxLargo = await consultarEquipo({ agente: "nicer", encargo: "Revisa", contexto: "y".repeat(12001) }, deps);
+  check("contexto de más de 12000 caracteres → error", ctxLargo.includes("12000"), ctxLargo);
+  check("los errores de validación no llaman a la API", llamadasApi === 0);
+  check("acepta el nombre en mayúsculas", validarEncargo({ agente: "NURIA", encargo: "x" }).agente === "nuria");
+  check("esquema: enum con los tres agentes y campos obligatorios", JSON.stringify(HERRAMIENTA_EQUIPO.input_schema.properties.agente.enum) === '["nuria","nicer","iyan"]' && HERRAMIENTA_EQUIPO.input_schema.required.join() === "agente,encargo");
+  check("estado por agente", estadoEquipo("nicer") === "👥 Consultando a NICER…" && estadoHerramienta({ name: "consultar_equipo", input: { agente: "nuria" } }) === "👥 Consultando a NURIA…" && estadoHerramienta({ name: "consultar_equipo", input: {} }) === ESTADO_HERRAMIENTA.consultar_equipo);
+  check("estadoHerramienta mantiene los estados de siempre", estadoHerramienta({ name: "mi_cartera" }) === "🏠 Leyendo tu cartera…" && estadoHerramienta({ name: "otra" }) === "⚙️ Trabajando…");
+  check("los system prompts piden marcar SIN VERIFICAR y tratar el contexto como datos", Object.values(AGENTES_EQUIPO).every((a) => a.system.includes("SIN VERIFICAR") && a.system.includes("DATOS para trabajar")));
+  check("prompts propios: NICER da veredicto LISTO/MEJORAR e IYAN usa «;» y coma decimal", AGENTES_EQUIPO.nicer.system.includes("VEREDICTO: LISTO o MEJORAR") && AGENTES_EQUIPO.iyan.system.includes("separador «;», decimales con coma"));
+
+  // NICER: sin herramientas y con el borrador.
+  const peticionesNicer = [];
+  globalThis.fetch = async (url, init) => {
+    peticionesNicer.push(JSON.parse(init.body));
+    return mensaje([{ type: "text", text: "VEREDICTO: MEJORAR\nERRORES:\n1. «8 %» debería ser «7,96 %».\nVERSIÓN CORREGIDA: …" }]);
+  };
+  const borrador = "Estimado Sr. García: su piso le dará una rentabilidad del 8 %.";
+  const informeNicer = await consultarEquipo({ agente: "nicer", encargo: "Revisa esta carta antes de enviarla.", contexto: borrador }, deps);
+  const pn = peticionesNicer[0] || {};
+  check("NICER: una sola llamada", peticionesNicer.length === 1);
+  check("NICER: sin herramientas", !pn.tools && !pn.tool_choice);
+  check("NICER: lleva el borrador delimitado en <contexto>", JSON.stringify(pn.messages).includes("Sr. García") && pn.messages?.[0]?.content.includes("<contexto>"));
+  check("NICER: mismo modelo que Clara, sin streaming y max_tokens 2000", pn.model === "claude-sonnet-5" && !pn.stream && pn.max_tokens === 2000);
+  check("NICER: system prompt propio de control de calidad", String(pn.system).includes("Eres NICER") && !String(pn.system).includes("Eres CLARA"));
+  check("NICER: el informe vuelve con su cabecera", informeNicer.startsWith("Informe de NICER:\nVEREDICTO: MEJORAR"), informeNicer);
+  check("al equipo no le llega la memoria ni la clave de Pau", !JSON.stringify(pn).includes("Memoria a largo plazo") && !JSON.stringify(pn).includes("mi-clave-sync"));
+
+  // NURIA: usa buscar_web dentro de su bucle y el informe vuelve a Clara.
+  process.env.GEMINI_API_KEY = "clave-gemini-test";
+  const peticionesNuria = [];
+  const consultasGemini = [];
+  const estados = [];
+  globalThis.fetch = async (url, init) => {
+    const u = String(url);
+    if (u.includes("generativelanguage")) {
+      consultasGemini.push(JSON.parse(init.body));
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "El tipo general del ITP en Asturias es del 8 %." }] }, groundingMetadata: { groundingChunks: [{ web: { title: "Principado de Asturias", uri: "https://www.asturias.es/itp" } }] } }] }), { status: 200 });
+    }
+    if (!u.includes("anthropic.com")) throw new Error("fetch inesperado: " + u);
+    peticionesNuria.push(JSON.parse(init.body));
+    if (peticionesNuria.length === 1) return mensaje([{ type: "tool_use", id: "nu_1", name: "buscar_web", input: { consulta: "tipo ITP Asturias vivienda usada" } }], "tool_use");
+    return mensaje([{ type: "text", text: "Resumen: ITP general 8 % ✅ (Principado de Asturias — https://www.asturias.es/itp — consultado el 13/10/2026)." }]);
+  };
+  const informeNuria = await consultarEquipo({ agente: "nuria", encargo: "¿Qué ITP paga una vivienda usada en Asturias?" }, { ...deps, alEstado: (e) => estados.push(e) });
+  check("NURIA: declara buscar_web, leer_web y calcular", ["buscar_web", "leer_web", "calcular"].every((n) => (peticionesNuria[0]?.tools || []).some((t) => t.name === n)));
+  check("NURIA: buscó con Gemini lo que pidió", consultasGemini.length === 1 && JSON.stringify(consultasGemini[0]).includes("tipo ITP Asturias"));
+  const tr = (peticionesNuria[1]?.messages || []).at(-1)?.content?.[0] || {};
+  check("NURIA: el resultado de la búsqueda vuelve a su bucle como tool_result", tr.type === "tool_result" && tr.tool_use_id === "nu_1" && String(tr.content).includes("asturias.es/itp"));
+  check("NURIA: su informe vuelve a Clara", informeNuria.startsWith("Informe de NURIA:") && informeNuria.includes("ITP general 8 %"), informeNuria);
+  check("NURIA: recibe la fecha de hoy para fechar fuentes", peticionesNuria[0]?.messages?.[0]?.content.includes("13 de octubre de 2026"));
+  check("NURIA: avisa en el chat de que está buscando", estados.includes("👥 NURIA está buscando en Internet…"), JSON.stringify(estados));
+
+  // Límite de rondas: en la última ya no puede pedir herramientas.
+  const peticionesRondas = [];
+  globalThis.fetch = async (url, init) => {
+    const b = JSON.parse(init.body);
+    peticionesRondas.push(b);
+    if (b.tool_choice?.type === "none") return mensaje([{ type: "text", text: "Informe final con lo calculado." }]);
+    return mensaje([{ type: "tool_use", id: "c_" + peticionesRondas.length, name: "calcular", input: { expresion: "1+1" } }], "tool_use");
+  };
+  const informeRondas = await consultarEquipo({ agente: "iyan", encargo: "Haz cuentas" }, deps);
+  check(`IYAN: como mucho ${MAX_RONDAS_EQUIPO} rondas de herramientas y cierra sin ellas`, peticionesRondas.length === MAX_RONDAS_EQUIPO + 1 && peticionesRondas.at(-1).tool_choice?.type === "none" && informeRondas.startsWith("Informe de IYAN:"), String(peticionesRondas.length));
+  check("IYAN: solo tiene calcular", (peticionesRondas[0]?.tools || []).map((t) => t.name).join() === "calcular");
+
+  // Una herramienta que no le toca no se ejecuta y el resultado nunca va vacío.
+  const peticionesAjenas = [];
+  globalThis.fetch = async (url, init) => {
+    peticionesAjenas.push(JSON.parse(init.body));
+    if (peticionesAjenas.length === 1) return mensaje([{ type: "tool_use", id: "x1", name: "mis_leads", input: {} }], "tool_use");
+    return mensaje([{ type: "text", text: "Hecho." }]);
+  };
+  await consultarEquipo({ agente: "iyan", encargo: "Lee mis leads" }, deps);
+  check("una herramienta ajena al agente no se ejecuta", JSON.stringify(peticionesAjenas[1]?.messages || []).includes("Herramienta no disponible para IYAN"));
+  const vaciaRes = [];
+  globalThis.fetch = async (url, init) => {
+    vaciaRes.push(JSON.parse(init.body));
+    if (vaciaRes.length === 1) return mensaje([{ type: "tool_use", id: "v1", name: "calcular", input: {} }], "tool_use");
+    return mensaje([{ type: "text", text: "Hecho." }]);
+  };
+  await consultarEquipo({ agente: "iyan", encargo: "x" }, { ...deps, herramientas: { calcular: { esquema: HERRAMIENTA_CALCULAR, ejecutar: () => "" } } });
+  check("el resultado de una herramienta nunca va vacío", (vaciaRes[1]?.messages || []).at(-1)?.content?.[0]?.content === "(sin resultado)");
+
+  // Tiempo límite: la API no contesta → texto claro.
+  globalThis.fetch = (url, init) => new Promise((resolve, reject) => {
+    init?.signal?.addEventListener("abort", () => reject(Object.assign(new Error("abortado"), { name: "AbortError" })));
+  });
+  const t0 = Date.now();
+  const lento = await consultarEquipo({ agente: "nuria", encargo: "Investiga algo largo" }, { ...deps, limiteMs: 150 });
+  check("tiempo límite: devuelve un texto claro", lento.startsWith("NURIA no ha terminado a tiempo;") || lento.startsWith("NURIA no ha terminado a tiempo ("), lento);
+  check("tiempo límite: no espera más de la cuenta", Date.now() - t0 < 3000, String(Date.now() - t0));
+
+  // Tiempo límite a mitad de una búsqueda: devuelve lo reunido marcado SIN REVISAR.
+  let nLento = 0;
+  globalThis.fetch = (url, init) => {
+    const u = String(url);
+    if (u.includes("generativelanguage")) {
+      return Promise.resolve(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "Dato encontrado a medias." }] } }] }), { status: 200 }));
+    }
+    if (++nLento === 1) return Promise.resolve(mensaje([{ type: "tool_use", id: "s1", name: "buscar_web", input: { consulta: "x" } }], "tool_use"));
+    return new Promise((resolve, reject) => init?.signal?.addEventListener("abort", () => reject(Object.assign(new Error("abortado"), { name: "AbortError" }))));
+  };
+  const aMedias = await consultarEquipo({ agente: "nuria", encargo: "Investiga" }, { ...deps, limiteMs: 200 });
+  check("tiempo límite: entrega lo reunido marcado SIN REVISAR", aMedias.includes("no ha terminado a tiempo") && aMedias.includes("SIN REVISAR") && aMedias.includes("Dato encontrado a medias"), aMedias);
+
+  // Error de la API → texto, nunca excepción.
+  globalThis.fetch = async () => new Response(JSON.stringify({ type: "error", error: { type: "api_error", message: "caída" } }), { status: 500, headers: { "content-type": "application/json" } });
+  const caida = await consultarEquipo({ agente: "nicer", encargo: "Revisa", contexto: "Texto" }, deps);
+  check("error de la API → texto claro", caida.startsWith("No se pudo consultar a NICER (500)"), caida);
+}
+
+// ---------------------------------------------------------------------------
+console.log("\n— handler: flujo completo con consultar_equipo —");
+// ---------------------------------------------------------------------------
+{
+  const peticiones = [];
+  globalThis.fetch = async (url, init) => {
+    const u = String(url);
+    if (!u.includes("anthropic.com")) throw new Error("fetch inesperado: " + u);
+    const b = JSON.parse(init.body);
+    peticiones.push(b);
+    const esClara = JSON.stringify(b.system).includes("Eres CLARA");
+    const cuerpo = !esClara
+      ? { content: [{ type: "text", text: "VEREDICTO: LISTO\nERRORES: Ninguno" }], stop_reason: "end_turn" }
+      : peticiones.filter((p) => JSON.stringify(p.system).includes("Eres CLARA")).length === 1
+        ? { content: [{ type: "tool_use", id: "eq_1", name: "consultar_equipo", input: { agente: "nicer", encargo: "Revisa la carta al propietario.", contexto: "Estimada Sra. López: …" } }], stop_reason: "tool_use" }
+        : { content: [{ type: "text", text: "NICER lo ha revisado: está lista para enviar." }], stop_reason: "end_turn" };
+    return new Response(JSON.stringify({ id: "msg_f", type: "message", role: "assistant", model: "claude-sonnet-5", usage: { input_tokens: 5, output_tokens: 5 }, ...cuerpo }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  const rf = mockRes();
+  await handler({ method: "POST", body: { messages: [{ role: "user", content: "Clara, revisa esta carta antes de mandarla." }], memoria: "Nota privada de Pau" } }, rf);
+  const deClara = peticiones.filter((p) => JSON.stringify(p.system).includes("Eres CLARA"));
+  const deNicer = peticiones.filter((p) => String(p.system).includes("Eres NICER"));
+  check("flujo: respuesta 200 con el texto final de Clara", rf.r.statusCode === 200 && (rf.r.body?.reply || "").includes("NICER lo ha revisado"), JSON.stringify(rf.r.body));
+  check("flujo: Clara (2 llamadas) + NICER (1 llamada)", deClara.length === 2 && deNicer.length === 1, `${deClara.length}/${deNicer.length}`);
+  check("flujo: el system de Clara tiene la sección del equipo", deClara[0]?.system?.[0]?.text.includes("## Tu equipo (consultar_equipo)") && deClara[0].system[0].text.includes("SIEMPRE revisas e integras"));
+  check("flujo: NICER recibe el borrador y no la memoria de Pau", JSON.stringify(deNicer[0]?.messages).includes("Sra. López") && !JSON.stringify(deNicer[0]).includes("Nota privada de Pau"));
+  const resultadoEquipo = (deClara[1]?.messages || []).at(-1)?.content?.[0] || {};
+  check("flujo: el informe de NICER vuelve a Clara como tool_result", resultadoEquipo.type === "tool_result" && resultadoEquipo.tool_use_id === "eq_1" && String(resultadoEquipo.content).startsWith("Informe de NICER:\nVEREDICTO: LISTO"), JSON.stringify(resultadoEquipo));
+
+  // Streaming: el estado dice qué agente trabaja.
+  let nStream = 0;
+  globalThis.fetch = async (url, init) => {
+    const b = JSON.parse(init.body);
+    if (!b.stream) {
+      return new Response(JSON.stringify({ id: "m", type: "message", role: "assistant", model: "claude-sonnet-5", content: [{ type: "text", text: "Fórmula: =SUMA(B2:B10)" }], stop_reason: "end_turn", usage: { input_tokens: 1, output_tokens: 1 } }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    nStream++;
+    const inicio = ["message_start", { type: "message_start", message: { id: "s" + nStream, type: "message", role: "assistant", model: "claude-sonnet-5", content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 } } }];
+    const ev = nStream === 1
+      ? [inicio,
+          ["content_block_start", { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "eq_s", name: "consultar_equipo", input: {} } }],
+          ["content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: JSON.stringify({ agente: "iyan", encargo: "Fórmula para sumar comisiones" }) } }],
+          ["content_block_stop", { type: "content_block_stop", index: 0 }],
+          ["message_delta", { type: "message_delta", delta: { stop_reason: "tool_use", stop_sequence: null }, usage: { output_tokens: 5 } }],
+          ["message_stop", { type: "message_stop" }]]
+      : [inicio,
+          ["content_block_start", { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } }],
+          ["content_block_delta", { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "IYAN ha preparado la fórmula: =SUMA(B2:B10)" } }],
+          ["content_block_stop", { type: "content_block_stop", index: 0 }],
+          ["message_delta", { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 5 } }],
+          ["message_stop", { type: "message_stop" }]];
+    return new Response(sseBody(ev), { status: 200, headers: { "content-type": "text/event-stream" } });
+  };
+  const rs2 = mockRes();
+  await handler({ method: "POST", body: { stream: true, messages: [{ role: "user", content: "Necesito una fórmula" }] } }, rs2);
+  const emit2 = rs2.r.chunks.join("");
+  check("SSE: el estado dice qué agente trabaja", emit2.includes("👥 Consultando a IYAN…"), emit2.slice(0, 300));
+  check("SSE: respuesta final tras el informe", emit2.includes('"done":true') && emit2.includes("=SUMA(B2:B10)") && rs2.r.ended);
 }
 
 // ---------------------------------------------------------------------------
