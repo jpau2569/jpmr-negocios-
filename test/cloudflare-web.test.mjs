@@ -646,7 +646,9 @@ console.log("\n🧰 Servidor local, publicación y link temporal");
   const bat = bruto.toString("latin1");
   check("link-temporal.bat: solo ASCII y saltos CRLF", [...bruto].every((b) => b < 128) && !/[^\r]\n/.test(bat) && bat.includes("\r\n"));
   check("link-temporal.bat: expansión retardada y nunca %PUERTO%",
-    bat.includes("setlocal EnableExtensions EnableDelayedExpansion") && !bat.includes("%PUERTO%") && bat.includes('"!CFD!" tunnel --url http://localhost:!PUERTO!'));
+    bat.includes("setlocal EnableExtensions EnableDelayedExpansion") && !bat.includes("%PUERTO%") && bat.includes('"!CFD!" tunnel --url http://127.0.0.1:!PUERTO!'));
+  // Dentro de un bloque ( … ) un %ProgramFiles(x86)% cierra el paréntesis antes de tiempo y la ventana se cierra sola.
+  check("link-temporal.bat: dentro de bloques, ProgramFiles(x86) con expansión retardada", !/^\s{4,}.*%ProgramFiles\(x86\)%/m.test(bat));
   const lineas = bat.split("\r\n").filter((l) => !/^\s*rem\b/i.test(l));
   const pos = (re) => lineas.findIndex((l) => re.test(l));
   const iDefinido = pos(/^if not defined PUERTO goto :malpuerto$/), iCifras = pos(/^if not "!RESTO!"=="x" goto :malpuerto$/);
