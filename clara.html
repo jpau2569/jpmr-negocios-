@@ -387,6 +387,33 @@
     wrap.appendChild(b);
   }
 
+  // Si la respuesta trae una tabla en un bloque ```csv (skill hoja-calculo-excel),
+  // se ofrece descargarla como .csv que Excel abre directamente (BOM para los acentos).
+  function extraeCsv(text) {
+    const m = String(text || "").match(/```csv\s*\n([\s\S]*?)```/i);
+    return m && m[1].trim() ? m[1].trim() : null;
+  }
+  function botonDescargaCsv(wrap, texto) {
+    if (!wrap) return;
+    wrap.querySelector(".dlcsv")?.remove();
+    const csv = extraeCsv(texto);
+    if (!csv) return;
+    const b = document.createElement("button");
+    b.className = "copy dlcsv";
+    b.style.opacity = "1";
+    b.textContent = "⬇ Descargar Excel (CSV)";
+    b.title = "Descarga la tabla; se abre con Excel o Google Sheets";
+    b.addEventListener("click", () => {
+      const blob = new Blob(["﻿" + csv.replace(/\r?\n/g, "\r\n")], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "clara-" + new Date().toISOString().slice(0, 10) + ".csv";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+    wrap.appendChild(b);
+  }
+
   function addMessage(role, text, adj) {
     const wrap = document.createElement("div");
     wrap.className = "msg " + (role === "user" ? "user" : "clara");
@@ -435,6 +462,7 @@
       });
       wrap.appendChild(copy);
       botonDescargaHtml(wrap, text);
+      botonDescargaCsv(wrap, text);
     }
     chatEl.appendChild(wrap);
     mainEl.scrollTop = mainEl.scrollHeight;
@@ -653,6 +681,7 @@
           bubble.innerHTML = renderRich(texto);
           bubble.rawText = texto;
           botonDescargaHtml(bubble.closest(".msg"), texto);
+          botonDescargaCsv(bubble.closest(".msg"), texto);
           if (errorMsg) addError(errorMsg);
           finaliza(texto);
         }

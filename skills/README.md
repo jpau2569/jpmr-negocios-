@@ -41,3 +41,17 @@ Reglas:
 1. **Carpeta aquí** (permanente, va con el código): crea `skills/<nombre>/SKILL.md`, súbelo a GitHub y Vercel la publica.
 2. **Desde el chat** (con la nube activa): pídele *"Clara, créate una skill para…"* y la guarda en Supabase con `crear_skill`.
 3. **Desde un enlace**: pásale la dirección de un `SKILL.md` público; Clara lo lee con `leer_web`, lo adapta y lo guarda con `crear_skill`.
+
+## Skills incluidas
+
+| Skill | Para qué |
+|---|---|
+| `ficha-portal-inmobiliario` | Ficha y anuncio para portales a partir de los datos reales del piso. |
+| `fotos-inmueble` | Revisar y ordenar las fotos de un inmueble para los portales (formato, duplicadas, datos personales visibles). |
+| `mensajes-clientes` | Mensajes de WhatsApp y correo a clientes en el tono de la oficina. |
+| `documento-oficina` | Cartas, informes y autorizaciones como HTML A4 con la marca (lo legal sale como BORRADOR). |
+| `hoja-calculo-excel` | Tablas en un bloque ```csv; en el chat aparece el botón «⬇ Descargar Excel (CSV)». |
+| `acta-y-tareas` | De una reunión, llamada, nota de voz o hilo de mensajes a acta con tareas, responsables y fechas. |
+| `plan-semanal` | Organizar el día o la semana con prioridades reales y bloques de tiempo. |
+| `presupuesto-servicios` | Presupuesto u hoja de encargo; nunca inventa precios y el IVA lo calcula con `calcular`. |
+| `mejora-continua` | Detecta tareas que se repiten y propone crear o mejorar una skill (con `crear_skill`) o guardar una preferencia (con `recordar`). No cambia el código de Clara. |
