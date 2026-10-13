@@ -52,11 +52,12 @@ export async function borraAjuste(db, clave) {
  */
 export async function guardaHoja(db, f) {
   const r = await db.prepare(
-    `INSERT INTO hojas (id, tipo, referencia, inmueble, nombre, busqueda, agente_id, agente, firmada, recibida, ip, contenido, hash)
-     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    `INSERT INTO hojas (id, tipo, referencia, inmueble, nombre, busqueda, agente_id, agente, firmada, recibida, ip, contenido, hash, textos_al_dia, marca_al_dia)
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
      WHERE NOT EXISTS (SELECT 1 FROM registro WHERE hoja = ? AND accion = 'borrada')
      ON CONFLICT (id) DO NOTHING`)
-    .bind(f.id, f.tipo, f.referencia, f.inmueble, f.nombre, f.busqueda, f.agenteId, f.agente, f.firmada, f.recibida, f.ip, f.contenido, f.hash, f.id)
+    .bind(f.id, f.tipo, f.referencia, f.inmueble, f.nombre, f.busqueda, f.agenteId, f.agente, f.firmada, f.recibida, f.ip, f.contenido, f.hash,
+      f.textosAlDia ? 1 : 0, f.marcaAlDia ? 1 : 0, f.id)
     .run();
   if (r.meta?.changes) return "nueva";
   const existente = await db.prepare("SELECT hash FROM hojas WHERE id = ?").bind(f.id).first();
@@ -67,10 +68,15 @@ export async function guardaHoja(db, f) {
 /** Escapa los comodines de LIKE (% _ \) para buscar el texto tal cual. */
 export const comoLike = (t) => `%${String(t).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
-const COLUMNAS_LISTA = "id, tipo, referencia, inmueble, nombre, agente, firmada, recibida, hash, estado, anulada, motivo";
+const COLUMNAS_LISTA = "id, tipo, referencia, inmueble, nombre, agente, firmada, recibida, hash, estado, anulada, motivo, textos_al_dia, marca_al_dia";
 
-/** Lista (sin el contenido ni las firmas). filtros: { tipo, desdeUtc, hastaUtc, referencia, nombre, limite }. */
-export async function listaHojas(db, { tipo = "", desdeUtc = "", hastaUtc = "", referencia = "", nombre = "", limite = 200 } = {}) {
+/**
+ * Lista (sin el contenido ni las firmas). filtros: { tipo, desdeUtc,
+ * hastaUtc, referencia, nombre, limite, agenteId }. agenteId = null: todas;
+ * un número: solo las de ese agente (ajuste «Los agentes solo ven sus hojas»).
+ */
+export async function listaHojas(db, { tipo = "", desdeUtc = "", hastaUtc = "", referencia = "", nombre = "", limite = 200, agenteId = null } = {}) {
+  const soloDe = agenteId === null ? -1 : agenteId;
   const { results } = await db.prepare(
     `SELECT ${COLUMNAS_LISTA} FROM hojas
      WHERE (? = '' OR tipo = ?)
@@ -78,15 +84,17 @@ export async function listaHojas(db, { tipo = "", desdeUtc = "", hastaUtc = "", 
        AND (? = '' OR firmada < ?)
        AND (? = '' OR referencia LIKE ? ESCAPE '\\')
        AND (? = '' OR busqueda LIKE ? ESCAPE '\\')
+       AND (? = -1 OR agente_id = ?)
      ORDER BY firmada DESC, id
      LIMIT ?`)
-    .bind(tipo, tipo, desdeUtc, desdeUtc, hastaUtc, hastaUtc, referencia, comoLike(referencia), nombre, comoLike(nombre), limite)
+    .bind(tipo, tipo, desdeUtc, desdeUtc, hastaUtc, hastaUtc, referencia, comoLike(referencia), nombre, comoLike(nombre), soloDe, soloDe, limite)
     .all();
   return results || [];
 }
 
-export async function cuentaHojas(db) {
-  return Number((await db.prepare("SELECT COUNT(*) AS n FROM hojas").first())?.n || 0);
+export async function cuentaHojas(db, agenteId = null) {
+  const soloDe = agenteId === null ? -1 : agenteId;
+  return Number((await db.prepare("SELECT COUNT(*) AS n FROM hojas WHERE (? = -1 OR agente_id = ?)").bind(soloDe, soloDe).first())?.n || 0);
 }
 
 export async function leeHoja(db, id) {
@@ -99,7 +107,7 @@ export async function leeHoja(db, id) {
  */
 export async function filasCsv(db, limite = 20000) {
   const { results } = await db.prepare(
-    `SELECT id, tipo, estado, firmada, recibida, referencia, inmueble, nombre, agente, hash, anulada, motivo,
+    `SELECT id, tipo, estado, firmada, recibida, referencia, inmueble, nombre, agente, hash, anulada, motivo, textos_al_dia, marca_al_dia,
        CASE tipo WHEN 'visita' THEN json_extract(contenido, '$.datos.visitante.dni') ELSE json_extract(contenido, '$.datos.piso.propDni') END AS dni,
        CASE tipo WHEN 'visita' THEN json_extract(contenido, '$.datos.visitante.telefono') ELSE json_extract(contenido, '$.datos.piso.propTelefono') END AS telefono,
        CASE tipo WHEN 'visita' THEN json_extract(contenido, '$.datos.visitante.email') ELSE json_extract(contenido, '$.datos.piso.propEmail') END AS correo,
@@ -110,18 +118,24 @@ export async function filasCsv(db, limite = 20000) {
 
 /**
  * Anula: no borra ni cambia lo firmado. Deja fecha, motivo y quién, y una
- * línea en el registro. Devuelve 1 si la anuló, 0 si no existía o ya estaba anulada.
+ * línea en el registro, LAS DOS COSAS EN UN SOLO db.batch (una transacción):
+ * o se hacen las dos o ninguna. El INSERT solo escribe si la hoja ha quedado
+ * anulada y aún no tenía su línea (una hoja se anula una sola vez), así que
+ * si el UPDATE no cambia nada tampoco se escribe en el registro.
+ * Devuelve 1 si la anuló, 0 si no existía o ya estaba anulada.
  */
 export async function anulaHoja(db, id, { cuando, motivo, quien }) {
-  const r = await db.prepare(
-    "UPDATE hojas SET estado = 'anulada', anulada = ?, motivo = ?, anulada_por = ? WHERE id = ? AND estado = 'firmada'")
-    .bind(cuando, motivo, quien, id).run();
-  const n = r.meta?.changes || 0;
-  if (n) {
-    await db.prepare("INSERT INTO registro (cuando, quien, accion, hoja, tipo, detalle) SELECT ?, ?, 'anulada', id, tipo, ? FROM hojas WHERE id = ?")
-      .bind(cuando, quien, motivo, id).run();
-  }
-  return n;
+  const res = await db.batch([
+    db.prepare("UPDATE hojas SET estado = 'anulada', anulada = ?, motivo = ?, anulada_por = ? WHERE id = ? AND estado = 'firmada'")
+      .bind(cuando, motivo, quien, id),
+    db.prepare(
+      `INSERT INTO registro (cuando, quien, accion, hoja, tipo, detalle)
+       SELECT ?, ?, 'anulada', id, tipo, ? FROM hojas
+       WHERE id = ? AND estado = 'anulada' AND anulada = ?
+         AND NOT EXISTS (SELECT 1 FROM registro WHERE hoja = ? AND accion = 'anulada')`)
+      .bind(cuando, quien, motivo, id, cuando, id),
+  ]);
+  return res[0]?.meta?.changes || 0;
 }
 
 /**
@@ -129,6 +143,9 @@ export async function anulaHoja(db, id, { cuando, motivo, quien }) {
  * el motivo de su anulación, si lo había. Queda solo que existió una hoja
  * con ese id, su tipo, cuándo se borró y quién lo hizo (así una cola vieja
  * de un móvil no la puede volver a subir). Todo en una transacción.
+ * EL ORDEN IMPORTA: primero la línea «borrada» del registro y después el
+ * DELETE, porque el trigger hojas_sin_borrar de schema.sql no deja borrar
+ * una hoja que no tenga esa línea.
  */
 export async function borraHoja(db, id, { cuando, quien }) {
   const res = await db.batch([
@@ -142,6 +159,21 @@ export async function borraHoja(db, id, { cuando, quien }) {
 export async function listaRegistro(db, limite = 100) {
   const { results } = await db.prepare("SELECT id, cuando, quien, accion, hoja, tipo, detalle FROM registro ORDER BY id DESC LIMIT ?").bind(limite).all();
   return results || [];
+}
+
+// ---- Versión de la sesión (cerrar sesión de verdad) --------------------------------
+export async function versionTitular(db) {
+  return Number((await db.prepare("SELECT version FROM sesion_titular WHERE id = 1").first())?.version || 0);
+}
+/** «Salir» del titular: sube la versión y su cookie deja de valer en el servidor. */
+export async function subeVersionTitular(db) {
+  await db.prepare(
+    `INSERT INTO sesion_titular (id, version) VALUES (1, 1)
+     ON CONFLICT (id) DO UPDATE SET version = version + 1`).run();
+}
+/** «Salir» de un agente: sube su versión (como al cambiarle la clave). */
+export async function subeVersionAgente(db, id) {
+  await db.prepare("UPDATE agentes SET version = version + 1 WHERE id = ?").bind(id).run();
 }
 
 // ---- Agentes --------------------------------------------------------------------

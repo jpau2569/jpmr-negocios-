@@ -48,10 +48,13 @@ export const CAMPOS_MARCA = [
 ];
 
 /* Textos legales de partida: los BORRADOR de Cerebro (operaciones-datos.js,
-   fuentes en cerebro/FUENTES-CAPTACION.md y FUENTES-OPERACIONES.md). */
+   fuentes en cerebro/FUENTES-CAPTACION.md y FUENTES-OPERACIONES.md).
+   El de protección de datos de la visita de Cerebro nombra a Asesoría
+   Castresana; aquí se deja neutro («[razón social y NIF]») para que no se
+   cuele en otra inmobiliaria. Cerebro no se toca. */
 export const TEXTOS_DEFECTO = Object.freeze({
   declaracion: HOJA_VISITA_BORRADOR.declaracion,
-  rgpdVisita: HOJA_VISITA_BORRADOR.rgpd,
+  rgpdVisita: HOJA_VISITA_BORRADOR.rgpd.replace(/\[razón social y NIF de [^\]]*\]/, '[razón social y NIF]'),
   visitaRevisados: false,
   conformidad: HOJA_CAPTACION_BORRADOR.conformidad,
   rgpdCaptacion: HOJA_CAPTACION_BORRADOR.rgpd,
@@ -148,6 +151,52 @@ export function marcaRevisados(actuales, grupo, valor) {
 
 /** Datos de la marca que siguen [PENDIENTE] (para avisar en Ajustes). */
 export const pendientesMarca = (marca) => CAMPOS_MARCA.filter((c) => tieneCorchetes(marca?.[c.id])).map((c) => c.etiqueta);
+
+/**
+ * Los textos tal como van dentro de una hoja de ese tipo, sacados de los
+ * de Ajustes (las claves cambian: rgpdVisita → rgpd). Lo usan el móvil al
+ * firmar y el Worker al comprobar si los de la hoja están al día.
+ */
+export function textosDeHoja(textos, tipo) {
+  const t = textosCompletos(textos);
+  return tipo === 'visita'
+    ? { declaracion: t.declaracion, rgpd: t.rgpdVisita, revisados: t.visitaRevisados }
+    : { conformidad: t.conformidad, rgpd: t.rgpdCaptacion, desistimiento: t.desistimiento, revisados: t.captacionRevisados };
+}
+
+const sinTildes = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const esCastresana = (s) => sinTildes(s).includes('castresana');
+
+/**
+ * Avisos de marca para el titular (Inicio y Ajustes), para que la marca de
+ * serie (Asesoría Castresana) no se cuele en los PDF de otra inmobiliaria.
+ * logoModo: 'defecto' | 'propio' | 'ninguno'.
+ * Si la inmobiliaria ES Asesoría Castresana, su nombre en los textos y en
+ * el encabezado de firmas es lo correcto y no se avisa.
+ */
+export function avisosMarca(marca, textos, logoModo) {
+  const avisos = [];
+  const m = marca || {};
+  const t = textosCompletos(textos);
+  const otraInmobiliaria = !esCastresana(m.nombreComercial);
+  if (otraInmobiliaria && logoModo === 'defecto') {
+    avisos.push('Sigue puesto el logo de serie (Asesoría Castresana): sube el tuyo o quítalo en Ajustes → Logo.');
+  }
+  if (otraInmobiliaria) {
+    const con = [];
+    if (esCastresana(m.encabezadoFirmas)) con.push('el encabezado de firmas');
+    if ([...GRUPOS_TEXTOS.visita].some((k) => esCastresana(t[k]))) con.push('los textos legales de la hoja de visita');
+    if ([...GRUPOS_TEXTOS.captacion].some((k) => esCastresana(t[k]))) con.push('los textos legales de la hoja de captación');
+    if (con.length) avisos.push(`Todavía pone «Castresana» en ${con.join(', ')}: cámbialo en Ajustes.`);
+  }
+  const legales = ['razonSocial', 'cif'].filter((k) => tieneCorchetes(m[k]));
+  if (legales.length) {
+    avisos.push(`${legales.length === 2 ? 'La razón social y el CIF siguen' : legales[0] === 'cif' ? 'El CIF sigue' : 'La razón social sigue'} como [PENDIENTE]: complétalos en Ajustes → Marca antes de usar la app con clientes.`);
+  }
+  const otros = CAMPOS_MARCA.filter((c) => !['razonSocial', 'cif'].includes(c.id) && tieneCorchetes(m[c.id])).map((c) => c.etiqueta);
+  if (otros.length) avisos.push(`Faltan datos de la marca: ${otros.join(', ')}. Complétalos en Ajustes.`);
+  return avisos;
+}
 
 /* ── Colores legibles (WCAG) ─────────────────────────────────────────── */
 

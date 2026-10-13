@@ -7,7 +7,9 @@
 //   · sin conexión: firmar, queda en la cola con el aviso «pendiente de
 //     subir», recargar sin red (abre desde la caché del service worker) y,
 //     al volver la red, se sube sola y una sola vez;
-//   · sin scroll lateral, todo lo táctil ≥ 44 px y sin errores de CSP.
+//   · sin scroll lateral, todo lo táctil ≥ 44 px (también los enlaces sueltos
+//     y la etiqueta de las casillas) y sin errores de CSP;
+//   · cola compartida: lo que firmó otro usuario en el mismo móvil no se ve.
 // ============================================================================
 import { chromium } from "playwright";
 import { servidorLocal } from "../cloudflare/hojas-firmadas/herramientas/probar-en-local.mjs";
@@ -32,7 +34,7 @@ const cuenta = () => db._base.prepare("SELECT COUNT(*) AS n FROM hojas").get().n
 const sinScrollLateral = (p) => p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
 async function tactilesPequenos(p) {
   return p.evaluate(() => {
-    const sel = "button, select, input:not([type=checkbox]), textarea, a.boton, .pestanas a, summary, .casilla label, .hoja-fila";
+    const sel = "button, select, input:not([type=checkbox]), textarea, a.boton, a.enlace-tactil, .pestanas a, summary, .casilla label, .hoja-fila";
     return [...document.querySelectorAll(sel)]
       .filter((el) => el.offsetParent !== null)
       .map((el) => ({ el: el.tagName + (el.id ? "#" + el.id : el.className ? "." + String(el.className).split(" ")[0] : ""), alto: Math.round(el.getBoundingClientRect().height) }))
@@ -114,6 +116,11 @@ async function recorrido(ancho) {
   await revisa(p, "hoja de visita");
   check("todos los campos tienen etiqueta", await p.evaluate(() => [...document.querySelectorAll("#form-hoja input, #form-hoja select, #form-hoja textarea")].every((el) => el.labels && el.labels.length > 0)));
   check("aviso BORRADOR de los textos legales", await p.locator(".aviso-borrador").isVisible());
+  const casillas = await p.evaluate(() => [...document.querySelectorAll(".casilla label")].map((l) => ({ alto: l.getBoundingClientRect().height, conCasilla: Boolean(l.querySelector("input[type=checkbox]")) })));
+  check("casillas de RGPD y ofertas: la etiqueta (≥ 44 px) envuelve la casilla", casillas.length === 2 && casillas.every((c) => c.alto >= 44 && c.conCasilla), JSON.stringify(casillas));
+  await p.locator("label[for=v-ofertas]").click({ position: { x: 200, y: 10 } });
+  check("tocar el texto de la casilla la marca", await p.isChecked("#v-ofertas"));
+  await p.uncheck("#v-ofertas");
   await p.click("#form-hoja button[type=submit]");
   await p.waitForSelector("#errores:not([hidden])");
   check("firmar vacío: lista de lo que falta, con el foco", await p.evaluate(() => document.activeElement?.id === "errores") && /firma del visitante/.test(await p.textContent("#errores")));
@@ -143,6 +150,7 @@ async function recorrido(ancho) {
   const ruta = await descarga.path();
   const pdf = (await import("node:fs")).readFileSync(ruta).toString("latin1");
   check("PDF descargado con el SHA-256 al pie y la marca", pdf.startsWith("%PDF-1.4") && pdf.includes(fila.hash) && pdf.includes("(ASESORIA CASTRESANA INMO)") && /Hoja-visita-PIS0190-\d{4}-\d{2}-\d{2}\.pdf/.test(descarga.suggestedFilename()));
+  check("PDF subido: bajo las firmas, visita, firma en el móvil y registro en el servidor", pdf.includes("Visita del ") && pdf.includes("Registrada en el servidor el"));
   if (movil) {
     await p.click("[data-accion=compartir]");
     const c = await p.waitForFunction(() => window.__compartido).then((h) => h.jsonValue());
@@ -164,6 +172,8 @@ async function recorrido(ancho) {
   await p.waitForSelector(".datos");
   await revisa(p, "detalle");
   check("detalle con el SHA-256", (await p.textContent(".huella code")) === fila.hash);
+  check("el SHA-256 explicado en palabras de Pau", /Código de comprobación \(SHA-256\): sirve para demostrar que la hoja no ha cambiado/.test(await p.textContent(".huella")));
+  check("«← Volver a la lista» con zona táctil de 44 px", (await p.locator("a.enlace-tactil[href='#hojas']").evaluate((a) => a.getBoundingClientRect().height)) >= 44);
   await p.fill("#motivo", "Prueba de anulación desde la interfaz");
   await p.click("#form-anular button[type=submit]");
   await p.waitForFunction(() => /ANULADA/.test(document.querySelector(".datos")?.textContent || ""));
@@ -207,7 +217,9 @@ console.log("\n🏷️  Ajustes de marca (1366 px)");
   await p.click(".pestanas a[href='#ajustes']");
   await p.waitForSelector("#form-marca");
   await revisa(p, "ajustes");
-  check("el aviso dice qué datos de la marca faltan (CIF, razón social)", /Razón social/.test(await p.textContent(".avisos")));
+  check("el aviso dice qué datos de la marca faltan (CIF, razón social)", /razón social y el CIF siguen como \[PENDIENTE\]/.test(await p.textContent(".avisos")));
+  check("el aviso de Telegram en palabras de Pau", /Avisos por Telegram: sin configurar \(opcional\)/.test(await p.textContent(".avisos")) && !/TELEGRAM_/.test(await p.textContent(".avisos")));
+  check("Ajustes: «Los agentes solo ven sus hojas» activado por defecto", await p.isChecked("#p-soloSuyas"));
   await p.fill("#m-nombreComercial", "Pisos Norte");
   await p.fill("#m-encabezadoFirmas", "PISOS NORTE GESTION SL");
   await p.evaluate(() => { const c = document.getElementById("m-colorPrincipal"); c.value = "#ffe600"; c.dispatchEvent(new Event("input", { bubbles: true })); });
@@ -217,6 +229,10 @@ console.log("\n🏷️  Ajustes de marca (1366 px)");
   await p.reload();
   await p.waitForSelector(".acciones-grandes, #form-marca");
   check("al recargar, la app se llama como la marca nueva", (await p.title()) === "Pisos Norte · Hojas firmadas" && (await p.textContent(".nombre-app")) === "Pisos Norte");
+  await p.goto(`${BASE}/#inicio`);
+  await p.waitForSelector(".avisos");
+  check("Inicio avisa: otra inmobiliaria con el logo y el encabezado de Castresana", /logo de serie/.test(await p.textContent(".avisos")));
+  check("«Ir a Ajustes» con zona táctil de 44 px", (await p.locator(".avisos a.enlace-tactil").evaluate((a) => a.getBoundingClientRect().height)) >= 44);
   check("la barra usa el color nuevo con texto legible", (await p.locator(".barra").evaluate((e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e).color].join("|"))) === "rgb(255, 230, 0)|rgb(0, 0, 0)");
   check("sin errores en consola", pc.errores.length === 0, pc.errores.join(" | "));
 }
@@ -244,7 +260,9 @@ console.log("\n📵 Sin conexión (360 px)");
   const enCola = await p.evaluate(() => new Promise((ok) => { const r = indexedDB.open("hojas-firmadas"); r.onsuccess = () => { const q = r.result.transaction("pendientes").objectStore("pendientes").count(); q.onsuccess = () => ok(q.result); }; }));
   check("está en la cola local (IndexedDB)", enCola === 1);
   const [desc] = await Promise.all([p.waitForEvent("download"), p.click("[data-accion=descargar]")]);
-  check("sin red también sale el PDF (dice «Pendiente de registrar»)", (await import("node:fs")).readFileSync(await desc.path()).toString("latin1").includes("Pendiente de registrar en el servidor"));
+  const pdfSinRed = (await import("node:fs")).readFileSync(await desc.path()).toString("latin1");
+  check("sin red también sale el PDF (dice «Pendiente de registrar»)", pdfSinRed.includes("Pendiente de registrar en el servidor"));
+  check("y NO dice «Registrada» (no se ha subido)", !pdfSinRed.includes("Registrada") && pdfSinRed.includes("Visita del "));
   await revisa(p, "firmada sin red");
   await p.reload();
   await p.waitForSelector(".acciones-grandes", { timeout: 10_000 });
@@ -262,6 +280,63 @@ console.log("\n📵 Sin conexión (360 px)");
   const st = await p.evaluate(async ({ hoja, hash }) => (await fetch("/api/hojas", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ hoja, hash }) })).status, { hoja: JSON.parse(fila.contenido), hash: fila.hash });
   check("volver a mandarla da 200 (repetida) y sigue habiendo una", st === 200 && db._base.prepare("SELECT COUNT(*) AS n FROM hojas WHERE nombre = 'Carmen Sin Cobertura'").get().n === 1);
   check("sin errores en consola", errores.filter((e) => !/ERR_INTERNET_DISCONNECTED|Failed to fetch|net::/.test(e)).length === 0, errores.join(" | "));
+}
+
+// ---- Cola compartida (móvil): dos usuarios en el mismo teléfono ----
+console.log("\n👥 Cola compartida y salir de verdad (360 px)");
+{
+  const { p } = movil;
+  p.on("dialog", (d) => d.accept());
+  const alta = await p.evaluate(async () => (await fetch("/api/agentes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nombre: "Ana Agente", usuario: "ana.movil", clave: "clave de ana movil" }) })).status);
+  check("alta de una agente desde el móvil del titular", alta === 200);
+  // El titular firma y la hoja se queda en la cola (el servidor no responde).
+  await p.route("**/api/hojas", (r) => (r.request().method() === "POST" ? r.fulfill({ status: 503, contentType: "application/json", body: "{}" }) : r.continue()));
+  await p.goto(`${BASE}/#visita`);
+  await p.waitForSelector("#form-hoja");
+  await rellenaVisita(p, "Elena Privada Titular");
+  await firma(p, movil.cdp, "#firma-cliente");
+  await firma(p, movil.cdp, "#firma-agente");
+  await p.click("#form-hoja button[type=submit]");
+  await p.waitForSelector(".estado-subida.pendiente");
+  const idPendiente = await p.evaluate(() => new Promise((ok) => { const r = indexedDB.open("hojas-firmadas"); r.onsuccess = () => { const q = r.result.transaction("pendientes").objectStore("pendientes").getAll(); q.onsuccess = () => ok(q.result[0]?.id); }; }));
+  const cookieVieja = (await p.context().cookies()).find((c) => c.name === "__Host-sesion");
+  await p.goto(`${BASE}/#ajustes`);
+  await p.waitForSelector("#salir");
+  await p.click("#salir");
+  await p.waitForSelector("#form-entrar");
+  await p.unroute("**/api/hojas");
+  // La cookie del titular, copiada antes de salir, ya no vale en el servidor.
+  const conVieja = await fetch(`${BASE}/api/yo`, { headers: { cookie: `${cookieVieja?.name}=${cookieVieja?.value}` } });
+  check("tras «Salir», la cookie copiada del titular ya no vale (401)", Boolean(cookieVieja) && conVieja.status === 401);
+  await p.fill("#usuario", "ana.movil");
+  await p.fill("#clave", "clave de ana movil");
+  await p.click("#form-entrar button[type=submit]");
+  await p.waitForSelector(".acciones-grandes");
+  await p.waitForSelector("#pendientes:not([hidden])");
+  const aviso = await p.textContent("#pendientes");
+  check("la agente ve «1 hoja pendiente de otro usuario en este móvil»", /1 hoja pendiente de otro usuario en este móvil/.test(aviso), aviso);
+  check("…sin datos de esa hoja", !/Elena|PIS0190|600/.test(aviso));
+  await p.goto(`${BASE}/#hojas`);
+  await p.waitForSelector("#form-filtros");
+  await p.waitForTimeout(300);
+  const lista = await p.textContent("main");
+  check("en «Hojas» no sale la hoja del titular, solo cuántas hay", !lista.includes("Elena") && /1 hoja pendiente de otro usuario/.test(lista));
+  await p.goto(`${BASE}/#local/${idPendiente}`);
+  await p.waitForSelector("main .error");
+  check("abrirla por su dirección tampoco enseña nada", /otro usuario/.test(await p.textContent("main")) && !(await p.textContent("main")).includes("Elena"));
+  const enCola = await p.evaluate(() => new Promise((ok) => { const r = indexedDB.open("hojas-firmadas"); r.onsuccess = () => { const q = r.result.transaction("pendientes").objectStore("pendientes").count(); q.onsuccess = () => ok(q.result); }; }));
+  check("la agente no la intenta subir: sigue en la cola", enCola === 1 && db._base.prepare("SELECT COUNT(*) AS n FROM hojas WHERE nombre = 'Elena Privada Titular'").get().n === 0);
+  await revisa(p, "hojas de la agente");
+  // El titular vuelve a entrar y se sube.
+  await p.goto(`${BASE}/#ajustes`);
+  await p.waitForSelector("#salir");
+  await p.click("#salir");
+  await p.waitForSelector("#form-entrar");
+  await p.fill("#clave", CLAVE);
+  await p.click("#form-entrar button[type=submit]");
+  await p.waitForSelector(".acciones-grandes");
+  await p.waitForFunction(() => document.getElementById("pendientes").hidden === true, null, { timeout: 15_000 });
+  check("el titular vuelve a entrar y su hoja se sube sola", db._base.prepare("SELECT COUNT(*) AS n FROM hojas WHERE nombre = 'Elena Privada Titular'").get().n === 1);
 }
 
 await navegador.close();

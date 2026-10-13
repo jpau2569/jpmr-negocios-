@@ -18,6 +18,7 @@ import { CAMPOS_PISO, CAMPOS_INMUEBLE, limpiaFicha, nombrePiso } from '../cerebr
 import { esFirmaJpeg } from '../cerebro/visitas.js';
 import { esISO, esHora, telefonoWhatsapp } from '../cerebro/utiles.js';
 import { validaMarca, MAX_TEXTO_LEGAL } from './marca.js';
+import { analizaJpegDataUrl } from './jpeg.js';
 
 export const VERSION_HOJA = 1;
 export const TIPOS = { visita: 'Hoja de visita', captacion: 'Hoja de captación' };
@@ -71,6 +72,17 @@ export async function sha256Hex(t) {
 export const hashHoja = (hoja) => sha256Hex(canonico(hoja));
 export const esHash = (x) => typeof x === 'string' && /^[0-9a-f]{64}$/.test(x);
 
+/**
+ * Huella de los textos legales de una hoja SIN la marca «revisados»: el
+ * Worker guarda la de cada versión que el titular marca como revisada, y
+ * así acepta una hoja firmada sin conexión con unos textos que estaban
+ * revisados al firmarla aunque luego se hayan cambiado en Ajustes.
+ */
+export function huellaTextos(textos) {
+  const { revisados, ...resto } = textos && typeof textos === 'object' ? textos : {};
+  return sha256Hex(canonico(resto));
+}
+
 /* ── Firmas ──────────────────────────────────────────────────────────── */
 
 /** Bytes aproximados de un dataURL base64 (sin decodificarlo). */
@@ -79,7 +91,13 @@ export const bytesDeBase64 = (dataUrl) => {
   return Math.floor((b64.length * 3) / 4) - (b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0);
 };
 
-/** { dataUrl, ancho, alto } con un JPEG de verdad (FF D8 FF) y ≤ 150 KB. */
+/**
+ * { dataUrl, ancho, alto } con un JPEG de verdad y ≤ 150 KB. Se analiza la
+ * estructura del archivo (jpeg.js: SOI, segmentos, SOF con medidas
+ * razonables, datos de imagen y EOI) y las medidas tienen que ser las que
+ * dice la hoja. Lo que no se puede detectar: una firma en BLANCO bien
+ * formada (ver jpeg.js); eso lo frena el móvil, que exige un trazo.
+ */
 export function limpiaFirma(f, quien) {
   if (!esObjeto(f) || !esFirmaJpeg(f.dataUrl)) return { error: `Falta la firma ${quien}.` };
   if (!String(f.dataUrl).startsWith('data:image/jpeg;base64,/9j/')) return { error: `La firma ${quien} no es una imagen válida.` };
@@ -89,6 +107,9 @@ export function limpiaFirma(f, quien) {
   if (!Number.isInteger(ancho) || !Number.isInteger(alto) || ancho < 50 || alto < 20 || ancho > 2000 || alto > 2000) {
     return { error: `La firma ${quien} no tiene un tamaño válido.` };
   }
+  const jpeg = analizaJpegDataUrl(f.dataUrl, { maxLado: 2000 });
+  if (!jpeg.ok) return { error: `La firma ${quien} no es una imagen válida (${jpeg.motivo}).` };
+  if (jpeg.ancho !== ancho || jpeg.alto !== alto) return { error: `La firma ${quien} no tiene las medidas que dice.` };
   return { firma: { dataUrl: f.dataUrl, ancho, alto } };
 }
 

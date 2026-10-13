@@ -11,14 +11,16 @@ import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   canonico, hashHoja, limpiaHoja, esHojaExacta, resumenHoja, enMadrid, textoEnvio, enlaceWhatsapp, enlaceCorreo,
-  bytesDeBase64, MAX_FIRMA_BYTES, VERSION_HOJA, CAMPOS_CAPTACION, nombreDePila,
+  bytesDeBase64, MAX_FIRMA_BYTES, VERSION_HOJA, CAMPOS_CAPTACION, nombreDePila, huellaTextos,
 } from "../cloudflare/hojas-firmadas/public/static/nucleo/hoja.js";
 import {
   MARCA_DEFECTO, TEXTOS_DEFECTO, validaMarca, marcaCompleta, textosCompletos, cambiaTextos, marcaRevisados, textoSobre, contraste,
-  coloresInterfaz, lineaLegal, pendientesMarca, AVISO_SUPRESION,
+  coloresInterfaz, lineaLegal, pendientesMarca, AVISO_SUPRESION, avisosMarca, textosDeHoja,
 } from "../cloudflare/hojas-firmadas/public/static/nucleo/marca.js";
-import { pdfDeHoja, textoPieHoja, nombrePdf } from "../cloudflare/hojas-firmadas/public/static/nucleo/pdf-hoja.js";
-import { decideTrasSubida } from "../cloudflare/hojas-firmadas/public/static/app/cola.js";
+import { pdfDeHoja, textoPieHoja, nombrePdf, notaFirmasVisita, cabeEnPie } from "../cloudflare/hojas-firmadas/public/static/nucleo/pdf-hoja.js";
+import { analizaJpeg, analizaJpegDataUrl } from "../cloudflare/hojas-firmadas/public/static/nucleo/jpeg.js";
+import { pdfHojaVisita } from "../cerebro/documentos.js";
+import { decideTrasSubida, repartePendientes } from "../cloudflare/hojas-firmadas/public/static/app/cola.js";
 import * as V from "../cloudflare/hojas-firmadas/public/static/app/vistas.js";
 import { aCsv } from "../cloudflare/hojas-firmadas/src/csv.js";
 import {
@@ -44,6 +46,9 @@ const raiz = (r) => new URL(`../${r}`, import.meta.url);
 const JPEG = readFileSync(raiz("cerebro/logo-castresana.jpg"));
 const FIRMA = { dataUrl: `data:image/jpeg;base64,${JPEG.toString("base64")}`, ancho: 500, alto: 201 };
 const AHORA = Date.parse("2026-10-13T08:30:00.000Z"); // martes, 10:30 en Madrid
+const aDataUrl = (buf) => `data:image/jpeg;base64,${Buffer.from(buf).toString("base64")}`;
+/** El JPEG de pruebas con N segmentos de comentario (COM) de relleno tras el SOI: sigue siendo válido. */
+const jpegConRelleno = (n, tam = 60_000) => Buffer.concat([JPEG.subarray(0, 2), ...Array.from({ length: n }, () => Buffer.concat([Buffer.from([0xff, 0xfe, (tam + 2) >> 8, (tam + 2) & 255]), Buffer.alloc(tam, 0x20)])), JPEG.subarray(2)]);
 
 function hojaVisita(extra = {}) {
   const r = limpiaHoja({
@@ -62,7 +67,7 @@ function hojaVisita(extra = {}) {
     },
     firmas: { cliente: FIRMA, agente: FIRMA },
     ...extra.sobre,
-  }, { ahoraMs: AHORA });
+  }, { ahoraMs: extra.ahoraMs || AHORA });
   if (!r.ok) throw new Error(`hojaVisita no válida: ${r.errores.join(" | ")}`);
   return r.hoja;
 }
@@ -166,6 +171,19 @@ console.log("\n🎨 Marca (white-label) y textos legales");
   check("cambiar un texto lo vuelve BORRADOR", cambio.ok && cambio.textos.visitaRevisados === false);
   check("no se puede dejar un texto vacío", !cambiaTextos(t0, { declaracion: "   " }).ok);
   check("textosCompletos no se cree un «revisados» con corchetes", textosCompletos({ ...t0, visitaRevisados: true }).visitaRevisados === false);
+  check("la protección de datos de la visita de serie no nombra a Asesoría Castresana", !/castresana/i.test(TEXTOS_DEFECTO.rgpdVisita) && TEXTOS_DEFECTO.rgpdVisita.includes("[razón social y NIF]"));
+  check("…ni ningún otro texto legal de serie", Object.values(TEXTOS_DEFECTO).filter((v) => typeof v === "string").every((v) => !/castresana/i.test(v)));
+  const otra = { ...MARCA_DEFECTO, nombreComercial: "Pisos Norte" };
+  const av = avisosMarca(otra, null, "defecto").join(" | ");
+  check("avisos: otra inmobiliaria con el logo de serie", /logo de serie/.test(av), av);
+  check("avisos: otra inmobiliaria con «Castresana» en el encabezado de firmas", /Castresana».*encabezado de firmas/.test(av), av);
+  check("avisos: razón social y CIF [PENDIENTE]", /razón social y el CIF siguen como \[PENDIENTE\]/.test(av), av);
+  const conTexto = avisosMarca({ ...otra, encabezadoFirmas: "PISOS NORTE", razonSocial: "Pisos Norte SL", cif: "B00000000" }, { ...textosCompletos(null), conformidad: "Encargo a Asesoría Castresana" }, "propio").join(" | ");
+  check("avisos: «Castresana» en un texto legal de la captación (sin avisos de logo ni de CIF)", /textos legales de la hoja de captación/.test(conTexto) && !/logo|CIF|visita/.test(conTexto), conTexto);
+  check("avisos: Asesoría Castresana con su logo y su encabezado no se avisa a sí misma", !/logo|Castresana»/.test(avisosMarca(MARCA_DEFECTO, null, "defecto").join(" ")));
+  check("avisos: una inmobiliaria completa y limpia no tiene avisos de marca", avisosMarca({ ...otra, encabezadoFirmas: "PISOS NORTE", razonSocial: "Pisos Norte SL", cif: "B00000000" }, null, "propio").length === 0);
+  check("textosDeHoja: las claves de la hoja (rgpdVisita → rgpd)", canonico(textosDeHoja(null, "visita")) === canonico({ declaracion: TEXTOS_DEFECTO.declaracion, rgpd: TEXTOS_DEFECTO.rgpdVisita, revisados: false }));
+  check("huellaTextos no depende de «revisados»", (await huellaTextos({ a: "x", revisados: true })) === (await huellaTextos({ a: "x", revisados: false })));
   check("el aviso de supresión es BORRADOR y no da plazos", AVISO_SUPRESION.startsWith("BORRADOR") && !/\d+\s*(años|meses|días)/.test(AVISO_SUPRESION));
 }
 
@@ -184,6 +202,10 @@ console.log("\n📄 PDF con la marca configurada");
   check("lleva la razón social y el CIF bajo la cabecera", pdf.includes("Pisos Norte Gestion SL · CIF B00000000"));
   check("el pie lleva el SHA-256 del contenido firmado", pdf.includes(`SHA-256 del contenido firmado: ${huella}`));
   check("el pie lleva la fecha de firma y la del servidor (hora de Madrid)", pdf.includes("Firmada en el móvil el 13/10/2026 10:29") && pdf.includes("Registrada en el servidor el 13/10/2026 10:30"));
+  check("bajo las firmas: la visita, la firma y el registro, cada uno con SU hora", pdf.includes("Visita del 13/10/2026 a las 10:00. Firmada en el m") && notaFirmasVisita(h, { recibida: new Date(AHORA).toISOString() }) === "Visita del 13/10/2026 a las 10:00. Firmada en el móvil el 13/10/2026 a las 10:29 (hora de Madrid). Registrada en el servidor el 13/10/2026 a las 10:30.", notaFirmasVisita(h, { recibida: new Date(AHORA).toISOString() }));
+  const pendiente = latin1(pdfDeHoja(h, { hash: huella }));
+  check("sin subir: el PDF NUNCA dice «Registrada» (ni pone la hora de firma en su lugar)", !pendiente.includes("Registrada") && !/Registrad/.test(notaFirmasVisita(h, {})) && notaFirmasVisita(h, { recibida: "" }).endsWith("(hora de Madrid)."));
+  check("ni usa la hora de la visita como hora de la firma", !pendiente.includes("a las 10:00. Registrada") && !pendiente.includes("Firmado en el dispositivo del agente el 13/10/2026 a las 10:00"));
   check("usa el color principal configurado y no el azul de Castresana", pdf.includes("0.043 0.365 0.118 rg") && !pdf.includes("0.063 0.125 0.227 rg"));
   check("dos firmas incrustadas (visitante y agente) + logo opcional", (pdf.match(/\/Subtype \/Image/g) || []).length === 2);
   const conLogo = latin1(pdfDeHoja(h, { hash: huella }, { logo: { bytes: new Uint8Array(JPEG), ancho: 500, alto: 201 } }));
@@ -193,6 +215,22 @@ console.log("\n📄 PDF con la marca configurada");
   check("la primera línea del pie cabe en una línea del PDF", pdf.includes(`(${pie[0].replace(/[()]/g, (c) => `\\${c}`)})`), pie[0]);
   const anulada = latin1(pdfDeHoja(h, { hash: huella, recibida: new Date(AHORA).toISOString(), estado: "anulada", anulada: new Date(AHORA + 3600_000).toISOString(), motivo: "Datos del visitante equivocados" }));
   check("una hoja anulada lo dice al pie con el motivo", anulada.includes("ANULADA el 13/10/2026 a las 11:30. Motivo: Datos del visitante equivocados"));
+  check("anulada: la segunda línea lleva SHA-256, firma Y registro (no se pierde la hora del servidor)", anulada.includes(`(SHA-256: ${huella} · Firmada 13/10/2026 10:29 · Registrada 13/10/2026 10:30)`));
+  // El peor caso: hash con las cifras más anchas y un motivo largo.
+  const hashAncho = "a".repeat(64);
+  const casos = [
+    { hash: hashAncho },
+    { hash: hashAncho, recibida: new Date(AHORA).toISOString() },
+    { hash: hashAncho, recibida: new Date(AHORA).toISOString(), estado: "anulada", anulada: new Date(AHORA + 3600_000).toISOString(), motivo: "El visitante dio mal su teléfono y hay que repetir la hoja con los datos buenos, todos y cada uno de ellos" },
+    { hash: hashAncho, estado: "anulada", anulada: new Date(AHORA + 3600_000).toISOString(), motivo: "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW" },
+  ];
+  for (const tipo of ["visita", "captacion"]) {
+    const hh = tipo === "visita" ? h : hojaCaptacion();
+    const lineas = casos.flatMap((c) => textoPieHoja(hh, c));
+    check(`pie (${tipo}): ninguna línea se corta, ni con el código más ancho ni con un motivo largo`, lineas.every(cabeEnPie), lineas.filter((l) => !cabeEnPie(l)).join(" || "));
+  }
+  const motivoLargo = textoPieHoja(h, casos[2])[0];
+  check("anulada: el motivo se recorta a unos 60 caracteres con «…»", motivoLargo.endsWith("…") && motivoLargo.split("Motivo: ")[1].length <= 60, motivoLargo);
   check("BORRADOR mientras los textos no estén revisados", pdf.includes("BORRADOR"));
   const revisada = limpiaHoja({ ...h, textos: { ...h.textos, revisados: true } }, { ahoraMs: AHORA }).hoja;
   check("sin aviso BORRADOR cuando los textos se firmaron revisados", !latin1(pdfDeHoja(revisada, { hash: "x" })).includes("BORRADOR"));
@@ -205,6 +243,20 @@ console.log("\n📄 PDF con la marca configurada");
   check("captación: condiciones del encargo tal como se escribieron", capDentro.includes("(3 % + IVA)") && capDentro.includes("(6 meses)"));
   check("captación: firma del propietario y del agente", capDentro.includes("(Firma del propietario)") && capDentro.includes("(Firma del agente)"));
   check("nombre de archivo sin caracteres raros", nombrePdf(h) === "Hoja-visita-PIS0190-2026-10-13.pdf", nombrePdf(h));
+}
+
+// ============================================================================
+console.log("\n🧠 Cerebro: la opción nueva no cambia nada si no se pasa");
+{
+  const visita = { id: "abc-12345678", fecha: "2026-10-13", hora: "17:30", inmueble: "Uría 12", visitante: { nombre: "Ana López", dni: "1X", telefono: "600000000", email: "" }, aceptaRgpd: true, aceptaOfertas: false, firma: FIRMA.dataUrl, firmaAncho: 500, firmaAlto: 201, registrada: "2026-10-13T15:30:00.000Z" };
+  const ajustes = { empresa: "Asesoría Castresana", agente: "Pau Moralejo", ciudad: "Oviedo", textoDeclaracion: "Visita {visitante}", textoRgpd: "RGPD", textosRevisados: false };
+  const sin = latin1(pdfHojaVisita(visita, ajustes, { ahora: new Date("2026-10-13T15:30:00Z") }));
+  const conDate = latin1(pdfHojaVisita(visita, ajustes, new Date("2026-10-13T15:30:00Z")));
+  check("sin notaFirmas: la nota de siempre de Cerebro", sin.includes("Firmado en el dispositivo del agente el 13/10/2026 a las 17:30. Registrada:") && conDate.includes("Firmado en el dispositivo del agente el 13/10/2026 a las 17:30. Registrada:"));
+  const con = latin1(pdfHojaVisita(visita, ajustes, { ahora: new Date("2026-10-13T15:30:00Z"), notaFirmas: "Nota propia." }));
+  check("con notaFirmas: solo esa nota", con.includes("(Nota propia.)") && !con.includes("Firmado en el dispositivo"));
+  const quita = (t) => t.replace(/\/CreationDate \([^)]*\)/g, "");
+  check("notaFirmas: undefined da el mismo PDF que no pasarla", quita(latin1(pdfHojaVisita(visita, ajustes, { ahora: new Date("2026-10-13T15:30:00Z"), notaFirmas: undefined }))) === quita(sin));
 }
 
 // ============================================================================
@@ -230,6 +282,12 @@ console.log("\n📊 CSV y cola sin conexión");
   check("cola: 201/200 subida, 410 borrada, 401 sesión, sin red/429/5xx espera, 422/409 error",
     decideTrasSubida(201) === "subida" && decideTrasSubida(200) === "subida" && decideTrasSubida(410) === "borrada" && decideTrasSubida(401) === "sesion"
     && decideTrasSubida(0) === "espera" && decideTrasSubida(429) === "espera" && decideTrasSubida(502) === "espera" && decideTrasSubida(422) === "error" && decideTrasSubida(409) === "error");
+  const cola = [{ id: "a", hoja: { agente: { id: 0 } } }, { id: "b", hoja: { agente: { id: 3 } } }, { id: "c", hoja: { agente: { id: 3 } } }];
+  const deAna = repartePendientes(cola, 3);
+  check("cola compartida: cada usuario ve solo las suyas y de las otras solo cuántas", deAna.mias.map((i) => i.id).join() === "b,c" && deAna.otras === 1 && repartePendientes(cola, 0).mias.length === 1 && repartePendientes(cola, 0).otras === 2);
+  check("cola compartida: sin sesión no se enseña ninguna", repartePendientes(cola, null).mias.length === 0 && repartePendientes(cola, null).otras === 3);
+  const lista = V.vistaHojas({ pendientes: deAna.mias.map((i) => ({ ...i, hoja: hojaVisita({ sobre: { agente: { id: 3, nombre: "Ana" } } }) })), otrasPendientes: 1 });
+  check("la lista dice «1 hoja pendiente de otro usuario en este móvil» sin datos suyos", lista.includes("1 hoja pendiente de otro usuario en este móvil"));
 }
 
 // ============================================================================
@@ -243,6 +301,15 @@ console.log("\n🧱 Vistas y esqueleto (todo escapado)");
   const formC = V.formCaptacion({ cfg: { marca: MARCA_DEFECTO, textos: textosCompletos(null) }, agente: { nombre: "Pau" } });
   check("captación: honorarios y duración en blanco (sin valores inventados)", /id="c-honorarios"[^>]*value=""/.test(formC) && /id="c-duracion"[^>]*value=""/.test(formC));
   check("captación: el precio mínimo interno no aparece", !formC.includes("c-precioMinimo"));
+  check("casillas: la etiqueta envuelve la casilla (toda la fila se toca)", /<label for="v-rgpd"><input id="v-rgpd"[^>]*type="checkbox"/.test(formV) && /<label for="v-ofertas"><input id="v-ofertas"/.test(formV));
+  check("«Ir a Ajustes» con zona táctil", V.vistaInicio({ agente: { nombre: "Pau" }, avisos: ["x"] }).includes('class="enlace-tactil" href="#ajustes"'));
+  const det = V.vistaDetalle({ hoja: hojaVisita(), registro: { hash: "f".repeat(64), recibida: new Date(AHORA).toISOString(), estado: "firmada", textosAlDia: false, marcaAlDia: true }, marca: MARCA_DEFECTO });
+  check("detalle: «← Volver a la lista» con zona táctil", det.includes('class="enlace-tactil" href="#hojas">← Volver a la lista'));
+  check("detalle: el SHA-256 explicado para Pau", det.includes("Código de comprobación (SHA-256): sirve para demostrar que la hoja no ha cambiado"));
+  check("detalle: avisa si los textos legales no eran los de Ajustes", det.includes("DISTINTOS de los que había en Ajustes") && det.includes("La misma que había en Ajustes"));
+  const ajV = V.vistaAjustes({ agente: { titular: true, nombre: "Pau" }, marca: MARCA_DEFECTO, textos: textosCompletos(null), logo: { modo: "defecto" }, permisos: { agentesSoloSuyas: true } });
+  check("Ajustes: «Los agentes solo ven sus hojas», marcado por defecto", /<input id="p-soloSuyas"[^>]* checked/.test(ajV) && ajV.includes("Los agentes solo ven sus hojas"));
+  check("Ajustes: sin palabras técnicas en la exportación", !ajV.includes("SHA-256"));
   const app = paginaApp({ marca: { ...MARCA_DEFECTO, nombreComercial: `Pisos "Norte" <b>` }, conLogo: true });
   check("el título de la app sale del nombre comercial y escapado", app.includes("<title>Pisos &quot;Norte&quot; &lt;b&gt; · Hojas firmadas</title>"));
   check("el esqueleto no lleva scripts ni estilos en línea", !/<script>|<style|style="/.test(app));
@@ -284,7 +351,36 @@ console.log("\n🖼️  Icono y logo");
   check("el icono cambia con los colores de la marca", Buffer.compare(Buffer.from(png), Buffer.from(otro)) !== 0);
   check("logo: JPEG válido", Boolean(validaLogo({ dataUrl: FIRMA.dataUrl, ancho: 500, alto: 201 }).logo));
   check("logo: un PNG disfrazado se rechaza", Boolean(validaLogo({ dataUrl: "data:image/jpeg;base64," + Buffer.from("\x89PNG....").toString("base64"), ancho: 50, alto: 50 }).error));
-  check("logo: más de 200 KB se rechaza", /200 KB/.test(validaLogo({ dataUrl: "data:image/jpeg;base64," + Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(210 * 1024)]).toString("base64"), ancho: 50, alto: 50 }).error || ""));
+  const grande = jpegConRelleno(4);
+  check("logo: más de 200 KB se rechaza (aunque sea un JPEG bien formado)", analizaJpeg(new Uint8Array(grande)).ok && /200 KB/.test(validaLogo({ dataUrl: aDataUrl(grande), ancho: 500, alto: 201 }).error || ""));
+  check("logo: una cabecera FF D8 FF con relleno detrás ya no pasa", Boolean(validaLogo({ dataUrl: aDataUrl(Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(1024)])), ancho: 50, alto: 50 }).error));
+  const poliglota = aDataUrl(Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.from("<html><script>alert(1)</script></html>")]));
+  check("logo: un HTML con cabecera de JPEG delante se rechaza (políglota)", Boolean(validaLogo({ dataUrl: poliglota, ancho: 100, alto: 100 }).error));
+  check("logo: un SVG disfrazado de JPEG se rechaza", Boolean(validaLogo({ dataUrl: aDataUrl(Buffer.from("<svg onload=alert(1)>")), ancho: 100, alto: 100 }).error));
+  check("logo: medidas que no son las del JPEG → error", /no coinciden/.test(validaLogo({ dataUrl: FIRMA.dataUrl, ancho: 400, alto: 201 }).error || ""));
+}
+
+// ============================================================================
+console.log("\n🧪 JPEG de verdad (firmas y logo)");
+{
+  const ok = analizaJpeg(new Uint8Array(JPEG));
+  check("el JPEG de pruebas se analiza: medidas y canales", ok.ok && ok.ancho === 500 && ok.alto === 201 && [1, 3, 4].includes(ok.canales), JSON.stringify(ok));
+  check("sin EOI (cortado) → no vale", !analizaJpeg(new Uint8Array(JPEG.subarray(0, JPEG.length - 2))).ok);
+  check("cortado por la mitad → no vale", !analizaJpeg(new Uint8Array(JPEG.subarray(0, Math.floor(JPEG.length / 2)))).ok);
+  check("solo SOI + EOI (sin SOF ni imagen) → no vale", !analizaJpeg(new Uint8Array([0xff, 0xd8, 0xff, 0xd9])).ok);
+  check("«/9j/» + basura → no vale", !analizaJpegDataUrl("data:image/jpeg;base64,/9j/" + "A".repeat(200)).ok);
+  const enorme = Buffer.from(JPEG); // medidas de 65535 × 65535 en el SOF
+  const iSof = [...enorme.keys()].find((i) => enorme[i] === 0xff && enorme[i + 1] >= 0xc0 && enorme[i + 1] <= 0xc2);
+  enorme[iSof + 5] = 0xff; enorme[iSof + 6] = 0xff; enorme[iSof + 7] = 0xff; enorme[iSof + 8] = 0xff;
+  check("medidas absurdas en el SOF → no vale", !analizaJpeg(new Uint8Array(enorme)).ok);
+  const h = hojaVisita();
+  const basura = structuredClone(h); basura.firmas.cliente.dataUrl = "data:image/jpeg;base64,/9j/" + "A".repeat(200);
+  check("firma «/9j/» + basura (cabecera bien, resto no) → la hoja no vale", !limpiaHoja(basura, { ahoraMs: AHORA }).ok && /no es una imagen válida/.test(limpiaHoja(basura, { ahoraMs: AHORA }).errores.join(" ")));
+  const cortada = structuredClone(h); cortada.firmas.agente.dataUrl = aDataUrl(JPEG.subarray(0, JPEG.length - 40));
+  check("firma cortada → la hoja no vale", !limpiaHoja(cortada, { ahoraMs: AHORA }).ok);
+  const mentira = structuredClone(h); mentira.firmas.cliente.ancho = 600;
+  check("firma con medidas que no son las suyas → la hoja no vale", /medidas que dice/.test(limpiaHoja(mentira, { ahoraMs: AHORA }).errores.join(" ")));
+  check("firma de verdad → vale", limpiaHoja(h, { ahoraMs: AHORA }).ok);
 }
 
 // ============================================================================
@@ -366,6 +462,12 @@ let cookieTitular;
   check("con otra PANEL_CLAVE la sesión deja de valer", (await pide("/api/yo", { cookie: cookieTitular, entorno: { ...env, PANEL_CLAVE: "otra-clave-del-titular" } })).status === 401);
   const salir = await pide("/api/salir", { metodo: "POST", cuerpo: {}, cookie: cookieTitular });
   check("salir borra la cookie", /Max-Age=0/.test(salir.headers.get("set-cookie") || ""));
+  check("y la cierra EN EL SERVIDOR: la cookie copiada ya no vale", (await pide("/api/yo", { cookie: cookieTitular })).status === 401);
+  cookieTitular = cookieDe(await pide("/api/entrar", { metodo: "POST", cuerpo: { clave: CLAVE }, ip: "7.7.7.7" }));
+  check("al volver a entrar, la sesión nueva sí vale", (await pide("/api/yo", { cookie: cookieTitular })).status === 200);
+  const yoSin = await jsonDe(await pide("/api/yo", { cookie: cookieTitular, entorno: { ...env, TELEGRAM_BOT_TOKEN: "", TELEGRAM_CHAT_ID: "" } }));
+  check("aviso de Telegram en palabras de Pau, sin nombres de secretos", yoSin.avisos.includes("Avisos por Telegram: sin configurar (opcional).") && !JSON.stringify(yoSin.avisos).includes("TELEGRAM_"));
+  check("aviso de razón social y CIF [PENDIENTE] en /api/yo", yoSin.avisos.some((a) => /razón social y el CIF siguen como \[PENDIENTE\]/.test(a)));
 }
 
 console.log("\n⬆️  Worker: subir hojas (idempotente) e inmutabilidad");
@@ -535,6 +637,117 @@ console.log("\n🏷️  Worker: marca, textos y logo desde Ajustes");
   check("volver al logo de serie", (await pide("/marca/logo.jpg")).status === 200);
   const reg = await jsonDe(await pide("/api/registro", { cookie: cookieTitular }));
   check("registro visible para el titular", reg.registro.length >= 1);
+}
+
+console.log("\n🕵️  Worker: el servidor no se cree lo que dice el móvil");
+let cookieAna, idAna;
+{
+  // Todo esto con la marca y los textos de Ajustes de AHORA (Pisos Norte, tras el bloque anterior).
+  const yo = await jsonDe(await pide("/api/yo", { cookie: cookieTitular }));
+  const marcaAhora = yo.marca;
+  const hoja = (sobre = {}) => hojaVisita({ ahoraMs: reloj, sobre: { marca: marcaAhora, textos: textosDeHoja(yo.textos, "visita"), firmadaEn: new Date(reloj - 60_000).toISOString(), ...sobre } });
+  const sube = async (h, cookie) => pide("/api/hojas", { metodo: "POST", cuerpo: { hoja: h, hash: await hashHoja(h) }, cookie });
+  idAna = (await jsonDe(await pide("/api/agentes", { metodo: "POST", cuerpo: { nombre: "Ana Agente", usuario: "ana", clave: "clave de ana larga" }, cookie: cookieTitular }))).id;
+  cookieAna = cookieDe(await pide("/api/entrar", { metodo: "POST", cuerpo: { usuario: "ana", clave: "clave de ana larga" }, ip: "8.8.8.8" }));
+  const suplanta = await sube(hoja({ agente: { id: idAna, nombre: "Laura Prieto" } }), cookieAna);
+  check("un agente no puede firmar con el nombre de otro (aunque el id sea el suyo) → 403", suplanta.status === 403 && /nombre/.test((await jsonDe(suplanta)).error));
+  const buena = hoja({ agente: { id: idAna, nombre: "Ana Agente" } });
+  const rBuena = await sube(buena, cookieAna);
+  const jBuena = await jsonDe(rBuena);
+  check("con su id y su nombre sí → 201, con textos y marca al día", rBuena.status === 201 && jBuena.textosAlDia === true && jBuena.marcaAlDia === true);
+  check("el titular no puede subir hojas de un agente que no existe → 422", (await sube(hoja({ agente: { id: 999, nombre: "Fantasma" } }), cookieTitular)).status === 422);
+  check("ni de un agente que existe con otro nombre → 422", (await sube(hoja({ agente: { id: idAna, nombre: "Otro Nombre" } }), cookieTitular)).status === 422);
+  check("pero sí las de un agente que existe, con su nombre → 201", (await sube(hoja({ agente: { id: idAna, nombre: "Ana Agente" } }), cookieTitular)).status === 201);
+  // «Revisados» falsos: los textos de Ajustes son BORRADOR.
+  const falsa = hoja({ agente: { id: idAna, nombre: "Ana Agente" }, textos: { declaracion: "Declaro lo que el agente quiera {visitante}", rgpd: "Nada.", revisados: true } });
+  const rFalsa = await sube(falsa, cookieAna);
+  check("textos inventados con «revisados: true» (Ajustes no los tiene revisados) → 422", rFalsa.status === 422 && /revisados/.test((await jsonDe(rFalsa)).error));
+  const borradorRevisado = hoja({ agente: { id: idAna, nombre: "Ana Agente" }, textos: { ...textosDeHoja(yo.textos, "visita"), revisados: true } });
+  check("los mismos textos de Ajustes pero con «revisados: true» cuando no lo están → 422", (await sube(borradorRevisado, cookieAna)).status === 422);
+  // Marca distinta: se acepta, pero queda marcada y se enseña.
+  const otraMarca = hoja({ agente: { id: idAna, nombre: "Ana Agente" }, marca: { ...marcaAhora, cif: "B12345678", razonSocial: "Inventada SL" } });
+  const rMarca = await jsonDe(await sube(otraMarca, cookieAna));
+  check("marca distinta de la de Ajustes: se acepta pero marcada como diferente", rMarca.ok && rMarca.marcaAlDia === false && rMarca.textosAlDia === true);
+  const det = await jsonDe(await pide(`/api/hojas/${otraMarca.id}`, { cookie: cookieTitular }));
+  check("el detalle lo enseña (marcaAlDia: false)", det.registro.marcaAlDia === false && det.registro.textosAlDia === true);
+  const csv = Buffer.from(await (await pide("/api/exportar", { cookie: cookieTitular })).arrayBuffer()).toString("utf8");
+  const filaCsv = csv.split("\r\n").find((l) => l.includes(otraMarca.id)) || csv.split("\n").find((l) => l.includes(otraMarca.id)) || "";
+  check("el CSV tiene las columnas de textos y marca y la hoja sale con «Sí;No»", csv.includes("Textos legales iguales que en Ajustes al subirla;Marca igual que en Ajustes al subirla") && filaCsv.includes(";Sí;No;"), filaCsv.slice(0, 200));
+  check("las columnas calculadas también son inmutables en D1", (() => { try { db._base.prepare("UPDATE hojas SET marca_al_dia = 1 WHERE id = ?").run(otraMarca.id); return false; } catch (e) { return /no se puede modificar/.test(e.message); } })());
+
+  // Firmada SIN CONEXIÓN con textos revisados y, antes de subirla, el titular cambia los textos.
+  const textosRev = { declaracion: "D./D.ª {visitante} declara que ha visitado {inmueble} con {agente}, de {empresa}.", rgpdVisita: "Responsable: Pisos Norte Gestion SL, B00000000, Calle Mayor 1, Gijón." };
+  await pide("/api/ajustes/textos", { metodo: "POST", cuerpo: { textos: textosRev }, cookie: cookieTitular });
+  const rRev = await jsonDe(await pide("/api/ajustes/revisados", { metodo: "POST", cuerpo: { grupo: "visita", valor: true }, cookie: cookieTitular }));
+  check("textos de la visita revisados en Ajustes", rRev.textos.visitaRevisados === true);
+  const sinRed = hoja({ agente: { id: idAna, nombre: "Ana Agente" }, textos: textosDeHoja(rRev.textos, "visita") });
+  check("con los textos revisados de Ajustes, «revisados: true» vale", sinRed.textos.revisados === true);
+  const cambio = await jsonDe(await pide("/api/ajustes/textos", { metodo: "POST", cuerpo: { textos: { declaracion: textosRev.declaracion + " Texto nuevo." } }, cookie: cookieTitular }));
+  check("el titular cambia los textos: vuelven a ser BORRADOR", cambio.textos.visitaRevisados === false);
+  const rSinRed = await sube(sinRed, cookieAna);
+  const jSinRed = await jsonDe(rSinRed);
+  check("la hoja firmada sin conexión ANTES del cambio no se queda atascada → 201", rSinRed.status === 201, JSON.stringify(jSinRed));
+  check("…y queda marcada con textos distintos de los de Ajustes", jSinRed.textosAlDia === false && db._base.prepare("SELECT textos_al_dia FROM hojas WHERE id = ?").get(sinRed.id).textos_al_dia === 0);
+  const inventada = hoja({ agente: { id: idAna, nombre: "Ana Agente" }, textos: { ...textosDeHoja(rRev.textos, "visita"), declaracion: "Otra versión que nadie revisó {visitante}." } });
+  check("pero unos textos que NUNCA se marcaron revisados siguen sin valer → 422", (await sube(inventada, cookieAna)).status === 422);
+  const vieja = hoja({ agente: { id: idAna, nombre: "Ana Agente" }, textos: { declaracion: TEXTOS_DEFECTO.declaracion, rgpd: TEXTOS_DEFECTO.rgpdVisita, revisados: false } });
+  const rVieja = await jsonDe(await sube(vieja, cookieAna));
+  check("una hoja BORRADOR firmada con los textos de antes también entra (marcada como distinta)", rVieja.ok && rVieja.textosAlDia === false);
+  // El titular cambia su nombre después de firmar sin conexión: su hoja tampoco se atasca.
+  const delTitular = hoja({ agente: { id: 0, nombre: "Laura Prieto" } });
+  await pide("/api/ajustes/marca", { metodo: "POST", cuerpo: { marca: { ...marcaAhora, titular: "Laura Prieto Díaz" } }, cookie: cookieTitular });
+  const rTit = await jsonDe(await sube(delTitular, cookieTitular));
+  check("hoja del titular firmada antes de cambiar su nombre → se acepta, con la marca marcada como distinta", rTit.ok && rTit.marcaAlDia === false);
+}
+
+console.log("\n👀 Worker: lo que ven los agentes");
+{
+  const deOtro = db._base.prepare("SELECT id FROM hojas WHERE agente_id <> ? LIMIT 1").get(idAna).id;
+  const listaAna = await jsonDe(await pide("/api/hojas", { cookie: cookieAna }));
+  check("por defecto un agente solo ve sus hojas en la lista", listaAna.hojas.length > 0 && listaAna.hojas.every((h) => h.agente === "Ana Agente") && listaAna.soloSuyas === true && listaAna.total === listaAna.hojas.length);
+  check("y no puede abrir la de otro (403)", (await pide(`/api/hojas/${deOtro}`, { cookie: cookieAna })).status === 403);
+  check("el agente no puede cambiar ese ajuste (403)", (await pide("/api/ajustes/permisos", { metodo: "POST", cuerpo: { agentesSoloSuyas: false }, cookie: cookieAna })).status === 403);
+  check("el titular sí: «los agentes ven todas»", (await jsonDe(await pide("/api/ajustes/permisos", { metodo: "POST", cuerpo: { agentesSoloSuyas: false }, cookie: cookieTitular }))).permisos.agentesSoloSuyas === false);
+  const todas = await jsonDe(await pide("/api/hojas", { cookie: cookieAna }));
+  check("entonces el agente ve todas y puede abrir la de otro", todas.soloSuyas === false && todas.hojas.some((h) => h.agente !== "Ana Agente") && (await pide(`/api/hojas/${deOtro}`, { cookie: cookieAna })).status === 200);
+  check("un valor que no es sí/no → 422", (await pide("/api/ajustes/permisos", { metodo: "POST", cuerpo: { agentesSoloSuyas: "no" }, cookie: cookieTitular })).status === 422);
+  await pide("/api/ajustes/permisos", { metodo: "POST", cuerpo: { agentesSoloSuyas: true }, cookie: cookieTitular });
+  check("se vuelve a encender y /api/yo lo dice", (await jsonDe(await pide("/api/yo", { cookie: cookieTitular }))).permisos.agentesSoloSuyas === true);
+}
+
+console.log("\n🏷️  Worker: avisos de marca para otra inmobiliaria");
+{
+  const yo = await jsonDe(await pide("/api/yo", { cookie: cookieTitular }));
+  await pide("/api/ajustes/marca", { metodo: "POST", cuerpo: { marca: { ...yo.marca, encabezadoFirmas: "ASESORIA CASTRESANA INMO" } }, cookie: cookieTitular });
+  const av = (await jsonDe(await pide("/api/yo", { cookie: cookieTitular }))).avisos.join(" | ");
+  check("Pisos Norte con el logo de serie y «CASTRESANA» en el encabezado: dos avisos", /logo de serie/.test(av) && /Castresana».*encabezado de firmas/.test(av), av);
+  await pide("/api/ajustes/marca", { metodo: "POST", cuerpo: { marca: { ...yo.marca, encabezadoFirmas: "PISOS NORTE GESTION SL", razonSocial: "Pisos Norte Gestion SL", cif: "B00000000" } }, cookie: cookieTitular });
+  await pide("/api/ajustes/logo", { metodo: "POST", cuerpo: { quitar: true }, cookie: cookieTitular });
+  const av2 = (await jsonDe(await pide("/api/yo", { cookie: cookieTitular }))).avisos.join(" | ");
+  check("con su encabezado, sus datos y sin el logo de serie: sin avisos de marca", !/logo de serie|Castresana|PENDIENTE/.test(av2), av2);
+  check("un agente no recibe avisos de marca", (await jsonDe(await pide("/api/yo", { cookie: cookieAna }))).avisos.length === 0);
+}
+
+console.log("\n🔒 Worker: anular de golpe, borrar con constancia y salir de verdad");
+{
+  const h = hojaVisita({ ahoraMs: reloj, sobre: { marca: (await jsonDe(await pide("/api/yo", { cookie: cookieTitular }))).marca, agente: { id: 0, nombre: "Laura" }, firmadaEn: new Date(reloj - 60_000).toISOString() } });
+  check("hoja para anular subida", (await pide("/api/hojas", { metodo: "POST", cuerpo: { hoja: h, hash: await hashHoja(h) }, cookie: cookieTitular })).status === 201);
+  // Si el INSERT en el registro falla, el UPDATE tampoco se queda (un solo batch).
+  db._base.exec("CREATE TRIGGER prueba_falla BEFORE INSERT ON registro BEGIN SELECT RAISE(ABORT, 'fallo simulado'); END;");
+  const fallo = await pide(`/api/hojas/${h.id}/anular`, { metodo: "POST", cuerpo: { motivo: "Motivo de la prueba de fallo" }, cookie: cookieTitular });
+  db._base.exec("DROP TRIGGER prueba_falla");
+  check("si falla el registro, la hoja NO queda anulada (UPDATE e INSERT en el mismo batch)", fallo.status === 500 && db._base.prepare("SELECT estado FROM hojas WHERE id = ?").get(h.id).estado === "firmada");
+  check("anular con el registro bien → 200 y una sola línea", (await pide(`/api/hojas/${h.id}/anular`, { metodo: "POST", cuerpo: { motivo: "Motivo de verdad" }, cookie: cookieTitular })).status === 200
+    && db._base.prepare("SELECT COUNT(*) AS n FROM registro WHERE hoja = ? AND accion = 'anulada'").get(h.id).n === 1);
+  check("anular otra vez no escribe otra línea", (await pide(`/api/hojas/${h.id}/anular`, { metodo: "POST", cuerpo: { motivo: "Otra vez lo mismo" }, cookie: cookieTitular })).status === 409
+    && db._base.prepare("SELECT COUNT(*) AS n FROM registro WHERE hoja = ? AND accion = 'anulada'").get(h.id).n === 1);
+  let sinConstancia = "";
+  try { db._base.prepare("DELETE FROM hojas WHERE id = ?").run(h.id); } catch (e) { sinConstancia = e.message; }
+  check("un DELETE directo en D1 sin «borrada» en el registro falla (trigger)", /solo se borra dejando constancia/.test(sinConstancia), sinConstancia);
+  check("«Borrar datos» desde la app sí (el registro va antes que el DELETE)", (await pide(`/api/hojas/${h.id}/borrar`, { metodo: "POST", cuerpo: { confirmacion: "BORRAR" }, cookie: cookieTitular })).status === 200
+    && !db._base.prepare("SELECT 1 FROM hojas WHERE id = ?").get(h.id));
+  // Salir de un agente: su cookie deja de valer en el servidor.
+  check("el agente sale y su cookie ya no vale", (await pide("/api/salir", { metodo: "POST", cuerpo: {}, cookie: cookieAna })).status === 200 && (await pide("/api/yo", { cookie: cookieAna })).status === 401);
 }
 
 console.log(`\nResultado hojas-firmadas: ${pasados} pasados, ${fallados} fallados.`);

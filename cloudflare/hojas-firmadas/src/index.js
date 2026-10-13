@@ -17,10 +17,11 @@
 //  inyectar el reloj y fetch para probar el Worker entero con Node y una D1
 //  simulada sobre SQLite.
 // ============================================================================
-import { esHojaExacta, hashHoja, canonico, resumenHoja, esId, esHash, enMadrid, normalBusqueda, TIPOS } from "../public/static/nucleo/hoja.js";
+import { esHojaExacta, hashHoja, canonico, resumenHoja, esId, esHash, enMadrid, normalBusqueda, huellaTextos, TIPOS } from "../public/static/nucleo/hoja.js";
 import {
-  marcaCompleta, textosCompletos, validaMarca, cambiaTextos, marcaRevisados, pendientesMarca, TEXTOS_DEFECTO, GRUPOS_TEXTOS,
+  marcaCompleta, textosCompletos, validaMarca, cambiaTextos, marcaRevisados, avisosMarca, textosDeHoja, TEXTOS_DEFECTO, GRUPOS_TEXTOS,
 } from "../public/static/nucleo/marca.js";
+import { analizaJpegDataUrl } from "../public/static/nucleo/jpeg.js";
 import { esISO, sumaDias } from "../public/static/cerebro/utiles.js";
 import { aCsv } from "./csv.js";
 import {
@@ -159,18 +160,37 @@ async function leeMarca(base) {
   return { marca: marcaCompleta(marca), textos: textosCompletos(textos), logo: infoLogo, logoDatos: logo };
 }
 
-/** Logo subido: JPEG de verdad (FF D8 FF), ≤ 200 KB y medidas razonables. */
+/**
+ * Logo subido: JPEG de verdad, ≤ 200 KB y medidas razonables. Se analiza
+ * la estructura del archivo (nucleo/jpeg.js: SOI, segmentos, SOF, datos de
+ * imagen y EOI), no solo los tres primeros bytes: así no entra un HTML o un
+ * SVG con una cabecera de JPEG pegada delante. Las medidas tienen que ser
+ * las del propio JPEG (el PDF las usa para encajarlo).
+ */
 export function validaLogo(b) {
-  const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/.exec(String(b?.dataUrl || ""));
-  if (!m) return { error: "El logo tiene que llegar como JPEG (la app lo convierte sola)." };
-  let bytes;
-  try { bytes = Uint8Array.from(atob(m[1]), (c) => c.charCodeAt(0)); } catch { return { error: "El logo no es válido." }; }
-  if (bytes.length > LIMITE.logoBytes) return { error: "El logo pesa más de 200 KB." };
-  if (bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) return { error: "El archivo no es un JPEG." };
+  if (!/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(String(b?.dataUrl || ""))) return { error: "El logo tiene que llegar como JPEG (la app lo convierte sola)." };
+  const r = analizaJpegDataUrl(b.dataUrl, { maxLado: 1600 });
+  if (!r.ok) return { error: `El archivo no es un JPEG válido: ${r.motivo}.` };
+  if (r.bytes.length > LIMITE.logoBytes) return { error: "El logo pesa más de 200 KB." };
   const ancho = Number(b.ancho), alto = Number(b.alto);
   if (!Number.isInteger(ancho) || !Number.isInteger(alto) || ancho < 16 || alto < 16 || ancho > 1600 || alto > 1600) return { error: "Las medidas del logo no son válidas." };
+  if (ancho !== r.ancho || alto !== r.alto) return { error: "Las medidas del logo no coinciden con la imagen." };
   return { logo: { dataUrl: b.dataUrl, ancho, alto } };
 }
+
+/** Permisos guardados (o nada) con los valores por defecto. */
+export function permisosCompletos(guardados) {
+  const g = guardados && typeof guardados === "object" ? guardados : {};
+  // «Los agentes solo ven sus hojas»: ENCENDIDO salvo que el titular lo apague.
+  return { agentesSoloSuyas: g.agentesSoloSuyas !== false };
+}
+
+/** Huellas de las versiones de textos que el titular ha marcado como revisadas. */
+function revisionesCompletas(g) {
+  const o = g && typeof g === "object" ? g : {};
+  return { visita: Array.isArray(o.visita) ? o.visita.filter(esHash) : [], captacion: Array.isArray(o.captacion) ? o.captacion.filter(esHash) : [] };
+}
+const MAX_REVISIONES = 50;
 
 // ============================================================================
 export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => fetch(...a) } = {}) {
@@ -257,7 +277,7 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
       const claveDada = String(datos.clave || "").slice(0, 200);
       let sesion = null;
       if (!usuario) {
-        if (await igualesSeguro(claveDada, clave)) sesion = { agente: 0, version: 0 };
+        if (await igualesSeguro(claveDada, clave)) sesion = { agente: 0, version: await db.versionTitular(env.DB) };
       } else {
         const ag = esUsuario(usuario) ? await db.agentePorUsuario(env.DB, usuario) : null;
         const ok = await compruebaClave(claveDada, ag || GUARDADO_DE_RELLENO);
@@ -278,25 +298,31 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
 
     if (ruta === "/api/salir") {
       if (met !== "POST") return noPermitido("POST");
+      // Cierra la sesión EN EL SERVIDOR: sube la versión del titular o del
+      // agente y la cookie (aunque alguien la hubiera copiado) deja de valer.
+      // Se cierran también las sesiones de ese mismo usuario en otros móviles.
+      if (yo.titular) await db.subeVersionTitular(env.DB);
+      else await db.subeVersionAgente(env.DB, yo.id);
       return json({ ok: true }, 200, { "set-cookie": cabeceraBorrarCookie() });
     }
 
     if (ruta === "/api/yo" && met === "GET") {
       const { marca, textos, logo } = await leeMarca(env.DB);
+      const permisos = permisosCompletos(await db.leeAjuste(env.DB, "permisos"));
       const avisos = [];
       if (yo.titular) {
-        const p = pendientesMarca(marca);
-        if (p.length) avisos.push(`Faltan datos de la marca: ${p.join(", ")}. Complétalos en Ajustes.`);
+        avisos.push(...avisosMarca(marca, textos, logo.modo));
         if (!textos.visitaRevisados) avisos.push("Los textos legales de la hoja de visita son BORRADOR: revísalos con un profesional.");
         if (!textos.captacionRevisados) avisos.push("Los textos legales de la hoja de captación son BORRADOR: revísalos con un profesional.");
-        if (!telegramActivo(env)) avisos.push("Telegram apagado (es opcional): faltan los secretos TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID.");
+        if (!telegramActivo(env)) avisos.push("Avisos por Telegram: sin configurar (opcional).");
       }
-      return json({ agente: { id: yo.id, nombre: yo.nombre, titular: yo.titular }, marca, textos, logo, avisos });
+      return json({ agente: { id: yo.id, nombre: yo.nombre, titular: yo.titular }, marca, textos, logo, permisos, avisos });
     }
 
     // ---- Hojas --------------------------------------------------------------------
     if (ruta === "/api/hojas" && met === "POST") return subeHoja(req, env, ctx, yo, ahora, iso);
     if (ruta === "/api/hojas" && met === "GET") {
+      const soloDe = await soloSuyasDe(env, yo);
       const q = u.searchParams;
       const tipo = ["visita", "captacion"].includes(q.get("tipo")) ? q.get("tipo") : "";
       const desde = esISO(q.get("desde")) ? q.get("desde") : "";
@@ -308,8 +334,9 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
         referencia: String(q.get("ref") || "").trim().slice(0, 40),
         nombre: normalBusqueda(q.get("nombre")).slice(0, 60),
         limite: 200,
+        agenteId: soloDe,
       });
-      return json({ hojas: filas, total: await db.cuentaHojas(env.DB), limite: 200 });
+      return json({ hojas: filas, total: await db.cuentaHojas(env.DB, soloDe), limite: 200, soloSuyas: soloDe !== null });
     }
     const mHoja = /^\/api\/hojas\/([0-9a-f-]{36})(\/anular|\/borrar)?$/.exec(ruta);
     if (mHoja) {
@@ -318,9 +345,14 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
       if (!mHoja[2] && met === "GET") {
         const f = await db.leeHoja(env.DB, id);
         if (!f) throw new ErrorHttp(404, "Esa hoja no existe o se borró.");
+        const soloDe = await soloSuyasDe(env, yo);
+        if (soloDe !== null && f.agente_id !== soloDe) throw new ErrorHttp(403, "Esta hoja la firmó otro agente. El titular puede dejar que los agentes vean todas en Ajustes.");
         return json({
           hoja: JSON.parse(f.contenido),
-          registro: { hash: f.hash, recibida: f.recibida, estado: f.estado, anulada: f.anulada, motivo: f.motivo, anuladaPor: f.anulada_por, agente: f.agente },
+          registro: {
+            hash: f.hash, recibida: f.recibida, estado: f.estado, anulada: f.anulada, motivo: f.motivo, anuladaPor: f.anulada_por, agente: f.agente,
+            textosAlDia: f.textos_al_dia === 1, marcaAlDia: f.marca_al_dia === 1,
+          },
         });
       }
       if (met !== "POST") return noPermitido(mHoja[2] ? "POST" : "GET");
@@ -346,12 +378,14 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
     if (ruta === "/api/exportar" && met === "GET") {
       soloTitular(yo);
       const madrid = (x) => { const e = enMadrid(x); return e.fecha ? `${e.fecha} ${e.hora}` : ""; };
+      const siNo = (v) => (v === 1 ? "Sí" : "No");
       const filas = (await db.filasCsv(env.DB)).map((f) => [
         TIPOS[f.tipo] || f.tipo, f.estado, madrid(f.firmada), madrid(f.recibida), f.referencia, f.inmueble, f.nombre,
-        f.dni, f.telefono, f.correo, f.visita, f.agente, f.hash, madrid(f.anulada), f.motivo, f.id,
+        f.dni, f.telefono, f.correo, f.visita, f.agente, siNo(f.textos_al_dia), siNo(f.marca_al_dia), f.hash, madrid(f.anulada), f.motivo, f.id,
       ]);
       const csv = aCsv(["Tipo", "Estado", "Firmada (móvil, hora de Madrid)", "Registrada (servidor)", "Referencia", "Inmueble", "Nombre",
-        "DNI / NIE", "Teléfono", "Correo", "Visita (día y hora)", "Agente", "SHA-256", "Anulada el", "Motivo de anulación", "Id"], filas);
+        "DNI / NIE", "Teléfono", "Correo", "Visita (día y hora)", "Agente", "Textos legales iguales que en Ajustes al subirla", "Marca igual que en Ajustes al subirla",
+        "SHA-256", "Anulada el", "Motivo de anulación", "Id"], filas);
       return respuesta(csv, 200, "text/csv; charset=utf-8", { "content-disposition": `attachment; filename="hojas-firmadas-${enMadrid(iso).iso}.csv"` });
     }
 
@@ -373,10 +407,26 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
         return json({ ok: true, textos: r.textos });
       }
       if (ruta === "/api/ajustes/revisados") {
-        const r = marcaRevisados(await db.leeAjuste(env.DB, "textos"), String(datos.grupo || ""), datos.valor === true);
+        const grupo = String(datos.grupo || "");
+        const r = marcaRevisados(await db.leeAjuste(env.DB, "textos"), grupo, datos.valor === true);
         if (!r.ok) throw new ErrorHttp(422, r.error);
+        if (datos.valor === true) {
+          // Se apunta la huella de ESTA versión de los textos: una hoja firmada
+          // sin conexión con ella se sigue aceptando como «revisada» aunque
+          // después se cambien los textos en Ajustes.
+          const rev = revisionesCompletas(await db.leeAjuste(env.DB, "revisiones"));
+          const h = await huellaTextos(textosDeHoja(r.textos, grupo));
+          rev[grupo] = [...rev[grupo].filter((x) => x !== h), h].slice(-MAX_REVISIONES);
+          await db.guardaAjuste(env.DB, "revisiones", rev, iso);
+        }
         await db.guardaAjuste(env.DB, "textos", r.textos, iso);
         return json({ ok: true, textos: r.textos });
+      }
+      if (ruta === "/api/ajustes/permisos") {
+        if (typeof datos.agentesSoloSuyas !== "boolean") throw new ErrorHttp(422, "Falta el valor del ajuste.");
+        const p = permisosCompletos({ agentesSoloSuyas: datos.agentesSoloSuyas });
+        await db.guardaAjuste(env.DB, "permisos", p, iso);
+        return json({ ok: true, permisos: p });
       }
       if (ruta === "/api/ajustes/borrador") {
         const grupo = String(datos.grupo || "");
@@ -447,32 +497,61 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
     const r = esHojaExacta(datos.hoja, { ahoraMs: ahora });
     if (!r.ok) throw new ErrorHttp(422, "La hoja no es válida.", { errores: r.errores });
     const hoja = r.hoja;
-    // Un agente sube sus hojas; el titular puede subir las de cualquiera (por
-    // ejemplo, si entra en el móvil de un agente para vaciar su cola).
-    if (!yo.titular && hoja.agente.id !== yo.id) throw new ErrorHttp(403, "Esta hoja la firmó otro agente: tiene que subirla él.");
+    // Quién firma: un agente solo sube SUS hojas y con SU nombre (el de la
+    // sesión, no el que diga el móvil). El titular puede subir las de
+    // cualquiera (por ejemplo, si entra en el móvil de un agente para vaciar
+    // su cola), pero el agente tiene que existir y llamarse como en D1. El
+    // nombre del titular no se compara: lo puede cambiar en Ajustes y una
+    // hoja suya firmada sin conexión antes del cambio se quedaría atascada.
+    if (!yo.titular) {
+      if (hoja.agente.id !== yo.id) throw new ErrorHttp(403, "Esta hoja la firmó otro agente: tiene que subirla él.");
+      if (hoja.agente.nombre !== yo.nombre) throw new ErrorHttp(403, "El nombre del agente de la hoja no es el tuyo.");
+    } else if (hoja.agente.id !== 0) {
+      const ag = await db.agentePorId(env.DB, hoja.agente.id);
+      if (!ag) throw new ErrorHttp(422, "La hoja dice que la firmó un agente que no existe.");
+      if (ag.nombre !== hoja.agente.nombre) throw new ErrorHttp(422, "El nombre del agente de la hoja no coincide con el de ese agente.");
+    }
     const hash = await hashHoja(hoja);
-    if (!esHash(datos.hash) || datos.hash !== hash) throw new ErrorHttp(422, "El código SHA-256 no coincide con el contenido: la hoja ha cambiado después de firmarse.");
+    if (!esHash(datos.hash) || datos.hash !== hash) throw new ErrorHttp(422, "El código de comprobación (SHA-256) no coincide con el contenido: la hoja ha cambiado después de firmarse.");
+    // Textos legales y marca: se comparan con los de Ajustes AHORA. Una hoja
+    // firmada sin conexión antes de un cambio se acepta igual (no se queda
+    // atascada en el móvil), pero queda marcada como «distinta».
+    const { marca: marcaAhora, textos: textosAhora } = await leeMarca(env.DB);
+    const actuales = textosDeHoja(textosAhora, hoja.tipo);
+    const huella = await huellaTextos(hoja.textos);
+    const mismosTextos = huella === await huellaTextos(actuales);
+    if (hoja.textos.revisados && !(mismosTextos && actuales.revisados)) {
+      // «Revisados por un profesional» solo vale si ESA versión de los textos
+      // la marcó el titular como revisada (ahora o antes de cambiarla).
+      const rev = revisionesCompletas(await db.leeAjuste(env.DB, "revisiones"));
+      if (!rev[hoja.tipo].includes(huella)) {
+        throw new ErrorHttp(422, "La hoja dice que sus textos legales están revisados por un profesional, pero en Ajustes no constan como revisados.");
+      }
+    }
+    const textosAlDia = mismosTextos && hoja.textos.revisados === actuales.revisados;
+    const marcaAlDia = canonico(hoja.marca) === canonico(marcaAhora);
     const res = resumenHoja(hoja);
     const resultado = await db.guardaHoja(env.DB, {
       id: hoja.id, tipo: hoja.tipo, referencia: res.referencia, inmueble: res.inmueble, nombre: res.nombre, busqueda: res.busqueda,
       agenteId: hoja.agente.id, agente: hoja.agente.nombre, firmada: hoja.firmadaEn, recibida: iso,
-      ip: await ipResumida(req, env), contenido: canonico(hoja), hash,
+      ip: await ipResumida(req, env), contenido: canonico(hoja), hash, textosAlDia, marcaAlDia,
     });
     if (resultado === "conflicto") throw new ErrorHttp(409, "Ya hay otra hoja con ese identificador y distinto contenido.");
     if (resultado === "borrada") throw new ErrorHttp(410, "Esa hoja se borró por supresión de datos y no se vuelve a guardar.", { borrada: true });
     if (resultado === "repetida") {
       const f = await db.leeHoja(env.DB, hoja.id);
-      return json({ ok: true, repetida: true, id: hoja.id, hash, recibida: f.recibida, estado: f.estado });
+      return json({ ok: true, repetida: true, id: hoja.id, hash, recibida: f.recibida, estado: f.estado, anulada: f.anulada, motivo: f.motivo });
     }
     enSegundoPlano(ctx, avisaTelegram(env, textoHojaFirmada(hoja), hazFetch));
     enSegundoPlano(ctx, db.limpiaLimites(env.DB, ahora));
-    return json({ ok: true, id: hoja.id, hash, recibida: iso, estado: "firmada" }, 201);
+    return json({ ok: true, id: hoja.id, hash, recibida: iso, estado: "firmada", textosAlDia, marcaAlDia }, 201);
   }
 
   async function quienSoy(env, req, clave, ahora) {
     const s = await leeSesion(leeCookie(req.headers.get("cookie"), COOKIE), clave, ahora);
     if (!s) return null;
     if (s.agente === 0) {
+      if (s.version !== await db.versionTitular(env.DB)) return null; // cerró sesión («Salir»)
       const { marca } = await leeMarca(env.DB);
       return { id: 0, nombre: marca.titular, titular: true };
     }
@@ -482,6 +561,12 @@ export function crearManejador({ reloj = () => Date.now(), hazFetch = (...a) => 
   }
 }
 
+
+/** null = ve todas; un número = solo las de ese agente (ajuste del titular). */
+async function soloSuyasDe(env, yo) {
+  if (yo.titular) return null;
+  return permisosCompletos(await db.leeAjuste(env.DB, "permisos")).agentesSoloSuyas ? yo.id : null;
+}
 
 function soloTitular(yo) {
   if (!yo.titular) throw new ErrorHttp(403, "Esto solo lo puede hacer el titular (la clave principal).");

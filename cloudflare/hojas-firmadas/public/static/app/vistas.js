@@ -38,11 +38,17 @@ export function desplegable({ id, etiqueta, opciones, valor = '', obligatorio = 
 </div>`;
 }
 
+/* La etiqueta ENVUELVE la casilla: toda la fila (≥ 44 px de alto) se puede
+   tocar, no solo el cuadradito. */
 export function casilla({ id, etiqueta, marcada = false, obligatorio = false }) {
   return `<div class="casilla">
-  <input id="${id}" name="${id}" type="checkbox"${marcada ? ' checked' : ''}${obligatorio ? ' required' : ''}>
-  <label for="${id}">${esc(etiqueta)}${obligatorio ? marcaObligatorio(true) : ''}</label>
+  <label for="${id}"><input id="${id}" name="${id}" type="checkbox"${marcada ? ' checked' : ''}${obligatorio ? ' required' : ''}><span>${esc(etiqueta)}${obligatorio ? marcaObligatorio(true) : ''}</span></label>
 </div>`;
+}
+
+/* El código SHA-256 explicado para quien no es informático. */
+export function huella(hash) {
+  return `<p class="huella"><span>Código de comprobación (SHA-256): sirve para demostrar que la hoja no ha cambiado.</span><br><code>${esc(hash)}</code></p>`;
 }
 
 /** Un campo de campos-piso.js con su control adecuado. Prefijo: 'p-' (visita) o 'c-' (captación). */
@@ -98,7 +104,7 @@ ${sinSesion ? '<p class="aviso-borrador" role="note">Tu sesión ha caducado. Pue
   <a class="boton principal grande" href="#captacion">Nueva hoja de captación</a>
   <a class="boton grande" href="#hojas">Hojas firmadas</a>
 </div>
-${avisos.length ? `<section class="tarjeta avisos"><h2>Por revisar</h2><ul>${avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul><p><a href="#ajustes">Ir a Ajustes</a></p></section>` : ''}`;
+${avisos.length ? `<section class="tarjeta avisos"><h2>Por revisar</h2><ul>${avisos.map((a) => `<li>${esc(a)}</li>`).join('')}</ul><p><a class="enlace-tactil" href="#ajustes">Ir a Ajustes</a></p></section>` : ''}`;
 }
 
 /* ── Hoja de visita ──────────────────────────────────────────────────── */
@@ -210,7 +216,7 @@ export function vistaFirmada({ hoja, registro, marca }) {
   <p class="estado-subida ${pendiente ? 'pendiente' : 'subida'}" id="estado-subida">${pendiente
     ? 'Guardada en este móvil. <strong>Pendiente de subir</strong>: se subirá sola cuando haya conexión.'
     : `Guardada en la nube el ${esc(r.fecha)} a las ${esc(r.hora)}.`}</p>
-  <p class="huella">SHA-256: <code>${esc(registro.hash)}</code></p>
+  ${huella(registro.hash)}
   ${accionesEnvio(hoja, marca)}
   <div class="fila-botones">
     <a class="boton" href="#${hoja.tipo}">Otra hoja de ${hoja.tipo === 'visita' ? 'visita' : 'captación'}</a>
@@ -220,20 +226,23 @@ export function vistaFirmada({ hoja, registro, marca }) {
 }
 
 /* ── Lista de hojas ──────────────────────────────────────────────────── */
-export function vistaHojas({ filtros = {}, filas = null, total = 0, pendientes = [], error = '', titular = false }) {
+export function vistaHojas({ filtros = {}, filas = null, total = 0, pendientes = [], otrasPendientes = 0, error = '', titular = false, soloSuyas = false }) {
   const f = filtros;
   const tipos = [{ v: 'visita', t: 'Hojas de visita' }, { v: 'captacion', t: 'Hojas de captación' }];
-  const pend = pendientes.length ? `<section class="tarjeta pendientes-lista" aria-labelledby="t-pend"><h2 id="t-pend">En este móvil, sin subir (${pendientes.length})</h2><ul class="lista-hojas">${pendientes.map((p) => {
+  // De las hojas pendientes de OTRO usuario de este móvil solo se dice cuántas hay.
+  const otras = otrasPendientes ? `<p class="aviso-borrador" role="note">${otrasPendientes} hoja${otrasPendientes === 1 ? '' : 's'} pendiente${otrasPendientes === 1 ? '' : 's'} de otro usuario en este móvil. ${titular ? 'Se suben con tu sesión.' : 'Se suben cuando entre él.'}</p>` : '';
+  const pend = otras + (pendientes.length ? `<section class="tarjeta pendientes-lista" aria-labelledby="t-pend"><h2 id="t-pend">En este móvil, sin subir (${pendientes.length})</h2><ul class="lista-hojas">${pendientes.map((p) => {
     const r = resumenHoja(p.hoja);
     const fm = enMadrid(p.hoja.firmadaEn);
     return `<li><a class="hoja-fila" href="#local/${esc(p.id)}"><span class="etiqueta ${p.estado === 'error' ? 'mal' : 'espera'}">${p.estado === 'error' ? 'Error al subir' : 'Pendiente'}</span><strong>${esc(r.nombre)}</strong><span>${esc(TIPOS[p.hoja.tipo])} · ${esc(r.referencia || r.inmueble)}</span><span class="suave">${esc(fm.fecha)} ${esc(fm.hora)}</span>${p.mensaje ? `<span class="error">${esc(p.mensaje)}</span>` : ''}</a></li>`;
-  }).join('')}</ul></section>` : '';
+  }).join('')}</ul></section>` : '');
   const lista = filas === null ? '' : filas.length === 0 ? '<p>No hay hojas con esos filtros.</p>' : `<p class="suave">${filas.length === 200 ? 'Las 200 más recientes' : `${filas.length} hoja${filas.length === 1 ? '' : 's'}`} de ${total} en total.</p>
 <ul class="lista-hojas">${filas.map((h) => {
     const fm = enMadrid(h.firmada);
     return `<li><a class="hoja-fila" href="#hoja/${esc(h.id)}"><span class="etiqueta ${h.estado === 'anulada' ? 'mal' : 'bien'}">${h.estado === 'anulada' ? 'Anulada' : 'Firmada'}</span><strong>${esc(h.nombre)}</strong><span>${esc(TIPOS[h.tipo] || h.tipo)} · ${esc(h.referencia || h.inmueble)}</span><span class="suave">${esc(fm.fecha)} ${esc(fm.hora)} · ${esc(h.agente)}</span></a></li>`;
   }).join('')}</ul>`;
   return `<h1>Hojas firmadas</h1>
+${soloSuyas ? '<p class="suave">Ves solo las hojas que has firmado tú.</p>' : ''}
 ${pend}
 <form id="form-filtros" class="tarjeta filtros" role="search">
   <h2>Buscar</h2>
@@ -259,8 +268,8 @@ export function vistaDetalle({ hoja, registro, titular = false, local = false, m
   const filas = [
     ['Tipo', TIPOS[hoja.tipo]],
     ['Estado', local ? 'Pendiente de subir (solo en este móvil)' : registro.estado === 'anulada' ? 'ANULADA' : 'Firmada'],
-    ['Firmada (móvil)', `${fm.fecha} ${fm.hora}`],
-    ['Registrada (servidor)', registro.recibida ? `${rec.fecha} ${rec.hora}` : 'Todavía no'],
+    ['Firmada en el móvil', `${fm.fecha} ${fm.hora}`],
+    ['Registrada en la nube', registro.recibida ? `${rec.fecha} ${rec.hora}` : 'Todavía no'],
     ['Agente', hoja.agente.nombre],
     [hoja.tipo === 'captacion' ? 'Propietario' : 'Visitante', r.nombre],
     ['DNI / NIE', r.dni],
@@ -269,10 +278,19 @@ export function vistaDetalle({ hoja, registro, titular = false, local = false, m
     ['Inmueble', r.inmueble],
     hoja.tipo === 'visita' ? ['Visita', `${hoja.datos.fecha.split('-').reverse().join('/')} ${hoja.datos.hora}`] : ['Encargo', [hoja.datos.piso.tipoEncargo, hoja.datos.piso.honorarios, hoja.datos.piso.duracion].filter(Boolean).join(' · ')],
   ];
+  if (!local && typeof registro.textosAlDia === 'boolean') {
+    filas.push(
+      ['Textos legales', registro.textosAlDia ? 'Los mismos que había en Ajustes al subirla' : 'DISTINTOS de los que había en Ajustes al subirla (se firmó con otra versión)'],
+      ['Marca', registro.marcaAlDia ? 'La misma que había en Ajustes al subirla' : 'DISTINTA de la que había en Ajustes al subirla (se firmó con otra versión)'],
+    );
+  }
   if (registro.estado === 'anulada') {
     const a = enMadrid(registro.anulada);
     filas.push(['Anulada', `${a.fecha} ${a.hora} por ${registro.anuladaPor || ''}`], ['Motivo', registro.motivo]);
   }
+  const distinta = !local && (registro.textosAlDia === false || registro.marcaAlDia === false)
+    ? `<p class="aviso-borrador" role="note"><strong>Ojo:</strong> esta hoja se firmó con ${[registro.textosAlDia === false && 'unos textos legales', registro.marcaAlDia === false && 'una marca'].filter(Boolean).join(' y ')} distint${registro.textosAlDia === false ? 'os' : 'a'} de los de Ajustes cuando se subió (por ejemplo, firmada sin conexión antes de un cambio). El PDF enseña lo que se firmó de verdad.</p>`
+    : '';
   const anular = titular && !local && registro.estado !== 'anulada' ? `<section class="tarjeta" aria-labelledby="t-anular"><h2 id="t-anular">Anular</h2>
   <p>Una hoja firmada no se puede cambiar. Si hay un error, se anula con un motivo y se firma otra. La hoja anulada se conserva y queda constancia.</p>
   <form id="form-anular" novalidate>${area({ id: 'motivo', etiqueta: 'Motivo de la anulación', obligatorio: true, max: 300, filas: 2 })}
@@ -281,11 +299,12 @@ export function vistaDetalle({ hoja, registro, titular = false, local = false, m
   <p class="aviso-borrador" role="note">${esc(AVISO_SUPRESION)}</p>
   <form id="form-borrar" novalidate>${campo({ id: 'confirmacion', etiqueta: 'Para confirmar, escribe BORRAR', obligatorio: true, max: 10, extra: 'autocomplete="off" autocapitalize="characters"' })}
   <button class="boton peligro" type="submit">Borrar datos de esta hoja</button></form></section>` : '';
-  return `<p><a href="#hojas">← Volver a la lista</a></p>
+  return `<p><a class="enlace-tactil" href="#hojas">← Volver a la lista</a></p>
 <h1>${esc(TIPOS[hoja.tipo])}</h1>
 ${registro.estado === 'anulada' ? '<p class="aviso-borrador" role="note"><strong>ANULADA.</strong> Se conserva como constancia; el PDF lo indica al pie.</p>' : ''}
+${distinta}
 <dl class="datos">${filas.filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
-<p class="huella">SHA-256: <code>${esc(registro.hash)}</code></p>
+${huella(registro.hash)}
 ${accionesEnvio(hoja, marca)}
 ${anular}
 ${borrar}`;
@@ -300,8 +319,8 @@ const ETIQUETAS_TEXTOS = {
   desistimiento: 'Hoja de captación: desistimiento (si se firma fuera de la oficina)',
 };
 
-export function vistaAjustes({ agente, marca, textos, logo, agentes = [], registro = [], avisos = [] }) {
-  const salir = '<section class="tarjeta"><h2>Sesión</h2><p>Si sales, las hojas que estén sin subir siguen en este móvil hasta que vuelvas a entrar.</p><button class="boton" type="button" id="salir">Salir</button></section>';
+export function vistaAjustes({ agente, marca, textos, logo, agentes = [], registro = [], avisos = [], permisos = { agentesSoloSuyas: true } }) {
+  const salir = '<section class="tarjeta"><h2>Sesión</h2><p>Si sales, se cierra tu sesión en todos los móviles donde la tengas abierta. Las hojas que estén sin subir siguen en este móvil hasta que vuelvas a entrar.</p><button class="boton" type="button" id="salir">Salir</button></section>';
   if (!agente.titular) {
     return `<h1>Ajustes</h1><p>Has entrado como <strong>${esc(agente.nombre)}</strong>. La marca, los textos legales y los agentes los cambia el titular.</p>${salir}`;
   }
@@ -339,6 +358,13 @@ export function vistaAjustes({ agente, marca, textos, logo, agentes = [], regist
   const listaAgentes = agentes.length ? `<ul class="lista-simple">${agentes.map((a) => `<li><strong>${esc(a.nombre)}</strong> <span class="suave">usuario: ${esc(a.usuario)}${a.activo ? '' : ' · de baja'}</span>${a.activo ? `<div class="fila-botones"><button class="boton" type="button" data-clave-agente="${a.id}">Cambiar clave</button><button class="boton peligro" type="button" data-baja-agente="${a.id}">Dar de baja</button></div>` : ''}</li>`).join('')}</ul>` : '<p>Solo entras tú (el titular). Puedes añadir agentes con su propia clave.</p>';
   const agentesForm = `<section class="tarjeta" aria-labelledby="t-agentes"><h2 id="t-agentes">Agentes</h2>
   <p class="ayuda">Cada agente entra con su usuario y su clave, y sus hojas dicen quién las firmó. La clave se guarda cifrada (no se puede ver, solo cambiar). Un agente de baja no puede entrar, pero sus hojas se conservan.</p>
+  <form id="form-permisos" novalidate>
+    <h3>Lo que ven los agentes</h3>
+    ${casilla({ id: 'p-soloSuyas', etiqueta: 'Los agentes solo ven sus hojas', marcada: permisos.agentesSoloSuyas !== false })}
+    <p class="ayuda">Si lo quitas, cada agente podrá ver (no anular ni borrar) las hojas de todos, con los datos de los clientes.</p>
+    <button class="boton" type="submit">Guardar</button>
+    <p class="ok" id="permisos-ok" role="status" aria-live="polite"></p>
+  </form>
   ${listaAgentes}
   <form id="form-agente" novalidate>
     <h3>Añadir agente</h3>
@@ -359,7 +385,7 @@ ${logoForm}
 ${grupoTextos('visita', 'Textos legales de la hoja de visita')}
 ${grupoTextos('captacion', 'Textos legales de la hoja de captación')}
 ${agentesForm}
-<section class="tarjeta"><h2>Exportar</h2><p><a class="boton" href="/api/exportar" download>Descargar todas las hojas en Excel (CSV)</a></p><p class="ayuda">Sin firmas: nombre, contacto, inmueble, fechas, estado y código SHA-256 de cada hoja.</p></section>
+<section class="tarjeta"><h2>Exportar</h2><p><a class="boton" href="/api/exportar" download>Descargar todas las hojas en Excel (CSV)</a></p><p class="ayuda">Sin firmas: nombre, contacto, inmueble, fechas, estado, si los textos y la marca eran los de Ajustes y el código de comprobación de cada hoja.</p></section>
 ${reg}
 ${salir}`;
 }

@@ -55,6 +55,17 @@ async function operacion(modo, hacer) {
   }
 }
 
+/**
+ * Reparte la cola entre las hojas del usuario con sesión abierta y las de
+ * otros usuarios que firmaron en este mismo móvil (puro). De las de otros
+ * solo se enseña CUÁNTAS hay, nunca sus datos.
+ * agenteId: id del usuario con sesión (0 = titular) o null si no hay nadie.
+ */
+export function repartePendientes(items, agenteId) {
+  const mias = agenteId === null || agenteId === undefined ? [] : items.filter((i) => i?.hoja?.agente?.id === agenteId);
+  return { mias, otras: items.length - mias.length };
+}
+
 /** { id, hoja, hash, creada, estado: 'pendiente'|'error', mensaje } */
 export const guarda = (item) => operacion('readwrite', (a) => a.put(item));
 export const lista = async () => ((await operacion('readonly', (a) => a.getAll())) || []).sort((x, y) => String(x.creada).localeCompare(String(y.creada)));
@@ -68,11 +79,13 @@ let subiendo = null;
  * marcha, devuelve esa misma (no se lanzan dos a la vez).
  * Devuelve { subidas: [{ id, recibida }], quedan, motivo: ''|'sesion'|'espera'|'error' }.
  */
-export function subePendientes({ hazFetch = (...a) => fetch(...a) } = {}) {
+export function subePendientes({ hazFetch = (...a) => fetch(...a), filtro = () => true } = {}) {
   if (subiendo) return subiendo;
   subiendo = (async () => {
     const res = { subidas: [], quedan: 0, motivo: '' };
-    for (const item of await lista()) {
+    // filtro: un agente solo sube las suyas (las de otro usuario de este
+    // móvil esperan a que entre él); el titular puede subirlas todas.
+    for (const item of (await lista()).filter(filtro)) {
       let estado = 0;
       let cuerpo = {};
       try {
@@ -90,7 +103,7 @@ export function subePendientes({ hazFetch = (...a) => fetch(...a) } = {}) {
       const que = decideTrasSubida(estado);
       if (que === 'subida' || que === 'borrada') {
         await quita(item.id);
-        res.subidas.push({ id: item.id, recibida: cuerpo.recibida || '', estado: cuerpo.estado || 'firmada', borrada: que === 'borrada' });
+        res.subidas.push({ id: item.id, recibida: cuerpo.recibida || '', estado: cuerpo.estado || 'firmada', anulada: cuerpo.anulada || '', motivo: cuerpo.motivo || '', borrada: que === 'borrada' });
         continue;
       }
       if (que === 'error') {

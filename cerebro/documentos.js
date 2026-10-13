@@ -10,7 +10,8 @@
    Marca: Cerebro no pasa colores ni pie y todo sale como siempre. Hojas
    firmadas (cloudflare/hojas-firmadas, white-label) usa además
    `ajustes.colorPrincipal` / `colorAcento` / `lineaLegal` y las opciones
-   `textoPie` (texto o lista de dos líneas) y `productor`. Esa carpeta
+   `textoPie` (texto o lista de dos líneas), `productor` y, en la hoja de
+   visita, `notaFirmas` (la nota de debajo de las firmas). Esa carpeta
    lleva una COPIA EXACTA de este archivo, vigilada por
    test/hojas-firmadas.test.mjs: si lo cambias, ejecuta
    `node cloudflare/hojas-firmadas/herramientas/copiar-cerebro.mjs`.
@@ -212,7 +213,7 @@ function firmaAgente(ajustes) {
 /* ─────────────────────────── Hoja de visita ─────────────────────────── */
 
 export function pdfHojaVisita(visita, ajustes, opciones = {}) {
-  const { logo, ahora = new Date(), textoPie, productor } = opciones instanceof Date ? { ahora: opciones } : opciones;
+  const { logo, ahora = new Date(), textoPie, productor, notaFirmas } = opciones instanceof Date ? { ahora: opciones } : opciones;
   const doc = nuevoPdf({ titulo: `Hoja de visita · ${visita.inmueble}`, autor: ajustes.agente, productor });
   doc.pagina();
   const borrador = !ajustes.textosRevisados;
@@ -260,8 +261,11 @@ export function pdfHojaVisita(visita, ajustes, opciones = {}) {
   e.y += 10;
   const firmas = [{ etiqueta: 'Firma del visitante', nombre: visita.visitante.nombre, firma: visita.firma, ancho: visita.firmaAncho, alto: visita.firmaAlto }];
   if (ajustes.firmaAgente) firmas.push(firmaAgente(ajustes));
+  // `opciones.notaFirmas` (Hojas firmadas) sustituye la nota de debajo de
+  // las firmas: allí la hora de la firma y la del registro son distintas
+  // de la de la visita. Sin ella, la nota de siempre.
   e.firmas(firmas, ajustes.encabezadoFirmas || ENCABEZADO_FIRMAS,
-    `Firmado en el dispositivo del agente el ${fechaCorta(visita.fecha)} a las ${visita.hora}. Registrada: ${new Date(visita.registrada || ahora).toLocaleString('es-ES')}.`);
+    notaFirmas ?? `Firmado en el dispositivo del agente el ${fechaCorta(visita.fecha)} a las ${visita.hora}. Registrada: ${new Date(visita.registrada || ahora).toLocaleString('es-ES')}.`);
 
   pie(doc, textoPie || `Documento generado con Cerebro Útil Pau · ${ajustes.empresa}`, borrador);
   return doc.bytes();

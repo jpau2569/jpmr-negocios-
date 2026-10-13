@@ -13,7 +13,7 @@ import { declaracionDe } from '../cerebro/visitas.js';
 import { textoConformidad } from '../cerebro/documentos.js';
 import { limpiaHoja, hashHoja, nuevoId, VERSION_HOJA, MAX_FIRMA_BYTES, bytesDeBase64, enMadrid, CAMPOS_CAPTACION } from '../nucleo/hoja.js';
 import { pdfDeHoja, nombrePdf } from '../nucleo/pdf-hoja.js';
-import { coloresInterfaz, contraste, textoSobre, CAMPOS_MARCA, GRUPOS_TEXTOS } from '../nucleo/marca.js';
+import { coloresInterfaz, contraste, textoSobre, textosDeHoja, CAMPOS_MARCA, GRUPOS_TEXTOS } from '../nucleo/marca.js';
 import * as cola from './cola.js';
 import * as V from './vistas.js';
 
@@ -76,7 +76,7 @@ async function refrescaYo() {
   try {
     const r = await api('/api/yo');
     if (r.ok) {
-      est.yo = { agente: r.agente, marca: r.marca, textos: r.textos, logo: r.logo, avisos: r.avisos || [] };
+      est.yo = { agente: r.agente, marca: r.marca, textos: r.textos, logo: r.logo, permisos: r.permisos, avisos: r.avisos || [] };
       est.sesion = true;
       est.apagada = '';
       localStorage.setItem(CLAVE_YO, JSON.stringify(est.yo));
@@ -97,18 +97,35 @@ function pintaRed() {
   document.getElementById('red').textContent = navigator.onLine ? '' : 'Sin conexión';
 }
 
+/* La cola es del MÓVIL, no del usuario: si en este móvil han firmado dos
+   personas, cada una ve solo sus hojas y de las otras solo cuántas hay. */
+const idConSesion = () => (est.yo?.agente ? est.yo.agente.id : null);
+const plural = (n, una, varias) => (n === 1 ? una : varias);
+
 async function pintaPendientes() {
   const caja = document.getElementById('pendientes');
   let items = [];
   try { items = await cola.lista(); } catch { items = []; }
   if (!items.length) { caja.hidden = true; caja.textContent = ''; return items; }
-  const n = items.length;
-  const errores = items.filter((i) => i.estado === 'error').length;
+  if (idConSesion() === null) {
+    caja.innerHTML = `<span><strong>${items.length} ${plural(items.length, 'hoja pendiente', 'hojas pendientes')} de subir en este móvil.</strong> Se suben cuando entre quien las firmó.</span>`;
+    caja.hidden = false;
+    return items;
+  }
+  const { mias, otras } = cola.repartePendientes(items, idConSesion());
+  const n = mias.length;
+  const textoOtras = otras ? `${otras} ${plural(otras, 'hoja pendiente', 'hojas pendientes')} de otro usuario en este móvil.` : '';
+  if (!n) {
+    caja.innerHTML = `<span>${textoOtras} ${est.yo.agente.titular ? 'Se suben con tu sesión.' : 'Se suben cuando entre él.'}</span>`;
+    caja.hidden = false;
+    return items;
+  }
+  const errores = mias.filter((i) => i.estado === 'error').length;
   let detalle;
   if (!navigator.onLine) detalle = 'Sin conexión: se subirán solas al volver la cobertura.';
   else if (est.sesion === false) detalle = 'Tu sesión ha caducado: <a href="#entrar">entra</a> para subirlas.';
   else detalle = 'Se suben solas.';
-  caja.innerHTML = `<span><strong>${n} hoja${n === 1 ? '' : 's'} pendiente${n === 1 ? '' : 's'} de subir</strong>${errores ? ` (${errores} con error)` : ''}. ${detalle}</span>
+  caja.innerHTML = `<span><strong>${n} ${plural(n, 'hoja pendiente', 'hojas pendientes')} de subir</strong>${errores ? ` (${errores} con error)` : ''}. ${detalle}${textoOtras ? ` ${textoOtras}` : ''}</span>
     ${navigator.onLine && est.sesion !== false ? '<button type="button" class="boton" id="subir-ya">Subir ahora</button>' : ''}
     <a class="boton" href="#hojas">Ver</a>`;
   caja.hidden = false;
@@ -117,12 +134,17 @@ async function pintaPendientes() {
 
 async function intentaSubir() {
   if (!navigator.onLine) { await pintaPendientes(); return; }
+  if (idConSesion() === null) { await pintaPendientes(); return; }
+  // Un agente sube solo las suyas; el titular, todas (vacía la cola del móvil).
+  const yoId = idConSesion();
+  const titular = Boolean(est.yo?.agente?.titular);
   let res;
-  try { res = await cola.subePendientes(); } catch { await pintaPendientes(); return; }
+  try { res = await cola.subePendientes({ filtro: (i) => titular || i?.hoja?.agente?.id === yoId }); } catch { await pintaPendientes(); return; }
   if (res.motivo === 'sesion') est.sesion = false;
   for (const s of res.subidas) {
-    if (est.ultima?.hoja.id === s.id) est.ultima.registro = { ...est.ultima.registro, recibida: s.recibida, estado: s.estado };
-    if (est.actual?.hoja.id === s.id) est.actual.registro = { ...est.actual.registro, recibida: s.recibida, estado: s.estado };
+    const nuevo = { recibida: s.recibida, estado: s.estado, ...(s.estado === 'anulada' ? { anulada: s.anulada, motivo: s.motivo } : {}) };
+    if (est.ultima?.hoja.id === s.id) est.ultima.registro = { ...est.ultima.registro, ...nuevo };
+    if (est.actual?.hoja.id === s.id) est.actual.registro = { ...est.actual.registro, ...nuevo };
   }
   if (res.subidas.length) {
     aviso(res.subidas.length === 1 ? 'Hoja subida a la nube.' : `${res.subidas.length} hojas subidas a la nube.`);
@@ -233,12 +255,7 @@ function datosCaptacion(fechaCaptacion) {
   return { piso, notas: valor('c-notas') };
 }
 
-function textosDe(tipo) {
-  const t = est.yo.textos;
-  return tipo === 'visita'
-    ? { declaracion: t.declaracion, rgpd: t.rgpdVisita, revisados: t.visitaRevisados }
-    : { conformidad: t.conformidad, rgpd: t.rgpdCaptacion, desistimiento: t.desistimiento, revisados: t.captacionRevisados };
-}
+const textosDe = (tipo) => textosDeHoja(est.yo.textos, tipo);
 
 /* Texto legal con los datos puestos, en vivo (las mismas funciones que el PDF). */
 function actualizaTextoLegal(tipo) {
@@ -390,9 +407,9 @@ function pintaEntrar() {
 }
 
 async function pintaHojas() {
-  const pendientes = await cola.lista().catch(() => []);
+  const { mias: pendientes, otras: otrasPendientes } = cola.repartePendientes(await cola.lista().catch(() => []), idConSesion());
   const f = est.filtros;
-  vista.innerHTML = V.vistaHojas({ filtros: f, filas: null, pendientes, titular: est.yo.agente.titular });
+  vista.innerHTML = V.vistaHojas({ filtros: f, filas: null, pendientes, otrasPendientes, titular: est.yo.agente.titular });
   const enlazar = () => {
     document.getElementById('form-filtros').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -408,10 +425,10 @@ async function pintaHojas() {
     const r = await api(`/api/hojas?${q}`);
     if (location.hash !== '#hojas') return;
     if (r.estado === 401) return pinta();
-    vista.innerHTML = V.vistaHojas({ filtros: f, filas: r.ok ? r.hojas : null, total: r.total || 0, pendientes, error: r.ok ? '' : textoError(r), titular: est.yo.agente.titular });
+    vista.innerHTML = V.vistaHojas({ filtros: f, filas: r.ok ? r.hojas : null, total: r.total || 0, pendientes, otrasPendientes, error: r.ok ? '' : textoError(r), titular: est.yo.agente.titular, soloSuyas: Boolean(r.soloSuyas) });
   } catch {
     if (location.hash !== '#hojas') return;
-    vista.innerHTML = V.vistaHojas({ filtros: f, filas: null, pendientes, error: 'Sin conexión: la lista de la nube necesita internet. Arriba tienes lo que está en este móvil.', titular: est.yo.agente.titular });
+    vista.innerHTML = V.vistaHojas({ filtros: f, filas: null, pendientes, otrasPendientes, error: 'Sin conexión: la lista de la nube necesita internet. Arriba tienes lo que está en este móvil.', titular: est.yo.agente.titular });
   }
   enlazar();
 }
@@ -420,11 +437,11 @@ async function pintaDetalle(id) {
   vista.innerHTML = '<p class="cargando">Cargando…</p>';
   let r;
   try { r = await api(`/api/hojas/${encodeURIComponent(id)}`); } catch {
-    vista.innerHTML = '<p class="error" role="alert">Sin conexión: para ver una hoja de la nube hace falta internet.</p><p><a href="#hojas">← Volver</a></p>';
+    vista.innerHTML = '<p class="error" role="alert">Sin conexión: para ver una hoja de la nube hace falta internet.</p><p><a class="enlace-tactil" href="#hojas">← Volver a la lista</a></p>';
     return;
   }
   if (r.estado === 401) return pinta();
-  if (!r.ok) { vista.innerHTML = `<p class="error" role="alert">${V.esc(textoError(r))}</p><p><a href="#hojas">← Volver</a></p>`; return; }
+  if (!r.ok) { vista.innerHTML = `<p class="error" role="alert">${V.esc(textoError(r))}</p><p><a class="enlace-tactil" href="#hojas">← Volver a la lista</a></p>`; return; }
   est.actual = { hoja: r.hoja, registro: r.registro };
   vista.innerHTML = V.vistaDetalle({ hoja: r.hoja, registro: r.registro, titular: est.yo.agente.titular, marca: est.yo.marca });
   document.getElementById('form-anular')?.addEventListener('submit', async (e) => {
@@ -452,6 +469,11 @@ async function pintaDetalle(id) {
 async function pintaLocal(id) {
   const item = await cola.lee(id).catch(() => null);
   if (!item) { location.hash = `hoja/${id}`; return; }
+  // Una hoja pendiente de OTRO usuario de este móvil no se enseña.
+  if (item.hoja?.agente?.id !== idConSesion()) {
+    vista.innerHTML = '<p class="error" role="alert">Esta hoja la firmó otro usuario en este móvil: solo la puede ver él.</p><p><a class="enlace-tactil" href="#hojas">← Volver a la lista</a></p>';
+    return enfoca();
+  }
   est.actual = { hoja: item.hoja, registro: { hash: item.hash, recibida: '', estado: 'firmada' } };
   vista.innerHTML = (item.mensaje ? `<p class="error" role="alert">No se ha podido subir: ${V.esc(item.mensaje)}</p>` : '')
     + V.vistaDetalle({ hoja: item.hoja, registro: est.actual.registro, local: true, marca: est.yo.marca });
@@ -527,7 +549,7 @@ async function pintaAjustes() {
     } catch { /* sin conexión: se ve lo que hay */ }
   }
   if (location.hash !== '#ajustes') return;
-  vista.innerHTML = V.vistaAjustes({ agente: yo.agente, marca: yo.marca, textos: yo.textos, logo: yo.logo, agentes, registro, avisos: yo.avisos || [] });
+  vista.innerHTML = V.vistaAjustes({ agente: yo.agente, marca: yo.marca, textos: yo.textos, logo: yo.logo, agentes, registro, avisos: yo.avisos || [], permisos: yo.permisos });
   document.getElementById('salir').addEventListener('click', async () => {
     const pend = (await cola.lista().catch(() => [])).length;
     if (pend && !confirm(`Tienes ${pend} hoja(s) sin subir. Se quedan en este móvil hasta que vuelvas a entrar. ¿Salir?`)) return;
@@ -569,6 +591,11 @@ async function pintaAjustes() {
     if (!confirm('¿Sustituir estos textos por el borrador original?')) return;
     guardaAjuste('/api/ajustes/borrador', { grupo: b.dataset.borrador }, null, 'Textos restaurados al borrador.');
   }));
+  document.getElementById('form-permisos').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const soloSuyas = marcada('p-soloSuyas');
+    guardaAjuste('/api/ajustes/permisos', { agentesSoloSuyas: soloSuyas }, 'permisos-ok', soloSuyas ? 'Guardado: cada agente ve solo sus hojas.' : 'Guardado: los agentes ven todas las hojas.');
+  });
   document.getElementById('form-agente').addEventListener('submit', (e) => {
     e.preventDefault();
     guardaAjuste('/api/agentes', { nombre: valor('a-nombre'), usuario: valor('a-usuario').trim().toLowerCase(), clave: valor('a-clave') }, 'agente-ok', 'Agente añadido.');

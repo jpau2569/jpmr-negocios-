@@ -6,7 +6,7 @@
    Red primero (4 s de margen con poca cobertura) y, si no, la copia.
    Al tocar cualquier archivo de la lista: súbelo aquí y sube VERSION.
    ═══════════════════════════════════════════════════════════════════ */
-const VERSION = 'hojas-firmadas-v1';
+const VERSION = 'hojas-firmadas-v2';
 const RECURSOS = [
   '/',
   '/manifest.webmanifest',
@@ -18,6 +18,7 @@ const RECURSOS = [
   '/static/app/cola.js',
   '/static/app/vistas.js',
   '/static/nucleo/hoja.js',
+  '/static/nucleo/jpeg.js',
   '/static/nucleo/marca.js',
   '/static/nucleo/pdf-hoja.js',
   '/static/cerebro/campos-piso.js',

@@ -6,7 +6,7 @@
    Al tocar cualquier archivo de la lista: súbelo aquí y sube VERSION.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'cerebro-v2.0.2';
+const VERSION = 'cerebro-v2.0.3';
 const RECURSOS = [
   './', './index.html', './app.html', './styles.css', './app.js', './utiles.js', './datos.js',
   './calendario.js', './firma.js', './pdf.js', './documentos.js', './visitas.js', './operaciones.js',
