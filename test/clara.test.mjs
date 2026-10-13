@@ -2036,6 +2036,16 @@ const FICHA_INMOWEB = `<!doctype html><html><head>
   check("ficha: operación sacada del título", f.operacion === "venta");
   const texto = F.resumenFicha(f);
   check("resumen: cita referencia y enlace, y otras características publicadas", texto.includes("Referencia: PIS0100") && texto.includes(url) && texto.includes("Orientación: Sur"));
+  // Ficha REAL de asesoriacastresana.com (PIS0190, descargada el 13-10-2026): al pie
+  // lleva inmuebles relacionados con sus propios data-ref, precios y fotos.
+  const real = F.parsearFicha(readFileSync(new URL("./fixtures/ficha-pis0190.html", import.meta.url), "utf8"), "https://www.asesoriacastresana.com/piso--oviedo-con--es1706032.html");
+  check("ficha real: la referencia es la de la cabecera (PIS0190), no la de un relacionado", real.referencia === "PIS0190");
+  check("ficha real: precio, superficies, habitaciones, baños, planta y certificado", real.precio?.valor === 265000 && real.superficie_util === "90 m²" && real.superficie_construida === "100 m²" && real.habitaciones === 3 && real.banos === 2 && real.planta === "3º" && /G/.test(real.certificado_energetico || ""));
+  check("ficha real: 23 fotos, todas de este inmueble y a tamaño web (no miniaturas)", real.fotos.length === 23 && real.fotos.every((u) => u.includes("/property/1706032/image/w/")));
+  const { extraeFotos } = await import("../lib/fotos-ficha.js");
+  check("fotos: storage.googleapis.com solo dentro de static.inmoweb.es", extraeFotos('<img src="https://storage.googleapis.com/otro-bucket/property/1/image/a.jpg"><img src="https://storage.googleapis.com/static.inmoweb.es/clients/1/property/2/image/w/b.jpg">').length === 1);
+  const { dominioPermitido } = await import("../api/_foto.js");
+  check("proxy de fotos: acepta la carpeta de Inmoweb en Google Storage y nada más de ese dominio", dominioPermitido("https://storage.googleapis.com/static.inmoweb.es/clients/2853/property/1706032/image/w/a.jpg") && !dominioPermitido("https://storage.googleapis.com/otro/a.jpg"));
   const vacia = F.resumenFicha(F.parsearFicha("<html><body><h1>Piso</h1></body></html>", url));
   check("lo que la ficha no dice sale «no consta» (nada inventado)", vacia.includes("Precio: no consta") && vacia.includes("Certificado energético: no consta") && vacia.includes("Superficie útil: no consta") && vacia.includes("Extras que publica: no consta"));
 
