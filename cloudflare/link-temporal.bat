@@ -18,7 +18,20 @@ if not defined CFD if exist "%ProgramFiles%\cloudflared\cloudflared.exe" set "CF
 if not defined CFD if exist "%ProgramFiles(x86)%\cloudflared\cloudflared.exe" set "CFD=%ProgramFiles(x86)%\cloudflared\cloudflared.exe"
 if not defined CFD (
   echo.
-  echo  No encuentro cloudflared en este PC.
+  echo  No encuentro cloudflared en este PC. Hace falta para el link temporal.
+  where winget >nul 2>nul && (
+    set "INSTALAR="
+    set /p "INSTALAR=Lo instalo ahora con winget? Escribe S y pulsa Intro: "
+    if /i "!INSTALAR!"=="S" (
+      winget install --id Cloudflare.cloudflared -e --accept-source-agreements --accept-package-agreements
+      if exist "!ProgramFiles!\cloudflared\cloudflared.exe" set "CFD=!ProgramFiles!\cloudflared\cloudflared.exe"
+      if exist "!ProgramFiles(x86)!\cloudflared\cloudflared.exe" set "CFD=!ProgramFiles(x86)!\cloudflared\cloudflared.exe"
+    )
+  )
+)
+if not defined CFD (
+  echo.
+  echo  Sigue sin estar cloudflared. Si acabas de instalarlo, cierra esta ventana y vuelve a abrir el .bat.
   echo  Instalalo desde la pagina oficial:
   echo    https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/
   echo  Windows 64 bits, instalador:
@@ -32,7 +45,8 @@ if not defined CFD (
 echo.
 echo  Que quieres ensenar? Escribe el PUERTO de tu PC:
 echo    8080 = demo del escaparate servida con "python -m http.server 8080"
-echo    8788 = castresana-web en local (probar-en-local.mjs)
+echo    8788 = castresana-web en local (Valora tu piso y visitas)
+echo    8790 = hojas-firmadas en local (firmas con el dedo)
 echo    4321 = Fotos Faciles (comparte solo enlaces de album /a/...)
 echo.
 set "PUERTO="
@@ -59,11 +73,12 @@ if !PUERTO! LSS 1 goto :malpuerto
 if !PUERTO! GTR 65535 goto :malpuerto
 
 echo.
-echo  Abriendo el tunel hacia http://localhost:!PUERTO! ...
+echo  Abriendo el tunel hacia http://127.0.0.1:!PUERTO! ...
+echo  Antes tiene que estar abierta la otra ventana con la app en marcha.
 echo  Busca abajo una linea con  https://....trycloudflare.com  y mandasela al cliente.
 echo  Para APAGARLO: cierra esta ventana (o pulsa Ctrl+C).
 echo.
-"!CFD!" tunnel --url http://localhost:!PUERTO!
+"!CFD!" tunnel --url http://127.0.0.1:!PUERTO!
 echo.
 echo  El tunel se ha cerrado. El enlace ya no funciona.
 pause
