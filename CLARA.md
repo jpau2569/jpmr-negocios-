@@ -43,6 +43,24 @@ Este mandato vive también en `clara_persona.md` (sección "Lo que sabes de Pau"
 - **`lib/leerweb.js`** — herramienta `leer_web`: Clara lee cualquier página pública que le pases (anuncios, ofertas, noticias). Bloquea direcciones internas o privadas en cada redirección.
 - **`lib/conectores.js`** — **conectores** de Clara: servidores MCP remotos (correo, calendario, Notion, hojas de cálculo, CRM…) que usa la propia API de Claude. Se activan solo desde Vercel con la variable `CLARA_CONECTORES` (ver abajo). Sin esa variable, Clara funciona exactamente igual que antes.
 
+- **`lib/archivos.js` + `api/_clara-archivo.js`** (ruta `/api/clara-archivo`) — **archivos de Word, Excel, PowerPoint y PDF** con las **Agent Skills oficiales de Anthropic** (`docx`, `xlsx`, `pptx`, `pdf`). Ver la sección siguiente.
+
+## Archivos de Word, Excel, PowerPoint y PDF (skills de Anthropic)
+
+**Qué es.** Le pides a Clara *«hazme esto en Word / Excel / PowerPoint / PDF»* y en su respuesta aparece una tarjeta **📄 Crear Word: <título>**. Al pulsarla, el servidor le pide a Claude que cree el archivo con la skill oficial de ese formato y la marca de Asesoría Castresana (azul marino `#10203a`, dorado `#c9a227`, firmas bajo «ASESORIA CASTRESANA INMO», lo legal como BORRADOR y sin inventar datos). Cuando termina sale **⬇ Descargar Word** (o Excel, PowerPoint, PDF) y el enlace queda guardado con la conversación.
+
+**Cómo funciona por dentro (por qué hay tarjeta).** Crear un archivo puede tardar más de los 60 s que da Vercel. Por eso Clara solo prepara una *ficha* con la herramienta `preparar_archivo` (formato, título e instrucciones completas, hasta 20.000 caracteres) y el navegador llama a `/api/clara-archivo` por tramos de ~45 s: si la API devuelve `pause_turn` o se acaba el tramo, responde «pendiente» con el estado y el navegador vuelve a llamar («Creando el Word… 2/6»), como mucho 6 veces. La descarga pasa por el mismo endpoint, que hace de proxy de la Files API con el `Content-Type` y el nombre correctos.
+
+**Qué necesita.** Solo **`ANTHROPIC_API_KEY`** (la misma del chat). Se apaga poniendo `CLARA_ARCHIVOS=no` en Vercel; el chequeo `/api/clara?estado=1` dice si está activa. Sin clave o si la beta falla, el chat sigue igual y la tarjeta da un aviso claro; el bloque ```csv (⬇ Excel CSV) y el HTML siguen siendo la opción rápida.
+
+**Seguridad.** La ficha, el estado entre tramos y cada enlace de descarga van **firmados con HMAC** con el mismo secreto del puente MCP (derivado de `ANTHROPIC_API_KEY` o `CLARA_PUENTE_SECRETO`): el endpoint solo trabaja encargos que ha preparado Clara (la tarjeta caduca a los 7 días) y solo sirve archivos que ha creado él y que sean `.docx`, `.xlsx`, `.pptx` o `.pdf`; no se puede pedir otro archivo de la cuenta. Ojo: el chat de Clara no pide contraseña (la clave de sincronización solo protege la memoria y los leads), así que esta función está tan abierta como el propio chat.
+
+**Avisos honestos.**
+- Las Agent Skills y la ejecución de código usan **betas** de Anthropic (`skills-2025-10-02`, `code-execution-2025-08-25`, `files-api-2025-04-14`). La documentación actual dice que ya no hacen falta, pero que siguen aceptándose; si Anthropic cambia algo, la tarjeta dará el aviso y el chat no se rompe.
+- **Cuesta uso de API**: cada archivo son varias llamadas a `claude-sonnet-5` con ejecución de código (más caro que una respuesta normal del chat). Úsalo para lo que de verdad vaya a salir en Word, Excel, PowerPoint o PDF.
+- Vercel no deja pasar respuestas de más de **4,5 MB**: un PowerPoint con muchas fotos puede no descargarse; Clara lo avisa y hay que pedir una versión más ligera.
+- Los archivos quedan guardados en la Files API de la cuenta de Anthropic de Pau hasta que se borren desde la consola.
+
 ## Conectores (MCP) — configuración
 
 Un conector es un **servidor MCP remoto**: una dirección `https://…` que ofrece el propio servicio (o una plataforma de integraciones) junto con un token de acceso. Comprueba en la documentación de cada servicio si ofrece servidor MCP remoto y cómo obtener su dirección y su token. Solo sirven los que funcionan por URL (no los que se instalan en tu ordenador).

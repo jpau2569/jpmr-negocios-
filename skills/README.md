@@ -42,6 +42,15 @@ Reglas:
 2. **Desde el chat** (con la nube activa): pídele *"Clara, créate una skill para…"* y la guarda en Supabase con `crear_skill`.
 3. **Desde un enlace**: pásale la dirección de un `SKILL.md` público; Clara lo lee con `leer_web`, lo adapta y lo guarda con `crear_skill`.
 
+## Skills propias (SKILL.md) y skills oficiales de Anthropic
+
+Conviven dos cosas distintas con el mismo nombre:
+
+- **Las de esta carpeta** (y las que Clara crea con `crear_skill`) son **manuales de texto**: Clara los lee con `usar_skill` y los sigue al escribir su respuesta. No ejecutan nada y no gastan más que la respuesta normal.
+- **Las Agent Skills oficiales de Anthropic** (`docx`, `xlsx`, `pptx`, `pdf`) **crean archivos de verdad** ejecutando código en un contenedor de Anthropic. Clara no las carga con `usar_skill`: cuando Pau pide algo en Word, Excel, PowerPoint o PDF, usa la herramienta `preparar_archivo` y el chat le enseña una tarjeta para crearlo y descargarlo (`lib/archivos.js` + `/api/clara-archivo`, detalle en `CLARA.md`). Son beta y cuestan uso de API.
+
+Se combinan así: la skill propia decide **qué** se escribe (por ejemplo, `documento-oficina` o `presupuesto-servicios`, con sus normas de no inventar y de BORRADOR) y, si Pau quiere el archivo de oficina, Clara pasa ese contenido completo a `preparar_archivo`. Si la creación de archivos no está activa, se queda la opción rápida de siempre: el HTML A4 y el bloque ```csv.
+
 ## Skills incluidas
 
 | Skill | Para qué |

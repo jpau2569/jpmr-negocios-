@@ -145,6 +145,25 @@
   @media (pointer:coarse){
     .msg .acciones .dl{min-height:44px;padding:0 12px;font-size:12.5px}
   }
+  /* Tarjetas de archivo (preparar_archivo): debajo de la burbuja, con la marca
+     de Asesoría Castresana (azul marino #10203a y dorado #c9a227). */
+  .msg.clara.con-archivos{flex-wrap:wrap;row-gap:6px}
+  .msg.clara.con-archivos .bubble{flex:1 1 calc(100% - 44px)}
+  .msg.clara.con-archivos .acciones{flex:1 1 100%;padding-left:44px}
+  .msg .archivos{flex:1 1 100%;padding-left:44px;display:flex;flex-direction:column;gap:8px;min-width:0}
+  .archivo{background:#10203a;border:1px solid #c9a227;border-radius:var(--r-md);padding:10px 12px;
+    display:flex;flex-direction:column;gap:8px;min-width:0}
+  .archivo .atit{color:#fff;font-size:13.5px;font-weight:700;overflow-wrap:anywhere}
+  .archivo .atit small{display:block;color:#e8d9a8;font-weight:500;font-size:12px;margin-top:2px}
+  .archivo button,.archivo a.adl{min-height:44px;border-radius:10px;font-family:inherit;font-size:14px;font-weight:800;
+    cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 14px;
+    text-decoration:none;max-width:100%;overflow-wrap:anywhere;text-align:center}
+  .archivo .acrear,.archivo a.adl{background:#c9a227;color:#10203a;border:none}
+  .archivo .acrear:disabled{opacity:.6;cursor:progress}
+  .archivo .aestado{color:#f3ead0;font-size:12.5px;min-height:1em}
+  .archivo .aestado.mal{color:#ffc9c9}
+  .archivo .barra{height:6px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden}
+  .archivo .barra i{display:block;height:100%;width:0;background:#c9a227;transition:width .3s}
 
   .typing{display:inline-flex;gap:5px;align-items:center;padding:4px 2px}
   .typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
@@ -449,7 +468,124 @@
     marcaDescargas(wrap);
   }
 
-  function addMessage(role, text, adj) {
+  // ---- Archivos de oficina (📄 Word / Excel / PowerPoint / PDF) ----
+  // Clara prepara una ficha firmada (preparar_archivo); al pulsar la tarjeta,
+  // /api/clara-archivo crea el archivo por tramos (cada uno < 60 s) y al final
+  // devuelve el enlace de descarga, que queda guardado con la conversación.
+  const NOMBRE_FORMATO = { docx: "Word", xlsx: "Excel", pptx: "PowerPoint", pdf: "PDF" };
+  const MAX_TRAMOS_ARCHIVO = 6;
+  function tamano(bytes) {
+    const n = Number(bytes) || 0;
+    if (!n) return "";
+    return n < 1e6 ? Math.max(1, Math.round(n / 1024)) + " KB" : (n / 1e6).toFixed(1).replace(".", ",") + " MB";
+  }
+  function pintaArchivos(wrap, lista) {
+    if (!wrap || !Array.isArray(lista) || !lista.length) return;
+    let caja = wrap.querySelector(".archivos");
+    if (!caja) {
+      caja = document.createElement("div");
+      caja.className = "archivos";
+      const acc = wrap.querySelector(".acciones");
+      acc ? wrap.insertBefore(caja, acc) : wrap.appendChild(caja);
+    }
+    caja.innerHTML = "";
+    for (const ficha of lista) caja.appendChild(tarjetaArchivo(ficha));
+    wrap.classList.add("con-archivos");
+  }
+  function tarjetaArchivo(ficha) {
+    const nombre = NOMBRE_FORMATO[ficha.formato] || "archivo";
+    const card = document.createElement("div");
+    card.className = "archivo";
+    const tit = document.createElement("div");
+    tit.className = "atit";
+    tit.textContent = (ficha.resultado ? "📄 " + nombre + ": " + (ficha.titulo || "") : "Archivo de " + nombre);
+    const sub = document.createElement("small");
+    sub.textContent = "Con la marca de Asesoría Castresana · lo crean las skills de Anthropic";
+    tit.appendChild(sub);
+    const estado = document.createElement("div");
+    estado.className = "aestado";
+    estado.setAttribute("role", "status");
+    estado.setAttribute("aria-live", "polite");
+    const barra = document.createElement("div");
+    barra.className = "barra";
+    barra.hidden = true;
+    barra.appendChild(document.createElement("i"));
+    card.append(tit);
+    const pintaListo = () => {
+      const a = document.createElement("a");
+      a.className = "adl";
+      a.href = ficha.resultado.url;
+      a.setAttribute("download", ficha.resultado.nombre || "");
+      a.textContent = "⬇ Descargar " + nombre;
+      a.setAttribute("aria-label", "Descargar " + (ficha.resultado.nombre || nombre));
+      estado.classList.remove("mal");
+      estado.textContent = "✅ " + (ficha.resultado.nombre || "Archivo listo") + (tamano(ficha.resultado.bytes) ? " · " + tamano(ficha.resultado.bytes) : "");
+      card.append(a, estado);
+    };
+    if (ficha.resultado && String(ficha.resultado.url || "").startsWith("/api/clara-archivo?")) {
+      pintaListo();
+      return card;
+    }
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "acrear";
+    b.textContent = "📄 Crear " + nombre + ": " + (ficha.titulo || "");
+    card.append(b, barra, estado);
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      estado.classList.remove("mal");
+      barra.hidden = false;
+      const fin = await creaArchivo(ficha, (n) => {
+        estado.textContent = "Creando el " + nombre + "… " + n + "/" + MAX_TRAMOS_ARCHIVO;
+        barra.firstChild.style.width = Math.round((n / MAX_TRAMOS_ARCHIVO) * 100) + "%";
+      });
+      barra.hidden = true;
+      if (fin.ok) {
+        ficha.resultado = fin.archivo;
+        saveChat();
+        b.remove();
+        barra.remove();
+        estado.remove();
+        pintaListo();
+      } else {
+        b.disabled = false;
+        b.textContent = "↻ Reintentar: " + nombre;
+        estado.classList.add("mal");
+        estado.textContent = "❌ " + fin.error;
+      }
+    });
+    return card;
+  }
+  async function creaArchivo(ficha, alAvance) {
+    const sinResultado = { formato: ficha.formato, titulo: ficha.titulo, instrucciones: ficha.instrucciones, caduca: ficha.caduca, firma: ficha.firma };
+    let estado = null, firmaEstado = null;
+    for (let n = 1; n <= MAX_TRAMOS_ARCHIVO; n++) {
+      alAvance(n);
+      let data, res;
+      try {
+        const ctrl = new AbortController();
+        const reloj = setTimeout(() => ctrl.abort(), 75000);
+        res = await fetch("/api/clara-archivo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ficha: sinResultado, estado, firmaEstado }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(reloj);
+        data = await res.json().catch(() => ({}));
+      } catch {
+        return { ok: false, error: "Se cortó la conexión mientras se creaba el archivo. Vuelve a pulsar para reintentarlo." };
+      }
+      if (!res.ok) return { ok: false, error: data.error || "No se pudo crear el archivo (" + res.status + ")." };
+      if (data.listo && String(data.archivo?.url || "").startsWith("/api/clara-archivo?")) return { ok: true, archivo: data.archivo };
+      if (!data.pendiente) return { ok: false, error: data.error || "Respuesta inesperada al crear el archivo." };
+      estado = data.estado;
+      firmaEstado = data.firmaEstado;
+    }
+    return { ok: false, error: "El archivo no ha terminado en " + MAX_TRAMOS_ARCHIVO + " intentos. Pídele a Clara una versión más corta." };
+  }
+
+  function addMessage(role, text, adj, archivos) {
     const wrap = document.createElement("div");
     wrap.className = "msg " + (role === "user" ? "user" : "clara");
     const avatar = document.createElement("div");
@@ -501,6 +637,7 @@
       wrap.appendChild(acciones);
       botonDescargaHtml(wrap, text);
       botonDescargaCsv(wrap, text);
+      pintaArchivos(wrap, archivos);
     }
     chatEl.appendChild(wrap);
     mainEl.scrollTop = mainEl.scrollHeight;
@@ -655,13 +792,13 @@
     // Los adjuntos solo viajan en los últimos mensajes (el servidor también lo limita).
     const payload = history.map((m, i) => {
       const adjs = m.adjuntos || (m.adjunto ? [m.adjunto] : null);
-      if (!adjs) return m;
+      if (!adjs) return m.archivos ? { role: m.role, content: m.content } : m;
       const vivos = i < history.length - 6 ? [] : adjs.filter((a) => !a.omitido && a.data);
       return vivos.length ? { role: m.role, content: m.content, adjuntos: vivos } : { role: m.role, content: m.content };
     });
 
-    const finaliza = (texto) => {
-      history.push({ role: "assistant", content: texto });
+    const finaliza = (texto, archivos) => {
+      history.push(archivos && archivos.length ? { role: "assistant", content: texto, archivos } : { role: "assistant", content: texto });
       saveChat();
       speak(texto);
     };
@@ -683,6 +820,12 @@
         const bubble = addMessage("assistant", "");
         assistantMsg = bubble.closest(".msg");
         let acc = "", finalReply = null, errorMsg = null;
+        const archivosTurno = [];
+        const sumaArchivo = (f) => {
+          if (!f || !f.firma || archivosTurno.some((x) => x.firma === f.firma)) return;
+          archivosTurno.push(f);
+          pintaArchivos(assistantMsg, archivosTurno);
+        };
         const reader = res.body.getReader();
         const dec = new TextDecoder();
         let buf = "";
@@ -707,7 +850,8 @@
               bubble.innerHTML = renderRich(acc) + '<div class="estado">' + escapeHtml(ev.estado) + "</div>";
               mainEl.scrollTop = mainEl.scrollHeight;
             }
-            if (ev.done) finalReply = ev.reply;
+            if (ev.archivo) sumaArchivo(ev.archivo);
+            if (ev.done) { finalReply = ev.reply; (ev.archivos || []).forEach(sumaArchivo); }
             if (ev.error) errorMsg = ev.error;
           }
         }
@@ -721,7 +865,7 @@
           botonDescargaHtml(bubble.closest(".msg"), texto);
           botonDescargaCsv(bubble.closest(".msg"), texto);
           if (errorMsg) addError(errorMsg);
-          finaliza(texto);
+          finaliza(texto, archivosTurno);
         }
       } else {
         // ---- Modo clásico (o error): respuesta JSON de una pieza ----
@@ -732,8 +876,9 @@
         } else if (!data.reply) {
           deshacer("Clara no llegó a responder. Tu mensaje sigue en el cuadro: reenvíalo.");
         } else {
-          addMessage("assistant", data.reply);
-          finaliza(data.reply);
+          const arch = Array.isArray(data.archivos) ? data.archivos : [];
+          addMessage("assistant", data.reply, null, arch);
+          finaliza(data.reply, arch);
         }
       }
     } catch (err) {
@@ -952,7 +1097,7 @@
       history.push(m);
       // Los marcadores internos ("[Inicio de sesión…]", "[Pau ha activado…]") no se pintan.
       if (m.role === "user" && m.content.startsWith("[")) continue;
-      addMessage(m.role === "user" ? "user" : "assistant", m.content, m.adjuntos || m.adjunto);
+      addMessage(m.role === "user" ? "user" : "assistant", m.content, m.adjuntos || m.adjunto, m.archivos);
     }
     if (saved.mode && MODE_INTRO[saved.mode]) {
       mode = saved.mode;

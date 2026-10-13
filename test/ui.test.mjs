@@ -44,12 +44,14 @@ const page = await browser.newPage();
 let RESPUESTA =
   "¡Hecho, Pau! La rentabilidad **bruta** es del `7,96%`. ✅\n\n```html\n<!doctype html><html><body><h1>Mini ebook</h1></body></html>\n```";
 const peticiones = [];
+let EVENTOS_EXTRA = []; // p. ej. la ficha de preparar_archivo
 await page.route("**/api/clara", async (route) => {
   peticiones.push(route.request().postDataJSON());
   await route.fulfill({
     contentType: "text/event-stream",
     body:
       'data: {"estado":"🧮 Calculando…"}\n\n' +
+      EVENTOS_EXTRA.map((e) => `data: ${JSON.stringify(e)}\n\n`).join("") +
       `data: ${JSON.stringify({ t: RESPUESTA.slice(0, 20) })}\n\n` +
       `data: ${JSON.stringify({ t: RESPUESTA.slice(20) })}\n\n` +
       `data: ${JSON.stringify({ done: true, reply: RESPUESTA })}\n\n`,
@@ -165,6 +167,55 @@ try {
     check(`${ancho} px: sin scroll lateral y ningún botón fuera de la pantalla`, m.doc <= m.vw && m.main <= 0 && m.fuera === 0, JSON.stringify(m));
   }
   await page.setViewportSize({ width: 1280, height: 720 });
+
+  console.log("\n— 📄 archivos de oficina (preparar_archivo) —");
+  {
+    const FICHA = { formato: "docx", titulo: "Carta de visita a la propietaria de Uría 12, 3ºB con un título largo de verdad", instrucciones: "Carta a la propietaria para confirmar la visita del martes.", caduca: Date.now() + 864e5, firma: "f".repeat(64) };
+    const pedidosArchivo = [];
+    await page.route("**/api/clara-archivo", async (route) => {
+      const cuerpo = route.request().postDataJSON();
+      pedidosArchivo.push(cuerpo);
+      const r = pedidosArchivo.length === 1
+        ? { pendiente: true, intento: 1, max: 6, estado: "ZXN0YWRv", firmaEstado: "e".repeat(64) }
+        : { listo: true, intento: 2, max: 6, archivo: { nombre: "carta-de-visita.docx", formato: "docx", bytes: 18432, url: "/api/clara-archivo?descargar=file_1&f=" + "a".repeat(64) } };
+      await new Promise((ok) => setTimeout(ok, 250)); // deja ver la barra de estado
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify(r) });
+    });
+    await page.setViewportSize({ width: 360, height: 760 });
+    RESPUESTA = "Te he preparado la carta: pulsa la tarjeta para crear el Word.";
+    EVENTOS_EXTRA = [{ estado: "📄 Preparando el archivo…" }, { archivo: FICHA }];
+    await page.fill("#input", "Hazme la carta en Word");
+    await page.press("#input", "Enter");
+    await page.waitForSelector(".msg.clara .archivo .acrear");
+    EVENTOS_EXTRA = [];
+    const boton = page.locator(".msg.clara .archivo .acrear").last();
+    check("aparece la tarjeta «📄 Crear Word: …»", (await boton.textContent()).startsWith("📄 Crear Word: Carta de visita"));
+    const alto = await boton.evaluate((b) => b.getBoundingClientRect().height);
+    check("el botón de la tarjeta mide 44 px o más", alto >= 44, String(alto));
+    await boton.click();
+    await page.waitForFunction(() => /Creando el Word… 1\/6/.test(document.querySelector(".archivo .aestado")?.textContent || ""));
+    check("barra de estado «Creando el Word… 1/6»", true);
+    await page.waitForSelector(".msg.clara .archivo a.adl");
+    const enlace = page.locator(".msg.clara .archivo a.adl").last();
+    check("tras pendiente → listo sale «⬇ Descargar Word»", (await enlace.textContent()) === "⬇ Descargar Word");
+    check("el enlace apunta a la descarga firmada", (await enlace.getAttribute("href")).startsWith("/api/clara-archivo?descargar=file_1&f="));
+    check("se llamó dos veces y la segunda con el estado firmado", pedidosArchivo.length === 2 && pedidosArchivo[1].estado === "ZXN0YWRv" && pedidosArchivo[1].firmaEstado === "e".repeat(64) && pedidosArchivo[1].ficha.firma === FICHA.firma);
+    check("se enseña el nombre y el tamaño", (await page.locator(".msg.clara .archivo .aestado").last().textContent()).includes("carta-de-visita.docx · 18 KB"));
+    const m360 = await page.evaluate(() => {
+      const main = document.querySelector("main");
+      const fuera = [...document.querySelectorAll(".archivo, .archivo a, .archivo button")].filter((e) => { const r = e.getBoundingClientRect(); return r.right > innerWidth + 0.5 || r.left < -0.5; }).length;
+      return { doc: document.documentElement.scrollWidth, vw: innerWidth, main: main.scrollWidth - main.clientWidth, fuera };
+    });
+    check("360 px: la tarjeta no provoca scroll lateral", m360.doc <= m360.vw && m360.main <= 0 && m360.fuera === 0, JSON.stringify(m360));
+    await page.reload();
+    await page.waitForSelector(".msg.clara .archivo a.adl");
+    check("tras recargar sigue el botón de descarga (sin volver a crear)", (await page.locator(".msg.clara .archivo .acrear").count()) === 0);
+    await page.fill("#input", "gracias");
+    await page.press("#input", "Enter");
+    await page.waitForTimeout(400);
+    check("las fichas no viajan de vuelta en el historial del chat", !JSON.stringify(peticiones.at(-1)?.messages || []).includes(FICHA.firma));
+    await page.setViewportSize({ width: 1280, height: 720 });
+  }
 
   console.log("\n— landing del ebook (ebook.html) —");
   let leadRecibido = null;
