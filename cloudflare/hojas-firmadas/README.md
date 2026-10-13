@@ -38,6 +38,8 @@ node cloudflare/hojas-firmadas/herramientas/probar-en-local.mjs
 
 Para probarla **en el móvil**, usa el link temporal (`cloudflare/link-temporal.bat`, puerto **8790**; ver el README de `castresana-web`, apartado 7). Cierra el túnel en cuanto acabes.
 
+**En Mac:** el `.bat` no funciona (es de Windows). Haz doble clic en `cloudflare/probar-en-mac.command`: arranca la app, abre el navegador y, si dices que sí, crea el link temporal (instala `cloudflared` con Homebrew o lo descarga de GitHub). La primera vez, si macOS lo bloquea: clic derecho → **Abrir** → **Abrir**.
+
 Es **el mismo código** que irá a Cloudflare, con SQLite haciendo de D1.
 
 ---
