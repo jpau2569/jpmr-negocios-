@@ -726,7 +726,8 @@
     const nota = document.getElementById("usoNota");
     if (!txt) return;
     const llam = t.llamadas + t.llamadas_openrouter;
-    txt.textContent = "Este mes: " + dolares(t.coste_usd) + " (estimado) · " + llam + (llam === 1 ? " llamada" : " llamadas");
+    const tokens = t.entrada + t.salida + t.cache_lectura + t.cache_escritura;
+    txt.textContent = "Este mes: " + tokens.toLocaleString("es-ES") + " tokens · " + dolares(t.coste_usd) + " (estimado) · " + llam + (llam === 1 ? " llamada" : " llamadas");
     const notas = [];
     if (t.tope) {
       barra.hidden = false;
@@ -1409,5 +1410,6 @@
   recogeCompartido();
   informeReinicio();
 </script>
+<script src="/uso-marcador.js" defer></script>
 </body>
 </html>
