@@ -20,3 +20,4 @@ pulso-local-ai/tsconfig.tsbuildinfo
 # Compilaciones temporales de los tests (dentro del proyecto para que resuelvan node_modules)
 pulso-local-ai/.test-build-*/
 cloudflare/.bin/
+escaparate3d/usb/

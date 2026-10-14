@@ -116,5 +116,22 @@ console.log("\n📷 Fotos de una ficha (/api/fotos)");
   globalThis.fetch = original;
 }
 
+
+// ---- Vídeo para la TV por USB (herramientas/video-usb.mjs) ----
+{
+  const V = await import("../escaparate3d/herramientas/video-usb.mjs");
+  const ok = (c, m) => { if (c) { pasados++; console.log("  ✅ video-usb:", m); } else { fallados++; console.error("  ❌ video-usb:", m); } };
+  console.log("\n🎬 Vídeo para la TV por USB");
+  ok(V.precioTexto({ precio: 265000, operacion: "venta" }) === "265.000 €" && V.precioTexto({ precio: 890, operacion: "alquiler" }) === "890 €/mes" && V.precioTexto({ precio: 0 }) === "Precio a consultar", "precios en formato español, alquiler al mes y sin precio «a consultar»");
+  const n = V.normaliza({ ref: "X1", operacion: "venta", titulo: "Piso en Oviedo, venta", localidad: "Oviedo", precio: 1, m2: 90, habitaciones: 3, banos: 1, url: "https://www.asesoriacastresana.com/x-es1.html", ficha: { referencia: "PIS1", fotos: ["a", "b", "c", "d"], extras: ["Ascensor"], planta: "3º" } });
+  ok(n.ref === "PIS1" && n.tipo === "Piso" && n.fotos.length === 3 && n.datos.join("|") === "90 m²|3 hab.|1 baño|Planta 3º", "solo datos publicados, 3 fotos como mucho");
+  const sinNada = V.normaliza({ ref: "Y", titulo: "Local" });
+  ok(sinNada.datos.length === 0 && sinNada.fotos.length === 0 && sinNada.precio === "Precio a consultar", "lo que no se publica no se inventa");
+  const plan = V.planDiapositivas(Array.from({ length: 9 }, (_, i) => ({ ref: "R" + i })), 4);
+  ok(plan[0].tipo === "pres" && plan.at(-1).tipo === "pres" && plan.filter((d) => d.tipo === "piso").length === 9 && plan.filter((d) => d.tipo === "pres").length === 4, "presentación al empezar, cada 4 inmuebles y al final");
+  const html = V.htmlInmueble({ ...n, tipo: "<img onerror=x>" }, { logo: "data:,", fotosLocales: [] });
+  ok(!html.includes("<img onerror") && html.includes("Fotos en la ficha"), "texto escapado y aviso si no hay fotos");
+}
+
 console.log(`\n${fallados === 0 ? "✅" : "❌"} Escaparate 3D: ${pasados} pasados, ${fallados} fallados\n`);
 process.exit(fallados === 0 ? 0 : 1);
