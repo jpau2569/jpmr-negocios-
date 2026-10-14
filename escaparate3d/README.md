@@ -171,6 +171,7 @@ node escaparate3d/herramientas/video-usb.mjs --datos cartera.json [--salida carp
 ```
 
 - `cartera.json` = `{ out: [...] }` con lo que dan `lib/cartera.js` (`obtenerCartera`) y `lib/ficha-inmueble.js` (`parsearFicha`).
+- Al empezar y al terminar sale la **tarjeta de visita** del despacho (`TARJETA` y `htmlTarjeta`, logo JC en `herramientas/logo-jc.png`, solo con el QR de la web; letra Poppins si está `@fontsource/poppins` o la carpeta en `POPPINS`).
 - Salen cuatro vídeos, uno por orientación: `1-vertical.mp4` (1080×1920, para una tele que ya muestra en vertical), `2-girado-izquierda.mp4` y `3-girado-derecha.mp4` (1920×1080, girados 90° a cada lado, para una tele colgada en vertical que sigue en modo horizontal; cuál vale depende de hacia qué lado se giró al colgarla) y `4-vertical-boca-abajo.mp4` (girado 180°). En la tienda se prueba el que se vea derecho. También salen `diapositivas/*.jpg` (pase de fotos si la tele no lee el vídeo). H.264 High 4.1, 30 fps, sin audio.
 - Necesita Chromium (Playwright) y `ffmpeg` (o `FFMPEG=` / `ffmpeg-static`). La salida por defecto, `escaparate3d/usb/`, está en `.gitignore`.
 - Nada inventado: lo que el inmueble no publica no sale; sin fotos, el logo y «Fotos en la ficha: escanea el código».
