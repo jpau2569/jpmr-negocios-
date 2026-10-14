@@ -17,10 +17,13 @@
 //  (parsearFicha) sobre la web oficial.
 //
 //  Salida (en --salida, por defecto escaparate3d/usb/):
-//    escaparate-vertical.mp4    1080×1920, para una tele puesta en vertical
-//                               que muestra la imagen en vertical.
-//    escaparate-girado.mp4      el mismo girado 90°, para una tele colgada
-//                               en vertical pero que sigue en modo horizontal.
+//    1-vertical.mp4             1080×1920, para una tele que ya muestra la
+//                               imagen en vertical.
+//    2-girado-izquierda.mp4     girado 90° a un lado y 3-girado-derecha.mp4 al
+//                               otro: para una tele colgada en vertical que
+//                               sigue en modo horizontal (cuál vale depende de
+//                               hacia qué lado se giró la tele al colgarla).
+//    4-vertical-boca-abajo.mp4  el vertical girado 180°.
 //    diapositivas/NN-*.jpg      cada diapositiva suelta (sirve como pase de
 //                               fotos desde el USB si la tele no lee el vídeo).
 //  Nada inventado: lo que el inmueble no publica no sale. Los textos de
@@ -239,13 +242,18 @@ async function principal() {
   const { readdirSync } = await import("node:fs");
   const jpgs = readdirSync(dirDiapos).filter((f) => f.endsWith(".jpg")).sort();
   writeFileSync(lista, jpgs.map((f) => `file '${join(dirDiapos, f).replace(/'/g, "'\\''")}'\nduration ${segundos}`).join("\n") + `\nfile '${join(dirDiapos, jpgs.at(-1))}'\n`);
-  const vertical = join(salida, "escaparate-vertical.mp4");
+  const vertical = join(salida, "1-vertical.mp4");
   const comunes = ["-c:v", "libx264", "-profile:v", "high", "-level", "4.1", "-pix_fmt", "yuv420p", "-r", "30", "-movflags", "+faststart", "-an"];
   execFileSync(ffmpeg, ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lista, "-vf", "scale=1080:1920,format=yuv420p", ...comunes, vertical], { stdio: "inherit" });
-  const girado = join(salida, "escaparate-girado.mp4");
-  execFileSync(ffmpeg, ["-y", "-loglevel", "error", "-i", vertical, "-vf", "transpose=2", ...comunes, girado], { stdio: "inherit" });
+  // Una tele colgada en vertical puede estar girada hacia cualquiera de los dos
+  // lados (o mostrar la imagen boca abajo): se sacan todas las orientaciones y
+  // en la tienda se prueba la que se vea derecha.
+  const giros = [["2-girado-izquierda.mp4", "transpose=2"], ["3-girado-derecha.mp4", "transpose=1"], ["4-vertical-boca-abajo.mp4", "hflip,vflip"]];
+  for (const [nombre, filtro] of giros) {
+    execFileSync(ffmpeg, ["-y", "-loglevel", "error", "-i", vertical, "-vf", filtro, ...comunes, join(salida, nombre)], { stdio: "inherit" });
+  }
   rmSync(lista, { force: true });
-  console.log(`✅ Vídeos: ${vertical}\n           ${girado}  (${archivos.length} diapositivas × ${segundos} s)`);
+  console.log(`✅ Vídeos en ${salida}: 1-vertical, ${giros.map(([n]) => n.replace(".mp4", "")).join(", ")}  (${archivos.length} diapositivas × ${segundos} s)`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
