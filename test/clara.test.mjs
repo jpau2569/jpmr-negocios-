@@ -1280,7 +1280,8 @@ console.log("\n— archivos de oficina: preparar_archivo + /api/clara-archivo �
   check("esquema: los cuatro formatos y los tres campos obligatorios", JSON.stringify(A.HERRAMIENTA_ARCHIVO.input_schema.properties.formato.enum) === '["docx","xlsx","pptx","pdf"]' && A.HERRAMIENTA_ARCHIVO.input_schema.required.length === 3);
 
   // Ficha firmada
-  const T0 = Date.UTC(2026, 9, 13);
+  // Fecha de ahora: la misma ficha se usa luego contra el handler, que mira el reloj real (con una fecha fija la prueba caducaba sola al día siguiente).
+  const T0 = Date.now();
   const cf = A.crearFicha({ formato: "docx", titulo: "Carta de visita", instrucciones: INSTR }, process.env, T0);
   const ficha = cf.ficha;
   check("ficha: firmada y con caducidad de 24 horas", cf.ok && /^[0-9a-f]{64}$/.test(ficha.firma) && ficha.caduca === T0 + 24 * 3600 * 1000 && A.VIGENCIA_FICHA_MS === 864e5);
