@@ -128,7 +128,9 @@ console.log("\n📷 Fotos de una ficha (/api/fotos)");
   const sinNada = V.normaliza({ ref: "Y", titulo: "Local" });
   ok(sinNada.datos.length === 0 && sinNada.fotos.length === 0 && sinNada.precio === "Precio a consultar", "lo que no se publica no se inventa");
   const plan = V.planDiapositivas(Array.from({ length: 9 }, (_, i) => ({ ref: "R" + i })), 4);
-  ok(plan[0].tipo === "pres" && plan.at(-1).tipo === "pres" && plan.filter((d) => d.tipo === "piso").length === 9 && plan.filter((d) => d.tipo === "pres").length === 4, "presentación al empezar, cada 4 inmuebles y al final");
+  ok(plan[0].tipo === "pres" && plan[1].tipo === "tarjeta" && plan.at(-1).tipo === "tarjeta" && plan.filter((d) => d.tipo === "piso").length === 9 && plan.filter((d) => d.tipo === "pres").length === 3, "presentación y tarjeta al empezar, presentación cada 4 inmuebles y tarjeta al final");
+  const tarjeta = V.htmlTarjeta({ logoJC: "data:," });
+  ok((tarjeta.match(/aria-label="Código QR/g) || []).length === 1 && tarjeta.includes("NUESTRA WEB") && !/wa\.me|api\.whatsapp/.test(tarjeta) && ["985 21 04 68", "689 92 99 26", "672 77 57 21", "Marqués de Canillejas", "17:00 – 19:00"].every((t) => tarjeta.includes(t)), "tarjeta con los datos reales y solo el QR de la web");
   const html = V.htmlInmueble({ ...n, tipo: "<img onerror=x>" }, { logo: "data:,", fotosLocales: [] });
   ok(!html.includes("<img onerror") && html.includes("Fotos en la ficha"), "texto escapado y aviso si no hay fotos");
 }

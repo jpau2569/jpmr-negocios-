@@ -51,6 +51,20 @@ export const PRESENTACION = {
   web: "www.asesoriacastresana.com",
 };
 
+// Tarjeta de visita del despacho (la que pasó Pau el 14-10-2026), sin el QR de
+// WhatsApp: en la tele solo va el QR de la web.
+export const TARJETA = {
+  servicios: ["Abogados", "Fiscal", "Jurídico", "Laboral", "Contable", "Admón. Fincas"],
+  telefono: "985 21 04 68",
+  movil: "689 92 99 26",
+  whatsapp: "672 77 57 21",
+  correo: "asesoriacastresana@gmail.com",
+  oficinas: [["Oviedo", "C/ Cabo Noval, 8 - bajo · 33007"], ["Llanes", "C/ Marqués de Canillejas, 10 - bajo · 33500"]],
+  horario: "Lun – Vie · 10:00 – 14:00 y 17:00 – 19:00",
+  web: "www.asesoriacastresana.com",
+  url: "https://www.asesoriacastresana.com",
+};
+
 const arg = (n, def) => {
   const i = process.argv.indexOf(`--${n}`);
   return i < 0 ? def : (process.argv[i + 1] && !process.argv[i + 1].startsWith("--") ? process.argv[i + 1] : true);
@@ -157,14 +171,75 @@ export function htmlPresentacion(n, { logo }) {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><style>${CSS}</style></head><body>${cabecera(logo)}<div class="pres">${vistas[n % vistas.length]}</div></body></html>`;
 }
 
-// Orden: presentación, 4 inmuebles, presentación, 4 inmuebles… y cierre con contacto.
+const ICONO = {
+  tel: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',
+  movil: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
+  wa: '<path d="M3 21l1.6-4.7A9 9 0 1 1 8 19.5z"/><path d="M9 8.5c0 3.5 3 6.5 6.5 6.5l1-1.8-2.2-1-1 .9a5 5 0 0 1-2.4-2.4l.9-1-1-2.2z"/>',
+  correo: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  web: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+};
+const icono = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONO[k]}</svg>`;
+
+// La tarjeta de visita en vertical: cara delantera arriba y trasera abajo.
+// `fuentes` es CSS @font-face opcional (Poppins); sin él usa la del sistema.
+export function htmlTarjeta({ logoJC, fuentes = "" }) {
+  const T = TARJETA;
+  const qr = qrSvg(T.url, { nivel: "M", margen: 0, oscuro: "#1f2f73" });
+  const fila = (k, txt, extra = "") => `<div class="fila"><span class="ic">${icono(k)}</span><span>${esc(txt)}</span>${extra}</div>`;
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><style>${fuentes}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#eceef3;font-family:Poppins,"Liberation Sans","DejaVu Sans",Arial,sans-serif}
+.t{position:absolute;left:50px;right:50px;border-radius:30px;overflow:hidden;box-shadow:0 30px 60px rgba(20,30,80,.18)}
+.delante{top:50px;height:600px;background:linear-gradient(120deg,#fff 55%,#f4f5fa);border-left:16px solid #2b3d94}
+.delante .marca{display:flex;align-items:center;gap:44px;padding:90px 40px 0 60px}
+.delante .marca img{width:180px}
+.a{font-size:44px;letter-spacing:19px;color:#2b3d94;font-weight:400}
+.c{font-size:82px;line-height:1;font-weight:700;color:#1f2f73;letter-spacing:2px;margin-top:6px}
+.raya{width:96px;height:6px;background:#8d94a3;margin:30px 0 26px}
+.g{font-size:27px;letter-spacing:8px;font-weight:600;color:#1d2230}
+.serv{position:absolute;left:0;right:0;bottom:0;height:140px;background:#1f2f73;color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;font-size:31px;letter-spacing:1.5px}
+.serv i{margin:0 14px}
+.serv i{font-style:normal;color:#8ea0e6}
+.detras{top:700px;bottom:50px;background:linear-gradient(150deg,#26398a,#1c2a6b 60%,#18225a);color:#fff;padding:60px 64px 0}
+.detras .cab{display:flex;align-items:center;gap:22px;font-size:40px;font-weight:700;letter-spacing:5px}
+.detras .cab img{height:70px;filter:brightness(0) invert(1)}
+.fila{display:flex;align-items:center;gap:30px;font-size:46px;margin-top:30px}
+.cab+.fila{margin-top:48px}
+.ic{width:74px;height:74px;border-radius:14px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#c9d2f5;flex:none}
+.ic svg{width:40px;height:40px}
+.fila small{font-size:24px;letter-spacing:3px;color:#9fb0f0}
+.fila.mail{font-size:40px}
+.ofi{margin-top:44px;border-top:2px solid rgba(255,255,255,.15);padding-top:34px;font-size:30px;line-height:1.8;color:#e9edfb;white-space:nowrap}
+.bajo{display:flex;justify-content:space-between;align-items:center;margin-top:36px}
+.ofi b,.hor b{font-size:23px;letter-spacing:4px;color:#9fb0f0;margin-right:16px}
+.qr{text-align:center}
+.qr div{width:250px;height:250px;background:#fff;border-radius:24px;padding:22px}
+.qr svg{width:206px;height:206px;display:block}
+.qr p{font-size:24px;letter-spacing:3px;font-weight:700;margin-top:14px}
+.qr span{font-size:21px;color:#b5c1ef}
+.hor{font-size:32px;line-height:1.6;color:#e9edfb}
+.hor b{display:block}
+.hor .w{font-weight:700;font-size:34px;color:#fff;margin-top:34px}
+</style></head><body>
+<div class="t delante"><div class="marca"><img src="${logoJC}" alt=""><div><div class="a">ASESORÍA</div><div class="c">CASTRESANA</div><div class="raya"></div><div class="g">GESTIÓN INMOBILIARIA</div></div></div>
+<div class="serv">${[T.servicios.slice(0, 3), T.servicios.slice(3)].map((f) => `<div>${f.map(esc).join(" <i>•</i> ")}</div>`).join("")}</div></div>
+<div class="t detras"><div class="cab"><img src="${logoJC}" alt="">ASESORÍA CASTRESANA</div>
+${fila("tel", T.telefono)}${fila("movil", T.movil)}${fila("wa", T.whatsapp, "<small>WHATSAPP</small>")}<div class="fila mail"><span class="ic">${icono("correo")}</span><span>${esc(T.correo)}</span></div>
+<div class="ofi">${T.oficinas.map(([c, d]) => `<div><b>${esc(c.toUpperCase())}</b>${esc(d)}</div>`).join("")}</div>
+<div class="bajo"><div class="hor"><b>HORARIO</b>${esc(T.horario).replace(" · ", "<br>")}<div class="w">${esc(T.web)}</div></div>
+<div class="qr"><div>${qr}</div><p>NUESTRA WEB</p><span>Escanea con el móvil</span></div></div></div>
+</body></html>`;
+}
+
+// Orden: presentación, tarjeta, 4 inmuebles, presentación, 4 inmuebles… y
+// cierre con la tarjeta de visita.
 export function planDiapositivas(pisos, cada = 4) {
-  const plan = [{ tipo: "pres", n: 0 }];
+  const plan = [{ tipo: "pres", n: 0 }, { tipo: "tarjeta" }];
   pisos.forEach((p, i) => {
     plan.push({ tipo: "piso", p });
     if ((i + 1) % cada === 0 && i < pisos.length - 1) plan.push({ tipo: "pres", n: plan.filter((x) => x.tipo === "pres").length });
   });
-  plan.push({ tipo: "pres", n: 2 });
+  plan.push({ tipo: "tarjeta" });
   return plan;
 }
 
@@ -194,6 +269,16 @@ async function principal() {
   mkdirSync(dirFotos, { recursive: true });
   const logo = "data:image/jpeg;base64," + readFileSync(join(RAIZ, "cerebro", "logo-castresana.jpg")).toString("base64");
 
+  const logoJC = "data:image/png;base64," + readFileSync(join(RAIZ, "escaparate3d", "herramientas", "logo-jc.png")).toString("base64");
+  // Poppins (la letra de la tarjeta) si está instalada con npm i @fontsource/poppins
+  // (o en la carpeta de la variable POPPINS); si no, sale con la del sistema.
+  let fuentes = "";
+  try {
+    const { createRequire } = await import("node:module");
+    const dir = process.env.POPPINS || dirname(createRequire(import.meta.url).resolve("@fontsource/poppins/package.json"));
+    fuentes = [400, 600, 700].map((w) => `@font-face{font-family:Poppins;font-weight:${w};src:url(data:font/woff2;base64,${readFileSync(join(dir, "files", `poppins-latin-${w}-normal.woff2`)).toString("base64")})}`).join("");
+  } catch {}
+
   const { chromium } = await import("playwright");
   const nav = await chromium.launch({ executablePath: process.env.CHROMIUM || (existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined) });
   const pag = await nav.newPage({ viewport: { width: 1080, height: 1920 } });
@@ -215,6 +300,9 @@ async function principal() {
       }
       html = htmlInmueble(d.p, { logo, fotosLocales: locales });
       nombre = d.p.ref;
+    } else if (d.tipo === "tarjeta") {
+      html = htmlTarjeta({ logoJC, fuentes });
+      nombre = "tarjeta";
     } else {
       html = htmlPresentacion(d.n, { logo });
       nombre = "castresana";
