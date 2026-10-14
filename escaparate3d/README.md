@@ -160,3 +160,17 @@ sola a la URL original de la foto.
   JSON-LD `RealEstateAgent`, navegación por teclado y foco visible.
 - Las fotos se pintan dentro del canvas: por eso deben servirse desde el mismo
   dominio (ver `fotos/LEEME.md`).
+
+## Vídeo para la TV por USB (`herramientas/video-usb.mjs`)
+
+Convierte la cartera actual en un vídeo MP4 en bucle para la tele del escaparate, sin internet ni navegador en la tele:
+una diapositiva por inmueble (hasta 3 fotos, precio, datos publicados, referencia, teléfonos y QR a su ficha) y, cada 4 inmuebles, una de presentación de Asesoría Castresana con textos sacados de su web (`PRESENTACION`, editable solo con textos reales del despacho).
+
+```
+node escaparate3d/herramientas/video-usb.mjs --datos cartera.json [--salida carpeta] [--segundos 8] [--cada 4]
+```
+
+- `cartera.json` = `{ out: [...] }` con lo que dan `lib/cartera.js` (`obtenerCartera`) y `lib/ficha-inmueble.js` (`parsearFicha`).
+- Sale `escaparate-vertical.mp4` (1080×1920), `escaparate-girado.mp4` (girado 90° para una tele colgada en vertical que sigue en horizontal) y `diapositivas/*.jpg` (pase de fotos si la tele no lee el vídeo). H.264 High 4.1, 30 fps, sin audio.
+- Necesita Chromium (Playwright) y `ffmpeg` (o `FFMPEG=` / `ffmpeg-static`). La salida por defecto, `escaparate3d/usb/`, está en `.gitignore`.
+- Nada inventado: lo que el inmueble no publica no sale; sin fotos, el logo y «Fotos en la ficha: escanea el código».
