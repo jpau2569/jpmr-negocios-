@@ -51,7 +51,8 @@ export const PRESENTACION = {
   web: "www.asesoriacastresana.com",
 };
 
-// Tarjeta de visita del despacho (la que pasó Pau el 14-10-2026), sin el QR de
+// Tarjeta de visita del despacho (la que pasó Pau el 14-10-2026; horario de tarde
+// corregido por Pau el 16-10-2026: 16:30 – 19:30), sin el QR de
 // WhatsApp: en la tele solo va el QR de la web.
 export const TARJETA = {
   servicios: ["Abogados", "Fiscal", "Jurídico", "Laboral", "Contable", "Admón. Fincas"],
@@ -60,7 +61,7 @@ export const TARJETA = {
   whatsapp: "672 77 57 21",
   correo: "asesoriacastresana@gmail.com",
   oficinas: [["Oviedo", "C/ Cabo Noval, 8 - bajo · 33007"], ["Llanes", "C/ Marqués de Canillejas, 10 - bajo · 33500"]],
-  horario: "Lun – Vie · 10:00 – 14:00 y 17:00 – 19:00",
+  horario: "Lun – Vie · 10:00 – 14:00 y 16:30 – 19:30",
   web: "www.asesoriacastresana.com",
   url: "https://www.asesoriacastresana.com",
 };
