@@ -97,6 +97,7 @@ function hoyPantalla(ctx, partes) {
     </section>
     <section class="tarjeta inclina"><h2>⚡ Acciones rápidas</h2>
       <div class="acciones-rapidas">
+        <button class="accion-rapida" data-accion="ir" data-a="enviar">📨 Enviar WhatsApp</button>
         <button class="accion-rapida" data-accion="captura">💬 Escribir y organizar</button>
         <button class="accion-rapida" data-accion="ir" data-a="evento/nuevo">📅 Nueva cita</button>
         <button class="accion-rapida" data-accion="ir" data-a="tarea/nuevo">✅ Nueva tarea</button>
@@ -105,7 +106,6 @@ function hoyPantalla(ctx, partes) {
         <button class="accion-rapida" data-accion="ir" data-a="recurso/nuevo">🔗 Guardar enlace</button>
         <button class="accion-rapida" data-accion="ir" data-a="recurso/nuevo?tipo=video">🎬 Guardar vídeo</button>
         <button class="accion-rapida" data-accion="ir" data-a="nota/nuevo">📝 Crear nota</button>
-        <button class="accion-rapida" data-accion="ir" data-a="enviar">📨 Enviar WhatsApp</button>
       </div></section>`;
   const bienvenida = nada ? `<section class="tarjeta inclina"><h2>👋 Empieza aquí</h2>
       <p>La agenda está vacía. Todo lo que guardes se queda <strong>en este aparato</strong> (no hay cuenta ni sincronización todavía).</p>
