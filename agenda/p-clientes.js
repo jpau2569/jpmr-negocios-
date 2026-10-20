@@ -43,7 +43,7 @@ function clientes(ctx) {
     ${etiquetas.length ? `<div><label class="sr" for="f-etc">Etiqueta</label><select id="f-etc" class="entrada" data-cambio="cliente-filtro" data-campo-filtro="etiqueta"><option value="">Todas las etiquetas</option>${etiquetas.map((e) => `<option ${f.etiqueta === e ? 'selected' : ''}>${h(e)}</option>`).join('')}</select></div>` : ''}
   </div>
   <div class="pestanas-int"><button data-accion="cliente-vista" data-v="lista" aria-pressed="${f.vista === 'lista'}">☰ Lista</button><button data-accion="cliente-vista" data-v="tablero" aria-pressed="${f.vista === 'tablero'}">▦ Tablero por estados</button></div>`;
-  const cab = cabecera('Clientes', '<a class="btn" href="#importar">📱 Importar contactos</a><a class="btn primario" href="#cliente/nuevo">＋ Cliente</a>');
+  const cab = cabecera('Clientes', '<a class="btn" href="#importar">📱 Importar contactos</a><a class="btn" href="#enviar">📨 Enviar WhatsApp</a><a class="btn primario" href="#cliente/nuevo">＋ Cliente</a>');
   if (!activos(ctx.estado.clientes).length) return `${cab}<section class="tarjeta">${vacio('👤', 'Aún no tienes clientes.', '<a class="btn primario" href="#cliente/nuevo">Crear el primero</a>')}</section>`;
   if (f.vista === 'tablero') {
     return `${cab}${filtros}<div class="tablero">${ESTADOS_CLIENTE.map((e) => {
@@ -117,7 +117,7 @@ function cliente(ctx, partes) {
     <p>${etiquetaDemo(c)} <span class="chip chip-info">${h(NOMBRE_ESTADO_CLIENTE[c.estado])}</span> <span class="chip">${h(TIPOS[c.tipo])}</span> ${chips(c.etiquetas)}</p>
     <div class="contacto">
       ${tel ? `<a class="btn" href="tel:${h(tel)}">📞 Llamar</a>` : ''}
-      ${wa ? `<a class="btn" href="https://wa.me/${h(wa)}" target="_blank" rel="noopener noreferrer">💬 Abrir WhatsApp</a>` : ''}
+      ${wa ? `<a class="btn primario" href="#enviar/${h(c.id)}">📨 Enviar por WhatsApp</a><a class="btn" href="https://wa.me/${h(wa)}" target="_blank" rel="noopener noreferrer">💬 Abrir chat</a>` : `<a class="btn" href="#cliente/${h(c.id)}/editar">📱 Añadir móvil para WhatsApp</a>`}
       ${c.email ? `<a class="btn" href="mailto:${h(c.email)}">✉️ Redactar correo</a>` : ''}
     </div>
     ${tel || c.email ? '<p class="detalle" style="color:var(--suave);font-size:.82rem">Abrir la llamada, WhatsApp o el correo no registra nada: cuando hables con el cliente, apúntalo abajo en el historial.</p>' : ''}

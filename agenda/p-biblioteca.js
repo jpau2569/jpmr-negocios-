@@ -119,6 +119,7 @@ function recurso(ctx, partes, query) {
       <p class="detalle" style="color:var(--suave);font-size:.85rem">Guardado el ${h(fechaCorta(r.creado.slice(0, 10)))}</p>
       <div class="fila-botones">
         ${r.url ? `<a class="btn primario" href="${h(r.url)}" target="_blank" rel="noopener noreferrer">↗ Abrir el original</a>` : ''}
+        ${r.url ? `<a class="btn" href="#enviar${r.cliente && buscaId(ctx.estado, 'clientes', r.cliente) ? '/' + h(r.cliente) : ''}?tipo=enlace&amp;recurso=${h(r.id)}">📨 Enviar por WhatsApp</a>` : ''}
         <button class="btn" data-accion="recurso-favorito" data-id="${h(r.id)}">${r.favorito ? '⭐ Quitar favorito' : '☆ Favorito'}</button>
         ${r.estado !== 'revisado' ? `<button class="btn" data-accion="recurso-estado" data-id="${h(r.id)}" data-estado="revisado">✔ Marcar revisado</button>` : ''}
         ${r.estado !== 'archivado' ? `<button class="btn" data-accion="recurso-estado" data-id="${h(r.id)}" data-estado="archivado">🗄 Archivar</button>` : `<button class="btn" data-accion="recurso-estado" data-id="${h(r.id)}" data-estado="pendiente">↩ Desarchivar</button>`}
