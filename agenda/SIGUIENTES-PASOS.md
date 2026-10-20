@@ -14,33 +14,26 @@ Actualizado: 20/10/2026.
   - Tu WhatsApp (672 77 57 21) en la firma de los mensajes.
 - **Tus datos se guardan solo en cada aparato.** El móvil y el MacBook no se sincronizan. Para pasar los datos de uno a otro: Ajustes → «Guardar copia completa» → en el otro aparato, «Restaurar una copia».
 
-## Pendiente 1 — Tu dominio `agenda.jpaumoralejo.es` (lo haces tú, ~5 min)
+## Pendiente 1 — Tu dominio `agenda.jpaumoralejo.es` (casi hecho)
 
-La redirección ya está publicada en `vercel.json`. Faltan dos pasos que solo puedes hacer tú: Vercel no me dejó añadir el dominio (error 403 de permisos).
+Hecho el 20/10:
+- **Hostinger:** CNAME `agenda` → `cname.vercel-dns.com`. Funciona; Vercel lo ve bien.
+- **Vercel:** el dominio está añadido en el proyecto **`jpmr-negocios`** (sin guion) de la cuenta **appsmovilpau**. Ese proyecto despliega este mismo repositorio, así que también tiene la agenda y sirve igual.
 
-### Paso A — Vercel
-1. Entra en https://vercel.com con tu cuenta.
-2. Abre el proyecto **`jpmr-negocios-`** (el que **acaba en guion**, del equipo *pau-ia-projectos*).
-   - No uses el proyecto `jpmr-negocios` (sin guion, de otra cuenta): ese no sirve `jpmr-negocios.vercel.app`.
-3. **Settings → Domains** → escribe `agenda.jpaumoralejo.es` → **Add**.
-4. Si te ofrece redirigir a `www` o algo parecido, elige **no**: solo `agenda.jpaumoralejo.es`.
+Falta: Vercel dice «Verification Required — This domain is linked to another Vercel account». Hay que demostrar que el dominio es tuyo con un registro TXT:
 
-### Paso B — Hostinger (gestiona el DNS de jpaumoralejo.es)
-1. Entra en https://hpanel.hostinger.com.
-   - Si no te deja entrar: usa «¿Has olvidado tu contraseña?» con tu correo. Si tienes la verificación en dos pasos activada, ten a mano el móvil.
-2. **Dominios** → `jpaumoralejo.es` → **DNS / Nameservers** → **Gestionar registros DNS**.
-3. Añade un registro nuevo:
+1. En Vercel → proyecto `jpmr-negocios` → Settings → **Domains** → `agenda.jpaumoralejo.es`. En la fila **TXT**, pulsa el **icono de copiar** del valor. Empieza por `vc-domain-verify=agenda.jpaumoralejo.es,…` y es largo: cópialo con el botón, no a mano.
+2. En **Hostinger** → Dominios → `jpaumoralejo.es` → **DNS** → añade:
 
-   | Tipo  | Nombre | Apunta a              | TTL           |
-   |-------|--------|-----------------------|---------------|
-   | CNAME | agenda | cname.vercel-dns.com  | el de defecto |
+   | Tipo | Nombre  | Valor                                  | TTL           |
+   |------|---------|----------------------------------------|---------------|
+   | TXT  | _vercel | (lo que has copiado de Vercel, entero) | el de defecto |
 
-4. Guarda. **No toques** los registros que ya existen: son los de tu web actual de jpaumoralejo.es.
+3. Deja el CNAME `agenda` como está. `cname.vercel-dns.com` sigue valiendo, aunque Vercel recomiende otro valor.
+4. Vuelve a Vercel y espera a que `agenda.jpaumoralejo.es` pase a **Valid Configuration** (unos minutos; si no, pulsa *Refresh*). Luego el https se crea solo.
+5. **Ojo:** en esa pantalla hay una fila `jpmr-negocios-sepia.vercel.app` con «307 → agenda.jpaumoralejo.es». Mientras el dominio no esté verificado, esa dirección lleva a una web que no abre. Si usas `jpmr-negocios-sepia.vercel.app` para algo, pulsa **Edit** en esa fila y quita la redirección («No redirect»). Si no la usas, déjala.
 
-### Paso C — Comprobar
-- En Vercel → Domains, `agenda.jpaumoralejo.es` debe pasar a **Valid Configuration**. Suele tardar unos minutos y a veces hasta 1 hora. El https lo pone Vercel solo.
-- Abre https://agenda.jpaumoralejo.es: tiene que abrirse la agenda.
-- Si a las 24 h sigue en rojo, mira que el nombre sea solo `agenda`, sin `.jpaumoralejo.es` detrás. Hostinger lo añade solo.
+Comprobar: https://agenda.jpaumoralejo.es tiene que abrir la agenda.
 
 ## Pendiente 2 — Probar en tu móvil
 1. Abre la agenda en Chrome → menú ⋮ → **Instalar aplicación**.
