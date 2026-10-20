@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>OLVIDO DE PAU AGENDA</title>
+<meta name="description" content="Agenda personal y profesional de Pau: citas, tareas, clientes, inmuebles, notas y enlaces en un solo sitio." />
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content="#040a1c" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Olvido Agenda" />
+<meta name="robots" content="noindex" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icono-192.png" type="image/png" />
+<link rel="apple-touch-icon" href="icono-180.png" />
+<link rel="stylesheet" href="styles.css" />
+<script>
+  // Tema antes de pintar (sin parpadeo). Si falla, se queda el del sistema.
+  let t = 'oscuro';
+  try { const g = JSON.parse(localStorage.getItem('olvido_pau_agenda_v1') || 'null'); if (g) t = g.ajustes?.tema || 'oscuro'; } catch {}
+  if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t;
+</script>
+</head>
+<body>
+<div class="escena" aria-hidden="true"></div>
+<div class="arranque" id="arranque" aria-hidden="true"><img src="logo-jp.webp" alt="" width="1200" height="675" /></div>
+<a class="saltar" href="#vista">Saltar al contenido</a>
+<div class="app">
+  <header class="cabecera">
+    <a class="marca" href="#hoy" aria-label="OLVIDO DE PAU AGENDA, ir a Mi día">
+      <img src="icono-192.png" alt="" width="38" height="38" />
+      <span class="marca-texto"><span class="marca-1">OLVIDO DE PAU</span><span class="marca-2">AGENDA</span></span>
+    </a>
+    <span class="estado-red oculto" id="estado-red" role="status">Sin conexión</span>
+    <button class="icono-btn" type="button" data-accion="buscar" aria-label="Buscar (Ctrl+K)" title="Buscar (Ctrl+K)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+    </button>
+    <button class="icono-btn solo-movil" type="button" data-accion="menu" aria-label="Más secciones" aria-expanded="false" aria-controls="lateral">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+  </header>
+
+  <nav class="lateral" id="lateral" aria-label="Secciones">
+    <a href="#hoy" data-seccion="hoy"><span aria-hidden="true">☀️</span>Mi día</a>
+    <a href="#agenda" data-seccion="agenda"><span aria-hidden="true">📅</span>Agenda</a>
+    <a href="#tareas" data-seccion="tareas"><span aria-hidden="true">✅</span>Tareas</a>
+    <a href="#clientes" data-seccion="clientes"><span aria-hidden="true">👤</span>Clientes</a>
+    <a href="#inmuebles" data-seccion="inmuebles"><span aria-hidden="true">🏠</span>Inmuebles</a>
+    <a href="#notas" data-seccion="notas"><span aria-hidden="true">📝</span>Notas</a>
+    <a href="#biblioteca" data-seccion="biblioteca"><span aria-hidden="true">🔗</span>Biblioteca</a>
+    <a href="#asistente" data-seccion="asistente"><span aria-hidden="true">✨</span>Asistente de Pau</a>
+    <a href="#ajustes" data-seccion="ajustes"><span aria-hidden="true">⚙️</span>Ajustes y datos</a>
+    <button type="button" class="btn primario anadir-lateral" data-accion="anadir">＋ Añadir</button>
+  </nav>
+
+  <div class="avisos-recordatorio" id="recordatorios" aria-live="polite"></div>
+  <main id="vista" tabindex="-1"><noscript>OLVIDO DE PAU AGENDA necesita JavaScript.</noscript></main>
+
+  <nav class="inferior" aria-label="Secciones principales">
+    <a href="#hoy" data-seccion="hoy"><span class="ico" aria-hidden="true">☀️</span>Hoy</a>
+    <a href="#agenda" data-seccion="agenda"><span class="ico" aria-hidden="true">📅</span>Agenda</a>
+    <button type="button" class="boton-anadir" data-accion="anadir" aria-label="Añadir"><span aria-hidden="true">＋</span></button>
+    <a href="#tareas" data-seccion="tareas"><span class="ico" aria-hidden="true">✅</span>Tareas</a>
+    <a href="#clientes" data-seccion="clientes"><span class="ico" aria-hidden="true">👤</span>Clientes</a>
+  </nav>
+</div>
+<div id="aviso" class="aviso oculto" role="status" aria-live="polite"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

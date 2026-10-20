@@ -20,5 +20,18 @@
       "source": "/p/:slug",
       "destination": "/api/oportunidades-ficha?slug=:slug"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "agenda.jpaumoralejo.es"
+        }
+      ],
+      "destination": "/agenda/app.html",
+      "permanent": false
+    }
   ]
 }
