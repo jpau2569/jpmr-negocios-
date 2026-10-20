@@ -23,16 +23,18 @@ function filtraClientes(ctx) {
   const lista = activos(ctx.estado.clientes).filter((c) => {
     if (f.estado && c.estado !== f.estado) return false;
     if (!f.estado && f.vista === 'lista' && c.estado === 'archivado') return false;
+    // Los contactos del móvil (pueden ser cientos) solo salen al buscarlos o al filtrar por «Solo contacto».
+    if (!f.estado && !palabras.length && c.estado === 'contacto') return false;
     if (f.tipo && c.tipo !== f.tipo) return false;
     if (f.etiqueta && !c.etiquetas.includes(f.etiqueta)) return false;
     const texto = normaliza(`${nombreCliente(c)} ${c.telefono} ${c.email} ${c.zonas} ${c.etiquetas.join(' ')}`);
     return palabras.every((p) => texto.includes(p));
   }).sort((a, b) => nombreCliente(a).localeCompare(nombreCliente(b), 'es'));
-  return { f, lista };
+  return { f, lista, ocultos: f.estado || palabras.length ? 0 : activos(ctx.estado.clientes).filter((c) => c.estado === 'contacto').length };
 }
 
 function clientes(ctx) {
-  const { f, lista } = filtraClientes(ctx);
+  const { f, lista, ocultos } = filtraClientes(ctx);
   const etiquetas = [...new Set(activos(ctx.estado.clientes).flatMap((c) => c.etiquetas))].sort();
   const filtros = `<div class="filtros">
     <div class="ancho"><label class="sr" for="f-cli">Buscar clientes</label><input id="f-cli" class="entrada" type="search" placeholder="Buscar por nombre, teléfono, zona…" value="${h(f.texto)}" data-teclear="cliente-filtro" data-campo-filtro="texto" /></div>
@@ -41,7 +43,7 @@ function clientes(ctx) {
     ${etiquetas.length ? `<div><label class="sr" for="f-etc">Etiqueta</label><select id="f-etc" class="entrada" data-cambio="cliente-filtro" data-campo-filtro="etiqueta"><option value="">Todas las etiquetas</option>${etiquetas.map((e) => `<option ${f.etiqueta === e ? 'selected' : ''}>${h(e)}</option>`).join('')}</select></div>` : ''}
   </div>
   <div class="pestanas-int"><button data-accion="cliente-vista" data-v="lista" aria-pressed="${f.vista === 'lista'}">☰ Lista</button><button data-accion="cliente-vista" data-v="tablero" aria-pressed="${f.vista === 'tablero'}">▦ Tablero por estados</button></div>`;
-  const cab = cabecera('Clientes', '<a class="btn" href="#importar">⇪ Importar CSV</a><a class="btn primario" href="#cliente/nuevo">＋ Cliente</a>');
+  const cab = cabecera('Clientes', '<a class="btn" href="#importar">📱 Importar contactos</a><a class="btn primario" href="#cliente/nuevo">＋ Cliente</a>');
   if (!activos(ctx.estado.clientes).length) return `${cab}<section class="tarjeta">${vacio('👤', 'Aún no tienes clientes.', '<a class="btn primario" href="#cliente/nuevo">Crear el primero</a>')}</section>`;
   if (f.vista === 'tablero') {
     return `${cab}${filtros}<div class="tablero">${ESTADOS_CLIENTE.map((e) => {
@@ -51,9 +53,15 @@ function clientes(ctx) {
           <label class="sr" for="mc-${h(c.id)}">Mover a ${h(nombreCliente(c))}</label><select id="mc-${h(c.id)}" data-cambio="cliente-estado" data-id="${h(c.id)}">${ESTADOS_CLIENTE.map((x) => `<option value="${x}" ${x === c.estado ? 'selected' : ''}>${x === c.estado ? NOMBRE_ESTADO_CLIENTE[x] : 'Mover a: ' + NOMBRE_ESTADO_CLIENTE[x]}</option>`).join('')}</select></div>`).join('') || '<p class="detalle" style="color:var(--suave)">Vacío</p>'}</section>`;
     }).join('')}</div>`;
   }
-  return `${cab}${filtros}<section class="tarjeta" id="lista-clientes">${listaClientes(lista)}</section>`;
+  const aviso = ocultos ? `<p class="nota-info">📇 ${ocultos} contacto${ocultos === 1 ? '' : 's'} de la agenda del móvil no salen en la lista: escribe en el buscador o <button class="enlace-btn" data-accion="cliente-ver-contactos">verlos todos</button>.</p>` : '';
+  return `${cab}${filtros}${aviso}<section class="tarjeta" id="lista-clientes">${listaClientes(lista)}</section>`;
 }
-const listaClientes = (lista) => (lista.length ? `<p class="detalle" style="color:var(--suave);margin-top:0">${lista.length} cliente${lista.length === 1 ? '' : 's'}</p><ul class="lista">${lista.map((c) => itemCliente(c, c.zonas ? h(c.zonas) : '')).join('')}</ul>` : vacio('🔍', 'Ningún cliente coincide con la búsqueda.'));
+// Con teléfono, al lado va un acceso a WhatsApp (abre el chat; no envía nada).
+const accesoWhatsapp = (c) => {
+  const wa = telefonoWhatsapp(c.telefono);
+  return wa ? `<a class="btn pequeno" href="https://wa.me/${h(wa)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir WhatsApp con ${h(nombreCliente(c))}">💬</a>` : '';
+};
+const listaClientes = (lista) => (lista.length ? `<p class="detalle" style="color:var(--suave);margin-top:0">${lista.length} resultado${lista.length === 1 ? '' : 's'}${lista.length > 200 ? ' (se muestran 200: afina la búsqueda)' : ''}</p><ul class="lista">${lista.slice(0, 200).map((c) => itemCliente(c, c.zonas ? h(c.zonas) : '', accesoWhatsapp(c))).join('')}</ul>` : vacio('🔍', 'Ningún cliente coincide con la búsqueda.'));
 
 function formularioCliente(ctx, c, nuevo) {
   return `${cabecera(nuevo ? 'Nuevo cliente' : 'Editar cliente', '', nuevo ? 'clientes' : `cliente/${c.id}`)}
@@ -225,6 +233,7 @@ export const acciones = {
       if (caja) caja.innerHTML = listaClientes(filtraClientes(ctx).lista);
     }, 120);
   },
+  'cliente-ver-contactos'(ctx) { filtraClientes(ctx); ctx.filtros.clientes.estado = 'contacto'; ctx.repinta(); },
   'cliente-vista'(ctx, el) { filtraClientes(ctx); ctx.filtros.clientes.vista = el.dataset.v; ctx.repinta(); },
   'cliente-estado'(ctx, el) {
     const c = buscaId(ctx.estado, 'clientes', el.dataset.id);

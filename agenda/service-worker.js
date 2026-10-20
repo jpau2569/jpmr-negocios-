@@ -5,13 +5,13 @@
    Al tocar cualquier archivo de la lista: súbelo aquí y sube VERSION.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'olvido-agenda-v1.0.1';
+const VERSION = 'olvido-agenda-v1.1.0';
 const RECURSOS = [
   './', './index.html', './app.html', './styles.css', './app.js', './ui.js', './utiles.js', './datos.js', './comun.js',
   './captura.js', './busqueda.js', './exportar.js', './recordatorios.js',
   './p-hoy.js', './p-agenda.js', './p-tareas.js', './p-clientes.js', './p-inmuebles.js', './p-notas.js',
   './p-biblioteca.js', './p-asistente.js', './p-ajustes.js', './p-global.js',
-  './manifest.json', './logo.svg', './icono-180.png', './icono-192.png', './icono-512.png', './icono-maskable-512.png',
+  './manifest.json', './logo-jp.webp', './contactos.js', './efectos3d.js', './icono-180.png', './icono-192.png', './icono-512.png', './icono-maskable-512.png',
 ];
 
 // De uno en uno: un recurso que falle no deja la app sin modo sin conexión.

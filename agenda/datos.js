@@ -21,8 +21,9 @@ export const COLECCIONES = ['clientes', 'inmuebles', 'eventos', 'tareas', 'notas
 /* ───────────── catálogos (lo que se ve en los desplegables) ───────────── */
 
 export const TIPOS_CLIENTE = ['comprador', 'vendedor', 'propietario', 'inquilino', 'colaborador', 'otro'];
-export const ESTADOS_CLIENTE = ['nuevo', 'contactado', 'seguimiento', 'visita', 'negociacion', 'cerrado', 'archivado'];
+export const ESTADOS_CLIENTE = ['contacto', 'nuevo', 'contactado', 'seguimiento', 'visita', 'negociacion', 'cerrado', 'archivado'];
 export const NOMBRE_ESTADO_CLIENTE = {
+  contacto: 'Solo contacto',
   nuevo: 'Nuevo', contactado: 'Contactado', seguimiento: 'Seguimiento', visita: 'Visita',
   negociacion: 'Negociación', cerrado: 'Cerrado', archivado: 'Archivado',
 };
@@ -67,7 +68,7 @@ export const BLOQUES_PANEL = {
 
 export const AJUSTES_BASE = {
   nombre: 'Pau',
-  tema: 'auto', // auto · claro · oscuro
+  tema: 'oscuro', // auto · claro · oscuro (el diseño futurista luce en oscuro)
   bloques: Object.keys(BLOQUES_PANEL).map((id) => ({ id, visible: true })),
   prioridades: ['', '', ''],
   prioridadesFecha: '',
@@ -126,6 +127,7 @@ export const LIMPIA = {
     email: txt(r.email, 120).trim(),
     tipo: uno(r.tipo, TIPOS_CLIENTE, 'comprador'),
     estado: uno(r.estado, ESTADOS_CLIENTE, 'nuevo'),
+    // «Solo contacto»: viene de la agenda del móvil y aún no es un cliente en seguimiento.
     procedencia: txt(r.procedencia, 80),
     preferencias: txt(r.preferencias, 2000),
     presupuestoMin: num(r.presupuestoMin),
@@ -242,7 +244,7 @@ export function normalizaEstado(bruto) {
   if (!bruto || typeof bruto !== 'object') return e;
   const aj = bruto.ajustes && typeof bruto.ajustes === 'object' ? bruto.ajustes : {};
   e.ajustes.nombre = txt(aj.nombre, 40).trim() || AJUSTES_BASE.nombre;
-  e.ajustes.tema = uno(aj.tema, ['auto', 'claro', 'oscuro'], 'auto');
+  e.ajustes.tema = uno(aj.tema, ['auto', 'claro', 'oscuro'], AJUSTES_BASE.tema);
   e.ajustes.avisosNavegador = bool(aj.avisosNavegador);
   e.ajustes.ultimaCopia = sello(aj.ultimaCopia);
   e.ajustes.prioridadesFecha = fecha(aj.prioridadesFecha);
@@ -346,7 +348,7 @@ export const tareaVencida = (t, hoy = aISO()) => tareaAbierta(t) && t.fecha && t
 export function clientesSinSeguimiento(estado, hoy = aISO()) {
   const dias = estado.ajustes.diasSinSeguimiento;
   return activos(estado.clientes)
-    .filter((c) => !['cerrado', 'archivado'].includes(c.estado))
+    .filter((c) => !['cerrado', 'archivado', 'contacto'].includes(c.estado))
     .map((c) => {
       const ultimo = c.historial.map((h) => h.fecha).sort().at(-1) || c.creado.slice(0, 10);
       if (c.siguienteSeguimiento && c.siguienteSeguimiento <= hoy) {

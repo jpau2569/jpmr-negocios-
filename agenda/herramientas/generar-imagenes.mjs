@@ -1,32 +1,56 @@
-/* Genera los PNG de OLVIDO DE PAU AGENDA a partir de logo.svg, con Chromium.
-   Salen: icono-180/192/512, icono-maskable-512 (con margen de seguridad)
-   y presentacion-4k.png (3840 × 2160, logo centrado).
+/* Genera las imágenes de OLVIDO DE PAU AGENDA a partir del logo JP de Pau
+   (agenda/logo-jp-original.webp, 1672 × 941). Usa Python + Pillow.
+   Salen: logo-jp.webp (1200 px, para la app), icono-180/192/512 (monograma JP,
+   también en la cabecera), icono-maskable-512 y presentacion-4k.png (3840 × 2160).
+   Ojo: la de 4K es una AMPLIACIÓN del original (1672 px de ancho): sirve
+   para pantallas grandes, pero no tiene más detalle que la imagen de partida.
    Uso:  node agenda/herramientas/generar-imagenes.mjs                      */
 
-import { readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
 
 const DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
-const svg = await readFile(join(DIR, 'logo.svg'), 'utf8');
-const datos = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+const python = String.raw`
+import sys
+from PIL import Image, ImageDraw, ImageFilter
+d = sys.argv[1]
+orig = Image.open(d + '/logo-jp-original.webp').convert('RGB')
+FONDO = (5, 14, 34)
 
-const navegador = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium' });
-async function foto(nombre, ancho, alto, html, transparente = false) {
-  const p = await navegador.newPage({ viewport: { width: ancho, height: alto }, deviceScaleFactor: 1 });
-  await p.setContent(`<!doctype html><html><body style="margin:0;background:transparent;width:${ancho}px;height:${alto}px;overflow:hidden">${html}</body></html>`);
-  await p.waitForLoadState('networkidle');
-  await p.screenshot({ path: join(DIR, nombre), omitBackground: transparente });
-  await p.close();
-  console.log('✓', nombre);
-}
+def lienzo(n):
+    # Fondo azul noche con un leve foco central, como el del logo.
+    base = Image.new('RGB', (n, n), FONDO)
+    luz = Image.new('L', (n, n), 0)
+    ImageDraw.Draw(luz).ellipse((n * .1, n * .05, n * .9, n * .85), fill=60)
+    luz = luz.filter(ImageFilter.GaussianBlur(n / 6))
+    return Image.composite(Image.new('RGB', (n, n), (14, 30, 66)), base, luz)
 
-for (const n of [180, 192, 512]) await foto(`icono-${n}.png`, n, n, `<img src="${datos}" width="${n}" height="${n}" style="display:block">`, true);
-// Maskable: el sistema recorta un círculo; el dibujo va dentro del 80 % central.
-await foto('icono-maskable-512.png', 512, 512, `<div style="width:512px;height:512px;background:#0b1530;display:grid;place-items:center"><img src="${datos}" width="400" height="400"></div>`);
-await foto('presentacion-4k.png', 3840, 2160, `<div style="width:3840px;height:2160px;background:radial-gradient(circle at 50% 40%,#183076 0%,#0b1530 55%,#050a18 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,'Segoe UI',Roboto,sans-serif">
-  <img src="${datos}" width="1000" height="1000" style="filter:drop-shadow(0 60px 80px rgba(0,0,0,.55))">
-  <div style="margin-top:90px;color:#fff;font-size:150px;font-weight:800;letter-spacing:.05em">OLVIDO DE PAU</div>
-  <div style="color:#19d3c5;font-size:96px;font-weight:700;letter-spacing:.45em;margin-top:10px;padding-left:.45em">AGENDA</div></div>`);
-await navegador.close();
+# Monograma JP sin la palabra AGENDA, con los bordes fundidos con el fondo.
+jp = orig.crop((470, 140, 1200, 725))
+mascara = Image.new('L', jp.size, 0)
+ImageDraw.Draw(mascara).rounded_rectangle((18, 18, jp.width - 18, jp.height - 18), 40, fill=255)
+mascara = mascara.filter(ImageFilter.GaussianBlur(14))
+
+def marca(n, ocupa):
+    c = lienzo(n)
+    ancho = int(n * ocupa)
+    alto = int(jp.height * ancho / jp.width)
+    j = jp.resize((ancho, alto), Image.LANCZOS)
+    m = mascara.resize((ancho, alto), Image.LANCZOS)
+    c.paste(j, ((n - ancho) // 2, (n - alto) // 2), m)
+    return c
+
+for n in (180, 192, 512):
+    marca(n, .86).save(d + '/icono-%d.png' % n, optimize=True)
+marca(512, .66).save(d + '/icono-maskable-512.png', optimize=True)
+
+# 4K: el logo entero ampliado (16:9 como el original) con un poco de enfoque.
+grande = orig.resize((3840, 2161), Image.LANCZOS).crop((0, 0, 3840, 2160))
+grande = grande.filter(ImageFilter.UnsharpMask(radius=2, percent=60, threshold=2))
+grande.save(d + '/presentacion-4k.png', optimize=True)
+# Versión ligera para la app (pantalla de bienvenida y panel).
+orig.resize((1200, 675), Image.LANCZOS).save(d + '/logo-jp.webp', quality=88)
+print('ok')
+`;
+console.log(execFileSync('python3', ['-c', python, DIR], { encoding: 'utf8' }).trim());

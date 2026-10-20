@@ -10,7 +10,7 @@
      se guarda.
    ═══════════════════════════════════════════════════════════════════ */
 
-import { activos, duplicadosCliente, ESTADOS_CLIENTE, LIMPIA, nombreCliente, TIPOS_CLIENTE, TIPOS_EVENTO, valida } from './datos.js';
+import { activos, ESTADOS_CLIENTE, LIMPIA, nombreCliente, TIPOS_CLIENTE, TIPOS_EVENTO, valida } from './datos.js';
 import { normaliza } from './utiles.js';
 
 /* ───────────── CSV ───────────── */
@@ -105,11 +105,10 @@ export function proponeMapeo(cabecera) {
   return mapeo;
 }
 
-/** Vista previa: cada fila con el cliente que saldría, sus errores y sus posibles duplicados. */
+/** Vista previa de un CSV: cada fila con el cliente que saldría, sus errores y sus duplicados. */
 export function previaImportacion(estado, filas, mapeo) {
-  const nuevos = [];
-  return filas.map((fila, n) => {
-    const bruto = { demo: false };
+  const brutos = filas.map((fila) => {
+    const bruto = {};
     for (const [campo, i] of Object.entries(mapeo)) if (i >= 0) bruto[campo] = (fila[i] ?? '').trim();
     if (bruto.tipo) bruto.tipo = TIPOS_CLIENTE.find((t) => normaliza(bruto.tipo).startsWith(t.slice(0, 5))) || 'otro';
     if (bruto.estado) bruto.estado = ESTADOS_CLIENTE.find((t) => normaliza(bruto.estado).startsWith(t.slice(0, 5))) || 'nuevo';
@@ -117,12 +116,41 @@ export function previaImportacion(estado, filas, mapeo) {
       const [nom, ...resto] = bruto.nombre.split(' ');
       bruto.nombre = nom; bruto.apellidos = resto.join(' ');
     }
-    const cliente = LIMPIA.clientes(bruto);
+    return bruto;
+  });
+  return previaClientes(estado, brutos, 2);
+}
+
+/**
+ * Vista previa de una lista de clientes (CSV, .vcf o selector del móvil).
+ * Duplicados por teléfono (9 últimas cifras), correo o nombre completo, contra
+ * la agenda y contra las filas anteriores del mismo archivo. Con índices: miles
+ * de contactos se revisan al momento.
+ */
+export function previaClientes(estado, brutos, primeraFila = 1) {
+  const porTel = new Map(); const porMail = new Map(); const porNombre = new Map();
+  const apunta = (c) => {
+    const tel = String(c.telefono || '').replace(/\D/g, '').slice(-9);
+    if (tel.length === 9 && !porTel.has(tel)) porTel.set(tel, c);
+    const mail = normaliza(c.email);
+    if (mail && !porMail.has(mail)) porMail.set(mail, c);
+    const nom = normaliza(`${c.nombre} ${c.apellidos}`);
+    if (nom && !porNombre.has(nom)) porNombre.set(nom, c);
+  };
+  activos(estado.clientes).forEach(apunta);
+  return brutos.map((bruto, n) => {
+    const cliente = LIMPIA.clientes({ ...bruto, demo: false });
     const errores = Object.values(valida('clientes', cliente));
-    const conjunto = { ...estado, clientes: [...estado.clientes, ...nuevos] };
-    const duplicados = duplicadosCliente(conjunto, cliente).map((d) => `${nombreCliente(d.cliente)} (${d.motivos.join(', ')})`);
-    if (!errores.length) nuevos.push(cliente);
-    return { fila: n + 2, cliente, errores, duplicados, importar: !errores.length && !duplicados.length };
+    const encontrados = new Map();
+    const tel = cliente.telefono.replace(/\D/g, '').slice(-9);
+    if (tel.length === 9 && porTel.has(tel)) encontrados.set(porTel.get(tel), [...(encontrados.get(porTel.get(tel)) || []), 'mismo teléfono']);
+    const mail = normaliza(cliente.email);
+    if (mail && porMail.has(mail)) encontrados.set(porMail.get(mail), [...(encontrados.get(porMail.get(mail)) || []), 'mismo correo']);
+    const nom = normaliza(`${cliente.nombre} ${cliente.apellidos}`);
+    if (nom && porNombre.has(nom)) encontrados.set(porNombre.get(nom), [...(encontrados.get(porNombre.get(nom)) || []), 'mismo nombre']);
+    const duplicados = [...encontrados].map(([c, motivos]) => `${nombreCliente(c)} (${motivos.join(', ')})`);
+    if (!errores.length) apunta(cliente);
+    return { fila: n + primeraFila, cliente, errores, duplicados, importar: !errores.length && !duplicados.length };
   });
 }
 

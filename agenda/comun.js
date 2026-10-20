@@ -44,11 +44,11 @@ export function itemTarea(estado, t, hoy) {
   </li>`;
 }
 
-export function itemCliente(c, extra = '') {
+export function itemCliente(c, extra = '', despues = '') {
   return `<li><a class="elemento" href="#cliente/${h(c.id)}">
     <span class="cuerpo"><span class="titulo">${h(nombreCliente(c))}</span>${etiquetaDemo(c)}
     <br><span class="detalle">${h(NOMBRE_ESTADO_CLIENTE[c.estado])} · ${h(c.tipo)}${c.telefono ? ' · ' + h(c.telefono) : ''}${extra ? ' · ' + extra : ''}</span></span>
-    <span aria-hidden="true">›</span></a></li>`;
+    <span aria-hidden="true">›</span></a>${despues}</li>`;
 }
 
 export function itemInmueble(i, extra = '', despues = '') {

@@ -62,7 +62,8 @@ await page.waitForSelector('.saludo');
 console.log('\n☀️ Arranque');
 check('saludo a Pau y fecha en español', /Pau/.test(await page.textContent('.saludo h1')) && /de \d{4}/.test(await page.textContent('.saludo p')));
 check('agenda vacía ofrece empezar', await page.isVisible('text=Empieza aquí'));
-check('logo en la cabecera', await page.isVisible('.marca img'));
+check('logo JP en la cabecera y en el panel', await page.isVisible('.marca img') && await page.isVisible('.logo3d img'));
+check('tema oscuro futurista por defecto', (await page.evaluate(() => document.documentElement.dataset.tema)) === 'oscuro');
 
 console.log('\n👤 1. Cliente que sigue al recargar');
 await ir(page, 'cliente/nuevo');
@@ -312,6 +313,30 @@ await page.click('dialog[open] button[value="si"]');
 await page.waitForTimeout(150);
 check('importa solo el válido', (await estado(page)).clientes.length === 2 && (await estado(page)).clientes.some((c) => c.nombre === 'Pedro' && c.etiquetas.includes('importado')));
 
+console.log('\n📇 Contactos del móvil');
+await ir(page, 'importar');
+check('explica que WhatsApp usa la agenda del teléfono', await page.isVisible('text=tus contactos de WhatsApp son los de la agenda del teléfono'));
+await page.setInputFiles('#vcf-archivo', { name: 'contactos.vcf', mimeType: 'text/vcard', buffer: Buffer.from('BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Rosa Vecina\r\nTEL;TYPE=CELL:633 44 55 66\r\nEND:VCARD\r\nBEGIN:VCARD\r\nVERSION:3.0\r\nFN:Lucía Repetida\r\nTEL:611223344\r\nEND:VCARD\r\n') });
+await page.waitForSelector('table.previa');
+check('vista previa del .vcf con el duplicado desmarcado', JSON.stringify(await page.$$eval('input[name="fila"]', (xs) => xs.map((x) => x.checked))) === '[true,false]');
+await page.click('form[data-form="csv-importar"] button[type="submit"]');
+await page.click('dialog[open] button[value="si"]');
+await page.waitForTimeout(150);
+const rosa = (await estado(page)).clientes.find((c) => c.nombre === 'Rosa');
+check('entra como «Solo contacto»', rosa?.estado === 'contacto' && rosa.etiquetas.includes('agenda-movil'));
+check('con acceso directo a WhatsApp en la lista', (await page.getAttribute(`a[aria-label="Abrir WhatsApp con Rosa Vecina"]`, 'href')) === 'https://wa.me/34633445566');
+await ir(page, 'hoy');
+check('no aparece en «Clientes a seguir»', !(await page.isVisible('text=Rosa Vecina')));
+await ir(page, 'clientes');
+await page.selectOption('#f-est', '');
+await page.waitForTimeout(100);
+check('la lista normal los oculta y lo avisa', !(await page.isVisible('#lista-clientes >> text=Rosa Vecina')) && await page.isVisible('text=contacto de la agenda del móvil'));
+await page.fill('#f-cli', 'rosa');
+await page.waitForTimeout(250);
+check('al buscar sí salen', await page.isVisible('#lista-clientes >> text=Rosa Vecina'));
+await page.fill('#f-cli', '');
+await page.waitForTimeout(200);
+
 console.log('\n🧪 Datos de ejemplo');
 await ir(page, 'ajustes');
 await page.click('button[data-accion="cargar-ejemplo"]');
@@ -322,7 +347,7 @@ await page.click('button[data-accion="quitar-ejemplo"]');
 await page.click('dialog[open] button[value="si"]');
 await page.waitForTimeout(150);
 const sinDemo = await estado(page);
-check('se quitan sin tocar los de Pau', sinDemo.clientes.length === 2 && !sinDemo.clientes.some((c) => c.demo));
+check('se quitan sin tocar los de Pau', sinDemo.clientes.length === 3 && !sinDemo.clientes.some((c) => c.demo));
 
 console.log('\n🧭 14. Ningún botón sin acción y 13. sin desbordes');
 const rutas = ['hoy', 'hoy/personalizar', 'agenda/dia', 'agenda/semana', 'agenda/mes', 'agenda/lista', 'tareas/hoy', 'tareas/tablero', 'clientes', 'clientes-tablero', `cliente/${idLucia}`, 'inmuebles', `inmueble/${idInm}`, 'notas', `nota/${notaG.id}`, 'biblioteca', `recurso/${video.id}`, 'asistente/manana', 'asistente/visita', 'asistente/presupuesto', 'ajustes', 'papelera', 'importar', 'evento/nuevo', 'tarea/nuevo', 'cliente/nuevo', 'inmueble/nuevo', 'recurso/nuevo', 'nota/nuevo'];
@@ -362,7 +387,7 @@ await page.waitForTimeout(500);
 await ctx.setOffline(true);
 await page.reload();
 await page.waitForSelector('.saludo', { timeout: 8000 }).catch(() => {});
-check('abre sin conexión con los datos', await page.isVisible('.saludo') && (await estado(page)).clientes.length === 2);
+check('abre sin conexión con los datos', await page.isVisible('.saludo') && (await estado(page)).clientes.length === 3);
 check('avisa de que no hay conexión', await page.isVisible('#estado-red'));
 await ctx.setOffline(false);
 

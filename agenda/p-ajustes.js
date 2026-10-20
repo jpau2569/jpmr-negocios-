@@ -11,7 +11,8 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import { AJUSTES_BASE, COLECCIONES, copiaSeguridad, datosEjemplo, DIAS_PAPELERA, estadoVacio, leeCopia, nombreCliente, nombreInmueble, quitaReferencias, tamanoKb } from './datos.js';
-import { CAMPOS_IMPORTABLES, csvClientes, csvInmuebles, csvTareas, icsEventos, leeCsv, previaImportacion, proponeMapeo } from './exportar.js';
+import { CAMPOS_IMPORTABLES, csvClientes, csvInmuebles, csvTareas, icsEventos, leeCsv, previaClientes, previaImportacion, proponeMapeo } from './exportar.js';
+import { clienteDeContacto, eligeContactosDelMovil, leeVcard, selectorContactosDisponible } from './contactos.js';
 import { aplicaTema, cabecera, campo, confirma, descarga, h, selector, vacio } from './ui.js';
 import { aISO, fechaCorta } from './utiles.js';
 
@@ -54,7 +55,7 @@ function ajustes(ctx) {
       <button class="btn" data-accion="exportar" data-que="tareas">Tareas (CSV)</button>
       <button class="btn" data-accion="exportar" data-que="inmuebles">Inmuebles (CSV)</button>
       <button class="btn" data-accion="exportar" data-que="ics">Calendario (.ics)</button>
-      <a class="btn" href="#importar">⇪ Importar clientes (CSV)</a>
+      <a class="btn" href="#importar">⇪ Importar contactos del móvil o CSV</a>
     </div>
   </section>
 
@@ -98,31 +99,49 @@ function papelera(ctx) {
 
 /* ───────────── importar clientes desde CSV ───────────── */
 
-let importacion = null; // { nombre, cabecera, filas, mapeo }
+let importacion = null; // { nombre, origen: 'csv'|'vcf'|'movil', cabecera, filas, mapeo, brutos }
+
+const previaActual = (estado) => (importacion.origen === 'csv'
+  ? previaImportacion(estado, importacion.filas, importacion.mapeo)
+  : previaClientes(estado, importacion.brutos));
 
 function importar(ctx) {
   if (!importacion) {
-    return `${cabecera('Importar clientes', '', 'clientes')}<section class="tarjeta">
+    const picker = selectorContactosDisponible();
+    return `${cabecera('Importar contactos y clientes', '', 'clientes')}
+    <section class="tarjeta"><h2>📱 Contactos del móvil (y de WhatsApp)</h2>
+      <p>WhatsApp no deja que ninguna app lea sus contactos, pero <strong>tus contactos de WhatsApp son los de la agenda del teléfono</strong>. Tráelos de una de estas dos formas:</p>
+      ${picker ? `<div class="fila-botones"><button class="btn primario" data-accion="contactos-movil">📇 Elegir contactos del móvil</button></div>
+      <p class="detalle" style="color:var(--suave);font-size:.85rem">Se abre la agenda de tu móvil; marca los que quieras (o todos). La app solo recibe nombre, teléfono y correo de los marcados.</p>` : `<p class="nota-info">Este navegador no permite elegir contactos directamente (solo lo hace Chrome en Android con la app publicada en https). Usa el archivo .vcf:</p>`}
+      <ol class="pasos">
+        <li><strong>Android:</strong> app Contactos → ☰ o Ajustes → <em>Exportar</em> → guarda el archivo .vcf.</li>
+        <li><strong>iPhone:</strong> app Contactos → <em>Listas</em> → mantén pulsada «Todos los contactos» → <em>Exportar</em>.</li>
+      </ol>
+      <label class="btn" for="vcf-archivo">📂 Elegir archivo .vcf</label><input id="vcf-archivo" class="sr" type="file" accept=".vcf,.vcard,text/vcard,text/x-vcard" data-cambio="vcf-abrir" />
+      <p class="detalle" style="color:var(--suave);font-size:.85rem">El archivo se lee en este aparato y no se sube a ningún sitio. Antes de guardar verás la lista con los duplicados. Entran como «Solo contacto»: no salen en seguimientos hasta que cambies su estado.</p>
+    </section>
+    <section class="tarjeta"><h2>📄 Clientes desde CSV</h2>
       <p>Elige un archivo CSV (de Excel, Google Contactos, tu CRM…). Primero verás cómo quedaría; no se guarda nada hasta que confirmes.</p>
-      <label class="btn primario" for="csv-archivo">Elegir archivo CSV</label><input id="csv-archivo" class="sr" type="file" accept=".csv,text/csv,text/plain" data-cambio="csv-abrir" />
+      <label class="btn" for="csv-archivo">Elegir archivo CSV</label><input id="csv-archivo" class="sr" type="file" accept=".csv,text/csv,text/plain" data-cambio="csv-abrir" />
       <p class="detalle" style="color:var(--suave);font-size:.85rem">Separado por «;» o «,», con una primera fila de títulos. Si tienes un .xlsx, en Excel: Archivo → Guardar como → CSV UTF-8.</p></section>`;
   }
-  const { nombre, cabecera: cab, filas, mapeo } = importacion;
-  const previa = previaImportacion(ctx.estado, filas, mapeo);
+  const { nombre, origen, cabecera: cab, filas, mapeo } = importacion;
+  const previa = previaActual(ctx.estado);
   const validas = previa.filter((p) => !p.errores.length);
-  const ops = [[-1, '— No importar —'], ...cab.map((c, i) => [i, c || `Columna ${i + 1}`])];
-  return `${cabecera('Importar clientes', '<button class="btn" data-accion="csv-cancelar">Cancelar</button>', 'clientes')}
-    <section class="tarjeta"><h2>1. Columnas de «${h(nombre)}»</h2>
+  const nDup = previa.filter((p) => p.duplicados.length).length;
+  const ops = origen === 'csv' ? [[-1, '— No importar —'], ...cab.map((c, i) => [i, c || `Columna ${i + 1}`])] : [];
+  return `${cabecera(origen === 'csv' ? 'Importar clientes' : 'Importar contactos', '<button class="btn" data-accion="csv-cancelar">Cancelar</button>', 'clientes')}
+    ${origen === 'csv' ? `<section class="tarjeta"><h2>1. Columnas de «${h(nombre)}»</h2>
       <p class="detalle" style="color:var(--suave)">${filas.length} fila${filas.length === 1 ? '' : 's'}. He propuesto la correspondencia; cámbiala si hace falta.</p>
       <div class="dos-col">${Object.entries(CAMPOS_IMPORTABLES).map(([k, def]) => selector(`map-${k}`, def.nombre, mapeo[k], ops, { 'data-cambio': 'csv-mapeo', 'data-k': k })).join('')}</div>
-    </section>
-    <form class="tarjeta" data-form="csv-importar"><h2>2. Vista previa</h2>
-      <p>${validas.length} válida${validas.length === 1 ? '' : 's'} · ${previa.length - validas.length} con errores · ${previa.filter((p) => p.duplicados.length).length} posible${previa.filter((p) => p.duplicados.length).length === 1 ? '' : 's'} duplicado${previa.filter((p) => p.duplicados.length).length === 1 ? '' : 's'} (desmarcados).</p>
-      <div class="tabla-scroll"><table class="previa"><thead><tr><th scope="col">Importar</th><th scope="col">Fila</th><th scope="col">Nombre</th><th scope="col">Teléfono</th><th scope="col">Correo</th><th scope="col">Avisos</th></tr></thead><tbody>
-      ${previa.slice(0, 300).map((p, i) => `<tr><td><input type="checkbox" name="fila" value="${i}" ${p.importar ? 'checked' : ''} ${p.errores.length ? 'disabled' : ''} aria-label="Importar fila ${p.fila}" /></td><td>${p.fila}</td><td>${h(nombreCliente(p.cliente))}</td><td>${h(p.cliente.telefono)}</td><td>${h(p.cliente.email)}</td>
+    </section>` : `<p class="nota-info">${h(nombre)}: ${previa.length} contacto${previa.length === 1 ? '' : 's'}${importacion.recortado ? ' (el archivo tenía más; se leen los 5.000 primeros)' : ''}. Entrarán como «Solo contacto» con la etiqueta «agenda-movil».</p>`}
+    <form class="tarjeta" data-form="csv-importar"><h2>${origen === 'csv' ? '2. ' : ''}Vista previa</h2>
+      <p>${validas.length} válido${validas.length === 1 ? '' : 's'} · ${previa.length - validas.length} con errores · ${nDup} posible${nDup === 1 ? '' : 's'} duplicado${nDup === 1 ? '' : 's'} (desmarcados).</p>
+      <div class="tabla-scroll"><table class="previa"><thead><tr><th scope="col">Importar</th><th scope="col">${origen === 'csv' ? 'Fila' : 'Nº'}</th><th scope="col">Nombre</th><th scope="col">Teléfono</th><th scope="col">Correo</th><th scope="col">Avisos</th></tr></thead><tbody>
+      ${previa.slice(0, 300).map((p, i) => `<tr><td><input type="checkbox" name="fila" value="${i}" ${p.importar ? 'checked' : ''} ${p.errores.length ? 'disabled' : ''} aria-label="Importar ${h(nombreCliente(p.cliente))}" /></td><td>${p.fila}</td><td>${h(nombreCliente(p.cliente))}</td><td>${h(p.cliente.telefono)}</td><td>${h(p.cliente.email)}</td>
         <td>${p.errores.map((e) => `<span class="chip chip-mal">${h(e)}</span>`).join(' ')}${p.duplicados.map((d) => `<span class="chip chip-demo">Ya existe: ${h(d)}</span>`).join(' ')}</td></tr>`).join('')}
       </tbody></table></div>
-      ${previa.length > 300 ? `<p class="detalle">Se muestran las 300 primeras de ${previa.length}. Las demás válidas sin duplicado se importan también.</p>` : ''}
+      ${previa.length > 300 ? `<p class="detalle">Se muestran los 300 primeros de ${previa.length}. Los demás válidos y sin duplicado se importan también.</p>` : ''}
       <div class="barra-guardar"><button class="btn primario" type="submit">Importar los marcados</button></div>
     </form>`;
 }
@@ -151,15 +170,18 @@ export const formularios = {
     ctx.repinta();
   },
   async 'csv-importar'(ctx, form) {
-    const previa = previaImportacion(ctx.estado, importacion.filas, importacion.mapeo);
+    const previa = previaActual(ctx.estado);
     const marcadas = new Set([...form.querySelectorAll('input[name="fila"]:checked')].map((x) => Number(x.value)));
     const elegidas = previa.filter((p, i) => !p.errores.length && (i < 300 ? marcadas.has(i) : p.importar));
     if (!elegidas.length) { ctx.aviso('No hay ninguna fila marcada.', { tipo: 'mal' }); return; }
-    if (!(await confirma({ titulo: `¿Importar ${elegidas.length} cliente${elegidas.length === 1 ? '' : 's'}?`, boton: 'Importar' }))) return;
-    for (const p of elegidas) ctx.estado.clientes.unshift({ ...p.cliente, etiquetas: [...new Set([...p.cliente.etiquetas, 'importado'])] });
-    ctx.guardar();
+    const csv = importacion.origen === 'csv';
+    const que = csv ? 'cliente' : 'contacto';
+    if (!(await confirma({ titulo: `¿Importar ${elegidas.length} ${que}${elegidas.length === 1 ? '' : 's'}?`, boton: 'Importar' }))) return;
+    for (const p of elegidas) ctx.estado.clientes.unshift({ ...p.cliente, etiquetas: [...new Set([...p.cliente.etiquetas, csv ? 'importado' : 'agenda-movil'])] });
+    if (!ctx.guardar()) return;
     importacion = null;
-    ctx.aviso(`${elegidas.length} cliente${elegidas.length === 1 ? '' : 's'} importado${elegidas.length === 1 ? '' : 's'} (etiqueta «importado»).`);
+    ctx.aviso(`${elegidas.length} ${que}${elegidas.length === 1 ? '' : 's'} importado${elegidas.length === 1 ? '' : 's'}${csv ? ' (etiqueta «importado»)' : ' como «Solo contacto»'}.`);
+    if (!csv) ctx.filtros.clientes = { texto: '', estado: 'contacto', tipo: '', etiqueta: '', vista: 'lista' };
     ctx.ir('clientes');
   },
 };
@@ -272,7 +294,27 @@ export const acciones = {
     if (texto.includes('�')) texto = new TextDecoder('windows-1252').decode(await archivo.arrayBuffer());
     const { cabecera: cab, filas } = leeCsv(texto);
     if (!cab.length || !filas.length) { ctx.aviso('El archivo no tiene filas de datos.', { tipo: 'mal' }); return; }
-    importacion = { nombre: archivo.name, cabecera: cab, filas, mapeo: proponeMapeo(cab) };
+    importacion = { nombre: archivo.name, origen: 'csv', cabecera: cab, filas, mapeo: proponeMapeo(cab) };
+    ctx.repinta();
+  },
+  async 'vcf-abrir'(ctx, el) {
+    const archivo = el.files?.[0];
+    el.value = '';
+    if (!archivo) return;
+    if (archivo.size > 30 * 1024 * 1024) { ctx.aviso('El archivo es demasiado grande (más de 30 MB). ¿Lleva fotos? Expórtalo sin fotos.', { tipo: 'mal', ms: 7000 }); return; }
+    const { contactos, recortado } = leeVcard(await lee(archivo));
+    if (!contactos.length) { ctx.aviso('No he encontrado contactos en ese archivo. ¿Es un .vcf?', { tipo: 'mal', ms: 6000 }); return; }
+    importacion = { nombre: archivo.name, origen: 'vcf', recortado, brutos: contactos.map((c) => clienteDeContacto(c, 'Agenda del móvil (.vcf)')) };
+    ctx.repinta();
+  },
+  async 'contactos-movil'(ctx) {
+    let contactos;
+    try { contactos = await eligeContactosDelMovil(); } catch (err) {
+      ctx.aviso(err?.name === 'InvalidStateError' ? 'El selector ya estaba abierto.' : 'No se ha podido abrir la agenda del móvil. Usa el archivo .vcf.', { tipo: 'mal', ms: 6000 });
+      return;
+    }
+    if (!contactos.length) { ctx.aviso('No has elegido ningún contacto.'); return; }
+    importacion = { nombre: 'Agenda del móvil', origen: 'movil', brutos: contactos.map((c) => clienteDeContacto(c, 'Agenda del móvil')) };
     ctx.repinta();
   },
   'csv-mapeo'(ctx, el) { importacion.mapeo[el.dataset.k] = Number(el.value); ctx.repinta(); },

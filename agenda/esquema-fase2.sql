@@ -28,7 +28,7 @@ create table if not exists agenda_clientes (
   telefono text not null default '' check (char_length(telefono) <= 30),
   email text not null default '' check (char_length(email) <= 120),
   tipo text not null default 'comprador' check (tipo in ('comprador','vendedor','propietario','inquilino','colaborador','otro')),
-  estado text not null default 'nuevo' check (estado in ('nuevo','contactado','seguimiento','visita','negociacion','cerrado','archivado')),
+  estado text not null default 'nuevo' check (estado in ('contacto','nuevo','contactado','seguimiento','visita','negociacion','cerrado','archivado')),
   procedencia text not null default '',
   preferencias text not null default '' check (char_length(preferencias) <= 2000),
   presupuesto_min numeric(12,2) check (presupuesto_min >= 0),

@@ -6,39 +6,50 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 :root {
-  --fondo: #f3f5fb;
+  /* Claro: marfil y dorado oscuro (el dorado brillante no se lee sobre blanco). */
+  --fondo: #f3f2ee;
   --tarjeta: #ffffff;
-  --tarjeta-2: #f7f9fe;
-  --texto: #0e1530;
-  --suave: #4a5573;
-  --linea: #dbe2f0;
-  --noche: #0b1530;
-  --primario: #1f55f0;        /* 5,6:1 sobre blanco */
+  --tarjeta-2: #f7f5ef;
+  --texto: #0d1530;
+  --suave: #4b536b;
+  --linea: #e2dccb;
+  --noche: #050b1e;
+  --primario: #7a5a0c;        /* 6,0:1 sobre blanco */
   --primario-texto: #ffffff;
-  --primario-suave: #e6edff;
-  --turquesa: #0a7a72;        /* 5,1:1 sobre blanco (texto) */
-  --turquesa-vivo: #19d3c5;   /* solo decoración */
+  --primario-suave: #f5ecd3;
+  --azul: #1f55f0;
+  --turquesa: #0a7a72;
+  --turquesa-vivo: #19d3c5;
+  --oro-1: #fbe7a6; --oro-2: #e3c066; --oro-3: #b8902c; --oro-4: #7a5a0c;
+  --borde-luz: rgba(122, 90, 12, .35);
   --ok: #17734a; --ok-fondo: #e2f4ea;
   --atencion: #8a5a00; --atencion-fondo: #fdf1d6;
   --mal: #b42318; --mal-fondo: #fde7e5;
-  --radio: 16px;
-  --sombra: 0 1px 2px rgba(11, 21, 48, .06), 0 6px 18px rgba(11, 21, 48, .06);
-  --anim: 160ms;
+  --radio: 18px;
+  --sombra: 0 1px 0 rgba(255,255,255,.9) inset, 0 2px 4px rgba(13, 21, 48, .05), 0 14px 30px -14px rgba(13, 21, 48, .25);
+  --anim: 180ms;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-tema="claro"]) {
-    --fondo: #070d1f; --tarjeta: #0f1a36; --tarjeta-2: #13214a; --texto: #e8edfb; --suave: #a8b3cf; --linea: #24345f;
-    --noche: #050a18; --primario: #7aa0ff; --primario-texto: #06102a; --primario-suave: #1a2b5e;
-    --turquesa: #4fe3d6; --ok: #6fd3a0; --ok-fondo: #12301f; --atencion: #f0c35c; --atencion-fondo: #3a2e12;
-    --mal: #ff8f86; --mal-fondo: #3d1b19; --sombra: none; color-scheme: dark;
-  }
-}
+/* Oscuro (por defecto): azul noche, dorado del logo JP y destellos azul eléctrico. */
 :root[data-tema="oscuro"] {
-  --fondo: #070d1f; --tarjeta: #0f1a36; --tarjeta-2: #13214a; --texto: #e8edfb; --suave: #a8b3cf; --linea: #24345f;
-  --noche: #050a18; --primario: #7aa0ff; --primario-texto: #06102a; --primario-suave: #1a2b5e;
-  --turquesa: #4fe3d6; --ok: #6fd3a0; --ok-fondo: #12301f; --atencion: #f0c35c; --atencion-fondo: #3a2e12;
-  --mal: #ff8f86; --mal-fondo: #3d1b19; --sombra: none; color-scheme: dark;
+  --fondo: #040a1c; --tarjeta: #0a1530; --tarjeta-2: #0f1e44; --texto: #eef2ff; --suave: #aab5d2; --linea: #1d2d5a;
+  --noche: #030816; --primario: #e8c870; --primario-texto: #1a1305; --primario-suave: #2a2412;
+  --azul: #5b8bff; --turquesa: #4fe3d6; --borde-luz: rgba(232, 200, 112, .5);
+  --ok: #6fd3a0; --ok-fondo: #12301f; --atencion: #f0c35c; --atencion-fondo: #3a2e12;
+  --mal: #ff8f86; --mal-fondo: #3d1b19;
+  --sombra: 0 1px 0 rgba(255,255,255,.06) inset, 0 -1px 0 rgba(0,0,0,.5) inset, 0 22px 44px -20px rgba(0,0,0,.85), 0 0 0 1px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema]) {
+    --fondo: #040a1c; --tarjeta: #0a1530; --tarjeta-2: #0f1e44; --texto: #eef2ff; --suave: #aab5d2; --linea: #1d2d5a;
+    --noche: #030816; --primario: #e8c870; --primario-texto: #1a1305; --primario-suave: #2a2412;
+    --azul: #5b8bff; --turquesa: #4fe3d6; --borde-luz: rgba(232, 200, 112, .5);
+    --ok: #6fd3a0; --ok-fondo: #12301f; --atencion: #f0c35c; --atencion-fondo: #3a2e12;
+    --mal: #ff8f86; --mal-fondo: #3d1b19;
+    --sombra: 0 1px 0 rgba(255,255,255,.06) inset, 0 -1px 0 rgba(0,0,0,.5) inset, 0 22px 44px -20px rgba(0,0,0,.85), 0 0 0 1px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
 }
 @media (prefers-reduced-motion: reduce) { :root { --anim: 0ms; } }
 
@@ -299,7 +310,180 @@ table.previa th, table.previa td { border-bottom: 1px solid var(--linea); paddin
 .carga { color: var(--suave); padding: 2rem; text-align: center; }
 .lista > li:has(> button) { display: flex; align-items: center; gap: .4rem; }
 .lista > li > a.elemento { flex: 1; min-width: 0; }
-.evento .hora { white-space: nowrap; overflow-wrap: normal; font-size: .92rem; }
+.evento .hora { white-space: nowrap; overflow-wrap: normal; font-size: .92rem; flex: none; }
+.proxima .hora-grande { white-space: nowrap; flex: none; }
 .evento .cuerpo { min-width: 0; }
 /* Las etiquetas .sr (posición absoluta) se quedan dentro de los contenedores con scroll. */
 .tablero, .pestanas-int, .tabla-scroll, .filtros, .campo, .prioridad-fila, .nav-fecha { position: relative; }
+.lista > li:has(> a.btn) { display: flex; align-items: center; gap: .4rem; }
+.pasos { padding-left: 1.2rem; }
+.pasos li { margin: .3rem 0; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   FUTURISTA 3D
+   Profundidad real con CSS 3D (perspectiva, capas en Z, luz que sigue al
+   puntero) y relieve dorado del logo JP. Todo el texto va sobre fondos
+   opacos: el efecto nunca se come la lectura. Sin movimiento si el
+   sistema pide «reducir movimiento».
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Fondo: auroras dorada y azul + suelo de rejilla en perspectiva. */
+body { background: var(--fondo); }
+.escena { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.escena::before {
+  content: ""; position: absolute; inset: -20%;
+  background:
+    radial-gradient(40% 35% at 18% 8%, rgba(232, 200, 112, .16), transparent 70%),
+    radial-gradient(45% 40% at 88% 18%, rgba(91, 139, 255, .18), transparent 70%),
+    radial-gradient(50% 40% at 50% 110%, rgba(79, 227, 214, .10), transparent 70%);
+  animation: aurora 26s ease-in-out infinite alternate;
+}
+.escena::after {
+  content: ""; position: absolute; left: -50%; right: -50%; bottom: -10%; height: 60%;
+  background-image: linear-gradient(rgba(232, 200, 112, .14) 1px, transparent 1px), linear-gradient(90deg, rgba(91, 139, 255, .12) 1px, transparent 1px);
+  background-size: 64px 64px;
+  transform: perspective(520px) rotateX(64deg); transform-origin: bottom;
+  mask-image: linear-gradient(to top, #000 0%, transparent 85%); -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 85%);
+  animation: rejilla 14s linear infinite;
+}
+:root[data-tema="claro"] .escena::after { opacity: .45; }
+@keyframes aurora { to { transform: translate3d(4%, 3%, 0) rotate(6deg) scale(1.06); } }
+@keyframes rejilla { to { background-position: 0 64px, 0 0; } }
+
+/* Cabecera: azul noche con filo dorado. */
+.cabecera { background: linear-gradient(180deg, #071233, #040a1c); border-bottom: 1px solid rgba(232, 200, 112, .35); box-shadow: 0 10px 30px -12px rgba(0, 0, 0, .7); }
+.marca img { border-radius: 10px; box-shadow: 0 0 0 1px rgba(232, 200, 112, .5), 0 4px 14px rgba(232, 200, 112, .25); }
+.marca-1 { background: linear-gradient(180deg, #fff6d6, #e8c870 55%, #b8902c); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.marca-2 { color: #8fb0ff; }
+
+/* Tarjetas con relieve: borde de luz dorado-azul y sombra profunda. */
+.tarjeta {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--tarjeta), var(--tarjeta)) padding-box,
+    linear-gradient(150deg, var(--borde-luz), rgba(91, 139, 255, .28) 38%, rgba(255, 255, 255, .04) 70%, rgba(232, 200, 112, .22)) border-box;
+  box-shadow: var(--sombra);
+  transition: transform var(--anim) ease, box-shadow var(--anim) ease;
+}
+.tarjeta h2 { letter-spacing: .01em; }
+.titulo-pantalla h1 { position: relative; padding-bottom: .2rem; }
+.titulo-pantalla h1::after { content: ""; position: absolute; left: 0; bottom: -2px; width: 2.6rem; height: 3px; border-radius: 3px; background: linear-gradient(90deg, var(--oro-2), var(--azul)); }
+
+/* Inclinación 3D al pasar el puntero (solo ratón: en el móvil no estorba al desplazarse). */
+.inclina { transform-style: preserve-3d; will-change: transform; position: relative; }
+.inclina::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity var(--anim);
+  background: radial-gradient(420px circle at var(--luz-x, 50%) var(--luz-y, 0%), rgba(255, 236, 170, .13), transparent 45%);
+}
+.inclina.activa::after { opacity: 1; }
+.inclina.activa { box-shadow: var(--sombra), 0 30px 60px -28px rgba(232, 200, 112, .35); }
+
+/* Botones: dorado metálico. */
+.btn.primario {
+  background: linear-gradient(180deg, var(--oro-1) 0%, var(--oro-2) 42%, var(--oro-3) 100%); border: 1px solid rgba(122, 90, 12, .7); color: #1a1305;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .6) inset, 0 -2px 0 rgba(0, 0, 0, .18) inset, 0 8px 18px -8px rgba(232, 200, 112, .6);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .35);
+}
+.btn.primario:hover { filter: brightness(1.06); }
+.btn { box-shadow: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 4px 10px -6px rgba(0, 0, 0, .5); }
+.btn.peligro { background: linear-gradient(180deg, #ff6b5f, #b42318); border-color: #8d1b13; }
+.pestanas-int [aria-current="page"], .pestanas-int [aria-pressed="true"] {
+  background: linear-gradient(180deg, var(--oro-1), var(--oro-2) 50%, var(--oro-3)); color: #1a1305; border-color: rgba(122, 90, 12, .7);
+  box-shadow: 0 6px 16px -8px rgba(232, 200, 112, .7);
+}
+
+/* Barra lateral: elemento activo con barra de luz. */
+.lateral { background: linear-gradient(180deg, var(--tarjeta), var(--fondo)); }
+.lateral a[aria-current="page"] { background: linear-gradient(90deg, var(--primario-suave), transparent); color: var(--primario); box-shadow: inset 3px 0 0 var(--oro-2); }
+
+/* Menú inferior flotante y botón Añadir como una esfera dorada. */
+@media (max-width: 959px) {
+  .inferior {
+    left: .5rem; right: .5rem; bottom: calc(.4rem + env(safe-area-inset-bottom)); border-radius: 22px; padding: .25rem; border: 1px solid transparent;
+    background: linear-gradient(var(--tarjeta), var(--tarjeta)) padding-box, linear-gradient(150deg, var(--borde-luz), rgba(91, 139, 255, .3), rgba(255, 255, 255, .05)) border-box;
+    box-shadow: 0 18px 40px -12px rgba(0, 0, 0, .7);
+  }
+  main { padding-bottom: 7.5rem; }
+}
+.boton-anadir {
+  background: radial-gradient(circle at 32% 26%, #fffbe8 0%, var(--oro-1) 18%, var(--oro-2) 45%, var(--oro-3) 75%, #5c430b 100%);
+  color: #1a1305; font-weight: 800; box-shadow: 0 2px 0 rgba(255, 255, 255, .5) inset, 0 -4px 10px rgba(0, 0, 0, .25) inset, 0 10px 24px rgba(232, 200, 112, .45), 0 0 0 4px var(--fondo);
+}
+
+/* ───────── panel Mi día: escenario 3D con el logo ───────── */
+.saludo {
+  position: relative; overflow: hidden; display: grid; grid-template-columns: 1fr; gap: .5rem; align-items: center; min-height: 170px;
+  background:
+    radial-gradient(120% 120% at 100% 0%, rgba(91, 139, 255, .28), transparent 50%),
+    radial-gradient(90% 90% at 0% 100%, rgba(232, 200, 112, .18), transparent 55%),
+    linear-gradient(140deg, #071233, #040a1c 60%, #06142e) padding-box,
+    linear-gradient(150deg, rgba(232, 200, 112, .8), rgba(91, 139, 255, .35) 40%, rgba(232, 200, 112, .4)) border-box;
+}
+.saludo .texto-saludo { position: relative; z-index: 2; transform: translateZ(40px); }
+.saludo h1 { font-size: clamp(1.5rem, 2.4vw + .6rem, 2.4rem); letter-spacing: -.01em; text-shadow: 0 2px 18px rgba(0, 0, 0, .6); }
+.escenario-logo { perspective: 900px; display: grid; place-items: center; }
+.logo3d {
+  position: relative; width: min(260px, 70%); aspect-ratio: 16 / 9; transform-style: preserve-3d;
+  animation: flota 7s ease-in-out infinite;
+}
+.logo3d img { width: 100%; height: 100%; object-fit: cover; mix-blend-mode: lighten; display: block;
+  /* Bordes fundidos: el fondo azul de la imagen desaparece y queda el oro flotando. */
+  -webkit-mask-image: radial-gradient(ellipse 62% 70% at 50% 48%, #000 55%, transparent 100%); mask-image: radial-gradient(ellipse 62% 70% at 50% 48%, #000 55%, transparent 100%);
+  -webkit-box-reflect: below -6px linear-gradient(transparent 70%, rgba(255, 255, 255, .16)); }
+.logo3d::after { /* destello que recorre el oro */
+  content: ""; position: absolute; inset: 12% 18%; border-radius: 40px; pointer-events: none; mix-blend-mode: overlay;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 245, 200, .65) 48%, transparent 60%) no-repeat; background-size: 250% 100%;
+  animation: destello 5.5s ease-in-out infinite;
+}
+@keyframes flota { 0%, 100% { transform: rotateY(-14deg) rotateX(6deg) translateZ(0); } 50% { transform: rotateY(14deg) rotateX(-4deg) translateZ(30px); } }
+@keyframes destello { 0%, 55% { background-position: 150% 0; } 85%, 100% { background-position: -60% 0; } }
+.kpis { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .8rem; }
+.kpi {
+  display: flex; flex-direction: column; min-width: 84px; padding: .5rem .75rem; border-radius: 14px; text-decoration: none; color: #fff;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .02)); border: 1px solid rgba(232, 200, 112, .35);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .12) inset, 0 10px 20px -12px rgba(0, 0, 0, .8); transform: translateZ(60px);
+}
+.kpi strong { font-size: 1.5rem; line-height: 1.1; background: linear-gradient(180deg, #fff6d6, #e8c870); -webkit-background-clip: text; background-clip: text; color: transparent; font-variant-numeric: tabular-nums; }
+.kpi span { font-size: .78rem; color: #c9d4f2; font-weight: 600; }
+.kpi.alerta strong { background: linear-gradient(180deg, #ffd0cb, #ff8f86); -webkit-background-clip: text; background-clip: text; }
+@media (min-width: 640px) { .saludo { grid-template-columns: 1.3fr 1fr; } }
+@media (max-width: 639px) { .escenario-logo { order: -1; } .logo3d { width: min(230px, 78%); } }
+
+/* Acciones rápidas como teclas con relieve. */
+.accion-rapida { background: linear-gradient(180deg, var(--tarjeta-2), var(--tarjeta)); box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 -2px 0 rgba(0, 0, 0, .25) inset, 0 8px 16px -10px rgba(0, 0, 0, .7); transition: transform var(--anim), border-color var(--anim); }
+.accion-rapida:hover { transform: translateY(-2px); border-color: var(--oro-2); }
+.accion-rapida:active { transform: translateY(1px); }
+
+/* Citas con profundidad y filo de color. */
+.evento { background: linear-gradient(180deg, var(--tarjeta-2), var(--tarjeta)); box-shadow: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 6px 14px -10px rgba(0, 0, 0, .7); }
+.evento .barra { box-shadow: 0 0 12px currentColor; }
+.mes a, .dia-semana { background: linear-gradient(180deg, var(--tarjeta-2), var(--tarjeta)); box-shadow: 0 6px 14px -12px rgba(0, 0, 0, .8); }
+.mes a.hoy, .dia-semana.hoy { border-color: var(--oro-2); box-shadow: inset 0 0 0 1px var(--oro-2), 0 0 20px -6px rgba(232, 200, 112, .6); }
+.prioridad-fila .num { background: radial-gradient(circle at 35% 30%, var(--oro-1), var(--oro-2) 55%, var(--oro-3)); color: #1a1305; box-shadow: 0 4px 10px -4px rgba(232, 200, 112, .7); }
+
+/* Pantalla de arranque: el logo un instante mientras carga. */
+.arranque { position: fixed; inset: 0; z-index: 100; pointer-events: none; display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, #0f2257, #040a1c 65%); transition: opacity .45s ease, visibility .45s; }
+.arranque img { width: min(520px, 80vw); mix-blend-mode: lighten; animation: entra .9s cubic-bezier(.2, .8, .2, 1) both; }
+.arranque.fuera { opacity: 0; visibility: hidden; }
+@keyframes entra { from { opacity: 0; transform: perspective(800px) rotateX(25deg) translateZ(-120px) scale(.9); } to { opacity: 1; transform: none; } }
+
+/* Pantallas 4K: más aire y letra mayor. */
+@media (min-width: 3000px) { html { font-size: 26px; } main, .avisos-recordatorio { max-width: 2000px; } .app { grid-template-columns: 340px minmax(0, 1fr); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .escena::before, .escena::after, .logo3d, .logo3d::after, .arranque img { animation: none !important; }
+  .inclina { transform: none !important; }
+}
+
+/* Medidas que crecen con la letra (en 4K todo escala en proporción). */
+.acciones-rapidas { grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); }
+.icono-btn { width: 2.75rem; height: 2.75rem; }
+.icono-btn svg { width: 1.4rem; height: 1.4rem; }
+.marca img { width: 2.4rem; height: 2.4rem; }
+.boton-anadir { width: 3.75rem; height: 3.75rem; font-size: 2rem; }
+.check { width: 1.6rem; height: 1.6rem; }
+.prioridad-fila .num { width: 1.75rem; height: 1.75rem; }
+.logo3d { width: min(26rem, 70%); }
+@media (max-width: 639px) { .logo3d { width: min(15rem, 78%); } }
+.lateral { max-width: 20rem; }
+@media (min-width: 960px) { .app { grid-template-columns: 16.25rem minmax(0, 1fr); } }

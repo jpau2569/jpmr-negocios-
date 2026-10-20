@@ -27,6 +27,18 @@ Agenda personal y profesional de Pau con CRM ligero: citas, tareas, clientes, in
 
 Sin dependencias ni empaquetador, igual que Cerebro y Nicer Estudia.
 
+## Diseño
+
+Tema **oscuro futurista por defecto** (azul noche, dorado del logo JP y destellos azul eléctrico); claro y «como el sistema» en Ajustes. Profundidad con CSS 3D, sin librerías:
+- fondo con auroras y suelo de rejilla en perspectiva (`.escena`);
+- tarjetas con borde de luz dorado-azul y relieve; con ratón se inclinan hacia el puntero con un reflejo que lo sigue (`efectos3d.js`, clase `.inclina`);
+- panel Mi día con el logo JP flotando en 3D, destello sobre el oro y reflejo, y contadores en relieve;
+- botones dorados metálicos y botón ＋ como esfera dorada en un menú inferior flotante;
+- pantalla de arranque con el logo;
+- en Android el panel se inclina un poco al girar el móvil;
+- medidas en `rem`: en 4K (≥ 3000 px) todo crece en proporción;
+- con «reducir movimiento» se apaga toda animación. El texto va siempre sobre fondo opaco.
+
 ## Mapa de pantallas
 
 `#hoy` Mi día (personalizable en `#hoy/personalizar`) · `#agenda/dia|semana|mes|lista/<fecha>` · `#evento/<id>` · `#tareas/hoy|semana|vencidas|sinfecha|hechas|todas|tablero` · `#tarea/<id>` · `#clientes` (lista y tablero) · `#cliente/<id>` · `#inmuebles` · `#inmueble/<id>` · `#notas` · `#nota/<id>` · `#biblioteca` · `#recurso/<id>` · `#asistente/<consulta>` · `#ajustes` · `#papelera` · `#importar`. Los formularios son `<id>/editar` o `nuevo`. Botón **＋ Añadir** (captura rápida) y buscador con **Ctrl+K** o «/».
@@ -46,6 +58,7 @@ Un objeto en `localStorage['olvido_pau_agenda_v1']`: `{ version, ajustes, client
 - **Biblioteca:** pegar y guardar, tipo detectado, duplicados (también el mismo vídeo con otra URL), carpetas, favoritos, estados, relaciones; YouTube/Vimeo incrustados **solo al pulsar** (YouTube por `youtube-nocookie`), el resto «Abrir el original».
 - **Captura rápida:** «Llamar a Marta mañana a las 10 por el piso de Oviedo» → propuesta con la fecha escrita en palabras; con dudas de cliente o inmueble obliga a elegir.
 - **Asistente:** la IA sale **pendiente**. Hay consultas calculadas en el aparato (resumen del día, clientes sin seguimiento, propuesta de tareas para mañana, plantilla para confirmar visita, inmuebles por presupuesto, nota → tareas), cada una con sus registros de origen y confirmación antes de crear.
+- **Contactos del móvil (los de WhatsApp):** WhatsApp no deja leer sus contactos a ninguna app, pero son los de la agenda del teléfono. Se traen con el **selector de contactos** del navegador (Chrome en Android con la app en https: Pau marca cuáles) o con un **archivo .vcf** exportado de Contactos (Android o iPhone), leído en el aparato (`contactos.js`). Vista previa con duplicados (índices: miles al momento), entran como «Solo contacto» con la etiqueta `agenda-movil`, no cuentan para seguimientos, se ocultan de la lista normal salvo al buscarlos, y cada uno tiene su botón 💬 de WhatsApp (abre el chat, no envía nada).
 - **Datos:** copia completa `.json` y restauración (enseña qué trae), CSV, `.ics`, importación de clientes CSV con columnas, vista previa, errores y duplicados; papelera de 30 días; borrar todo escribiendo BORRAR; datos de ejemplo marcados y removibles.
 - **Uso:** PWA instalable, funciona sin conexión, aviso de «Sin conexión», aviso de cambios sin guardar, sincroniza entre pestañas del mismo navegador.
 
@@ -66,7 +79,7 @@ Un objeto en `localStorage['olvido_pau_agenda_v1']`: `{ version, ajustes, client
 
 - `node test/agenda.test.mjs` — lógica (fechas, validación, duplicados, captura, búsqueda, CSV, ICS, recordatorios, copia).
 - `node test/agenda.ui.test.mjs` — Chromium real: criterios de aceptación de la fase 1, 360 y 1366 px, cada botón con acción registrada, etiquetas de los campos, sin conexión.
-- Imágenes: `node agenda/herramientas/generar-imagenes.mjs` (iconos y `presentacion-4k.png` 3840×2160 desde `logo.svg`).
+- Imágenes: `node agenda/herramientas/generar-imagenes.mjs` (Python + Pillow) saca de `logo-jp-original.webp` (el logo JP de Pau, 1672×941) los iconos con el monograma, `logo-jp.webp` para la app y `presentacion-4k.png` (3840×2160). La 4K es una **ampliación**: no tiene más detalle que el original; para una 4K nativa hace falta el logo a esa resolución o en vectorial.
 
 ## Fase 2 (pendiente): cuenta, Google Calendar, archivos
 

@@ -16,6 +16,7 @@ import { aplicaTema, aviso, confirma, h, leeFormulario, muestraErrores } from '.
 import { aISO, nuevoId } from './utiles.js';
 import { abreAnadir, abreBuscador } from './p-global.js';
 import { arrancaRecordatorios } from './recordatorios.js';
+import { arrancaEfectos3d } from './efectos3d.js';
 import * as pHoy from './p-hoy.js';
 import * as pAgenda from './p-agenda.js';
 import * as pTareas from './p-tareas.js';
@@ -234,6 +235,7 @@ if (!estado.ajustes.bloques.length) estado.ajustes.bloques = Object.keys(BLOQUES
 
 pinta({ foco: false });
 arrancaRecordatorios(ctx);
+arrancaEfectos3d();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('service-worker.js').catch(() => { /* sin modo sin conexión, la app funciona igual */ });

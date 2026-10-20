@@ -14,6 +14,8 @@ import {
 import { interpreta } from '../agenda/captura.js';
 import { buscaGlobal } from '../agenda/busqueda.js';
 import { csvClientes, icsEventos, leeCsv, previaImportacion, proponeMapeo } from '../agenda/exportar.js';
+import { clienteDeContacto, leeVcard } from '../agenda/contactos.js';
+import { previaClientes } from '../agenda/exportar.js';
 import { cuentaAtras, recordatoriosPendientes } from '../agenda/recordatorios.js';
 
 let pasados = 0, fallados = 0;
@@ -148,6 +150,26 @@ check('ICS con zona de Madrid', ics.includes('DTSTART;TZID=Europe/Madrid:2026102
 check('ICS escapa comas y punto y coma', ics.includes('SUMMARY:Visita\\, piso\\; 3º'));
 check('ICS: todo el día con fin exclusivo y alarma', ics.includes('DTEND;VALUE=DATE:20261209') && ics.includes('TRIGGER:-PT30M'));
 check('ICS: líneas ≤ 75 octetos y CRLF', ics.split('\r\n').every((l) => new TextEncoder().encode(l).length <= 75));
+
+console.log('\n📇 Contactos del móvil (.vcf)');
+const vcf = [
+  'BEGIN:VCARD', 'VERSION:2.1', 'N;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:Garc=C3=ADa;Mar=C3=ADa;;;', 'TEL;HOME:985 11 22 33', 'TEL;CELL:+34 655 44 33 22', 'END:VCARD',
+  'BEGIN:VCARD', 'VERSION:3.0', 'FN:Luis Pérez', 'TEL;TYPE=CELL:600000001', 'EMAIL:luis@x.es', 'NOTE:Fontanero\\, de confianza', 'END:VCARD',
+  'BEGIN:VCARD', 'VERSION:3.0', 'FN:<script>x</script>', 'END:VCARD',
+].join('\r\n');
+const lv = leeVcard(vcf);
+check('lee vCard 2.1 con tildes en quoted-printable', lv.contactos[0].nombre === 'María' && lv.contactos[0].apellidos === 'García');
+check('vCard 3.0: nombre, correo y nota', lv.contactos[1].nombre === 'Luis' && lv.contactos[1].apellidos === 'Pérez' && lv.contactos[1].nota === 'Fontanero, de confianza');
+check('sin teléfono ni nombre útil se limpia el HTML', !JSON.stringify(lv.contactos).includes('<script>'));
+const cm = clienteDeContacto(lv.contactos[0], 'Agenda del móvil');
+check('el móvil va primero (para WhatsApp) y el fijo a notas', cm.telefono === '+34 655 44 33 22' && cm.notas.includes('985 11 22 33') && cm.estado === 'contacto');
+const pv = previaClientes(demo, lv.contactos.map((c) => clienteDeContacto(c, 'x')));
+check('vista previa: Luis coincide por teléfono con Marta de ejemplo', pv[1].duplicados.some((d) => d.includes('mismo teléfono')) && !pv[1].importar && pv[0].importar);
+const muchos = Array.from({ length: 3000 }, (_, i) => ({ nombre: 'C' + i, telefono: String(600000000 + i) }));
+const t0 = Date.now();
+const pm = previaClientes(demo, muchos);
+check('3.000 contactos se revisan en menos de 1 s', Date.now() - t0 < 1000 && pm.length === 3000, `${Date.now() - t0} ms`);
+check('los «Solo contacto» no piden seguimiento', !clientesSinSeguimiento(normalizaEstado({ clientes: [{ id: 'k', nombre: 'K', estado: 'contacto', creado: '2020-01-01T00:00:00.000Z' }] })).length);
 
 console.log('\n🔔 Recordatorios');
 const rec = normalizaEstado({ eventos: [{ id: 'r', titulo: 'Firma', fecha: '2026-10-20', inicio: '12:00', recordatorios: [30, 1440] }] });
