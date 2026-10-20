@@ -35,7 +35,7 @@ const PANTALLAS = Object.assign({}, ...MODULOS.map((m) => m.pantallas || {}));
 const ACCIONES = Object.assign({}, ...MODULOS.map((m) => m.acciones || {}));
 const FORMULARIOS = Object.assign({}, ...MODULOS.map((m) => m.formularios || {}));
 // Qué sección del menú se marca para cada ruta.
-const SECCION = { hoy: 'hoy', agenda: 'agenda', evento: 'agenda', tareas: 'tareas', tarea: 'tareas', clientes: 'clientes', cliente: 'clientes', inmuebles: 'inmuebles', inmueble: 'inmuebles', notas: 'notas', nota: 'notas', biblioteca: 'biblioteca', recurso: 'biblioteca', asistente: 'asistente', ajustes: 'ajustes', papelera: 'ajustes', importar: 'ajustes', enviar: 'clientes' };
+const SECCION = { hoy: 'hoy', agenda: 'agenda', evento: 'agenda', tareas: 'tareas', tarea: 'tareas', clientes: 'clientes', cliente: 'clientes', inmuebles: 'inmuebles', inmueble: 'inmuebles', notas: 'notas', nota: 'notas', biblioteca: 'biblioteca', recurso: 'biblioteca', asistente: 'asistente', ajustes: 'ajustes', papelera: 'ajustes', importar: 'ajustes', enviar: 'enviar' };
 
 const leido = carga();
 let estado = leido.estado;
@@ -240,7 +240,16 @@ arrancaRecordatorios(ctx);
 arrancaEfectos3d();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  navigator.serviceWorker.register('service-worker.js').catch(() => { /* sin modo sin conexión, la app funciona igual */ });
+  const habiaVersion = Boolean(navigator.serviceWorker.controller);
+  navigator.serviceWorker.register('service-worker.js').then((r) => r.update()).catch(() => { /* sin modo sin conexión, la app funciona igual */ });
+  // Versión nueva publicada: se recarga sola una vez (salvo que haya algo a medias sin guardar).
+  let recargada = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!habiaVersion || recargada) return;
+    recargada = true;
+    if (ctx.sucio) { aviso('Hay una versión nueva de la agenda: guarda y recarga la página.', { ms: 10000 }); return; }
+    location.reload();
+  });
 }
 // Los navegadores pueden borrar el almacenamiento si falta espacio; se pide que no lo hagan.
 navigator.storage?.persist?.().catch(() => {});

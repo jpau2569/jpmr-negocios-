@@ -17,7 +17,7 @@ import { aISO, cuando, DIAS_CORTOS, deISO, deMinutos, esISO, fechaCorta, fechaLa
 const VISTAS = { dia: 'Día', semana: 'Semana', mes: 'Mes', lista: 'Próximos' };
 
 function navegacion(vistaActual, fecha, titulo, anterior, siguiente) {
-  return `${cabecera('Agenda', `<a class="btn primario" href="#evento/nuevo?fecha=${fecha}">＋ Evento</a>`)}
+  return `${cabecera('Agenda', `<a class="btn" href="#enviar?tipo=recordatorio">📨 WhatsApp</a><a class="btn primario" href="#evento/nuevo?fecha=${fecha}">＋ Evento</a>`)}
     <div class="pestanas-int" role="tablist" aria-label="Vista de la agenda">${Object.entries(VISTAS).map(([k, t]) => `<a href="#agenda/${k}/${fecha}" ${k === vistaActual ? 'aria-current="page"' : ''}>${t}</a>`).join('')}</div>
     ${vistaActual === 'lista' ? '' : `<div class="nav-fecha">
       <strong>${h(titulo)}</strong>
