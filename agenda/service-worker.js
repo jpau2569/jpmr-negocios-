@@ -5,7 +5,7 @@
    Al tocar cualquier archivo de la lista: súbelo aquí y sube VERSION.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'olvido-agenda-v1.1.0';
+const VERSION = 'olvido-agenda-v1.1.1';
 const RECURSOS = [
   './', './index.html', './app.html', './styles.css', './app.js', './ui.js', './utiles.js', './datos.js', './comun.js',
   './captura.js', './busqueda.js', './exportar.js', './recordatorios.js',

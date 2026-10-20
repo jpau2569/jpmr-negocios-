@@ -7,7 +7,7 @@ Agenda personal y profesional de Pau con CRM ligero: citas, tareas, clientes, in
 ## Cómo se abre
 
 - **En local:** desde la raíz del repo, `npx serve .` (o cualquier servidor estático) y abrir `http://localhost:3000/agenda/app.html`. Necesita HTTP: usa módulos ES y service worker (con `file://` no funciona).
-- **Publicada:** al desplegar el monorepo en Vercel queda en `https://<dominio-del-proyecto>/agenda/app.html` (no necesita variables ni funciones de servidor). Hasta que se despliegue la rama principal, no hay enlace público.
+- **Publicada:** en `https://agenda.jpaumoralejo.es` (redirige a `/agenda/app.html`, regla en `vercel.json`) y en `https://jpmr-negocios.vercel.app/agenda/app.html`, una vez fusionada en `main`. El subdominio necesita un registro CNAME `agenda` → `cname.vercel-dns.com` en el DNS de Hostinger. No usa variables ni funciones de servidor.
 - **Instalar en el móvil:** abrir el enlace en Chrome (Android) → menú ⋮ → «Instalar aplicación». En iPhone: Safari → Compartir → «Añadir a pantalla de inicio».
 
 ## Arquitectura (fase 1)

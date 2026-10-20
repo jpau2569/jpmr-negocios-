@@ -80,7 +80,7 @@ function visita(ctx, query) {
   const e = buscaId(ctx.estado, 'eventos', id) || visitas[0];
   const c = buscaId(ctx.estado, 'clientes', e.cliente);
   const i = buscaId(ctx.estado, 'inmuebles', e.inmueble);
-  const texto = `Hola${c ? ' ' + c.nombre : ''}, te escribo para confirmar la visita${i ? ` al ${i.tipo}${i.zona ? ' de ' + i.zona : ''}${i.referencia ? ` (ref. ${i.referencia})` : ''}` : ''} el ${fechaLarga(e.fecha)} a las ${e.inicio}${e.ubicacion ? ` en ${e.ubicacion}` : ''}. ¿Te viene bien? Un saludo, ${ctx.estado.ajustes.nombre}.`;
+  const texto = `Hola${c ? ' ' + c.nombre : ''}, te escribo para confirmar la visita${i ? ` al ${i.tipo}${i.zona ? ' de ' + i.zona : ''}${i.referencia ? ` (ref. ${i.referencia})` : ''}` : ''} el ${fechaLarga(e.fecha)} a las ${e.inicio}${e.ubicacion ? ` en ${e.ubicacion}` : ''}. ¿Te viene bien? Un saludo, ${ctx.estado.ajustes.nombre}${ctx.estado.ajustes.whatsapp ? ` · WhatsApp ${ctx.estado.ajustes.whatsapp}` : ''}.`;
   const wa = c ? telefonoWhatsapp(c.telefono) : '';
   ctx.filtros.textoVisita = texto;
   return `<div class="respuesta">

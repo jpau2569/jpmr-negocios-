@@ -271,6 +271,8 @@ check('crea las tareas de las casillas', (await estado(page)).tareas.filter((x) 
 console.log('\n✨ Asistente');
 await ir(page, 'asistente');
 check('la IA aparece como pendiente, sin respuestas simuladas', await page.isVisible('text=pendiente de configuración'));
+await ir(page, 'asistente/visita');
+check('la plantilla de visita firma con tu WhatsApp', (await page.textContent('.respuesta .texto-ficha')).includes('WhatsApp 672 77 57 21'));
 await ir(page, 'asistente/dia');
 check('resumen del día con sus fuentes', await page.isVisible('.respuesta .fuentes'));
 

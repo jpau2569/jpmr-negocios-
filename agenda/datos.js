@@ -68,6 +68,8 @@ export const BLOQUES_PANEL = {
 
 export const AJUSTES_BASE = {
   nombre: 'Pau',
+  // Va en la firma de los mensajes que prepara la app (WhatsApp, confirmaciones).
+  whatsapp: '672 77 57 21',
   tema: 'oscuro', // auto · claro · oscuro (el diseño futurista luce en oscuro)
   bloques: Object.keys(BLOQUES_PANEL).map((id) => ({ id, visible: true })),
   prioridades: ['', '', ''],
@@ -244,6 +246,7 @@ export function normalizaEstado(bruto) {
   if (!bruto || typeof bruto !== 'object') return e;
   const aj = bruto.ajustes && typeof bruto.ajustes === 'object' ? bruto.ajustes : {};
   e.ajustes.nombre = txt(aj.nombre, 40).trim() || AJUSTES_BASE.nombre;
+  e.ajustes.whatsapp = typeof aj.whatsapp === 'string' ? txt(aj.whatsapp, 30).trim() : AJUSTES_BASE.whatsapp;
   e.ajustes.tema = uno(aj.tema, ['auto', 'claro', 'oscuro'], AJUSTES_BASE.tema);
   e.ajustes.avisosNavegador = bool(aj.avisosNavegador);
   e.ajustes.ultimaCopia = sello(aj.ultimaCopia);

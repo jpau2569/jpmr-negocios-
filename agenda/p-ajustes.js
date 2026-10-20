@@ -31,6 +31,7 @@ function ajustes(ctx) {
     <h2>👤 Preferencias</h2>
     <div class="dos-col">
       ${campo('nombre', 'Tu nombre (para el saludo)', aj.nombre, { maxlength: 40 })}
+      ${campo('whatsapp', 'Tu WhatsApp (firma de los mensajes)', aj.whatsapp, { tipo: 'tel', maxlength: 30, inputmode: 'tel', ayuda: 'Vacío = sin teléfono en la firma.' })}
       ${selector('tema', 'Tema', aj.tema, { auto: 'Como el sistema', claro: 'Claro', oscuro: 'Oscuro' })}
       ${campo('diasSinSeguimiento', 'Avisar de clientes sin contacto tras (días)', aj.diasSinSeguimiento, { tipo: 'number', min: 1, max: 90 })}
     </div>
@@ -163,7 +164,8 @@ export const formularios = {
   ajustes(ctx, form, d) {
     const dias = Number(d.diasSinSeguimiento);
     if (!Number.isInteger(dias) || dias < 1 || dias > 90) return { errores: { diasSinSeguimiento: 'Entre 1 y 90 días.' } };
-    Object.assign(ctx.estado.ajustes, { nombre: d.nombre.trim().slice(0, 40) || AJUSTES_BASE.nombre, tema: d.tema, diasSinSeguimiento: dias });
+    if (d.whatsapp.trim() && d.whatsapp.replace(/\D/g, '').length < 9) return { errores: { whatsapp: 'El teléfono necesita al menos 9 cifras.' } };
+    Object.assign(ctx.estado.ajustes, { whatsapp: d.whatsapp.trim().slice(0, 30), nombre: d.nombre.trim().slice(0, 40) || AJUSTES_BASE.nombre, tema: d.tema, diasSinSeguimiento: dias });
     aplicaTema(d.tema);
     ctx.guardar();
     ctx.aviso('Preferencias guardadas.');
