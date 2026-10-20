@@ -162,6 +162,7 @@ function evento(ctx, partes, query) {
       ${listaEnlaces(e.enlaces)}
       <div class="fila-botones">
         ${visita && e.estadoVisita === 'pendiente' ? `<button class="btn primario" data-accion="visita-estado" data-id="${h(e.id)}" data-estado="realizada">✔ Visita realizada</button><button class="btn" data-accion="visita-estado" data-id="${h(e.id)}" data-estado="cancelada">✖ Cancelada</button>` : ''}
+        ${e.fecha >= aISO() && !(visita && e.estadoVisita === 'cancelada') ? `<a class="btn" href="#enviar${e.cliente && buscaId(ctx.estado, 'clientes', e.cliente) ? '/' + h(e.cliente) : ''}?tipo=recordatorio&amp;evento=${h(e.id)}">💬 Recordar por WhatsApp</a>` : ''}
         ${mapa ? `<a class="btn" href="${h(mapa)}" target="_blank" rel="noopener noreferrer">🗺 Abrir en el mapa</a>` : ''}
         <button class="btn" data-accion="evento-ics" data-id="${h(e.id)}">📲 Añadir a mi calendario (.ics)</button>
         <button class="btn" data-accion="evento-duplicar" data-id="${h(e.id)}">⧉ Duplicar</button>

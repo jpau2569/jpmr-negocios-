@@ -4,7 +4,8 @@
    #hoy · #agenda/<vista>/<fecha> · #evento/<id|nuevo> · #tareas/<vista> ·
    #tarea/<id|nuevo> · #clientes · #cliente/<id|nuevo> · #inmuebles ·
    #inmueble/<id|nuevo> · #notas · #nota/<id|nuevo> · #biblioteca ·
-   #recurso/<id|nuevo> · #asistente · #ajustes · #papelera · #importar
+   #recurso/<id|nuevo> · #asistente · #ajustes · #papelera · #importar ·
+   #enviar[/<cliente>] (mensaje de WhatsApp ya redactado)
    Cada pantalla vive en su módulo p-*.js y exporta:
      pantallas  { ruta: (ctx, partes, query) => html | {html, despues} }
      acciones   { nombre: (ctx, elemento, evento) }   ← data-accion / data-cambio
@@ -27,13 +28,14 @@ import * as pBiblioteca from './p-biblioteca.js';
 import * as pAsistente from './p-asistente.js';
 import * as pAjustes from './p-ajustes.js';
 import * as pGlobal from './p-global.js';
+import * as pEnviar from './p-enviar.js';
 
-const MODULOS = [pHoy, pAgenda, pTareas, pClientes, pInmuebles, pNotas, pBiblioteca, pAsistente, pAjustes, pGlobal];
+const MODULOS = [pHoy, pAgenda, pTareas, pClientes, pInmuebles, pNotas, pBiblioteca, pAsistente, pAjustes, pGlobal, pEnviar];
 const PANTALLAS = Object.assign({}, ...MODULOS.map((m) => m.pantallas || {}));
 const ACCIONES = Object.assign({}, ...MODULOS.map((m) => m.acciones || {}));
 const FORMULARIOS = Object.assign({}, ...MODULOS.map((m) => m.formularios || {}));
 // Qué sección del menú se marca para cada ruta.
-const SECCION = { hoy: 'hoy', agenda: 'agenda', evento: 'agenda', tareas: 'tareas', tarea: 'tareas', clientes: 'clientes', cliente: 'clientes', inmuebles: 'inmuebles', inmueble: 'inmuebles', notas: 'notas', nota: 'notas', biblioteca: 'biblioteca', recurso: 'biblioteca', asistente: 'asistente', ajustes: 'ajustes', papelera: 'ajustes', importar: 'ajustes' };
+const SECCION = { hoy: 'hoy', agenda: 'agenda', evento: 'agenda', tareas: 'tareas', tarea: 'tareas', clientes: 'clientes', cliente: 'clientes', inmuebles: 'inmuebles', inmueble: 'inmuebles', notas: 'notas', nota: 'notas', biblioteca: 'biblioteca', recurso: 'biblioteca', asistente: 'asistente', ajustes: 'ajustes', papelera: 'ajustes', importar: 'ajustes', enviar: 'clientes' };
 
 const leido = carga();
 let estado = leido.estado;

@@ -268,6 +268,77 @@ await page.click('dialog[open] button[value="si"]');
 await page.waitForTimeout(100);
 check('crea las tareas de las casillas', (await estado(page)).tareas.filter((x) => /Llevar llaves|Imprimir ficha/.test(x.titulo)).length === 2);
 
+console.log('\n📨 Enviar por WhatsApp (piso, recordatorio, vídeo y otro número)');
+await ir(page, `inmueble/${idInm}`);
+await page.click('a[href^="#enviar?tipo=piso"]');
+await page.waitForSelector('#enviar-lista');
+check('desde el piso pregunta a quién y lo dice', await page.isVisible('text=¿A quién se lo mandas?') && await page.isVisible('text=GIJ-01'));
+check('Lucía sale sugerida (le interesa ese piso)', await page.isVisible(`#enviar-lista a[href^="#enviar/${idLucia}"] .chip-info`));
+await page.fill('#enviar-buscar', 'lucia');
+await page.waitForTimeout(250);
+check('el buscador encuentra sin tildes', await page.isVisible(`#enviar-lista a[href^="#enviar/${idLucia}"]`));
+await page.click(`#enviar-lista a[href^="#enviar/${idLucia}"]`);
+await page.waitForSelector('#enviar-texto');
+const txtPiso = await page.inputValue('#enviar-texto');
+check('mensaje del piso: saludo, referencia y firma', txtPiso.startsWith('Hola Lucía') && txtPiso.includes('GIJ-01') && txtPiso.includes('672 77 57 21'));
+check('nunca lleva la dirección privada', !txtPiso.includes('Calle Secreta'));
+const textoDe = (href) => decodeURIComponent(href.split('?text=')[1] || '');
+check('el botón abre SU chat con el texto escrito', (await page.getAttribute('#enviar-wa', 'href')).startsWith('https://wa.me/34611223344?text=') && textoDe(await page.getAttribute('#enviar-wa', 'href')) === txtPiso);
+await page.fill('#enviar-texto', txtPiso + '\nPD: tiene terraza');
+check('si cambias el texto, cambia lo que se abre', textoDe(await page.getAttribute('#enviar-wa', 'href')).endsWith('PD: tiene terraza'));
+const histAntes = (await estado(page)).clientes.find((c) => c.id === idLucia).historial.length;
+check('preparar el mensaje no apunta nada', histAntes === (await estado(page)).clientes.find((c) => c.id === idLucia).historial.length);
+await page.click('button[data-accion="enviar-hecho"]');
+await page.waitForSelector(`text=Historial de interacciones`);
+const luciaTras = (await estado(page)).clientes.find((c) => c.id === idLucia);
+check('«Ya lo he enviado» lo apunta como WhatsApp', luciaTras.historial.length === histAntes + 1 && luciaTras.historial[0].tipo === 'whatsapp' && luciaTras.historial[0].texto.includes('GIJ-01'));
+check('la ficha del cliente tiene «Enviar por WhatsApp»', await page.isVisible(`a[href="#enviar/${idLucia}"]`));
+
+const cita = (await estado(page)).eventos.find((e) => e.cliente === idLucia && !e.borrado && e.fecha >= HOY);
+check('hay una cita próxima de Lucía para el recordatorio', Boolean(cita));
+await ir(page, `evento/${cita.id}`);
+await page.click('a[href*="tipo=recordatorio"]');
+await page.waitForSelector('#enviar-texto');
+const txtCita = await page.inputValue('#enviar-texto');
+check('recordatorio con el día en palabras y la hora', txtCita.includes('te recuerdo') && txtCita.includes(cita.fecha === MANANA ? 'mañana' : cita.fecha === HOY ? 'hoy' : 'el ') && (!cita.inicio || txtCita.includes(cita.inicio)));
+check('recordatorio de visita nombra el inmueble', cita.tipo !== 'visita' || txtCita.includes('GIJ-01'));
+
+await page.click('button[data-t="enlace"]');
+await page.waitForSelector('#enviar-cual');
+await page.selectOption('#enviar-cual', 'r:' + video.id);
+await page.waitForTimeout(100);
+check('vídeo de la biblioteca en el mensaje', (await page.inputValue('#enviar-texto')).includes(video.url) && (await page.inputValue('#enviar-texto')).includes('este vídeo'));
+await page.fill('[name="enviar-url"]', 'javascript:alert(1)');
+await page.dispatchEvent('[name="enviar-url"]', 'change');
+await page.waitForTimeout(100);
+check('un enlace que no es https no entra', !(await page.inputValue('#enviar-texto')).includes('javascript:'));
+await page.fill('[name="enviar-url"]', 'https://www.idealista.com/inmueble/123/');
+await page.dispatchEvent('[name="enviar-url"]', 'change');
+await page.waitForTimeout(100);
+check('o un enlace pegado a mano', (await page.inputValue('#enviar-texto')).includes('https://www.idealista.com/inmueble/123/'));
+
+await ir(page, `recurso/${video.id}`);
+check('desde la biblioteca también se envía', await page.isVisible('a[href*="tipo=enlace"]'));
+
+await ir(page, 'enviar');
+await page.fill('form[data-form="enviar-nuevo"] [name="nombre"]', 'Mario Nuevo');
+await page.fill('form[data-form="enviar-nuevo"] [name="telefono"]', '12');
+await page.click('form[data-form="enviar-nuevo"] button[type="submit"]');
+check('un número que no vale se avisa', await page.isVisible('form[data-form="enviar-nuevo"] [data-campo="telefono"] .error:not([hidden])'));
+await page.fill('form[data-form="enviar-nuevo"] [name="telefono"]', '622 33 44 55');
+await page.click('form[data-form="enviar-nuevo"] button[type="submit"]');
+await page.waitForSelector('#enviar-texto');
+const mario = (await estado(page)).clientes.find((c) => c.nombre === 'Mario');
+check('otro número: queda como «Solo contacto» y abre su chat', mario?.estado === 'contacto' && mario.apellidos === 'Nuevo' && (await page.getAttribute('#enviar-wa', 'href')).startsWith('https://wa.me/34622334455'));
+await ir(page, 'enviar');
+await page.fill('form[data-form="enviar-nuevo"] [name="nombre"]', 'Otro');
+await page.fill('form[data-form="enviar-nuevo"] [name="telefono"]', '+34 622334455');
+await page.click('form[data-form="enviar-nuevo"] button[type="submit"]');
+await page.waitForSelector('#enviar-texto');
+check('el mismo número no duplica el contacto', (await estado(page)).clientes.filter((c) => c.telefono.replace(/\D/g, '').endsWith('622334455')).length === 1);
+// Limpieza: las pruebas de copia de abajo esperan un solo cliente.
+await page.evaluate((id) => { const c = window.__agenda.ctx; c.estado.clientes = c.estado.clientes.filter((x) => x.id !== id); c.guardar(); }, mario.id);
+
 console.log('\n✨ Asistente');
 await ir(page, 'asistente');
 check('la IA aparece como pendiente, sin respuestas simuladas', await page.isVisible('text=pendiente de configuración'));
@@ -352,7 +423,7 @@ const sinDemo = await estado(page);
 check('se quitan sin tocar los de Pau', sinDemo.clientes.length === 3 && !sinDemo.clientes.some((c) => c.demo));
 
 console.log('\n🧭 14. Ningún botón sin acción y 13. sin desbordes');
-const rutas = ['hoy', 'hoy/personalizar', 'agenda/dia', 'agenda/semana', 'agenda/mes', 'agenda/lista', 'tareas/hoy', 'tareas/tablero', 'clientes', 'clientes-tablero', `cliente/${idLucia}`, 'inmuebles', `inmueble/${idInm}`, 'notas', `nota/${notaG.id}`, 'biblioteca', `recurso/${video.id}`, 'asistente/manana', 'asistente/visita', 'asistente/presupuesto', 'ajustes', 'papelera', 'importar', 'evento/nuevo', 'tarea/nuevo', 'cliente/nuevo', 'inmueble/nuevo', 'recurso/nuevo', 'nota/nuevo'];
+const rutas = ['hoy', 'hoy/personalizar', 'agenda/dia', 'agenda/semana', 'agenda/mes', 'agenda/lista', 'tareas/hoy', 'tareas/tablero', 'clientes', 'clientes-tablero', `cliente/${idLucia}`, 'inmuebles', `inmueble/${idInm}`, 'notas', `nota/${notaG.id}`, 'biblioteca', `recurso/${video.id}`, 'asistente/manana', 'asistente/visita', 'asistente/presupuesto', 'ajustes', 'papelera', 'importar', 'evento/nuevo', 'tarea/nuevo', 'cliente/nuevo', 'inmueble/nuevo', 'recurso/nuevo', 'nota/nuevo', 'enviar', `enviar/${idLucia}`, `enviar/${idLucia}?tipo=piso`, `enviar/${idLucia}?tipo=enlace`, `enviar/${idLucia}?tipo=libre`];
 const huerfanos = new Set();
 for (const ancho of [360, 1366]) {
   await page.setViewportSize({ width: ancho, height: 900 });

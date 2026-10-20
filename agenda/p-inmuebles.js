@@ -123,7 +123,7 @@ function inmueble(ctx, partes, query) {
     ${i.descripcion ? `<p class="texto-ficha">${h(i.descripcion)}</p>` : ''}
     ${i.enlaces.length ? `<h3 style="font-size:.95rem;margin:1rem 0 .3rem">Anuncios</h3>${listaEnlaces(i.enlaces)}` : ''}
     ${i.videos.length ? `<h3 style="font-size:.95rem;margin:1rem 0 .3rem">Vídeos</h3>${i.videos.map((v) => bloqueVideo(v)).join('')}` : ''}
-    <div class="fila-botones"><button class="btn" data-accion="inmueble-compartir" data-id="${h(i.id)}">📋 Copiar ficha para compartir</button></div>
+    <div class="fila-botones"><a class="btn primario" href="#enviar?tipo=piso&amp;inmueble=${h(i.id)}">📨 Enviar por WhatsApp</a><button class="btn" data-accion="inmueble-compartir" data-id="${h(i.id)}">📋 Copiar ficha para compartir</button></div>
   </section>
   <section class="tarjeta privado">
     <h2>Datos privados <span class="chip chip-demo">solo para ti</span></h2>

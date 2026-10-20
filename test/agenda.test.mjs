@@ -17,6 +17,7 @@ import { csvClientes, icsEventos, leeCsv, previaImportacion, proponeMapeo } from
 import { clienteDeContacto, leeVcard } from '../agenda/contactos.js';
 import { previaClientes } from '../agenda/exportar.js';
 import { cuentaAtras, recordatoriosPendientes } from '../agenda/recordatorios.js';
+import { cuandoTexto, enlaceWhatsapp, firma, mensajeEnlace, mensajeLibre, mensajePiso, mensajeRecordatorio, resumenEnvio } from '../agenda/mensajes.js';
 
 let pasados = 0, fallados = 0;
 function check(nombre, cond, detalle = '') {
@@ -179,6 +180,26 @@ check('abierta tarde: dice que ya ha empezado', recordatoriosPendientes(rec, new
 check('no se repite', recordatoriosPendientes(rec, new Date(2026, 9, 20, 11, 35), { 'r|2026-10-20|12:00|30': 1, 'r|2026-10-20|12:00|1440': 1 }).length === 0);
 check('ni los de la papelera', recordatoriosPendientes({ eventos: [{ ...rec.eventos[0], borrado: 'x' }] }, new Date(2026, 9, 20, 11, 35)).length === 0);
 check('activos ignora la papelera', activos([{ borrado: '' }, { borrado: 'x' }]).length === 1);
+
+console.log('\n📨 Mensajes de WhatsApp');
+const ajW = { nombre: 'Pau', whatsapp: '672 77 57 21' };
+const cliW = { nombre: 'Marta', telefono: '611 22 33 44' };
+const inmW = LIMPIA.inmuebles({ id: 'i1', referencia: 'OVI-3', titulo: 'Piso con terraza', tipo: 'piso', zona: 'Oviedo centro', precio: 185000, direccion: 'Calle Privada 1', notasInternas: 'el dueño baja a 170', enlaces: [{ url: 'https://ejemplo.es/anuncio' }], videos: [{ url: 'https://youtu.be/abc' }] });
+check('firma con nombre y WhatsApp, o sin ellos', firma(ajW) === 'Un saludo, Pau · 672 77 57 21' && firma({ nombre: 'Pau', whatsapp: '' }) === 'Un saludo, Pau' && firma({}) === 'Un saludo.');
+check('hoy, mañana o la fecha sin el año de este año', cuandoTexto('2026-10-20', '2026-10-20') === 'hoy' && cuandoTexto('2026-10-21', '2026-10-20') === 'mañana' && cuandoTexto('2026-10-27', '2026-10-20') === 'el martes, 27 de octubre' && cuandoTexto('2027-01-05', '2026-10-20').endsWith('de 2027'));
+const recW = mensajeRecordatorio({ evento: LIMPIA.eventos({ titulo: 'Visita interna', tipo: 'visita', fecha: '2026-10-21', inicio: '17:30', ubicacion: 'Portal de Uría' }), cliente: cliW, inmueble: inmW, ajustes: ajW, hoy: '2026-10-20' });
+check('recordatorio de visita: piso, día, hora y sitio', recW.startsWith('Hola Marta, te recuerdo la visita al piso de Oviedo centro (ref. OVI-3) mañana a las 17:30 en Portal de Uría.') && recW.endsWith('672 77 57 21'));
+check('el recordatorio no usa el título interno de la cita', !recW.includes('Visita interna'));
+const llamW = mensajeRecordatorio({ evento: LIMPIA.eventos({ titulo: 'x', tipo: 'llamada', fecha: '2026-10-20', todoElDia: true, ubicacion: 'Oficina' }), cliente: {}, ajustes: ajW, hoy: '2026-10-20' });
+check('llamada sin hora ni sitio, y sin nombre saluda igual', llamW.startsWith('Hola, te recuerdo nuestra llamada hoy.'));
+const pisoW = mensajePiso({ inmueble: inmW, cliente: cliW, ajustes: ajW });
+check('piso: datos públicos, anuncio y vídeo', pisoW.includes('OVI-3') && pisoW.includes('185.000 €') && pisoW.includes('https://ejemplo.es/anuncio') && pisoW.includes('https://youtu.be/abc'));
+check('piso: nunca dirección ni notas internas', !pisoW.includes('Calle Privada') && !pisoW.includes('170'));
+check('vídeo y enlace se nombran distinto', mensajeEnlace({ url: 'https://youtu.be/x', titulo: 'Tour', video: true, cliente: cliW, ajustes: ajW }).includes('te paso este vídeo: Tour\nhttps://youtu.be/x') && mensajeEnlace({ url: 'https://a.es', cliente: cliW, ajustes: ajW }).includes('te paso este enlace\nhttps://a.es'));
+check('mensaje libre deja hueco para escribir', mensajeLibre({ cliente: cliW, ajustes: ajW }).startsWith('Hola Marta, \n\n'));
+check('enlace wa.me con el 34 y el texto codificado', enlaceWhatsapp('611 22 33 44', 'Hola & adiós ¿sí?') === 'https://wa.me/34611223344?text=Hola%20%26%20adi%C3%B3s%20%C2%BFs%C3%AD%3F');
+check('sin teléfono válido no hay enlace', enlaceWhatsapp('12', 'x') === '' && enlaceWhatsapp('', 'x') === '');
+check('resumen para el historial', resumenEnvio({ tipo: 'piso', inmueble: inmW }).includes('OVI-3 · Piso con terraza') && resumenEnvio({ tipo: 'recordatorio', evento: { fecha: '2026-10-21', inicio: '17:30' } }).includes('21/10/2026 a las 17:30') && resumenEnvio({ tipo: 'libre', texto: 'x'.repeat(300) }).length < 200);
 
 console.log(`\n${fallados ? '❌' : '✅'} ${pasados} comprobaciones correctas, ${fallados} fallidas\n`);
 process.exit(fallados ? 1 : 0);
