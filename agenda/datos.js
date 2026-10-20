@@ -204,6 +204,8 @@ export const LIMPIA = {
     })).filter((s) => s.texto.trim()).slice(0, 50),
     etiquetas: etiquetas(r.etiquetas),
     repeticion: uno(r.repeticion, Object.keys(REPETICIONES), ''),
+    // Día del mes original de una tarea mensual (el 31 vuelve a ser 31 tras febrero).
+    diaMes: Number.isInteger(Number(r.diaMes)) && r.diaMes >= 1 && r.diaMes <= 31 ? Number(r.diaMes) : 0,
     cliente: id(r.cliente),
     inmueble: id(r.inmueble),
     enlaces: enlaces(r.enlaces),
@@ -471,11 +473,17 @@ export function fichaCompartible(inm) {
 /** Al completar una tarea con repetición, devuelve la siguiente (o null). */
 export function siguienteRepeticion(t, hoy = aISO()) {
   if (!t.repeticion || !t.fecha) return null;
-  const paso = { diaria: (f) => sumaDias(f, 1), semanal: (f) => sumaDias(f, 7), mensual: (f) => sumaMeses(f, 1) }[t.repeticion];
+  const dia = t.diaMes || Number(t.fecha.slice(8, 10));
+  const mensual = (f) => {
+    const s = sumaMeses(f.slice(0, 8) + '01', 1);
+    const ultimo = new Date(Number(s.slice(0, 4)), Number(s.slice(5, 7)), 0).getDate();
+    return s.slice(0, 8) + String(Math.min(dia, ultimo)).padStart(2, '0');
+  };
+  const paso = { diaria: (f) => sumaDias(f, 1), semanal: (f) => sumaDias(f, 7), mensual }[t.repeticion];
   let f = paso(t.fecha);
   while (f < hoy) f = paso(f);
   return LIMPIA.tareas({
-    ...t, id: nuevoId('t'), fecha: f, estado: 'pendiente', completada: '', creado: '', actualizado: '',
+    ...t, id: nuevoId('t'), fecha: f, diaMes: t.repeticion === 'mensual' ? dia : 0, estado: 'pendiente', completada: '', creado: '', actualizado: '',
     subtareas: t.subtareas.map((s) => ({ ...s, id: nuevoId('s'), hecha: false })),
   });
 }

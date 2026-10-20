@@ -223,6 +223,21 @@ await page.click('button[data-accion="papelera-restaurar"]');
 await page.waitForTimeout(100);
 check('y se recupera desde la papelera', !(await estado(page)).eventos.find((e) => e.id === llamada.id).borrado);
 
+console.log('\n⧉ Duplicar y direcciones raras');
+await ir(page, `evento/nuevo?fecha=${MANANA}`);
+await page.fill('[name="titulo"]', 'Feria ¿Marta & Juan? 100%');
+await page.check('[name="todoElDia"]');
+await page.fill('[name="ubicacion"]', 'Recinto ferial');
+await page.click('form[data-form="evento"] button[type="submit"]');
+await page.waitForSelector('text=Duplicar');
+await page.click('button[data-accion="evento-duplicar"]');
+await page.waitForTimeout(150);
+check('duplicar conserva título con «?», día completo y ubicación', (await page.inputValue('[name="titulo"]')) === 'Feria ¿Marta & Juan? 100%' && await page.isChecked('[name="todoElDia"]') && (await page.inputValue('[name="ubicacion"]')) === 'Recinto ferial');
+await page.click('a.btn.secundario:has-text("Cancelar")');
+await page.waitForTimeout(100);
+await ir(page, 'tarea/100%');
+check('una dirección con «%» suelto no rompe la app', await page.isVisible('text=Tarea no encontrada'));
+
 console.log('\n✍️ Cambios sin guardar');
 await ir(page, 'cliente/nuevo');
 await page.fill('[name="nombre"]', 'A medias');

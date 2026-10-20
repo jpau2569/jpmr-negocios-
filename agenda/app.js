@@ -97,7 +97,11 @@ window.addEventListener('storage', (e) => {
 /* ───────────── rutas ───────────── */
 
 function partesRuta() {
-  const [ruta, consulta = ''] = decodeURIComponent(location.hash.replace(/^#/, '')).split('?');
+  // Solo se descodifica la ruta: la consulta la lee URLSearchParams (un «?» o un «%» en un título no la rompen).
+  const [crudo, ...resto] = location.hash.replace(/^#/, '').split('?');
+  let ruta = crudo;
+  try { ruta = decodeURIComponent(crudo); } catch { /* «%» suelto: se usa tal cual */ }
+  const consulta = resto.join('?');
   const partes = ruta.split('/').filter(Boolean);
   return { nombre: partes[0] || 'hoy', partes: partes.slice(1), query: new URLSearchParams(consulta) };
 }

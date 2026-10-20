@@ -130,6 +130,9 @@ function evento(ctx, partes, query) {
     const fecha = esISO(query.get('fecha')) ? query.get('fecha') : aISO();
     const inicio = query.get('hora') || (fecha === aISO() ? deMinutos(Math.ceil((new Date().getHours() * 60 + new Date().getMinutes() + 1) / 30) * 30) : '10:00');
     const base = { titulo: query.get('titulo') || '', tipo: TIPOS_EVENTO[query.get('tipo')] ? query.get('tipo') : 'reunion', fecha, inicio: inicio === '23:59' ? '' : inicio, fin: '', todoElDia: false, fechaFin: '', ubicacion: '', cliente: query.get('cliente') || '', inmueble: query.get('inmueble') || '', descripcion: '', enlaces: [], recordatorios: [30], estadoVisita: 'pendiente', color: '' };
+    // Duplicar: copia todo salvo el id, el enlace con Google y el estado de la visita.
+    const origen = buscaId(ctx.estado, 'eventos', query.get('desde'));
+    if (origen) Object.assign(base, structuredClone({ ...origen, id: '', googleId: '', estadoVisita: 'pendiente', creado: '', actualizado: '', demo: false }));
     if (base.inmueble && !base.ubicacion) {
       const i = buscaId(ctx.estado, 'inmuebles', base.inmueble);
       if (i) base.ubicacion = [i.direccion, i.zona].filter(Boolean).join(', ');
@@ -234,8 +237,7 @@ export const acciones = {
   'evento-duplicar'(ctx, el) {
     const e = buscaId(ctx.estado, 'eventos', el.dataset.id);
     if (!e) return;
-    const q = new URLSearchParams({ fecha: e.fecha, hora: e.inicio, tipo: e.tipo, titulo: e.titulo, cliente: e.cliente, inmueble: e.inmueble });
-    ctx.ir(`evento/nuevo?${q}`);
+    ctx.ir(`evento/nuevo?desde=${encodeURIComponent(e.id)}`);
   },
 };
 

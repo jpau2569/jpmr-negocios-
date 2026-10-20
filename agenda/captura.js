@@ -36,7 +36,8 @@ function fechaValida(a, m, d) {
 function leeFecha(t, hoy, dudas) {
   let m;
   if ((m = busca(t, /\bpasado manana\b/))) return sumaDias(hoy, 2);
-  if ((m = busca(t, /\bmanana\b(?!\s+por)/)) || (m = busca(t, /\bmanana(?=\s+por)/))) return sumaDias(hoy, 1);
+  // «de la mañana» / «por la mañana» es la franja horaria, no el día siguiente.
+  if ((m = busca(t, /(?<!\b(?:la|esta) )\bmanana\b/))) return sumaDias(hoy, 1);
   if ((m = busca(t, /\b(?:hoy|esta (?:tarde|noche))\b/))) return hoy;
   if ((m = busca(t, /\bdentro de (\d{1,2}|\w+) dias?\b/))) {
     const n = Number(m[1]) || NUMEROS[m[1]];
@@ -94,18 +95,18 @@ function leeHora(t, dudas) {
     if (/\bpor la (manana|tarde)\b/.test(t.n)) dudas.push('Has dicho la franja pero no la hora: elígela antes de guardar.');
     return '';
   }
-  let h = Number(m[1]) || NUMEROS[m[1]];
+  let h = /^\d+$/.test(m[1]) ? Number(m[1]) : NUMEROS[m[1]];
   let min = m[2] ? Number(m[2]) : 0;
+  const franja = m[4] || '';
+  // La franja se aplica a la hora dicha («la una menos cuarto de la tarde» → 12:45).
+  if (/tarde|noche|pm/.test(franja) && h < 12) h += 12;
+  if (/noche|madrugada/.test(franja) && h === 12) h = 0;
+  let dudosa = false;
+  if (!franja && h >= 1 && h <= 7) { h += 12; dudosa = true; }
   if (m[3] === 'y media') min = 30;
   if (m[3] === 'y cuarto') min = 15;
-  if (m[3] === 'menos cuarto') { h -= 1; min = 45; }
-  const franja = m[4] || '';
-  if (/tarde|noche|pm/.test(franja) && h < 12) h += 12;
-  if (/madrugada/.test(franja) && h === 12) h = 0;
-  if (!franja && h >= 1 && h <= 7) {
-    h += 12;
-    dudas.push(`He entendido las ${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}; si era por la mañana, cámbialo.`);
-  }
+  if (m[3] === 'menos cuarto') { h = (h + 23) % 24; min = 45; }
+  if (dudosa) dudas.push(`He entendido las ${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}; si era por la mañana, cámbialo.`);
   if (h > 23 || min > 59) { dudas.push('La hora no es válida: escríbela a mano.'); return ''; }
   return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
 }

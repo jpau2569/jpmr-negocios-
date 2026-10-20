@@ -29,6 +29,13 @@ function guardaAvisados(m) {
 }
 
 /** Recordatorios que tocan ahora (desde su hora hasta el inicio de la cita, y 2 h de margen). */
+/** «en 25 min», «en 1 h 10 min», «empieza ahora» o «ya ha empezado». */
+export function cuentaAtras(faltan) {
+  if (faltan < 0) return ' · ya ha empezado';
+  if (faltan === 0) return ' · empieza ahora';
+  return ` · en ${faltan >= 60 ? `${Math.floor(faltan / 60)} h${faltan % 60 ? ` ${faltan % 60} min` : ''}` : `${faltan} min`}`;
+}
+
 export function recordatoriosPendientes(estado, ahora = new Date(), ya = {}) {
   const hoy = aISO(ahora);
   const salida = [];
@@ -38,12 +45,14 @@ export function recordatoriosPendientes(estado, ahora = new Date(), ya = {}) {
     const [hh, mm] = e.inicio.split(':').map(Number);
     const [a, m, d] = e.fecha.split('-').map(Number);
     const inicio = new Date(a, m - 1, d, hh, mm).getTime();
-    for (const min of e.recordatorios) {
-      const clave = `${e.id}|${e.fecha}|${e.inicio}|${min}`;
-      const momento = inicio - min * 60000;
-      if (ya[clave]) continue;
-      if (ahora.getTime() >= momento && ahora.getTime() <= inicio + 2 * 3600000) salida.push({ clave, evento: e, minutos: min });
-    }
+    // Solo un aviso por cita aunque se abra la app tarde: el último recordatorio vencido.
+    const t = ahora.getTime();
+    if (t > inicio + 2 * 3600000) continue;
+    const vencidos = e.recordatorios.filter((min) => t >= inicio - min * 60000);
+    if (!vencidos.length) continue;
+    const claves = vencidos.map((min) => `${e.id}|${e.fecha}|${e.inicio}|${min}`);
+    if (claves.every((k) => ya[k])) continue;
+    salida.push({ clave: claves[0], claves, evento: e, faltan: Math.round((inicio - t) / 60000) });
   }
   return salida;
 }
@@ -63,13 +72,13 @@ export function arrancaRecordatorios(ctx) {
   const revisa = () => {
     const ya = avisados();
     const lista = recordatoriosPendientes(ctx.estado, new Date(), ya);
-    for (const { clave, evento, minutos } of lista) {
-      ya[clave] = Date.now();
+    for (const { clave, claves, evento, faltan } of lista) {
+      for (const k of claves) ya[k] = Date.now();
       const texto = `${evento.inicio} · ${evento.titulo}`;
       const div = document.createElement('div');
       div.className = 'recordatorio';
       div.setAttribute('role', 'alert');
-      div.innerHTML = `<span aria-hidden="true">🔔</span><span><a href="#evento/${h(evento.id)}">${h(texto)}</a><br><span class="detalle">${h(TIPOS_EVENTO[evento.tipo]?.nombre || '')}${minutos ? ` · en ${minutos >= 60 ? minutos / 60 + ' h' : minutos + ' min'}` : ' · ahora'}${evento.ubicacion ? ' · ' + h(evento.ubicacion) : ''}</span></span><button class="btn pequeno cerrar" type="button" aria-label="Cerrar aviso">✕</button>`;
+      div.innerHTML = `<span aria-hidden="true">🔔</span><span><a href="#evento/${h(evento.id)}">${h(texto)}</a><br><span class="detalle">${h(TIPOS_EVENTO[evento.tipo]?.nombre || '')}${h(cuentaAtras(faltan))}${evento.ubicacion ? ' · ' + h(evento.ubicacion) : ''}</span></span><button class="btn pequeno cerrar" type="button" aria-label="Cerrar aviso">✕</button>`;
       div.querySelector('button').onclick = () => div.remove();
       div.querySelector('a').onclick = () => div.remove();
       caja.appendChild(div);

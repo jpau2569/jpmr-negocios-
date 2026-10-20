@@ -14,7 +14,7 @@ import {
 import { interpreta } from '../agenda/captura.js';
 import { buscaGlobal } from '../agenda/busqueda.js';
 import { csvClientes, icsEventos, leeCsv, previaImportacion, proponeMapeo } from '../agenda/exportar.js';
-import { recordatoriosPendientes } from '../agenda/recordatorios.js';
+import { cuentaAtras, recordatoriosPendientes } from '../agenda/recordatorios.js';
 
 let pasados = 0, fallados = 0;
 function check(nombre, cond, detalle = '') {
@@ -61,6 +61,10 @@ const multi = normalizaEstado({ eventos: [{ id: 'm', titulo: 'Feria', fecha: '20
 check('evento de varios días aparece en cada día', eventosDelDia(multi, '2026-10-21').length === 1 && !eventosDelDia(multi, '2026-10-23').length);
 
 const sig = siguienteRepeticion(LIMPIA.tareas({ titulo: 'Informe', fecha: '2026-10-01', repeticion: 'semanal', subtareas: [{ texto: 'a', hecha: true }] }), '2026-10-20');
+const mes31 = LIMPIA.tareas({ titulo: 'Cuota', fecha: '2027-01-31', repeticion: 'mensual' });
+const feb = siguienteRepeticion(mes31, '2027-01-31');
+const mar = siguienteRepeticion(feb, '2027-02-28');
+check('mensual del día 31: 28/02 y vuelve al 31/03', feb.fecha === '2027-02-28' && mar.fecha === '2027-03-31');
 check('repetición: la siguiente no cae en el pasado', sig.fecha === '2026-10-22' && sig.estado === 'pendiente' && !sig.subtareas[0].hecha);
 
 check('YouTube: watch, youtu.be y shorts', idYoutube('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=3') === 'dQw4w9WgXcQ' && idYoutube('https://youtu.be/dQw4w9WgXcQ') === 'dQw4w9WgXcQ' && idYoutube('https://youtube.com/shorts/dQw4w9WgXcQ') === 'dQw4w9WgXcQ');
@@ -110,6 +114,11 @@ check('sin fecha ni hora → tarea sin fecha', p6.tipo === 'tarea' && p6.fecha =
 const dosMartas = normalizaEstado({ clientes: [{ id: 'a', nombre: 'Marta', apellidos: 'Uno' }, { id: 'b', nombre: 'Marta', apellidos: 'Dos' }] });
 check('dos Martas → duda para elegir', interpreta('llamar a Marta hoy', dosMartas, ahora).dudas.some((d) => d.includes('elige')));
 check('31/04 no existe', interpreta('cita el 31/04 a las 10', demo, ahora).dudas.some((d) => d.includes('no es una fecha')));
+check('«a las 10 de la mañana» no es mañana', (() => { const x = interpreta('Llamar a Marta el viernes a las 10 de la mañana', demo, ahora); return x.fecha === '2026-10-23' && x.hora === '10:00'; })());
+check('«por la mañana» tampoco', interpreta('Visita con Marta el jueves por la mañana a las 12', demo, ahora).fecha === '2026-10-22');
+check('25 de octubre a las 11 de la mañana', (() => { const x = interpreta('firma el 25 de octubre a las 11 de la mañana', demo, ahora); return x.fecha === '2026-10-25' && x.hora === '11:00'; })());
+check('«mañana por la mañana» sí es mañana', interpreta('llamar a Marta mañana por la mañana', demo, ahora).fecha === '2026-10-21');
+check('a las 0 y a la una menos cuarto de la tarde', interpreta('cita a las 0', demo, ahora).hora === '00:00' && interpreta('cita a la una menos cuarto de la tarde', demo, ahora).hora === '12:45' && interpreta('cita a las 12 de la noche', demo, ahora).hora === '00:00');
 check('hoy es martes y digo el martes → el de la semana que viene', interpreta('ver a Marta el martes', demo, ahora).fecha === '2026-10-27');
 
 console.log('\n🔍 Buscador');
@@ -122,6 +131,7 @@ console.log('\n📤 Exportar e importar');
 const conFormula = normalizaEstado({ clientes: [{ id: 'f', nombre: '=HYPERLINK("x")', notas: 'a;b\nc' }] });
 const textoCsv = csvClientes(conFormula);
 check('CSV con BOM y «;»', textoCsv.startsWith('﻿Nombre;'));
+check('CSV deja los teléfonos +34 sin apóstrofo', csvClientes(normalizaEstado({ clientes: [{ id: 'p', nombre: 'A', telefono: '+34 600 111 222' }] })).includes(';+34 600 111 222;'));
 check('CSV desactiva fórmulas', textoCsv.includes(`"'=HYPERLINK(""x"")"`));
 const leido = leeCsv('﻿Nombre;Teléfono;Correo\n"Pérez; Ana";600111222;ana@x.es\n\nLuis;600333444;\n');
 check('leeCsv: comillas, «;» dentro y filas vacías', leido.filas.length === 2 && leido.filas[0][0] === 'Pérez; Ana' && leido.separador === ';');
@@ -135,14 +145,15 @@ check('previa: separa nombre y apellidos', previa[2].cliente.nombre === 'Pepe' &
 check('previa: duplicado dentro del propio CSV', previa[3].duplicados.length > 0);
 const ics = icsEventos(normalizaEstado({ eventos: [{ id: 'e', titulo: 'Visita, piso; 3º', fecha: '2026-10-25', inicio: '10:00', recordatorios: [30] }, { id: 't', titulo: 'Puente', fecha: '2026-12-07', fechaFin: '2026-12-08', todoElDia: true }] }), new Date('2026-10-20T10:00:00Z'));
 check('ICS con zona de Madrid', ics.includes('DTSTART;TZID=Europe/Madrid:20261025T100000') && ics.includes('DTEND;TZID=Europe/Madrid:20261025T110000') && ics.includes('BEGIN:VTIMEZONE'));
-check('ICS escapa comas y punto y coma', ics.includes('SUMMARY:Visita\\, piso\; 3º'));
+check('ICS escapa comas y punto y coma', ics.includes('SUMMARY:Visita\\, piso\\; 3º'));
 check('ICS: todo el día con fin exclusivo y alarma', ics.includes('DTEND;VALUE=DATE:20261209') && ics.includes('TRIGGER:-PT30M'));
 check('ICS: líneas ≤ 75 octetos y CRLF', ics.split('\r\n').every((l) => new TextEncoder().encode(l).length <= 75));
 
 console.log('\n🔔 Recordatorios');
 const rec = normalizaEstado({ eventos: [{ id: 'r', titulo: 'Firma', fecha: '2026-10-20', inicio: '12:00', recordatorios: [30, 1440] }] });
-check('salta a su hora', recordatoriosPendientes(rec, new Date(2026, 9, 20, 11, 35)).length === 2);
-check('no salta antes', recordatoriosPendientes(rec, new Date(2026, 9, 20, 11, 0)).length === 1);
+check('un solo aviso por cita aunque venzan dos', recordatoriosPendientes(rec, new Date(2026, 9, 20, 11, 35)).length === 1 && recordatoriosPendientes(rec, new Date(2026, 9, 20, 11, 35))[0].faltan === 25);
+check('el del día antes salta solo', recordatoriosPendientes(rec, new Date(2026, 9, 20, 11, 0))[0]?.claves.length === 1);
+check('abierta tarde: dice que ya ha empezado', recordatoriosPendientes(rec, new Date(2026, 9, 20, 12, 40))[0].faltan === -40 && cuentaAtras(-40).includes('ya ha empezado') && cuentaAtras(70) === ' · en 1 h 10 min');
 check('no se repite', recordatoriosPendientes(rec, new Date(2026, 9, 20, 11, 35), { 'r|2026-10-20|12:00|30': 1, 'r|2026-10-20|12:00|1440': 1 }).length === 0);
 check('ni los de la papelera', recordatoriosPendientes({ eventos: [{ ...rec.eventos[0], borrado: 'x' }] }, new Date(2026, 9, 20, 11, 35)).length === 0);
 check('activos ignora la papelera', activos([{ borrado: '' }, { borrado: 'x' }]).length === 1);

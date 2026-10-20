@@ -18,7 +18,8 @@ import { normaliza } from './utiles.js';
 const celda = (v) => {
   let s = Array.isArray(v) ? v.join(', ') : v == null ? '' : String(v);
   // Evita fórmulas al abrirlo en Excel (=, +, -, @ al principio).
-  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  // Un teléfono «+34…» o un número negativo no son fórmulas y se dejan tal cual.
+  if (/^[=@\t\r]/.test(s) || /^[+\-](?![\d\s]+$)/.test(s)) s = "'" + s;
   return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 export const csv = (cabecera, filas) => '\ufeff' + [cabecera, ...filas].map((f) => f.map(celda).join(';')).join('\r\n');
@@ -107,7 +108,7 @@ export function proponeMapeo(cabecera) {
 /** Vista previa: cada fila con el cliente que saldría, sus errores y sus posibles duplicados. */
 export function previaImportacion(estado, filas, mapeo) {
   const nuevos = [];
-  return filas.slice(0, 2000).map((fila, n) => {
+  return filas.map((fila, n) => {
     const bruto = { demo: false };
     for (const [campo, i] of Object.entries(mapeo)) if (i >= 0) bruto[campo] = (fila[i] ?? '').trim();
     if (bruto.tipo) bruto.tipo = TIPOS_CLIENTE.find((t) => normaliza(bruto.tipo).startsWith(t.slice(0, 5))) || 'otro';
@@ -127,7 +128,7 @@ export function previaImportacion(estado, filas, mapeo) {
 
 /* ───────────── calendario .ics ───────────── */
 
-const escIcs = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+const escIcs = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
 /** Líneas de más de 75 octetos se parten (RFC 5545). */
 function plegar(linea) {
   const bytes = new TextEncoder().encode(linea);
