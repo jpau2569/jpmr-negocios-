@@ -1,0 +1,79 @@
+package es.ilusionpantalla.app.ui.nav
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
+import androidx.navigation.compose.*
+import androidx.navigation.navArgument
+import es.ilusionpantalla.analitica.MotivoPaywall
+import es.ilusionpantalla.analitica.Origen
+import es.ilusionpantalla.app.CatalogoViewModel
+import es.ilusionpantalla.app.ui.pantallas.*
+
+enum class Destino(val ruta: String, val titulo: String, val icono: ImageVector, val proxima: Boolean = false) {
+    INICIO("inicio", "Inicio", Icons.Filled.Home),
+    EXPLORAR("explorar", "Explorar", Icons.Filled.Search),
+    CREAR("crear", "Crear", Icons.Filled.AddCircle, proxima = true),   // V1: creador básico local (Fase 2)
+    FAVORITOS("favoritos", "Favoritos", Icons.Filled.Favorite),
+    PERFIL("perfil", "Perfil", Icons.Filled.Person),
+}
+
+@Composable
+fun Navegacion() {
+    val nav = rememberNavController()
+    val vm: CatalogoViewModel = viewModel()   // una sola instancia compartida: catálogo, filtros y favoritos
+    val abrir: (String, Origen) -> Unit = { id, o -> nav.navigate("detalle/$id?origen=${o.codigo}") }
+    val actual = nav.currentBackStackEntryAsState().value?.destination?.route
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                Destino.entries.forEach { d ->
+                    NavigationBarItem(
+                        selected = actual == d.ruta,
+                        onClick = { nav.navigate(d.ruta) { popUpTo(nav.graph.startDestinationId) { saveState = true }; launchSingleTop = true; restoreState = true } },
+                        icon = { Icon(d.icono, contentDescription = d.titulo) },
+                        label = { Text(d.titulo) },
+                    )
+                }
+            }
+        },
+    ) { padding ->
+        NavHost(nav, startDestination = Destino.INICIO.ruta, modifier = Modifier.padding(padding)) {
+            composable(Destino.INICIO.ruta) { PantallaInicio(vm, abrir) }
+            composable(Destino.EXPLORAR.ruta) { PantallaExplorar(vm, abrir) }
+            composable(Destino.CREAR.ruta) { Marcador(Destino.CREAR) }
+            composable(Destino.FAVORITOS.ruta) { PantallaFavoritos(vm, abrir) }
+            composable(Destino.PERFIL.ruta) { PantallaPerfil(irCuenta = { nav.navigate("cuenta") }, irPaywall = { nav.navigate("paywall/perfil") }) }
+            composable("cuenta") { PantallaCuenta(alTerminar = { nav.popBackStack() }) }
+            composable("paywall/{motivo}", arguments = listOf(navArgument("motivo") { type = NavType.StringType })) { e ->
+                val motivo = MotivoPaywall.entries.firstOrNull { it.codigo == e.arguments?.getString("motivo") } ?: MotivoPaywall.PERFIL
+                PantallaPaywall(motivo, irCuenta = { nav.navigate("cuenta") }, cerrar = { nav.popBackStack() })
+            }
+            composable("detalle/{id}?origen={origen}", arguments = listOf(
+                navArgument("id") { type = NavType.StringType },
+                navArgument("origen") { type = NavType.StringType; defaultValue = "inicio" },
+            )) { e ->
+                val origen = Origen.entries.firstOrNull { it.codigo == e.arguments?.getString("origen") } ?: Origen.INICIO
+                PantallaDetalle(e.arguments?.getString("id").orEmpty(), origen, vm, atras = { nav.popBackStack() }, irPaywall = { nav.navigate("paywall/wallpaper_premium") }, abrir = { abrir(it, Origen.RELACIONADOS) })
+            }
+        }
+    }
+}
+
+/** Pantalla provisional de la Fase 1: demuestra navegación y tema. Las reales llegan en la Fase 2. */
+@Composable
+private fun Marcador(d: Destino) {
+    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(d.titulo, style = MaterialTheme.typography.headlineMedium)
+        Spacer(Modifier.height(8.dp))
+        Text(if (d.proxima) "Próximamente" else "Tu pantalla cobra vida.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
