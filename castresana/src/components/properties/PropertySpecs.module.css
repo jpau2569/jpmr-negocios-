@@ -1,0 +1,29 @@
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.heading {
+  font-size: var(--fs-lg);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-5);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  padding: var(--space-1) 0;
+}
+.item svg { color: var(--accent); flex: none; }
+
+@media (max-width: 560px) {
+  .grid { grid-template-columns: 1fr; }
+}

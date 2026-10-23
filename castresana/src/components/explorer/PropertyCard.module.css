@@ -1,0 +1,182 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: none;
+  scroll-snap-align: start;
+  border-radius: var(--radius-lg);
+}
+
+/* Variantes de tamaño (ancho fijo dentro del rail) */
+.rail { width: clamp(248px, 30vw, 316px); }
+.compact { width: clamp(200px, 24vw, 244px); }
+.compact .title { font-size: var(--fs-sm); }
+.compact .price { font-size: var(--fs-lg); }
+
+.media {
+  aspect-ratio: 16 / 10;
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+  box-shadow: var(--shadow-sm);
+}
+.card:hover .media {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.statusBadge {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 1;
+}
+
+.mediaMeta {
+  position: absolute;
+  bottom: var(--space-3);
+  left: var(--space-3);
+  z-index: 1;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.mediaChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(12, 10, 9, 0.6);
+  backdrop-filter: blur(6px);
+  color: var(--c-beige-100);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+}
+
+.fav {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  background: rgba(12, 10, 9, 0.55);
+  backdrop-filter: blur(6px);
+  color: var(--c-beige-100);
+  opacity: 0;
+  transform: translateY(-2px);
+  transition:
+    opacity var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+.card:hover .fav,
+.fav:focus-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.fav:hover { color: var(--accent-hover); }
+
+/* En táctil el hover no existe: favorito siempre visible */
+@media (hover: none) {
+  .fav { opacity: 1; transform: none; }
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 var(--space-1);
+  min-width: 0;
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.price {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-strong);
+}
+.priceSuffix {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-regular);
+  color: var(--text-tertiary);
+}
+
+.operation {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-normal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+.card:hover .title { color: var(--accent-hover); }
+
+.zone {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.specs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+.sep {
+  width: 3px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+}
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-2);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

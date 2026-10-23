@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Castresana">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1B1613"/>
+      <stop offset="1" stop-color="#100E0C"/>
+    </linearGradient>
+    <linearGradient id="copper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C88E5E"/>
+      <stop offset="1" stop-color="#B87A48"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="8" y="8" width="496" height="496" rx="104" fill="none" stroke="#362D24" stroke-width="2"/>
+  <!-- C abierta -->
+  <path d="M 396 122 A 190 190 0 1 0 396 390"
+        fill="none" stroke="url(#copper)" stroke-width="26" stroke-linecap="round"/>
+  <!-- Tejado a dos aguas + fuste -->
+  <path d="M 174 274 L 256 192 L 338 274 M 256 192 V 338"
+        fill="none" stroke="#F1EBDF" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
