@@ -81,8 +81,14 @@ details summary{cursor:pointer;font-weight:600}
 <section class="vista activa" id="v-inicio">
   <div class="tarjeta">
     <h2>¡Hola, nadador! 👋</h2>
-    <p>Acabas de empezar y eso es lo más difícil. Aquí tienes los <b>4 estilos</b> explicados paso a paso, los <b>errores que casi todo el mundo comete al principio</b> y <b>ejercicios</b> para mejorar cada uno.</p>
+    <p>Llevas un mes en el cursillo: lo más difícil ya está hecho. Aquí tienes <b>la salida de cabeza y los 4 estilos</b> explicados paso a paso, los <b>errores que casi todo el mundo comete al principio</b> y <b>ejercicios</b> para mejorar cada uno.</p>
     <p class="suave">Truco: antes de cada clase, mira el estilo que vais a trabajar y elige <b>una sola cosa</b> para mejorar ese día.</p>
+  </div>
+
+  <div class="tarjeta">
+    <h3>🏊 Ahora en el cursillo</h3>
+    <p class="suave" style="margin-top:0">Lo que estáis trabajando este mes. Toca para repasarlo antes de clase.</p>
+    <div class="fila" id="ahora"></div>
   </div>
 
   <div class="tarjeta" id="foco-hoy">
@@ -125,8 +131,8 @@ details summary{cursor:pointer;font-weight:600}
 
 <!-- PLAN -->
 <section class="vista" id="v-plan">
-  <h2>Plan de 8 semanas</h2>
-  <p class="suave">Una guía de qué ir dominando. Si tu curso va en otro orden, sigue al monitor y usa esto como repaso.</p>
+  <h2>Plan por etapas</h2>
+  <p class="suave">Qué ir dominando, sin prisa: cada etapa puede durar una semana o un mes. Si tu cursillo va en otro orden, sigue al monitor y marca lo que ya te sale.</p>
   <div class="tarjeta">
     <div class="fila" style="justify-content:space-between"><b>Progreso</b><span id="pct-plan">0 %</span></div>
     <div class="barra" style="margin-top:6px"><i id="barra-plan"></i></div>
@@ -209,6 +215,28 @@ const ESTILOS = {
       ["Ponerse tenso, «agarrotado»", "Cuerpo firme pero sin apretar. El agua te sostiene más si estás relajado."]
     ],
     claves: ["Burbujas siempre", "Cabeza entre los brazos", "Cuerpo largo y estirado"]
+  },
+  salida: {
+    nombre: "Tirarse de cabeza", emoji: "🤿", anim: "salida",
+    resumen: "Entrar al agua por las manos, con el cuerpo en flecha, y salir deslizando. Se aprende por pasos: sentado, de rodillas, agachado y de pie.",
+    aviso: "Solo con el monitor delante y donde él diga: zona con profundidad suficiente y sin nadie delante. Nunca en la parte que no cubre ni donde ponga «prohibido tirarse». Un golpe en la cabeza contra el fondo es muy grave.",
+    fases: [
+      "<b>Pies en el borde:</b> los dedos de los pies agarrados al bordillo, pies a la anchura de la cadera.",
+      "<b>Flecha:</b> brazos estirados por encima de la cabeza, una mano encima de la otra, y la cabeza escondida entre los brazos (bíceps tapando las orejas).",
+      "<b>Mirada al agua:</b> mira al sitio del agua por donde vas a entrar, no al frente. Barbilla hacia el pecho.",
+      "<b>Empuje:</b> dobla las rodillas y empuja fuerte con las piernas <b>hacia delante</b>, no hacia arriba. La cadera sube y pasa por encima de la cabeza.",
+      "<b>Entrada:</b> primero las manos y, por el mismo agujero, la cabeza, el cuerpo y los pies. Piernas juntas y estiradas.",
+      "<b>Deslizamiento:</b> bajo el agua, sube un poco las manos para no irte al fondo, aguanta la flecha y cuando pierdas velocidad empieza a nadar."
+    ],
+    errores: [
+      ["Planchazo (caer de tripa)", "Casi siempre es por levantar la cabeza. Escóndela entre los brazos y mira al agua, no a la pared de enfrente."],
+      ["Saltar hacia arriba y caer de pie o sentado", "Empuja hacia delante, inclinándote hacia el agua antes de despegar los pies."],
+      ["Separar las manos o abrir los brazos", "Mano encima de mano, como enganchadas. Las manos abren el agua para que pase la cabeza."],
+      ["Doblar las piernas o abrirlas al entrar", "Piernas juntas y estiradas, como si fueran una sola."],
+      ["Irse muy al fondo", "Nada más entrar, apunta las manos un poco hacia arriba y saldrás deslizando."],
+      ["Miedo y tirarse «a medias»", "Vuelve un paso atrás en la progresión (de rodillas o agachado). Pasa de paso cuando te salga 3 veces seguidas bien."]
+    ],
+    claves: ["Cabeza entre los brazos", "Mirar al agua", "Empujar hacia delante", "Entrar por el mismo agujero"]
   },
   crol: {
     nombre: "Crol", emoji: "🌊", anim: "crol",
@@ -294,14 +322,24 @@ const EJERCICIOS = [
   {id:"e1", e:"basico", t:"Burbujas en el borde", d:"Agarrado al borde, mete la cara y suelta el aire 10 veces seguidas. Saca la boca solo para coger aire.", m:"Para no ahogarte y respirar con calma."},
   {id:"e2", e:"basico", t:"Flecha desde la pared", d:"Empuja de la pared con los brazos en flecha y mira hasta dónde llegas sin mover nada. Intenta superar tu marca.", m:"Aprendes a estar largo y a no frenar."},
   {id:"e3", e:"basico", t:"La seta", d:"Coge aire, abraza tus rodillas y déjate flotar. Notarás que el agua te sube.", m:"Pierdes el miedo y entiendes que flotas."},
+  {id:"e19", e:"salida", t:"Paso 1 · Sentado en el borde", d:"Sentado, pies apoyados en la canaleta o en el agua. Brazos en flecha, cabeza entre los brazos, inclínate hacia delante hasta caer al agua por las manos.", m:"Notar que se entra por las manos sin miedo."},
+  {id:"e20", e:"salida", t:"Paso 2 · De rodillas", d:"Una rodilla en el borde y el otro pie delante agarrando el bordillo. Flecha, mira al agua y déjate caer empujando un poco con el pie de delante.", m:"La cabeza se queda escondida mientras caes."},
+  {id:"e21", e:"salida", t:"Paso 3 · Agachado", d:"De pie pero muy agachado, dedos de los pies en el borde y manos casi tocando el agua. Empuja con las piernas hacia delante.", m:"Primer empuje de piernas de verdad."},
+  {id:"e22", e:"salida", t:"Paso 4 · De pie", d:"De pie, dobla rodillas y cadera, flecha, mira al agua y empuja hacia delante. Entra por el «agujero» de las manos.", m:"La salida completa."},
+  {id:"e23", e:"salida", t:"Pasar por el aro", d:"Si el monitor pone un aro o un churro flotando un poco delante, intenta entrar al agua justo al otro lado sin tocarlo.", m:"Empujar hacia delante y no caer en plancha."},
+  {id:"e24", e:"salida", t:"Deslizar después de entrar", d:"Tras tirarte, aguanta la flecha bajo el agua contando hasta 3 antes de dar la primera patada o brazada.", m:"Aprovechar la velocidad de la salida."},
   {id:"e4", e:"crol", t:"Patada con tabla", d:"Tabla con los brazos estirados, cara en el agua y patada desde la cadera. Saca la cabeza para respirar cuando lo necesites.", m:"Patada fuerte y sin doblar las rodillas."},
   {id:"e5", e:"crol", t:"Patada de lado", d:"Un brazo estirado delante, el otro pegado al cuerpo, de lado y con la oreja en el brazo. Patada y respira girando un poco la cara.", m:"Es la posición exacta de la respiración del crol."},
   {id:"e6", e:"crol", t:"Brazada con un brazo", d:"Un brazo estirado delante (o con tabla) y nada solo con el otro. Respira hacia el lado del brazo que nada.", m:"Te centras en un brazo y en la respiración."},
   {id:"e7", e:"crol", t:"Pilla-pilla (alcance)", d:"Un brazo espera delante hasta que el otro llega y le «toca» la mano. Entonces sale el que esperaba.", m:"Brazada larga y cuerpo estirado."},
   {id:"e8", e:"crol", t:"Pulgar al muslo", d:"Nada crol y en cada brazada roza tu muslo con el pulgar antes de sacar el brazo.", m:"Terminar el empuje, que es lo que más avanza."},
+  {id:"e25", e:"crol", t:"Brazada con tabla delante", d:"Sujeta la tabla con una mano estirada; el otro brazo hace la brazada completa y, cuando vuelve, cambia de mano en la tabla.", m:"Brazada larga sin preocuparte de flotar."},
+  {id:"e26", e:"crol", t:"Codo alto (rozar el costado)", d:"En el recobro, desliza los dedos rozando el costado hasta la axila antes de llevar la mano delante.", m:"Sacar el brazo relajado y con el codo alto."},
   {id:"e9", e:"espalda", t:"Patada de espalda con tabla en el pecho", d:"Abraza la tabla contra el pecho, boca arriba, y patada. Que las rodillas no salgan.", m:"Cadera arriba y patada correcta."},
   {id:"e10", e:"espalda", t:"Vaso en la frente", d:"Imagina (o pon con el monitor) un vasito o una tapa en la frente y nada espalda sin que se caiga.", m:"Cabeza totalmente quieta."},
   {id:"e11", e:"espalda", t:"Espalda con un brazo", d:"Un brazo pegado al cuerpo y nada solo con el otro, rozando la oreja.", m:"Entrada correcta y rotación de hombros."},
+  {id:"e27", e:"espalda", t:"Espalda con pausa arriba", d:"Brazo estirado hacia el techo: para un segundo, mira que está recto y sigue hasta meterlo detrás de la cabeza rozando la oreja.", m:"Recobro recto, sin brazos torcidos."},
+  {id:"e28", e:"espalda", t:"Seis patadas, una brazada", d:"Patada de espalda contando 6 golpes y luego una brazada; después la otra, otra vez con 6 patadas.", m:"Coordinar brazos sin dejar de patear."},
   {id:"e12", e:"braza", t:"Patada de braza en el borde", d:"Agarrado al borde, boca abajo: talones al culo, pies de pato, empuja y junta. Despacio.", m:"Aprender los pies de pato sin pensar en nada más."},
   {id:"e13", e:"braza", t:"Patada de braza boca arriba", d:"Boca arriba con brazos pegados. Al recoger, intenta tocarte los talones con los dedos.", m:"Ves tus rodillas: no deben salir del agua ni abrirse mucho."},
   {id:"e14", e:"braza", t:"Una brazada, dos patadas", d:"Haz una brazada y dos patadas seguidas deslizándote en flecha.", m:"Coordinación y deslizamiento."},
@@ -314,16 +352,17 @@ const EJERCICIOS = [
 const PLAN = [
   {s:1, t:"Agua amiga", c:["Hago 10 burbujas seguidas sin agobiarme","Floto en estrella boca arriba 10 segundos","Me deslizo en flecha desde la pared"]},
   {s:2, t:"Patada", c:["Patada de crol con tabla 25 m","Patada de espalda con tabla en el pecho 25 m","Patada sin doblar mucho las rodillas"]},
-  {s:3, t:"Respirar en crol", c:["Patada de lado respirando sin parar","Crol con un brazo respirando de lado","Vuelvo la cara al agua antes de que entre la mano"]},
-  {s:4, t:"Crol completo", c:["25 m de crol sin parar","Respiro cada 3 brazadas al menos un largo","Pulgar al muslo en cada brazada"]},
-  {s:5, t:"Espalda", c:["25 m de espalda con la cabeza quieta","Brazo rozando la oreja","Cadera arriba, no me siento"]},
-  {s:6, t:"Patada de braza", c:["Pies de pato en el borde","Patada de braza con tabla 25 m","Piernas simétricas, sin tijera"]},
-  {s:7, t:"Braza completa", c:["Orden: brazos → respiro → patada → flecha","25 m de braza deslizando","Brazada pequeña, termina bajo la barbilla"]},
+  {s:3, t:"Brazada de crol y respirar", c:["Crol con un brazo respirando de lado","Pulgar al muslo en cada brazada","Vuelvo la cara al agua antes de que entre la mano"]},
+  {s:4, t:"Espalda", c:["Brazo rozando la oreja y entrando detrás de la cabeza","Cabeza quieta mirando al techo","25 m de espalda sin sentarme en el agua"]},
+  {s:5, t:"Tirarse de cabeza", c:["Me tiro sentado entrando por las manos","Me tiro de rodillas sin levantar la cabeza","Me tiro agachado sin planchazo","Me tiro de pie y deslizo contando hasta 3"]},
+  {s:6, t:"Crol completo", c:["25 m de crol sin parar","Respiro cada 3 brazadas al menos un largo","Salida de cabeza + 25 m de crol"]},
+  {s:7, t:"Braza", c:["Pies de pato en el borde","Orden: brazos → respiro → patada → flecha","25 m de braza deslizando"]},
   {s:8, t:"Iniciación a mariposa", c:["Ondulación de delfín 12 m","Patada de delfín con tabla","3 brazadas de mariposa seguidas"]}
 ];
 
 /* ===================== ESTADO (solo en este aparato) ===================== */
 const CLAVE = "nada_mejor_v1";
+const AHORA = [["salida","🤿 Tirarse de cabeza"],["crol","🌊 Brazada de crol"],["espalda","🙃 Espalda"]];
 function cargar(){
   try{ const d = JSON.parse(localStorage.getItem(CLAVE)||"{}"); return {ejer:d.ejer||{}, plan:d.plan||{}, diario:Array.isArray(d.diario)?d.diario:[], foco:d.foco||""}; }
   catch{ return {ejer:{}, plan:{}, diario:[], foco:""}; }
@@ -391,8 +430,37 @@ function escena(tipo){
   </svg>`;
 }
 
+// Salida de cabeza: el nadador en flecha sale del borde, entra por las manos y desliza.
+function escenaSalida(){
+  const piel = "#f2c7a5", gorro = "#ff8a3d", banador = "#0b4f7a";
+  return `<svg class="escena anim" viewBox="0 0 400 170" role="img" aria-label="Animación de la salida de cabeza: entra al agua por las manos con el cuerpo en flecha">
+  <style>
+    @keyframes salto{
+      0%,8%{transform:translate(106px,47px) rotate(-10deg)}
+      30%{transform:translate(160px,34px) rotate(15deg)}
+      48%{transform:translate(200px,44px) rotate(40deg)}
+      68%{transform:translate(262px,104px) rotate(20deg)}
+      90%,100%{transform:translate(330px,112px) rotate(0deg)}
+    }
+    @keyframes chap{0%,48%{opacity:0;transform:scale(.3)}55%{opacity:1;transform:scale(1)}75%,100%{opacity:0;transform:scale(1.4)}}
+    .nadador{animation:salto 3.2s ease-in-out infinite;transform-origin:0 0}
+    .chap{animation:chap 3.2s ease-out infinite;transform-box:fill-box;transform-origin:center}
+  </style>
+  <rect x="0" y="62" width="60" height="108" fill="#e9eef1"/><rect x="0" y="58" width="60" height="8" fill="#c4d0d6"/>
+  <g class="chap"><path d="M250 64 q6 -14 12 0 M241 64 q4 -9 8 0 M265 64 q4 -9 8 0" stroke="#fff" stroke-width="3" fill="none"/></g>
+  <g class="nadador">
+    <rect x="-62" y="-5" width="52" height="10" rx="5" fill="${piel}"/>
+    <rect x="-16" y="-8" width="40" height="16" rx="8" fill="${banador}"/>
+    <rect x="18" y="-7" width="24" height="14" rx="7" fill="${piel}"/>
+    <rect x="24" y="-3.5" width="46" height="7" rx="3.5" fill="${piel}" stroke="#d9a986"/>
+    <circle cx="44" cy="5" r="8" fill="${piel}"/><path d="M36 5 a8 8 0 0 1 16 0z" fill="${gorro}" transform="rotate(90 44 5)"/>
+  </g>
+  <text x="12" y="160" font-size="12" fill="#fff" font-family="system-ui">Manos primero · cabeza entre los brazos</text>
+  </svg>`;
+}
+
 /* ===================== ESTILOS ===================== */
-let estiloActual = "crol";
+let estiloActual = "salida";
 function pintarChipsEstilos(){
   $("#chips-estilos").innerHTML = Object.entries(ESTILOS).map(([id,e]) =>
     `<button class="chip" data-e="${id}" aria-pressed="${id===estiloActual}">${e.emoji} ${e.nombre}</button>`).join("");
@@ -405,7 +473,8 @@ function pintarEstilo(){
     <div class="tarjeta">
       <h3>${e.emoji} ${e.nombre}</h3>
       <p class="suave" style="margin-top:0">${e.resumen}</p>
-      ${escena(e.anim)}
+      ${e.aviso?`<div class="aviso" style="margin-bottom:10px">⚠️ ${e.aviso}</div>`:""}
+      ${e.anim==="salida"?escenaSalida():escena(e.anim)}
       <p class="suave" style="font-size:.8rem;margin:6px 0 0">Dibujo orientativo del ritmo, no a escala.</p>
     </div>
     <div class="tarjeta"><h3>Paso a paso</h3><ol class="fases">${e.fases.map(f=>`<li>${f}</li>`).join("")}</ol></div>
@@ -443,7 +512,7 @@ function pintarEjercicios(){
 function pintarPlan(){
   let total=0, hechos=0;
   $("#lista-plan").innerHTML = PLAN.map(sem => `
-    <div class="tarjeta"><h3>Semana ${sem.s} · ${sem.t}</h3>
+    <div class="tarjeta"><h3>Etapa ${sem.s} · ${sem.t}</h3>
       ${sem.c.map((c,i)=>{ const id=`s${sem.s}-${i}`; total++; if(estado.plan[id]) hechos++;
         return `<label class="check"><input type="checkbox" data-id="${id}" ${estado.plan[id]?"checked":""}><span>${c}</span></label>`; }).join("")}
     </div>`).join("");
@@ -521,7 +590,11 @@ $("#b-empezar").onclick = () => {
 $("#b-parar").onclick = () => { clearInterval(temporizador); $("#estado-reloj").textContent="Parado"; };
 
 /* ===================== ARRANQUE ===================== */
-function todo(){ pintarEstilo(); pintarEjercicios(); pintarPlan(); pintarFoco(); pintarDiario(); }
+function pintarAhora(){
+  $("#ahora").innerHTML = AHORA.map(([id,n])=>`<button class="btn sec" data-e="${id}">${n}</button>`).join("");
+  $("#ahora").querySelectorAll("button").forEach(b => b.onclick = () => { estiloActual = b.dataset.e; pintarEstilo(); document.querySelector('nav button[data-v="estilos"]').click(); });
+}
+function todo(){ pintarAhora(); pintarEstilo(); pintarEjercicios(); pintarPlan(); pintarFoco(); pintarDiario(); }
 todo();
 </script>
 </body>
