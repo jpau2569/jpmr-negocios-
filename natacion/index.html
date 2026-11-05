@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nada Mejor</title>
+<meta name="description" content="Ayuda de técnica de natación para nadadores que empiezan: crol, espalda, braza y mariposa, errores típicos, ejercicios y plan.">
+<meta name="theme-color" content="#0b4f7a">
+<style>
+:root{
+  --fondo:#eaf6fb; --tarjeta:#ffffff; --texto:#0d2a3a; --suave:#4b6676;
+  --agua:#0b84c6; --agua2:#0b4f7a; --acento:#ff8a3d; --ok:#1e9e62; --mal:#d64545;
+  --borde:#cfe5ef; --sombra:0 2px 10px rgba(11,79,122,.10);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --fondo:#06202e; --tarjeta:#0c3044; --texto:#e6f3f9; --suave:#9fc0d0;
+    --agua:#3fb3ee; --agua2:#7fd0f5; --borde:#1b4a62; --sombra:none;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--fondo);color:var(--texto);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+header{background:linear-gradient(135deg,#0b4f7a,#0b84c6);color:#fff;padding:18px 16px 22px}
+header h1{margin:0;font-size:1.5rem}
+header p{margin:4px 0 0;opacity:.9;font-size:.95rem}
+main{max-width:760px;margin:0 auto;padding:16px}
+h2{font-size:1.25rem;margin:8px 0 12px}
+h3{font-size:1.05rem;margin:0 0 6px}
+.tarjeta{background:var(--tarjeta);border:1px solid var(--borde);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:var(--sombra)}
+.suave{color:var(--suave);font-size:.93rem}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--tarjeta);border-top:1px solid var(--borde);
+  display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{flex:1;background:none;border:0;color:var(--suave);padding:8px 2px 10px;font:inherit;font-size:.75rem;cursor:pointer}
+nav button span{display:block;font-size:1.35rem;line-height:1.2}
+nav button[aria-selected="true"]{color:var(--agua);font-weight:700}
+.vista{display:none}.vista.activa{display:block}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px}
+.chip{flex:none;border:1px solid var(--borde);background:var(--tarjeta);color:var(--texto);border-radius:999px;padding:8px 14px;font:inherit;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--agua);border-color:var(--agua);color:#fff}
+ul.lista{margin:0;padding-left:20px}ul.lista li{margin:4px 0}
+.par{display:grid;gap:8px}
+.mal{border-left:4px solid var(--mal);padding:8px 10px;background:rgba(214,69,69,.07);border-radius:8px}
+.bien{border-left:4px solid var(--ok);padding:8px 10px;background:rgba(30,158,98,.08);border-radius:8px}
+.mal b{color:var(--mal)}.bien b{color:var(--ok)}
+.fases{counter-reset:f;list-style:none;padding:0;margin:0}
+.fases li{counter-increment:f;position:relative;padding:6px 0 6px 38px}
+.fases li::before{content:counter(f);position:absolute;left:0;top:6px;width:26px;height:26px;border-radius:50%;
+  background:var(--agua);color:#fff;font-weight:700;display:grid;place-items:center;font-size:.85rem}
+.btn{background:var(--agua);color:#fff;border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer}
+.btn.sec{background:transparent;color:var(--agua);border:1px solid var(--agua)}
+.btn:disabled{opacity:.5}
+.fila{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.escena{width:100%;height:auto;display:block;border-radius:12px;background:linear-gradient(#bfe6f7 0 38%,#3aa6dc 38% 100%)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .escena{background:linear-gradient(#123d55 0 38%,#0d6a9a 38% 100%)}}
+.check{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--borde)}
+.check:last-child{border-bottom:0}
+.check input{width:22px;height:22px;flex:none;margin-top:2px;accent-color:var(--ok)}
+.barra{height:10px;background:var(--borde);border-radius:99px;overflow:hidden}
+.barra i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.estrellas button{background:none;border:0;font-size:1.6rem;cursor:pointer;padding:0 2px;color:#c9d6dc}
+.estrellas button.on{color:#f5b301}
+.reloj{font-size:3rem;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;margin:6px 0}
+textarea,input[type=text],select{width:100%;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--borde);background:var(--fondo);color:var(--texto)}
+.aviso{background:rgba(255,138,61,.12);border:1px solid rgba(255,138,61,.5);border-radius:12px;padding:12px;font-size:.93rem}
+.diario li{margin-bottom:8px}
+.etq{display:inline-block;background:var(--fondo);border:1px solid var(--borde);border-radius:6px;padding:1px 8px;font-size:.8rem;color:var(--suave);margin-right:4px}
+details summary{cursor:pointer;font-weight:600}
+@media (prefers-reduced-motion: reduce){.anim *{animation:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏊 Nada Mejor</h1>
+  <p>Tu entrenador de bolsillo para la técnica: qué hacer, qué no y cómo practicarlo.</p>
+</header>
+
+<main>
+<!-- INICIO -->
+<section class="vista activa" id="v-inicio">
+  <div class="tarjeta">
+    <h2>¡Hola, nadador! 👋</h2>
+    <p>Acabas de empezar y eso es lo más difícil. Aquí tienes los <b>4 estilos</b> explicados paso a paso, los <b>errores que casi todo el mundo comete al principio</b> y <b>ejercicios</b> para mejorar cada uno.</p>
+    <p class="suave">Truco: antes de cada clase, mira el estilo que vais a trabajar y elige <b>una sola cosa</b> para mejorar ese día.</p>
+  </div>
+
+  <div class="tarjeta" id="foco-hoy">
+    <h3>🎯 Mi objetivo para la próxima clase</h3>
+    <p class="suave">Escoge un detalle y concéntrate solo en él.</p>
+    <select id="sel-foco" aria-label="Objetivo de la próxima clase"></select>
+    <p id="txt-foco" style="margin-bottom:0"></p>
+  </div>
+
+  <div class="tarjeta">
+    <h3>💡 Las 5 reglas de oro</h3>
+    <ol class="fases">
+      <li><b>Cabeza alineada.</b> Mira al fondo (o al techo en espalda). Si levantas la cabeza, las piernas se hunden.</li>
+      <li><b>Cuerpo largo.</b> Imagina que alguien tira de tus manos hacia delante y de tus pies hacia atrás.</li>
+      <li><b>Suelta el aire bajo el agua.</b> Burbujas por nariz y boca. Así, al sacar la cara solo tienes que coger aire.</li>
+      <li><b>Patada desde la cadera,</b> no desde la rodilla. Piernas casi estiradas y tobillos sueltos.</li>
+      <li><b>Despacio y bien antes que rápido y mal.</b> La velocidad llega sola cuando la técnica está.</li>
+    </ol>
+  </div>
+
+  <div class="aviso">
+    ⚠️ <b>Seguridad:</b> nada siempre con socorrista o monitor delante. Si te mareas, tienes un calambre o te cuesta respirar, para, agárrate al borde y avisa. Lo que dice tu monitor manda sobre esta app.
+  </div>
+</section>
+
+<!-- ESTILOS -->
+<section class="vista" id="v-estilos">
+  <h2>Técnica por estilos</h2>
+  <div class="chips" id="chips-estilos" role="group" aria-label="Estilos"></div>
+  <div id="detalle-estilo"></div>
+</section>
+
+<!-- EJERCICIOS -->
+<section class="vista" id="v-ejercicios">
+  <h2>Ejercicios para mejorar</h2>
+  <p class="suave">Pídele permiso al monitor para hacerlos al final de la clase o en baño libre. Marca ✓ los que ya te salgan.</p>
+  <div class="chips" id="chips-ejer" role="group" aria-label="Filtrar ejercicios"></div>
+  <div id="lista-ejer"></div>
+</section>
+
+<!-- PLAN -->
+<section class="vista" id="v-plan">
+  <h2>Plan de 8 semanas</h2>
+  <p class="suave">Una guía de qué ir dominando. Si tu curso va en otro orden, sigue al monitor y usa esto como repaso.</p>
+  <div class="tarjeta">
+    <div class="fila" style="justify-content:space-between"><b>Progreso</b><span id="pct-plan">0 %</span></div>
+    <div class="barra" style="margin-top:6px"><i id="barra-plan"></i></div>
+  </div>
+  <div id="lista-plan"></div>
+
+  <div class="tarjeta">
+    <h3>⏱️ Cronómetro de series</h3>
+    <p class="suave">Para cuando nades por tu cuenta: tiempo de nado y descanso.</p>
+    <div class="fila">
+      <label>Nado <input type="text" inputmode="numeric" id="t-nado" value="40" style="width:70px"> s</label>
+      <label>Descanso <input type="text" inputmode="numeric" id="t-desc" value="20" style="width:70px"> s</label>
+      <label>Series <input type="text" inputmode="numeric" id="t-series" value="6" style="width:60px"></label>
+    </div>
+    <div class="reloj" id="reloj" aria-live="polite">00:40</div>
+    <p id="estado-reloj" style="text-align:center;margin:0 0 10px" class="suave">Listo</p>
+    <div class="fila" style="justify-content:center">
+      <button class="btn" id="b-empezar">▶ Empezar</button>
+      <button class="btn sec" id="b-parar">■ Parar</button>
+    </div>
+  </div>
+</section>
+
+<!-- DIARIO -->
+<section class="vista" id="v-diario">
+  <h2>Mi diario de piscina</h2>
+  <div class="tarjeta">
+    <h3>¿Qué tal la clase de hoy?</h3>
+    <div class="estrellas" id="estrellas" aria-label="Cómo me sentí"></div>
+    <label class="suave" for="d-estilo">Estilo trabajado</label>
+    <select id="d-estilo"></select>
+    <label class="suave" for="d-nota" style="display:block;margin-top:8px">Qué me salió bien / qué me dijo el monitor</label>
+    <textarea id="d-nota" rows="3" placeholder="Ej.: me ha dicho que no levante la cabeza al respirar"></textarea>
+    <div class="fila" style="margin-top:10px">
+      <button class="btn" id="b-guardar">Guardar</button>
+    </div>
+  </div>
+  <div class="tarjeta">
+    <h3>Mis clases</h3>
+    <ul class="diario lista" id="lista-diario"></ul>
+  </div>
+  <div class="tarjeta">
+    <details>
+      <summary>Copia de seguridad</summary>
+      <p class="suave">Todo se guarda solo en este móvil. Puedes copiarlo para pasarlo a otro aparato.</p>
+      <div class="fila">
+        <button class="btn sec" id="b-exportar">Copiar mis datos</button>
+        <button class="btn sec" id="b-importar">Pegar datos</button>
+        <button class="btn sec" id="b-borrar" style="color:var(--mal);border-color:var(--mal)">Borrar todo</button>
+      </div>
+    </details>
+  </div>
+</section>
+</main>
+
+<nav role="tablist" aria-label="Secciones">
+  <button role="tab" data-v="inicio" aria-selected="true"><span>🏠</span>Inicio</button>
+  <button role="tab" data-v="estilos" aria-selected="false"><span>🏊</span>Estilos</button>
+  <button role="tab" data-v="ejercicios" aria-selected="false"><span>🧩</span>Ejercicios</button>
+  <button role="tab" data-v="plan" aria-selected="false"><span>📅</span>Plan</button>
+  <button role="tab" data-v="diario" aria-selected="false"><span>📓</span>Diario</button>
+</nav>
+
+<script>
+"use strict";
+/* ===================== CONTENIDO ===================== */
+const ESTILOS = {
+  basico: {
+    nombre: "Lo básico", emoji: "🫧", anim: "flotar",
+    resumen: "Flotar, respirar y deslizarse. Si esto sale bien, los cuatro estilos salen mucho mejor.",
+    fases: [
+      "<b>Burbujas:</b> mete la cara, suelta el aire despacio por nariz y boca (como tarareando «mmm»). Saca la boca y coge aire rápido.",
+      "<b>Flotar en estrella:</b> boca arriba, brazos y piernas abiertos, orejas dentro del agua y tripa arriba.",
+      "<b>Posición de flecha:</b> brazos estirados, una mano encima de la otra, bíceps tapando las orejas, cabeza entre los brazos.",
+      "<b>Deslizamiento:</b> empuja fuerte de la pared en posición de flecha y aguanta sin moverte hasta que casi pares."
+    ],
+    errores: [
+      ["Aguantar el aire debajo del agua", "Suéltalo poco a poco. Si lo aguantas, al salir tienes que soltar y coger a la vez y te ahogas."],
+      ["Levantar la cabeza para ver dónde vas", "Mira al fondo. Solo un vistazo rápido de vez en cuando."],
+      ["Ponerse tenso, «agarrotado»", "Cuerpo firme pero sin apretar. El agua te sostiene más si estás relajado."]
+    ],
+    claves: ["Burbujas siempre", "Cabeza entre los brazos", "Cuerpo largo y estirado"]
+  },
+  crol: {
+    nombre: "Crol", emoji: "🌊", anim: "crol",
+    resumen: "El estilo más rápido. Boca abajo, brazos alternos y patada continua.",
+    fases: [
+      "<b>Entrada:</b> la mano entra delante del hombro (no cruces al centro), con los dedos primero y el codo un poco más alto que la mano.",
+      "<b>Agarre:</b> estira el brazo hacia delante bajo el agua y dobla un poco el codo, como si te agarraras a una barra.",
+      "<b>Tirón:</b> empuja el agua hacia atrás, por debajo del cuerpo, hasta pasar la cadera. La mano termina rozando el muslo.",
+      "<b>Recobro:</b> saca el brazo con el codo alto y relajado y vuelve a meterlo delante.",
+      "<b>Respiración:</b> gira la cabeza a un lado junto con el cuerpo cuando ese brazo va atrás. Un ojo dentro, un ojo fuera. Vuelve la cara al agua antes de que entre la mano.",
+      "<b>Patada:</b> desde la cadera, piernas casi estiradas, tobillos sueltos, pequeña y rápida. Los pies apenas salpican."
+    ],
+    errores: [
+      ["Levantar la cabeza hacia delante para respirar", "Gírala de lado, como si apoyaras la oreja en el brazo estirado."],
+      ["Patada de bicicleta (doblar mucho las rodillas)", "Patada desde la cadera, rodillas casi rectas, como si tuvieras las piernas de goma."],
+      ["Cruzar la mano por delante de la cabeza", "Mete la mano en línea con tu hombro, como en dos raíles."],
+      ["Sacar el brazo antes de llegar a la cadera", "Termina el empuje: el pulgar roza el muslo antes de sacar el brazo."],
+      ["Soltar todo el aire fuera del agua", "Burbujas bajo el agua, fuera solo coges aire."]
+    ],
+    claves: ["Cara al fondo", "Respirar de lado", "Empujar hasta el muslo", "Patada pequeña desde la cadera"]
+  },
+  espalda: {
+    nombre: "Espalda", emoji: "🙃", anim: "espalda",
+    resumen: "Boca arriba, brazos alternos que giran como un molino y patada continua.",
+    fases: [
+      "<b>Posición:</b> boca arriba, orejas dentro del agua, mirada al techo, cadera arriba (que no se siente en el agua).",
+      "<b>Entrada:</b> el brazo entra estirado detrás de la cabeza, alineado con el hombro, por el meñique primero.",
+      "<b>Tirón:</b> bajo el agua dobla un poco el codo y empuja el agua hacia los pies.",
+      "<b>Recobro:</b> el brazo sale estirado por el pulgar, pasa rozando la oreja y vuelve a entrar.",
+      "<b>Rotación:</b> los hombros giran un poco hacia el brazo que tira; la cabeza se queda quieta.",
+      "<b>Patada:</b> igual que en crol pero boca arriba; las rodillas no deben salir del agua."
+    ],
+    errores: [
+      ["Sentarse en el agua (cadera hundida)", "Saca la tripa hacia el techo y apoya la nuca en el agua."],
+      ["Levantar la cabeza para mirarse los pies", "Mira al techo. Si te mueves la cabeza, se mueve todo."],
+      ["Rodillas que salen del agua", "Patada desde la cadera; los pies hacen «hervir» el agua, las rodillas no salen."],
+      ["Brazo que entra muy abierto (a las 3 en un reloj)", "Entra más cerca de la cabeza, en las 11 y la 1."]
+    ],
+    claves: ["Orejas en el agua", "Tripa arriba", "Brazo rozando la oreja", "Cabeza quieta"]
+  },
+  braza: {
+    nombre: "Braza", emoji: "🐸", anim: "braza",
+    resumen: "Brazos y piernas a la vez, simétricos. El secreto es deslizarse después de cada brazada.",
+    fases: [
+      "<b>Tirón:</b> desde la flecha, abre las manos hacia fuera y un poco hacia abajo, hasta la anchura de los hombros más o menos. Los codos no pasan de los hombros.",
+      "<b>Respiración:</b> mientras los brazos tiran, la cabeza sale de forma natural y coges aire mirando hacia delante y abajo.",
+      "<b>Recogida:</b> junta las manos bajo la barbilla y estíralas hacia delante.",
+      "<b>Patada:</b> lleva los talones hacia el culo, pon los pies «de pato» (puntas hacia fuera) y empuja el agua con las plantas, cerrando las piernas en círculo.",
+      "<b>Deslizamiento:</b> brazos y piernas estirados, cara en el agua, y aguanta 1-2 segundos antes de la siguiente brazada.",
+      "<b>Orden:</b> tiro → respiro → patada → me deslizo. «Brazos, cabeza, piernas, flecha»."
+    ],
+    errores: [
+      ["Hacer brazos y piernas al mismo tiempo", "Primero brazos, luego patada. Cuando las piernas empujan, los brazos ya están estirados."],
+      ["Tirar con los brazos hasta la cadera", "Los brazos se quedan delante: la brazada es pequeña y termina bajo la barbilla."],
+      ["Patada de tijera (cada pierna a su aire)", "Las dos piernas a la vez y simétricas. ¡Ojo, en competición la tijera descalifica!"],
+      ["No deslizarse", "Después de la patada cuenta «uno, dos» estirado como una flecha."],
+      ["Llevar la cabeza siempre fuera", "Mete la cara en cada deslizamiento y suelta el aire."]
+    ],
+    claves: ["Brazada pequeña delante", "Pies de pato", "Deslizar 1-2 segundos", "Cara dentro al estirar"]
+  },
+  mariposa: {
+    nombre: "Mariposa", emoji: "🦋", anim: "mariposa",
+    resumen: "El más difícil: los dos brazos a la vez y el cuerpo ondula como un delfín. Empieza por la ondulación.",
+    fases: [
+      "<b>Ondulación:</b> el movimiento nace en el pecho: pecho abajo, cadera arriba, como una ola que recorre el cuerpo hasta los pies.",
+      "<b>Patada de delfín:</b> piernas juntas, golpe hacia abajo con los empeines. Hay dos patadas por cada brazada.",
+      "<b>Entrada:</b> las dos manos entran a la vez delante de los hombros.",
+      "<b>Tirón:</b> empuja el agua hacia atrás por debajo del cuerpo, dibujando como un ojo de cerradura, hasta los muslos.",
+      "<b>Recobro y respiración:</b> los brazos salen juntos por fuera del agua, relajados. La barbilla sale hacia delante, rozando el agua, justo cuando los brazos terminan de empujar.",
+      "<b>Ritmo:</b> patada al entrar las manos, patada al salir las manos."
+    ],
+    errores: [
+      ["Ondular con las rodillas en vez de con el cuerpo", "El movimiento empieza en el pecho y baja; las rodillas solo acompañan."],
+      ["Sacar mucho la cabeza para respirar", "La barbilla roza el agua. Cuanto más alto, más te hundes después."],
+      ["Brazos que no salen del agua", "Termina bien el empuje hasta los muslos; así el brazo sale solo."],
+      ["Intentar nadar muchos metros al principio", "Pocos metros bien hechos. Empieza con 3 brazadas y descansa."]
+    ],
+    claves: ["Ola desde el pecho", "Dos patadas por brazada", "Barbilla rozando el agua", "Poco y bien"]
+  }
+};
+
+const EJERCICIOS = [
+  {id:"e1", e:"basico", t:"Burbujas en el borde", d:"Agarrado al borde, mete la cara y suelta el aire 10 veces seguidas. Saca la boca solo para coger aire.", m:"Para no ahogarte y respirar con calma."},
+  {id:"e2", e:"basico", t:"Flecha desde la pared", d:"Empuja de la pared con los brazos en flecha y mira hasta dónde llegas sin mover nada. Intenta superar tu marca.", m:"Aprendes a estar largo y a no frenar."},
+  {id:"e3", e:"basico", t:"La seta", d:"Coge aire, abraza tus rodillas y déjate flotar. Notarás que el agua te sube.", m:"Pierdes el miedo y entiendes que flotas."},
+  {id:"e4", e:"crol", t:"Patada con tabla", d:"Tabla con los brazos estirados, cara en el agua y patada desde la cadera. Saca la cabeza para respirar cuando lo necesites.", m:"Patada fuerte y sin doblar las rodillas."},
+  {id:"e5", e:"crol", t:"Patada de lado", d:"Un brazo estirado delante, el otro pegado al cuerpo, de lado y con la oreja en el brazo. Patada y respira girando un poco la cara.", m:"Es la posición exacta de la respiración del crol."},
+  {id:"e6", e:"crol", t:"Brazada con un brazo", d:"Un brazo estirado delante (o con tabla) y nada solo con el otro. Respira hacia el lado del brazo que nada.", m:"Te centras en un brazo y en la respiración."},
+  {id:"e7", e:"crol", t:"Pilla-pilla (alcance)", d:"Un brazo espera delante hasta que el otro llega y le «toca» la mano. Entonces sale el que esperaba.", m:"Brazada larga y cuerpo estirado."},
+  {id:"e8", e:"crol", t:"Pulgar al muslo", d:"Nada crol y en cada brazada roza tu muslo con el pulgar antes de sacar el brazo.", m:"Terminar el empuje, que es lo que más avanza."},
+  {id:"e9", e:"espalda", t:"Patada de espalda con tabla en el pecho", d:"Abraza la tabla contra el pecho, boca arriba, y patada. Que las rodillas no salgan.", m:"Cadera arriba y patada correcta."},
+  {id:"e10", e:"espalda", t:"Vaso en la frente", d:"Imagina (o pon con el monitor) un vasito o una tapa en la frente y nada espalda sin que se caiga.", m:"Cabeza totalmente quieta."},
+  {id:"e11", e:"espalda", t:"Espalda con un brazo", d:"Un brazo pegado al cuerpo y nada solo con el otro, rozando la oreja.", m:"Entrada correcta y rotación de hombros."},
+  {id:"e12", e:"braza", t:"Patada de braza en el borde", d:"Agarrado al borde, boca abajo: talones al culo, pies de pato, empuja y junta. Despacio.", m:"Aprender los pies de pato sin pensar en nada más."},
+  {id:"e13", e:"braza", t:"Patada de braza boca arriba", d:"Boca arriba con brazos pegados. Al recoger, intenta tocarte los talones con los dedos.", m:"Ves tus rodillas: no deben salir del agua ni abrirse mucho."},
+  {id:"e14", e:"braza", t:"Una brazada, dos patadas", d:"Haz una brazada y dos patadas seguidas deslizándote en flecha.", m:"Coordinación y deslizamiento."},
+  {id:"e15", e:"braza", t:"Cuento hasta dos", d:"Braza completa y, en cada flecha, cuenta mentalmente «uno, dos» antes de la siguiente brazada.", m:"Aprender a no tener prisa."},
+  {id:"e16", e:"mariposa", t:"Ondulación sin brazos", d:"Brazos pegados al cuerpo o estirados delante; ondula desde el pecho como un delfín, bajo el agua.", m:"La ola es la base de todo."},
+  {id:"e17", e:"mariposa", t:"Patada de delfín con tabla", d:"Con tabla, piernas juntas y golpes hacia abajo con los empeines.", m:"Fuerza en la patada."},
+  {id:"e18", e:"mariposa", t:"Mariposa con un brazo", d:"Un brazo delante quieto y el otro hace la brazada de mariposa, con las dos patadas.", m:"Ritmo de patada y brazo sin agotarte."}
+];
+
+const PLAN = [
+  {s:1, t:"Agua amiga", c:["Hago 10 burbujas seguidas sin agobiarme","Floto en estrella boca arriba 10 segundos","Me deslizo en flecha desde la pared"]},
+  {s:2, t:"Patada", c:["Patada de crol con tabla 25 m","Patada de espalda con tabla en el pecho 25 m","Patada sin doblar mucho las rodillas"]},
+  {s:3, t:"Respirar en crol", c:["Patada de lado respirando sin parar","Crol con un brazo respirando de lado","Vuelvo la cara al agua antes de que entre la mano"]},
+  {s:4, t:"Crol completo", c:["25 m de crol sin parar","Respiro cada 3 brazadas al menos un largo","Pulgar al muslo en cada brazada"]},
+  {s:5, t:"Espalda", c:["25 m de espalda con la cabeza quieta","Brazo rozando la oreja","Cadera arriba, no me siento"]},
+  {s:6, t:"Patada de braza", c:["Pies de pato en el borde","Patada de braza con tabla 25 m","Piernas simétricas, sin tijera"]},
+  {s:7, t:"Braza completa", c:["Orden: brazos → respiro → patada → flecha","25 m de braza deslizando","Brazada pequeña, termina bajo la barbilla"]},
+  {s:8, t:"Iniciación a mariposa", c:["Ondulación de delfín 12 m","Patada de delfín con tabla","3 brazadas de mariposa seguidas"]}
+];
+
+/* ===================== ESTADO (solo en este aparato) ===================== */
+const CLAVE = "nada_mejor_v1";
+function cargar(){
+  try{ const d = JSON.parse(localStorage.getItem(CLAVE)||"{}"); return {ejer:d.ejer||{}, plan:d.plan||{}, diario:Array.isArray(d.diario)?d.diario:[], foco:d.foco||""}; }
+  catch{ return {ejer:{}, plan:{}, diario:[], foco:""}; }
+}
+let estado = cargar();
+function guardar(){ try{ localStorage.setItem(CLAVE, JSON.stringify(estado)); }catch{} }
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ===================== NAVEGACIÓN ===================== */
+document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x===b));
+  document.querySelectorAll(".vista").forEach(v => v.classList.toggle("activa", v.id === "v-"+b.dataset.v));
+  scrollTo(0,0);
+}));
+
+/* ===================== ANIMACIONES SVG ===================== */
+// Nadador visto de lado; los brazos giran alrededor del hombro y las piernas oscilan.
+function escena(tipo){
+  const piel = "#f2c7a5", gorro = "#ff8a3d", banador = "#0b4f7a";
+  const espalda = tipo === "espalda";
+  const flotar = tipo === "flotar";
+  // keyframes por estilo
+  const k = {
+    crol:    {b1:"gira 1.6s linear infinite", b2:"gira 1.6s linear -0.8s infinite", p1:"patada .4s ease-in-out infinite alternate", p2:"patada .4s ease-in-out -.4s infinite alternate", c:"none"},
+    espalda: {b1:"gira 2s linear infinite", b2:"gira 2s linear -1s infinite", p1:"patada .4s ease-in-out infinite alternate", p2:"patada .4s ease-in-out -.4s infinite alternate", c:"none"},
+    braza:   {b1:"braza 2s ease-in-out infinite", b2:"braza 2s ease-in-out infinite", p1:"pbraza 2s ease-in-out infinite", p2:"pbraza 2s ease-in-out infinite", c:"cbraza 2s ease-in-out infinite"},
+    mariposa:{b1:"gira 1.8s linear infinite", b2:"gira 1.8s linear infinite", p1:"delfin .9s ease-in-out infinite alternate", p2:"delfin .9s ease-in-out infinite alternate", c:"ola 1.8s ease-in-out infinite"},
+    flotar:  {b1:"none", b2:"none", p1:"none", p2:"none", c:"flota 3s ease-in-out infinite"}
+  }[tipo];
+  const cuerpo = espalda || flotar
+    ? `<ellipse cx="0" cy="0" rx="62" ry="13" fill="${banador}"/><ellipse cx="-30" cy="-3" rx="30" ry="12" fill="${piel}"/>`
+    : `<ellipse cx="0" cy="0" rx="62" ry="13" fill="${piel}"/><rect x="-6" y="-12" width="34" height="24" rx="10" fill="${banador}"/>`;
+  return `<svg class="escena anim" viewBox="0 0 400 170" role="img" aria-label="Animación del movimiento de ${tipo}">
+  <style>
+    @keyframes gira{from{transform:rotate(0)}to{transform:rotate(-360deg)}}
+    @keyframes patada{from{transform:rotate(-9deg)}to{transform:rotate(9deg)}}
+    @keyframes delfin{from{transform:rotate(-16deg)}to{transform:rotate(10deg)}}
+    @keyframes braza{0%,100%{transform:rotate(0)}30%{transform:rotate(55deg)}50%{transform:rotate(25deg)}60%{transform:rotate(0)}}
+    @keyframes pbraza{0%,45%{transform:rotate(0)}60%{transform:rotate(-70deg)}75%{transform:rotate(-20deg)}90%,100%{transform:rotate(0)}}
+    @keyframes cbraza{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-8px) rotate(-8deg)}60%{transform:translateY(0) rotate(0)}}
+    @keyframes ola{0%,100%{transform:rotate(0)}25%{transform:rotate(-7deg)}75%{transform:rotate(6deg)}}
+    @keyframes flota{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+    @keyframes avanza{from{transform:translateX(-30px)}to{transform:translateX(30px)}}
+    .olas{animation:avanza 3s linear infinite alternate}
+  </style>
+  <g class="olas" opacity=".5"><path d="M-40 66 q25 -8 50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0" fill="none" stroke="#fff" stroke-width="3"/></g>
+  <g transform="translate(200,72) ${espalda?"":"scale(-1,1)"}">
+   <g style="animation:${k.c};transform-origin:0 0">
+    <!-- brazo de atrás -->
+    <g transform="translate(-44,0)"><g style="animation:${k.b2};transform-origin:0 0"><rect x="-4" y="-4" width="58" height="9" rx="4.5" fill="${piel}" opacity=".75"/></g></g>
+    <!-- piernas -->
+    <g transform="translate(58,0)"><g style="animation:${k.p2};transform-origin:0 0"><rect x="0" y="-4" width="62" height="10" rx="5" fill="${piel}" opacity=".75"/></g></g>
+    <g transform="translate(58,0)"><g style="animation:${k.p1};transform-origin:0 0"><rect x="0" y="-5" width="62" height="10" rx="5" fill="${piel}"/></g></g>
+    ${cuerpo}
+    <!-- cabeza con gorro -->
+    <circle cx="-78" cy="${espalda||flotar?-4:2}" r="15" fill="${piel}"/>
+    <path d="M-93 ${espalda||flotar?-4:2} a15 15 0 0 1 30 0 z" fill="${gorro}" transform="rotate(${espalda||flotar?0:-90} -78 ${espalda||flotar?-4:2})"/>
+    <!-- brazo de delante -->
+    <g transform="translate(-44,0)"><g style="animation:${k.b1};transform-origin:0 0"><rect x="-4" y="-4.5" width="58" height="9" rx="4.5" fill="${piel}" stroke="#d9a986"/></g></g>
+   </g>
+  </g>
+  <text x="12" y="160" font-size="12" fill="#fff" font-family="system-ui">${espalda?"← avanza mirando al techo":flotar?"Cuerpo largo y relajado":"sentido de avance →"}</text>
+  </svg>`;
+}
+
+/* ===================== ESTILOS ===================== */
+let estiloActual = "crol";
+function pintarChipsEstilos(){
+  $("#chips-estilos").innerHTML = Object.entries(ESTILOS).map(([id,e]) =>
+    `<button class="chip" data-e="${id}" aria-pressed="${id===estiloActual}">${e.emoji} ${e.nombre}</button>`).join("");
+  $("#chips-estilos").querySelectorAll(".chip").forEach(c => c.onclick = () => { estiloActual = c.dataset.e; pintarEstilo(); });
+}
+function pintarEstilo(){
+  pintarChipsEstilos();
+  const e = ESTILOS[estiloActual];
+  $("#detalle-estilo").innerHTML = `
+    <div class="tarjeta">
+      <h3>${e.emoji} ${e.nombre}</h3>
+      <p class="suave" style="margin-top:0">${e.resumen}</p>
+      ${escena(e.anim)}
+      <p class="suave" style="font-size:.8rem;margin:6px 0 0">Dibujo orientativo del ritmo, no a escala.</p>
+    </div>
+    <div class="tarjeta"><h3>Paso a paso</h3><ol class="fases">${e.fases.map(f=>`<li>${f}</li>`).join("")}</ol></div>
+    <div class="tarjeta"><h3>Errores típicos y cómo corregirlos</h3>
+      <div class="par">${e.errores.map(([m,b])=>`<div class="mal"><b>✗ ${m}</b></div><div class="bien" style="margin-bottom:8px"><b>✓</b> ${b}</div>`).join("")}</div>
+    </div>
+    <div class="tarjeta"><h3>Para recordar en el agua</h3>
+      <div class="fila">${e.claves.map(c=>`<span class="etq" style="font-size:.95rem;padding:4px 10px">${c}</span>`).join("")}</div>
+    </div>
+    <div class="fila"><button class="btn sec" id="ir-ejer">Ver ejercicios de ${e.nombre.toLowerCase()} →</button></div>`;
+  $("#ir-ejer").onclick = () => { filtroEjer = estiloActual; pintarEjercicios(); document.querySelector('nav button[data-v="ejercicios"]').click(); };
+}
+
+/* ===================== EJERCICIOS ===================== */
+let filtroEjer = "todos";
+function pintarEjercicios(){
+  const opciones = [["todos","Todos"], ...Object.entries(ESTILOS).map(([id,e])=>[id, e.emoji+" "+e.nombre])];
+  $("#chips-ejer").innerHTML = opciones.map(([id,n])=>`<button class="chip" data-f="${id}" aria-pressed="${id===filtroEjer}">${n}</button>`).join("");
+  $("#chips-ejer").querySelectorAll(".chip").forEach(c => c.onclick = () => { filtroEjer = c.dataset.f; pintarEjercicios(); });
+  const lista = EJERCICIOS.filter(x => filtroEjer==="todos" || x.e===filtroEjer);
+  $("#lista-ejer").innerHTML = lista.map(x => `
+    <div class="tarjeta">
+      <label class="check" style="border:0;padding:0">
+        <input type="checkbox" data-id="${x.id}" ${estado.ejer[x.id]?"checked":""}>
+        <div><h3>${x.t}</h3>
+          <span class="etq">${ESTILOS[x.e].emoji} ${ESTILOS[x.e].nombre}</span>
+          <p style="margin:6px 0">${x.d}</p>
+          <p class="suave" style="margin:0"><b>Para qué sirve:</b> ${x.m}</p></div>
+      </label>
+    </div>`).join("");
+  $("#lista-ejer").querySelectorAll("input").forEach(i => i.onchange = () => { estado.ejer[i.dataset.id] = i.checked; guardar(); });
+}
+
+/* ===================== PLAN ===================== */
+function pintarPlan(){
+  let total=0, hechos=0;
+  $("#lista-plan").innerHTML = PLAN.map(sem => `
+    <div class="tarjeta"><h3>Semana ${sem.s} · ${sem.t}</h3>
+      ${sem.c.map((c,i)=>{ const id=`s${sem.s}-${i}`; total++; if(estado.plan[id]) hechos++;
+        return `<label class="check"><input type="checkbox" data-id="${id}" ${estado.plan[id]?"checked":""}><span>${c}</span></label>`; }).join("")}
+    </div>`).join("");
+  const pct = Math.round(hechos/total*100);
+  $("#pct-plan").textContent = pct+" %"; $("#barra-plan").style.width = pct+"%";
+  $("#lista-plan").querySelectorAll("input").forEach(i => i.onchange = () => { estado.plan[i.dataset.id]=i.checked; guardar(); pintarPlan(); });
+}
+
+/* ===================== OBJETIVO DE LA PRÓXIMA CLASE ===================== */
+function pintarFoco(){
+  const ops = [];
+  for (const [id,e] of Object.entries(ESTILOS)) for (const c of e.claves) ops.push([`${id}|${c}`, `${e.emoji} ${e.nombre}: ${c}`]);
+  $("#sel-foco").innerHTML = `<option value="">— Elige uno —</option>` + ops.map(([v,n])=>`<option value="${esc(v)}" ${v===estado.foco?"selected":""}>${esc(n)}</option>`).join("");
+  const mostrar = () => {
+    const v = $("#sel-foco").value;
+    if(!v){ $("#txt-foco").textContent=""; return; }
+    const [id,c] = v.split("|"); const e = ESTILOS[id];
+    $("#txt-foco").innerHTML = `Hoy en <b>${e.nombre}</b> piensa solo en: <b>«${esc(c)}»</b>. Repítelo en cada largo. Al salir, apúntalo en el 📓 Diario.`;
+  };
+  $("#sel-foco").onchange = () => { estado.foco = $("#sel-foco").value; guardar(); mostrar(); };
+  mostrar();
+}
+
+/* ===================== DIARIO ===================== */
+let estrellas = 0;
+function pintarDiario(){
+  $("#estrellas").innerHTML = [1,2,3,4,5].map(n=>`<button aria-label="${n} estrellas" class="${n<=estrellas?"on":""}" data-n="${n}">★</button>`).join("");
+  $("#estrellas").querySelectorAll("button").forEach(b => b.onclick = () => { estrellas = +b.dataset.n; pintarDiario(); });
+  if(!$("#d-estilo").options.length) $("#d-estilo").innerHTML = Object.entries(ESTILOS).map(([id,e])=>`<option value="${id}">${e.emoji} ${e.nombre}</option>`).join("");
+  $("#lista-diario").innerHTML = estado.diario.length
+    ? estado.diario.slice().reverse().map(d => `<li><b>${esc(d.fecha)}</b> · ${ESTILOS[d.estilo]?ESTILOS[d.estilo].emoji+" "+ESTILOS[d.estilo].nombre:""} · ${"★".repeat(d.estrellas||0)}<br>${esc(d.nota)}</li>`).join("")
+    : `<li class="suave" style="list-style:none;margin-left:-20px">Aún no hay clases apuntadas.</li>`;
+}
+$("#b-guardar").onclick = () => {
+  const nota = $("#d-nota").value.trim();
+  if(!nota && !estrellas){ alert("Pon alguna estrella o escribe algo."); return; }
+  const f = new Date();
+  estado.diario.push({fecha: f.toLocaleDateString("es-ES",{day:"numeric",month:"short",year:"numeric"}), estilo: $("#d-estilo").value, estrellas, nota: nota.slice(0,500)});
+  guardar(); $("#d-nota").value=""; estrellas=0; pintarDiario();
+};
+$("#b-exportar").onclick = async () => {
+  const txt = JSON.stringify(estado);
+  try{ await navigator.clipboard.writeText(txt); alert("Copiado. Pégalo en el otro móvil con «Pegar datos»."); }
+  catch{ prompt("Copia este texto:", txt); }
+};
+$("#b-importar").onclick = () => {
+  const txt = prompt("Pega aquí tus datos:"); if(!txt) return;
+  try{ const d = JSON.parse(txt); if(typeof d!=="object"||!d) throw 0;
+    estado = {ejer:d.ejer||{}, plan:d.plan||{}, diario:Array.isArray(d.diario)?d.diario:[], foco:d.foco||""};
+    guardar(); todo(); alert("Datos recuperados.");
+  }catch{ alert("Ese texto no es una copia válida."); }
+};
+$("#b-borrar").onclick = () => { if(confirm("¿Borrar todo tu progreso y diario de este móvil?")){ estado={ejer:{},plan:{},diario:[],foco:""}; guardar(); todo(); } };
+
+/* ===================== CRONÓMETRO ===================== */
+let temporizador = null;
+const fmt = s => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+function pitido(f=880){ try{ const c=new (window.AudioContext||window.webkitAudioContext)(), o=c.createOscillator(); o.frequency.value=f; o.connect(c.destination); o.start(); o.stop(c.currentTime+.25); }catch{} if(navigator.vibrate) navigator.vibrate(200); }
+$("#b-empezar").onclick = () => {
+  clearInterval(temporizador);
+  const nado = Math.max(5, parseInt($("#t-nado").value)||40), desc = Math.max(0, parseInt($("#t-desc").value)||0), series = Math.max(1, parseInt($("#t-series").value)||1);
+  let serie=1, fase="nado", resta=nado;
+  const pinta = () => { $("#reloj").textContent = fmt(resta); $("#estado-reloj").textContent = fase==="nado" ? `🏊 Serie ${serie} de ${series} — ¡a nadar!` : `😮‍💨 Descanso (luego serie ${serie+1})`; };
+  pitido(); pinta();
+  temporizador = setInterval(() => {
+    resta--;
+    if(resta<0){
+      if(fase==="nado"){ if(serie>=series){ clearInterval(temporizador); $("#reloj").textContent="✓"; $("#estado-reloj").textContent="¡Terminado! Muy bien."; pitido(1200); return; }
+        if(desc>0){ fase="desc"; resta=desc; pitido(500);} else { serie++; resta=nado; pitido(); } }
+      else { fase="nado"; serie++; resta=nado; pitido(); }
+    }
+    pinta();
+  }, 1000);
+};
+$("#b-parar").onclick = () => { clearInterval(temporizador); $("#estado-reloj").textContent="Parado"; };
+
+/* ===================== ARRANQUE ===================== */
+function todo(){ pintarEstilo(); pintarEjercicios(); pintarPlan(); pintarFoco(); pintarDiario(); }
+todo();
+</script>
+</body>
+</html>
