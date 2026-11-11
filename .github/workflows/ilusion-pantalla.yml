@@ -1,0 +1,57 @@
+name: Ilusión Pantalla
+on:
+  push: { paths: ['ilusion-pantalla/**', '.github/workflows/ilusion-pantalla.yml'] }
+  pull_request: { paths: ['ilusion-pantalla/**'] }
+jobs:
+  datos-y-diseno:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Catálogo válido y seed al día
+        run: |
+          node ilusion-pantalla/content/validar-catalogo.mjs
+          node ilusion-pantalla/content/generar-seed.mjs
+          git diff --exit-code ilusion-pantalla/supabase/seed.sql
+      - name: Tokens de diseño
+        run: node ilusion-pantalla/design/verificar-tokens.mjs
+      - name: Firma R2 (vector AWS) y reglas de acceso
+        run: node ilusion-pantalla/supabase/tests/r2.test.ts
+      - name: Analítica (validación estricta de eventos)
+        run: node ilusion-pantalla/supabase/tests/analitica.test.ts
+      - name: Premium (estados de Google Play, JWT, vinculación de cuenta)
+        run: node ilusion-pantalla/supabase/tests/play.test.ts
+      - name: Pipeline de vídeo (ffmpeg real)
+        run: |
+          sudo apt-get install -y -qq ffmpeg >/dev/null
+          node ilusion-pantalla/herramientas/video/tests/video.test.mjs
+      - name: Migraciones + RLS (Postgres temporal)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql >/dev/null
+          sudo bash ilusion-pantalla/supabase/tests/run.sh
+  panel-admin:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: ilusion-pantalla/admin } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: ilusion-pantalla/admin/package-lock.json }
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npx vitest run
+      - run: npm run build
+        env: { NEXT_PUBLIC_SUPABASE_URL: 'https://ejemplo.supabase.co', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon-falsa' }
+  android-logica:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Tests de lógica (JVM puro: rendimiento + catálogo/red/descargas + analítica)
+        working-directory: ilusion-pantalla/android
+        run: gradle -PsoloJvm :core:rendimiento:test :core:catalogo:test :core:analitica:test :core:cuenta:test --no-daemon
+  # Compilar :app y :core:wallpaper exige Android SDK: se añade (assembleDebug + lint) en cuanto
+  # la primera build local en Android Studio confirme las versiones de libs.versions.toml.
