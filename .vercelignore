@@ -10,3 +10,6 @@ fotos-listas/
 # Worker de Cloudflare (castresana-web) y link temporal: se publican con `cf`
 # desde el PC de Pau, no en Vercel.
 cloudflare/
+
+# MarkItDown es una herramienta local (Node + uv), no una página web.
+markitdown/

@@ -21,3 +21,7 @@ pulso-local-ai/tsconfig.tsbuildinfo
 pulso-local-ai/.test-build-*/
 cloudflare/.bin/
 escaparate3d/usb/
+
+# Documentos de clientes que se pasan por MarkItDown: nunca al repo público.
+markitdown/documentos/*
+!markitdown/documentos/.gitkeep
