@@ -7,6 +7,15 @@ menos y entiende mejor las tablas.
 
 ## 1. Conectarlo (una vez por ordenador)
 
+**En el Mac, lo fácil:** descarga el repositorio (o solo `markitdown/instalar-en-mac.command`)
+y haz doble clic en ese archivo. Hace los pasos de abajo uno a uno, te pregunta antes
+de instalar nada, copia la skill a `~/.claude/skills/markitdown` para que se active
+sola en **todos** tus proyectos y, si le dices que sí, la conecta también a la app de
+escritorio (con copia del archivo antes). Si macOS dice que no puede abrirlo: clic
+derecho → Abrir.
+
+A mano:
+
 ```bash
 uvx --version                      # si no sale nada, hace falta uv (docs.astral.sh/uv)
 claude mcp add --scope user --transport stdio markitdown -- uvx markitdown-mcp
