@@ -6,7 +6,7 @@ que hay aquí es asesoramiento legal: es la lista de lo que hay que comprobar.
 
 ## 1. Qué sale del dispositivo hoy (fase 1)
 
-**Nada.** El tutor funciona con `vagoyo.js` en el navegador:
+**Nada, salvo que alguien lo mande a mano.** El tutor funciona con `vagoyo.js` en el navegador:
 
 | Dato | Dónde está | Sale | Se guarda |
 |---|---|---|---|
