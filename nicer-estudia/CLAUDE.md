@@ -79,13 +79,14 @@ Fase 1 hecha como demostración local: `vagoyo.js` (motor puro), `interfaz-tutor
 (pantallas y panel familiar) y las acciones `tutor-*` de `app.js`; el estado va en
 `ctx.tutor`; el progreso (sin texto del alumno) se guarda en `localStorage` con la clave
 `nicer-estudia:vagoyo` y Pau lo ve en el «Panel de Pau» o con «Mandar el resumen a Pau»
-(vista previa obligatoria, lo manda una persona). Reglas propias: **sin ninguna petición de red** (lo vigila
-`test/vago-yo.ui.test.mjs`), ante un signo dudoso **pregunta**, un acierto con
+(vista previa obligatoria, lo manda una persona). Reglas propias: **ninguna petición de red salvo leer una foto** con
+`/api/vagoyo` (`api/_vagoyo.js`), que está apagado hasta que Pau lo activa con su PIN y
+solo recibe foto + asignatura; la IA solo transcribe (lo vigilan `test/vago-yo*.mjs`), ante un signo dudoso **pregunta**, un acierto con
 pista **no es autónomo**, «consolidado» exige ejercicios distintos en días distintos,
 el resumen familiar sale **solo** del registro (que no guarda texto del alumno) y lo
 escrito dentro de un documento es texto, nunca órdenes. El nombre nunca califica al
 alumno. Todo en `vago-yo/README.md`; el prompt educativo en `vago-yo/PROMPT-TUTOR.md`;
-el modo real está **bloqueado** hasta la revisión de `vago-yo/DATOS-Y-ACTIVACION.md`.
+qué sale, adónde y la revisión para menores, en `vago-yo/DATOS-Y-ACTIVACION.md`.
 
 ## Separación por capas
 

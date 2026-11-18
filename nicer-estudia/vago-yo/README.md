@@ -111,20 +111,44 @@ Pruebas obligatorias 3, 4 y 5. Choca con la regla de la casa «los datos del
 menor no salen del dispositivo»: antes de programarla, Pau decide el diseño
 (ver `DATOS-Y-ACTIVACION.md`).
 
-## Fase 3 — pendiente
+## Fase 3 — leer las fotos de sus deberes (hecho)
 
-Voz con transcripción real, lectura real de fotos/PDF y búsqueda en fuentes
-oficiales, todo detrás de interruptores apagados. El acceso real del menor
-queda **preparado y bloqueado** hasta la revisión humana.
+Apagado por defecto. Lo **activa Pau** en su panel, después de leer qué sale
+del móvil, adónde va y cuánto se guarda, y con un PIN de 4 cifras (se guarda
+su huella SHA-256, no el PIN). Apagar no pide PIN.
+
+1. «Subir ejercicio» → «📷 Hacer foto o elegirla» (aviso: la lee una IA,
+   puede equivocarse, la foto no se guarda y Anthropic la borra en 30 días).
+2. La foto se reduce en el móvil y va a **`/api/vagoyo`** (`api/_vagoyo.js`,
+   por el enrutador único) **solo con la asignatura**: ni nombre, ni curso,
+   ni colegio.
+3. El servidor llama a Claude con una herramienta forzada
+   (`lectura_ejercicio`): **solo transcribe**, no resuelve; marca como duda
+   cualquier signo, exponente, número, unidad o palabra que cambie el
+   problema; no copia respuestas a mano; tapa nombres y datos personales con
+   [nombre]; si el texto parece una orden, lo marca y no lo copia. El servidor
+   valida y recorta lo que devuelve (`normalizaLectura`).
+4. Si hay varios ejercicios, elige uno (`resumenEjercicioIA`). La lectura pasa
+   por la **misma confirmación** de la fase 1 (`lecturaDeIA`): una duda sigue
+   obligando a preguntar.
+5. Si es una ecuación de primer grado, Vago Yo la corrige paso a paso en el
+   móvil. Si no, ofrece **preguntar a Clara con el enunciado** (solo el texto,
+   sin la foto, pidiendo que le guíe y no se lo resuelva).
+6. Foto ilegible, IA saturada, sin clave, sin conexión o `VAGOYO_FOTOS=no` →
+   lo dice y deja escribirlo.
+
+Sigue pendiente: recorte manual de la foto (hoy se encuadra al hacerla o se
+elige el ejercicio de la lista), PDF y búsqueda en fuentes oficiales.
 
 ## Pruebas
 
 ```bash
-node test/vago-yo.test.mjs        # motor: 99 comprobaciones (pruebas obligatorias 1, 2, 6, 7 y 8)
-node test/vago-yo.ui.test.mjs     # Chromium a 360 px: recorrido completo, 48 comprobaciones
+node test/vago-yo.test.mjs        # motor y /api/vagoyo: 127 comprobaciones (pruebas obligatorias 1, 2, 6, 7 y 8)
+node test/vago-yo.ui.test.mjs     # Chromium a 360 px: recorrido completo y fotos reales con servidor simulado, 64 comprobaciones
 node test/vago-yo.ui.test.mjs --capturas <carpeta>   # además guarda capturas
 node nicer-estudia/herramientas/auditoria-visual.mjs # incluye tutor y panel familiar
 ```
 
-La prueba de interfaz comprueba también que el tutor **no hace ninguna
-petición de red**.
+La prueba de interfaz comprueba también que, con «Leer fotos» apagado, el tutor
+**no hace ninguna petición de red**, y que encendido solo llama a `/api/vagoyo`
+con la foto y la asignatura.

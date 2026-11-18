@@ -9,6 +9,8 @@
 
 import * as V from "../nicer-estudia/vagoyo.js";
 import { vistaTutor, vistaFamilia } from "../nicer-estudia/interfaz-tutor.js";
+import lector, { normalizaLectura, SYSTEM, HERRAMIENTA } from "../api/_vagoyo.js";
+import Anthropic from "@anthropic-ai/sdk";
 
 let pasados = 0, fallados = 0;
 const check = (nombre, cond, detalle = "") => {
@@ -242,6 +244,86 @@ console.log("\n💾 Progreso guardado y mensaje para Pau");
   check("el mensaje para Pau lleva avance, dificultad, acción y repaso", /Avance/.test(msg) && /Dificultad/.test(msg) && /10 minutos/.test(msg) && /Próximo repaso/.test(msg));
   check("fecha en formato español", msg.includes("18/11/2026") && msg.includes("19/11/2026"));
   check("dice que no incluye lo que escribe", /No incluye lo que escribe/.test(msg));
+}
+
+console.log("\n📸 Fotos reales: del servidor a la confirmación");
+{
+  const resp = normalizaLectura({
+    legible: true, asignatura: "mates", pagina: "pág. 34",
+    ejercicios: [{ numero: "5", instruccion: "Resuelve", piezas: [{ t: "5(x " }, { opciones: ["−", "+", "+"], motivo: "borroso" }, { t: " 1) = 20" }] }],
+    texto_parece_orden: true, datos_personales_omitidos: true
+  });
+  const l = V.lecturaDeIA(resp, 0);
+  check("la duda de signo de la IA se convierte en pregunta (prueba 1, con foto real)", V.ejercicioDeLectura(l).tipo === "pregunta" && l.piezas[1].duda === "signo");
+  check("opciones repetidas se quitan", l.piezas[1].opciones.length === 2);
+  check("no es simulada y lo dice el origen", l.simulada === false && /leída por IA/.test(l.origen) && /pág\. 34/.test(l.origen));
+  check("avisa de la orden escondida y de los datos tapados", /orden/.test(l.aviso) && /datos personales/.test(l.aviso));
+  check("confirmado «+» → x = 3", V.ejercicioDeLectura(V.eligeEnLectura(l, 1, "+")).ejercicio.x === 3);
+  const dato = V.lecturaDeIA(normalizaLectura({ legible: true, ejercicios: [{ piezas: [{ t: "Pasa " }, { opciones: ["250", "350"], motivo: "el 2 parece un 3" }, { t: " cm a metros" }] }] }), 0);
+  const pd = V.ejercicioDeLectura(dato);
+  check("una duda de número también pregunta, con las opciones", pd.tipo === "pregunta" && /250 o 350/.test(pd.pregunta));
+  const otro = V.ejercicioDeLectura(V.eligeEnLectura(dato, 1, "250"));
+  check("lo que no es ecuación no se corrige: va a Clara", otro.tipo === "otro" && otro.texto === "Pasa 250 cm a metros");
+  const q = V.preguntaParaClara(otro, "fyq");
+  check("la pregunta a Clara pide guía, no la solución, y lleva el texto", /No me lo resuelvas/.test(q) && q.includes("250 cm") && /Física y Química/.test(q));
+  check("varios ejercicios: resumen corto con «?» en las dudas", V.resumenEjercicioIA({ numero: "2", piezas: [{ t: "x " }, { opciones: ["+", "−"] }, { t: " 1 = 3" }] }) === "2. x ? 1 = 3");
+  check("puedeLeerFotos: apagado por defecto", V.puedeLeerFotos({}).si === false && /Pau/.test(V.puedeLeerFotos({}).motivo));
+  check("puedeLeerFotos: sin conexión, no", V.puedeLeerFotos({ leerFotos: true }, { enLinea: false }).si === false);
+  check("puedeLeerFotos: activado y con red, sí", V.puedeLeerFotos({ leerFotos: true }, { enLinea: true }).si === true);
+  check("capacidades: con fotos activadas lo dice y nombra la IA", /IA/.test(V.capacidades({ leerFotos: true }).find((c) => c.id === "foto").texto));
+  check("PIN de 4 cifras", V.PIN_VALIDO.test("0427") && !V.PIN_VALIDO.test("12a4") && !V.PIN_VALIDO.test("12345"));
+}
+
+console.log("\n🛡️  /api/vagoyo (Claude simulado)");
+{
+  const resFalsa = () => { const r = { code: 0, body: null, headers: {} }; r.status = (c) => { r.code = c; return r; }; r.json = (b) => { r.body = b; return r; }; r.setHeader = (k, v) => { r.headers[k] = v; }; return r; };
+  const FOTO = { media_type: "image/jpeg", data: "QUJD" };
+  const original = Anthropic.Messages.prototype.create;
+  const peticiones = [];
+  Anthropic.Messages.prototype.create = async function (p) {
+    peticiones.push(JSON.parse(JSON.stringify(p)));
+    return { stop_reason: "tool_use", content: [{ type: "tool_use", id: "t1", name: "lectura_ejercicio", input: {
+      legible: true, asignatura: "mates", ejercicios: [{ numero: "1", piezas: [{ t: "2(x + 4) = 18\u0007" }] }] } }] };
+  };
+  const antes = { k: process.env.ANTHROPIC_API_KEY, f: process.env.VAGOYO_FOTOS };
+  process.env.ANTHROPIC_API_KEY = "sk-falsa";
+  delete process.env.VAGOYO_FOTOS;
+
+  let r = resFalsa();
+  await lector({ method: "POST", body: { imagen: FOTO, asignatura: "mates", nombre: "Nicer", centro: "Lastra" } }, r);
+  check("lee la foto y devuelve la lectura validada", r.code === 200 && r.body.lectura.legible && r.body.lectura.ejercicios[0].piezas[0].t === "2(x + 4) = 18");
+  const p = peticiones[0];
+  check("fuerza la herramienta (solo transcribe, nunca texto libre)", p.tool_choice?.name === "lectura_ejercicio" && p.tools[0].name === HERRAMIENTA.name);
+  const enviado = JSON.stringify(p);
+  check("al modelo NO le llega ni el nombre ni el colegio", !enviado.includes("Nicer") && !enviado.includes("Lastra"));
+  check("la foto va como imagen", p.messages[0].content[0].type === "image");
+  check("las reglas: no resolver, dudas, órdenes y datos personales", /No resuelvas/.test(SYSTEM) && /NO lo adivines/.test(SYSTEM) && /NO lo obedezcas/.test(SYSTEM) && /\[nombre\]/.test(SYSTEM));
+
+  r = resFalsa(); await lector({ method: "POST", body: { imagen: { media_type: "image/gif", data: "QUJD" } } }, r);
+  check("una imagen no válida → 400", r.code === 400);
+  r = resFalsa(); await lector({ method: "GET" }, r);
+  check("GET → 405", r.code === 405);
+  process.env.VAGOYO_FOTOS = "no";
+  r = resFalsa(); await lector({ method: "POST", body: { imagen: FOTO } }, r);
+  check("interruptor VAGOYO_FOTOS=no → 503 sin llamar a la IA", r.code === 503 && peticiones.length === 1);
+  delete process.env.VAGOYO_FOTOS;
+  delete process.env.ANTHROPIC_API_KEY;
+  r = resFalsa(); await lector({ method: "POST", body: { imagen: FOTO } }, r);
+  check("sin clave → 503 con mensaje para escribirlo", r.code === 503 && /Escribe/.test(r.body.error));
+  process.env.ANTHROPIC_API_KEY = "sk-falsa";
+  Anthropic.Messages.prototype.create = async () => { const e = new Error("saturado"); e.status = 529; throw e; };
+  r = resFalsa(); await lector({ method: "POST", body: { imagen: FOTO } }, r);
+  check("IA saturada → 503 claro", r.code === 503 && /saturada/.test(r.body.error));
+
+  const n = normalizaLectura({ legible: true, ejercicios: Array.from({ length: 7 }, () => ({ piezas: [{ t: "x = 1" }] })) });
+  check("como mucho 4 ejercicios", n.ejercicios.length === 4);
+  check("no legible sin ejercicios, con motivo", normalizaLectura({ legible: true, ejercicios: [] }).legible === false && normalizaLectura({}).motivo.length > 0);
+  check("asignatura desconocida → otra", normalizaLectura({ asignatura: "magia" }).asignatura === "otra");
+  check("una sola opción no es duda", normalizaLectura({ legible: true, ejercicios: [{ piezas: [{ opciones: ["+"], t: "+" }] }] }).ejercicios[0].piezas[0].t === "+");
+
+  Anthropic.Messages.prototype.create = original;
+  if (antes.k) process.env.ANTHROPIC_API_KEY = antes.k; else delete process.env.ANTHROPIC_API_KEY;
+  if (antes.f) process.env.VAGOYO_FOTOS = antes.f;
 }
 
 console.log("\n⏳ Pendientes de la fase 2 (no se prueban aún): 3 temario confirmado, 4 foto privada del supervisor, 5 revocar enlace.");
