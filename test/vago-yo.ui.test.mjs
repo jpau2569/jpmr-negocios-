@@ -43,7 +43,7 @@ const page = await ctxNav.newPage();
 await page.addInitScript(() => { delete window.SpeechRecognition; delete window.webkitSpeechRecognition; window.SpeechRecognition = undefined; window.webkitSpeechRecognition = undefined; });
 const errores = [];
 page.on("pageerror", (e) => errores.push(String(e)));
-page.on("console", (m) => { if (m.type() === "error") errores.push(m.text()); });
+page.on("console", (m) => { if (m.type() === "error" && !/status of 503/.test(m.text())) errores.push(m.text()); }); // el 503 lo simula la prueba
 const peticionesApi = [];
 page.on("request", (r) => { if (r.url().includes("/api/")) peticionesApi.push(r.url()); });
 
@@ -200,8 +200,84 @@ await page.click('[data-accion="tutor-comprobar"]');
 check("corrige sin conexión un enunciado escrito a mano", /Sin ayuda en este ejercicio/.test(await texto()));
 await ctxNav.setOffline(false);
 
+check("con «leer fotos» apagado, el tutor no ha hecho ninguna petición a /api", peticionesApi.length === 0, peticionesApi.join(", "));
+
+console.log("\n📸 Leer fotos de sus deberes con IA (servidor simulado)");
+await page.waitForTimeout(300);
+let respuestaIA = null, cuerposIA = [];
+await page.route("**/api/vagoyo", (ruta) => {
+  cuerposIA.push(JSON.parse(ruta.request().postData() || "{}"));
+  return ruta.fulfill(respuestaIA);
+});
+const lecturaOk = (ejercicios) => ({ status: 200, contentType: "application/json", body: JSON.stringify({ lectura: { legible: true, motivo: "", asignatura: "mates", pagina: "pág. 34", ejercicios, textoPareceOrden: false, datosPersonalesOmitidos: true } }) });
+const fotoPrueba = await page.screenshot({ clip: { x: 0, y: 0, width: 300, height: 160 } });
+await alInicio();
+await page.click('[data-accion="tutor-asignatura"][data-id="mates"]');
+await page.click('[data-pantalla="subir"]');
+check("apagado: dice que lo activa Pau y no hay botón de foto", /Lo puede activar Pau/.test(await texto()) && (await page.locator('[data-accion="tutor-foto-real"]').count()) === 0);
+
+await page.goto(`http://localhost:${PORT}/app.html?vista=familia`, { waitUntil: "networkidle" });
+t = await texto();
+check("el panel de Pau explica qué sale, adónde y cuánto se guarda", /Qué sale del móvil/i.test(t) && /Anthropic/.test(t) && /30 días/.test(t));
+await page.click('[data-accion="tutor-fotos-activar"]');
+await page.fill("#pin1", "0427"); await page.fill("#pin2", "0427");
+await page.check('input[name="leido"]');
+await page.click("#dlg-aceptar");
+check("activado por Pau con PIN", /Activado/.test(await texto()));
+const ajustesGuardados = await page.evaluate(() => localStorage.getItem("nicer-estudia:vagoyo-ajustes") || "");
+check("el PIN no se guarda en claro", ajustesGuardados.includes("pinHuella") && !ajustesGuardados.includes("0427"));
+await foto("07-pau-fotos");
+
+await page.click('[data-accion="ir"][data-vista="tutor"]');
+await page.click('[data-pantalla="subir"]');
+t = await texto();
+check("subir: avisa de que la lee una IA y de los 30 días", /IA/.test(t) && /30 días/.test(t) && (await page.locator('[data-accion="tutor-foto-real"]').count()) === 1);
+respuestaIA = lecturaOk([{ numero: "5", instruccion: "Resuelve la ecuación", piezas: [{ t: "5(x " }, { duda: "dato", opciones: ["−", "+"], motivo: "La raya está borrosa." }, { t: " 1) = 20" }] }]);
+await page.setInputFiles("#tutor-archivo", { name: "deberes.png", mimeType: "image/png", buffer: fotoPrueba });
+await page.waitForSelector('[data-accion="tutor-elegir"]');
+t = await texto();
+check("foto real con signo dudoso → pregunta antes de resolver", /menos .* o un más/.test(t) && /leída por IA/.test(t));
+check("enseña tu foto en la confirmación", (await page.locator("img.tutor-foto-real").count()) === 1);
+check("al servidor solo le llega la foto y la asignatura", JSON.stringify(Object.keys(cuerposIA[0]).sort()) === JSON.stringify(["asignatura", "imagen"]) && cuerposIA[0].imagen.media_type === "image/jpeg");
+await foto("08-foto-duda");
+await page.click('[data-accion="tutor-elegir"][data-op="+"]');
+await page.click('[data-accion="tutor-confirmar"]');
+await page.fill("#tutor-intento", "5x + 5 = 20\n5x = 15\nx = 3");
+await page.click('[data-accion="tutor-comprobar"]');
+check("y lo corrige paso a paso en el móvil", /Sin ayuda en este ejercicio/.test(await texto()));
+
+respuestaIA = lecturaOk([
+  { numero: "1", piezas: [{ t: "x + 2 = 5" }] },
+  { numero: "2", instruccion: "Calcula el área de un círculo de radio", piezas: [{ t: "3 cm" }] }
+]);
+await alInicio();
+await page.click('[data-pantalla="subir"]');
+await page.setInputFiles("#tutor-archivo", { name: "deberes.png", mimeType: "image/png", buffer: fotoPrueba });
+await page.waitForSelector('[data-accion="tutor-elegir-ej"]');
+check("varios ejercicios en la foto → elegir uno", (await page.locator('[data-accion="tutor-elegir-ej"]').count()) === 2);
+await page.click('[data-accion="tutor-elegir-ej"][data-i="1"]');
+check("lo que no corrige él, se lo ofrece a Clara", (await page.locator('[data-accion="tutor-a-clara"]').count()) === 1);
+await page.click('[data-accion="tutor-a-clara"]');
+const borrador = await page.inputValue("#profe-texto");
+check("Clara recibe solo el enunciado y la petición de guía", /No me lo resuelvas/.test(borrador) && /círculo de radio 3 cm/.test(borrador));
+
+respuestaIA = { status: 200, contentType: "application/json", body: JSON.stringify({ lectura: { legible: false, motivo: "Está movida: haz otra más cerca.", ejercicios: [] } }) };
+await page.goto(`http://localhost:${PORT}/app.html?vista=tutor`, { waitUntil: "networkidle" });
+await page.click('[data-pantalla="subir"]');
+await page.setInputFiles("#tutor-archivo", { name: "deberes.png", mimeType: "image/png", buffer: fotoPrueba });
+await page.waitForSelector(".tutor-error");
+check("foto ilegible → dice qué falta, sin inventarse nada", /Está movida/.test(await texto()));
+respuestaIA = { status: 503, contentType: "application/json", body: JSON.stringify({ error: "La IA está saturada. Prueba en un minuto." }) };
+await page.setInputFiles("#tutor-archivo", { name: "deberes.png", mimeType: "image/png", buffer: fotoPrueba });
+await page.waitForSelector(".tutor-error >> text=saturada");
+check("sin IA disponible → lo explica y deja escribirlo", /saturada/.test(await texto()) && (await page.locator("#tutor-enunciado").count()) === 1);
+
+await page.goto(`http://localhost:${PORT}/app.html?vista=familia`, { waitUntil: "networkidle" });
+await page.click('[data-accion="tutor-fotos-apagar"]');
+check("Pau lo apaga sin PIN (apagar siempre se puede)", /Apagado/.test(await texto()));
+check("las únicas peticiones de red del tutor han sido a /api/vagoyo", peticionesApi.every((u) => u.includes("/api/vagoyo")), peticionesApi.join(", "));
+
 console.log("\n🔒 Privacidad y calidad");
-check("el tutor no ha hecho ninguna petición a /api", peticionesApi.length === 0, peticionesApi.join(", "));
 const desborde = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 check("sin desborde horizontal a 360 px", desborde <= 0);
 check("sin errores de JavaScript", errores.length === 0, errores.join(" | "));

@@ -70,6 +70,29 @@ function guardaProgresoTutor() {
 }
 ctx.tutor.progreso = cargaProgresoTutor();
 
+/* Ajustes que decide Pau (leer fotos con IA y su PIN, guardado como huella). */
+const CLAVE_TUTOR_AJUSTES = 'nicer-estudia:vagoyo-ajustes';
+function cargaAjustesTutor() {
+  try {
+    const a = JSON.parse(localStorage.getItem(CLAVE_TUTOR_AJUSTES) || '{}');
+    return {
+      leerFotos: a.leerFotos === true && typeof a.pinHuella === 'string',
+      pinHuella: typeof a.pinHuella === 'string' ? a.pinHuella.slice(0, 80) : null,
+      activadoEl: /^\d{4}-\d{2}-\d{2}$/.test(a.activadoEl || '') ? a.activadoEl : null
+    };
+  } catch { return { leerFotos: false, pinHuella: null, activadoEl: null }; }
+}
+function guardaAjustesTutor() {
+  try { localStorage.setItem(CLAVE_TUTOR_AJUSTES, JSON.stringify(ctx.tutor.ajustes)); } catch { /* sigue en memoria */ }
+}
+ctx.tutor.ajustes = cargaAjustesTutor();
+
+async function huellaPin(pin) {
+  const datos = new TextEncoder().encode(`nicer-vagoyo:${pin}`);
+  const h = await crypto.subtle.digest('SHA-256', datos);
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 function tutorNuevo() {
   return {
     pantalla: 'inicio', asignatura: 'mates',
@@ -277,7 +300,7 @@ let pararDictadoTutor = null;
 const accionesTutor = {
   'tutor-ir': (el) => {
     if (el.dataset.pantalla === 'explicar') T().explicar = { elegida: null, revelado: false, otra: false };
-    if (el.dataset.pantalla === 'subir') T().errorEnunciado = null;
+    if (el.dataset.pantalla === 'subir') { T().errorEnunciado = null; T().errorFoto = null; }
     tutorA(el.dataset.pantalla || 'inicio');
   },
   'tutor-asignatura': (el) => {
@@ -289,6 +312,7 @@ const accionesTutor = {
     const foto = VY.FOTOS_DEMO.find((f) => f.id === el.dataset.id);
     if (!foto) return;
     T().lectura = VY.leeFotoDemo(foto);
+    T().fotoVista = null;
     tutorA('confirmar');
   },
   'tutor-elegir': (el) => {
@@ -311,6 +335,51 @@ const accionesTutor = {
     }
     T().errorEnunciado = null;
     tutorEmpieza({ ...ej, origen: 'Escrito por ti' });
+  },
+  'tutor-foto-real': () => {
+    const p = VY.puedeLeerFotos(T().ajustes, { enLinea: ctx.enLinea });
+    if (!p.si) { T().errorFoto = p.motivo; render(); return; }
+    $('#tutor-archivo')?.click();
+  },
+  'tutor-elegir-ej': (el) => {
+    const l = VY.lecturaDeIA(T().respuestaIA, Number(el.dataset.i));
+    if (!l) return;
+    T().lectura = l;
+    tutorA('confirmar');
+  },
+  'tutor-a-clara': () => {
+    const t = T();
+    const paso = VY.ejercicioDeLectura(t.lectura);
+    if (paso.tipo !== 'otro') return;
+    ctx.borrador = VY.preguntaParaClara(paso, t.lectura.asignatura || t.asignatura);
+    irA('profe');
+  },
+  'tutor-fotos-activar': async () => {
+    const t = T();
+    const nuevo = !t.ajustes.pinHuella;
+    const d = await pide({
+      titulo: 'Activar leer fotos con IA',
+      aceptar: 'Activar',
+      html: `<p class="tutor-nota" style="margin-top:0">Esto lo decide Pau. ${nuevo ? 'Crea un PIN de 4 cifras: hará falta para volver a activarlo.' : 'Escribe tu PIN.'}</p>
+        <div class="campo"><label for="pin1">${nuevo ? 'PIN nuevo' : 'PIN'}</label>
+          <input id="pin1" name="pin1" type="password" inputmode="numeric" maxlength="4" autocomplete="off" /></div>
+        ${nuevo ? '<div class="campo"><label for="pin2">Repite el PIN</label><input id="pin2" name="pin2" type="password" inputmode="numeric" maxlength="4" autocomplete="off" /></div>' : ''}
+        <label class="marcar" style="margin-top:10px"><input type="checkbox" name="leido" value="si" /> He leído qué sale del móvil y adónde va.</label>`
+    });
+    if (!d) return;
+    if (!d.leido?.length) { avisa('Marca la casilla de que lo has leído.'); return; }
+    if (!VY.PIN_VALIDO.test(d.pin1 || '')) { avisa('El PIN son 4 cifras.'); return; }
+    if (nuevo && d.pin1 !== d.pin2) { avisa('Los dos PIN no coinciden.'); return; }
+    const huella = await huellaPin(d.pin1);
+    if (!nuevo && huella !== t.ajustes.pinHuella) { avisa('PIN incorrecto.'); return; }
+    t.ajustes = { leerFotos: true, pinHuella: huella, activadoEl: ctx.hoy };
+    guardaAjustesTutor();
+    render();
+  },
+  'tutor-fotos-apagar': () => {
+    T().ajustes = { ...T().ajustes, leerFotos: false, activadoEl: null };
+    guardaAjustesTutor();
+    render();
   },
   'tutor-practicar': () => tutorEmpieza(VY.primerEjercicio(T().asignatura)),
   'tutor-comprobar': () => tutorEntrega($('#tutor-intento')?.value || ''),
@@ -427,6 +496,62 @@ const accionesTutor = {
     window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
   }
 };
+
+/* Foto real del ejercicio: se reduce en el móvil, se manda UNA vez a
+   /api/vagoyo y se queda solo en memoria para enseñarla. */
+async function tutorLeeFoto(archivo) {
+  const t = T();
+  const p = VY.puedeLeerFotos(t.ajustes, { enLinea: navigator.onLine !== false });
+  if (!p.si) { t.errorFoto = p.motivo; render(); return; }
+  t.errorFoto = null;
+  t.leyendo = 'Preparando la foto…';
+  t.fotoVista = null;
+  tutorA('leyendo');
+  let foto;
+  try {
+    const r = await preparaFotos([archivo], { ajustes: ajustesPara(1) });
+    foto = r.fotos[0];
+    if (!foto) throw new Error(r.motivo || 'No he podido abrir la foto.');
+  } catch (e) {
+    t.leyendo = null; t.errorFoto = e.message; tutorA('subir'); return;
+  }
+  t.fotoVista = `data:${foto.media_type};base64,${foto.data}`;
+  t.leyendo = 'Leyendo el enunciado…';
+  render();
+  const corte = new AbortController();
+  const alarma = setTimeout(() => corte.abort(), 60000);
+  try {
+    const res = await fetch('/api/vagoyo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: corte.signal,
+      body: JSON.stringify({ imagen: { media_type: foto.media_type, data: foto.data }, asignatura: t.asignatura })
+    });
+    const datos = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(datos.error || `Error ${res.status}.`);
+    const lectura = datos.lectura;
+    if (!lectura?.legible) throw new Error(lectura?.motivo || 'No he podido leer ningún ejercicio.');
+    t.respuestaIA = lectura;
+    t.leyendo = null;
+    if (lectura.ejercicios.length > 1) { tutorA('elegir'); return; }
+    t.lectura = VY.lecturaDeIA(lectura, 0);
+    tutorA('confirmar');
+  } catch (e) {
+    t.leyendo = null;
+    t.errorFoto = e.name === 'AbortError' ? 'Ha tardado demasiado. Prueba otra vez o escríbelo.'
+      : !navigator.onLine ? 'No hay conexión. Escribe el enunciado.' : e.message;
+    tutorA('subir');
+  } finally {
+    clearTimeout(alarma);
+  }
+}
+
+document.addEventListener('change', (ev) => {
+  if (ev.target.id !== 'tutor-archivo') return;
+  const archivo = ev.target.files?.[0];
+  ev.target.value = '';
+  if (archivo) tutorLeeFoto(archivo);
+});
 
 /* Lo escrito se conserva aunque se repinte la pantalla. */
 document.addEventListener('input', (ev) => {
@@ -737,7 +862,7 @@ const acciones = {
   'borrar-todo': async () => {
     if (!(await confirma('Se borra TODO: deberes, exámenes, tarjetas, notas y horario. No hay vuelta atrás.'))) return;
     estado = D.estadoInicial();
-    ctx.tutor = tutorNuevo();
+    ctx.tutor = { ...tutorNuevo(), ajustes: ctx.tutor.ajustes };
     try { localStorage.removeItem(CLAVE_TUTOR); } catch { /* nada */ }
     estado.asignaturas = D.ASIGNATURAS_ESO.map((a) => ({ id: id('as'), nombre: a.nombre, color: a.color, profe: '' }));
     persiste(); render();

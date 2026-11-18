@@ -859,13 +859,22 @@ export function ejercicioDeLectura(lectura) {
     const d = dudas[0];
     return {
       tipo: 'pregunta',
-      pregunta: d.duda === 'signo' ? `¿Ese signo es un menos (${d.opciones[0]}) o un más (${d.opciones[1]})?` : '¿Qué pone aquí?',
+      pregunta: d.duda === 'signo' ? `¿Ese signo es un menos (${d.opciones[0]}) o un más (${d.opciones[1]})?`
+        : `¿Qué pone aquí: ${d.opciones.join(' o ')}?`,
       motivo: d.motivo, indice: d.i, opciones: d.opciones
     };
   }
-  const r = deEnunciado(textoLeido(lectura));
-  if (!r) return { tipo: 'no-entiendo', mensaje: 'No reconozco una ecuación en lo que se ha leído. Escríbela tú.' };
-  return { tipo: 'ejercicio', ejercicio: { ...r, origen: lectura.origen, simulada: true } };
+  const texto = textoLeido(lectura);
+  const r = deEnunciado(texto);
+  if (!r) {
+    // No es una ecuación de primer grado: no lo corrijo paso a paso, pero
+    // el enunciado confirmado sirve para preguntarle a Clara (solo el texto).
+    return {
+      tipo: 'otro', texto, instruccion: lectura.lineas.filter((l) => !lectura.ordenes.includes(l)).join(' '),
+      mensaje: 'Este tipo de ejercicio todavía no lo corrijo yo paso a paso. Puedes preguntarle a Clara con este enunciado (sin la foto): te guía sin dártelo hecho.'
+    };
+  }
+  return { tipo: 'ejercicio', ejercicio: { ...r, origen: lectura.origen, simulada: lectura.simulada } };
 }
 
 /* Del texto «3(x − 2) = 12» a un ejercicio que se puede corregir. Sirve
@@ -998,11 +1007,16 @@ export const LECCIONES = {
 
 /* ── Qué funciona ahora y qué no ─────────────────────────────────── */
 
-export function capacidades({ enLinea = true, puedeDictar = false, puedeLeer = false } = {}) {
+export function capacidades({ enLinea = true, puedeDictar = false, puedeLeer = false, leerFotos = false } = {}) {
+  const foto = !leerFotos
+    ? { estado: 'simulado', texto: 'Apagado: solo fotos de ejemplo. Lo activa Pau en su panel.' }
+    : enLinea
+      ? { estado: 'si', texto: 'Lo lee una IA (Claude, de Anthropic) y te pregunta si duda. La foto no se guarda.' }
+      : { estado: 'no', texto: 'Sin conexión no puedo leer tus fotos: escribe el enunciado.' };
   return [
     { id: 'correccion', nombre: 'Corregir paso a paso', estado: 'si', texto: 'Se hace en el móvil, sin internet.' },
-    { id: 'foto', nombre: 'Leer fotos y PDF', estado: 'simulado', texto: 'Demo: solo fotos de ejemplo con la lectura preparada. Leer tus fotos llegará más adelante.' },
-    { id: 'ia', nombre: 'Explicaciones con IA', estado: 'no', texto: 'Apagado. Vago Yo usa explicaciones preparadas a mano.' },
+    { id: 'foto', nombre: 'Leer tus fotos', ...foto },
+    { id: 'ia', nombre: 'Explicaciones con IA', estado: 'no', texto: 'Apagado. Vago Yo usa explicaciones preparadas a mano; para dudas libres, Clara.' },
     { id: 'busqueda', nombre: 'Buscar en internet', estado: 'no', texto: 'Apagado.' },
     { id: 'dictado', nombre: 'Hablar (dictado)', estado: puedeDictar && enLinea ? 'si' : 'no', texto: puedeDictar ? (enLinea ? 'Pulsas, hablas, revisas y envías. No se guarda el audio.' : 'El dictado del navegador necesita conexión: escribe.') : 'Este navegador no deja dictar: escribe.' },
     { id: 'leer', nombre: 'Leer en voz alta', estado: puedeLeer ? 'si' : 'no', texto: puedeLeer ? 'Con pausa y repetir.' : 'Este navegador no lee en voz alta.' },
@@ -1057,3 +1071,53 @@ export function textoParaPau(resumen, { alumno = 'Nicer', hoy } = {}) {
   lineas.push('', 'No incluye lo que escribe, ni fotos ni audios.');
   return lineas.join('\n');
 }
+
+/* ── Lectura real de una foto (respuesta de /api/vagoyo) ─────────── */
+
+/* Convierte UN ejercicio de la respuesta del servidor en la misma lectura
+   que usa la confirmación: las dudas siguen obligando a preguntar. */
+export function lecturaDeIA(respuesta, indice = 0) {
+  const ej = respuesta?.ejercicios?.[indice];
+  if (!ej) return null;
+  const piezas = (ej.piezas || []).map((p) => (Array.isArray(p.opciones) && p.opciones.length >= 2
+    ? { duda: p.opciones.some((o) => /^[−\-+±·×]$/.test(o)) && p.opciones.every((o) => o.length <= 2) ? 'signo' : 'dato',
+        opciones: p.opciones.map(String), motivo: String(p.motivo || 'No se distingue bien.') }
+    : { t: String(p.t || '') })).filter((p) => p.duda || p.t);
+  if (!piezas.length) return null;
+  const avisos = [];
+  if (respuesta.textoPareceOrden) avisos.push('La foto trae una frase que parece una orden para el tutor. La trato como texto del documento: no cambia ninguna regla ni ningún permiso.');
+  if (respuesta.datosPersonalesOmitidos) avisos.push('He quitado nombres o datos personales que salían en la foto.');
+  const sitio = [respuesta.pagina, ej.numero ? `ej. ${ej.numero}` : ''].filter(Boolean).join(' · ');
+  return {
+    fotoId: null,
+    asignatura: ASIGNATURAS.some((a) => a.id === respuesta.asignatura) ? respuesta.asignatura : null,
+    origen: `Tu foto${sitio ? ` · ${sitio}` : ''} · leída por IA`,
+    simulada: false,
+    lineas: ej.instruccion ? [ej.instruccion] : [],
+    piezas,
+    elecciones: {},
+    dudas: piezas.filter((p) => p.duda).length,
+    ordenes: [],
+    aviso: avisos.join(' ') || null
+  };
+}
+
+/* Texto corto de cada ejercicio para elegir cuál trabajar (las dudas, con «?»). */
+export const resumenEjercicioIA = (ej) => [ej.numero ? `${ej.numero}.` : '', ej.instruccion || '',
+  (ej.piezas || []).map((p) => (Array.isArray(p.opciones) && p.opciones.length >= 2 ? '?' : p.t)).join('')]
+  .filter(Boolean).join(' ').slice(0, 160);
+
+/* Pregunta para Clara con el enunciado confirmado. Solo texto, nunca la foto. */
+export function preguntaParaClara(paso, asignatura) {
+  const materia = asignatura ? ` de ${nombreAsignatura(asignatura)}` : '';
+  return `Tengo este ejercicio${materia} y no sé por dónde empezar. No me lo resuelvas: guíame paso a paso.\n«${[paso.instruccion, paso.texto].filter(Boolean).join(' ')}»`;
+}
+
+/* ¿Puede leer fotos ahora? Lo decide Pau (ajustes) y la conexión. */
+export function puedeLeerFotos(ajustes, { enLinea = true } = {}) {
+  if (!ajustes?.leerFotos) return { si: false, motivo: 'Leer tus fotos con IA está apagado. Lo puede activar Pau en su panel.' };
+  if (!enLinea) return { si: false, motivo: 'Sin conexión no puedo leer tus fotos. Escribe el enunciado o usa una foto de ejemplo.' };
+  return { si: true, motivo: '' };
+}
+
+export const PIN_VALIDO = /^\d{4}$/;

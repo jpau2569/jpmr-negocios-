@@ -33,6 +33,7 @@ const RUTAS = {
   oportunidades: () => import("./_oportunidades.js"),
   profe: () => import("./_profe.js"),
   tiempo: () => import("./_tiempo.js"),
+  vagoyo: () => import("./_vagoyo.js"),
 };
 
 // Clara y CasteBot responden en streaming; activarlo aquí no afecta al resto.

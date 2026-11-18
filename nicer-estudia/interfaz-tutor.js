@@ -17,9 +17,11 @@ function cabecera(t) {
   </div>`;
 }
 
-const DEMO = `<div class="aviso-caja tutor-demo" role="note">
-  <strong>Sin IA todavía.</strong> Las explicaciones están preparadas y las fotos son de ejemplo.
-  Corregir tus pasos sí es de verdad, y tu progreso se guarda en este móvil.
+const demo = (t) => `<div class="aviso-caja tutor-demo" role="note">
+  ${t.ajustes?.leerFotos
+    ? '<strong>Tus fotos las lee una IA</strong> (Claude, de Anthropic) y puede equivocarse: te pregunto si duda. Las explicaciones están preparadas a mano.'
+    : '<strong>Sin IA todavía.</strong> Las explicaciones están preparadas y las fotos son de ejemplo.'}
+  Corregir tus pasos es de verdad, y tu progreso se guarda en este móvil.
 </div>`;
 
 function chipsAsignatura(actual) {
@@ -77,7 +79,7 @@ function inicio(estado, ctx, t) {
         <div class="frase">El vago soy yo: te doy el siguiente paso y lo haces tú.</div>
       </div>
     </div>
-    ${DEMO}
+    ${demo(t)}
   </section>
   <section class="seccion">
     <header><h2>Asignatura</h2></header>
@@ -96,33 +98,31 @@ function inicio(estado, ctx, t) {
   <section class="seccion">
     <details class="tarjeta tutor-capacidades">
       <summary>Qué funciona ahora y qué no</summary>
-      <ul>${V.capacidades({ enLinea: ctx.enLinea, puedeDictar: ctx.puedeDictar, puedeLeer: ctx.puedeLeer }).map((c) =>
+      <ul>${V.capacidades({ enLinea: ctx.enLinea, puedeDictar: ctx.puedeDictar, puedeLeer: ctx.puedeLeer, leerFotos: Boolean(t.ajustes?.leerFotos) }).map((c) =>
         `<li><span aria-hidden="true">${ICONO_ESTADO[c.estado]}</span><div><strong>${escapa(c.nombre)}</strong><br>${escapa(c.texto)}</div></li>`).join('')}</ul>
     </details>
     <button class="fantasma ancho mini" data-accion="ir" data-vista="familia" style="margin-top:8px">👪 Panel de Pau (qué ve tu familia)</button>
   </section>`;
 }
 
-function subir(estado, ctx, t) {
-  if (t.asignatura !== 'mates') {
-    return cabecera('Subir ejercicio') + `<section class="seccion">
-      <div class="tarjeta">
-        <p>En la demo, las fotos de ejemplo son de <strong>Matemáticas</strong>. Leer tus propias fotos llegará más adelante.</p>
-        <p>Para ${escapa(V.nombreAsignatura(t.asignatura))} tengo un ejercicio de práctica preparado.</p>
-        <button class="principal ancho" data-accion="tutor-practicar">Ponme el ejercicio</button>
-        <button class="fantasma ancho" data-accion="tutor-asignatura" data-id="mates" style="margin-top:8px">Cambiar a Matemáticas</button>
-      </div></section>`;
+/* Bloque «Tu foto»: real si Pau lo ha activado, si no explica por qué no. */
+function bloqueTuFoto(ctx, t) {
+  const p = V.puedeLeerFotos(t.ajustes, { enLinea: ctx.enLinea });
+  if (!p.si) {
+    return `<div class="tarjeta"><p><strong>📷 Tu foto</strong></p><p class="tutor-nota">${escapa(p.motivo)}</p></div>`;
   }
-  return cabecera('Subir ejercicio') + `
-  <section class="seccion">
-    <header><h2>Elige una foto de ejemplo</h2></header>
-    ${V.FOTOS_DEMO.map((f) => `<button class="tarjeta tutor-foto" data-accion="tutor-foto" data-id="${f.id}">
-      ${dibujoFoto(f, { pequena: true })}
-      <span><strong>${escapa(f.titulo)}</strong><br><small>${escapa(f.origen)}</small></span>
-    </button>`).join('')}
-    <p class="tutor-nota">Son fotos inventadas para probar. La lectura del texto está preparada, no la hace una IA.</p>
-  </section>
-  <section class="seccion">
+  return `<div class="tarjeta">
+    <button class="principal ancho grande" data-accion="tutor-foto-real">📷 Hacer foto o elegirla</button>
+    <input type="file" id="tutor-archivo" accept="image/*" class="input-oculto" tabindex="-1" aria-hidden="true" />
+    ${t.errorFoto ? `<p class="tutor-error" role="alert">${escapa(t.errorFoto)}</p>` : ''}
+    <p class="tutor-nota">Encuadra solo el ejercicio, con luz y de cerca. La lee una <strong>IA</strong> (Claude, de Anthropic):
+      la foto se reduce en el móvil, no se guarda en la app y Anthropic la borra en un plazo de 30 días.
+      Si algo no se distingue, te lo pregunto antes de resolver.</p>
+  </div>`;
+}
+
+function subir(estado, ctx, t) {
+  const escribir = `<section class="seccion">
     <header><h2>O escríbelo tú</h2></header>
     <div class="tarjeta">
       <label for="tutor-enunciado">Copia la ecuación tal cual (ej.: 4(x + 3) = 20)</label>
@@ -131,20 +131,56 @@ function subir(estado, ctx, t) {
       <button class="principal ancho" data-accion="tutor-enunciado" style="margin-top:8px">Usar este enunciado</button>
     </div>
   </section>`;
+  const tuFoto = `<section class="seccion">${bloqueTuFoto(ctx, t)}</section>`;
+  if (t.asignatura !== 'mates') {
+    return cabecera('Subir ejercicio') + tuFoto + `<section class="seccion">
+      <div class="tarjeta">
+        <p>Para ${escapa(V.nombreAsignatura(t.asignatura))} también tengo un ejercicio de práctica preparado.</p>
+        <button class="ancho" data-accion="tutor-practicar">Ponme el ejercicio</button>
+      </div></section>`;
+  }
+  return cabecera('Subir ejercicio') + tuFoto + `
+  <section class="seccion">
+    <header><h2>O prueba con una foto de ejemplo</h2></header>
+    ${V.FOTOS_DEMO.map((f) => `<button class="tarjeta tutor-foto" data-accion="tutor-foto" data-id="${f.id}">
+      ${dibujoFoto(f, { pequena: true })}
+      <span><strong>${escapa(f.titulo)}</strong><br><small>${escapa(f.origen)}</small></span>
+    </button>`).join('')}
+    <p class="tutor-nota">Son fotos inventadas para probar. Su lectura está preparada, no la hace la IA.</p>
+  </section>` + escribir;
+}
+
+function leyendo(estado, ctx, t) {
+  return cabecera('Leyendo tu foto') + `<section class="seccion"><div class="tarjeta" role="status" aria-live="polite">
+    ${t.fotoVista ? `<img class="tutor-foto-real" src="${t.fotoVista}" alt="Tu foto" />` : ''}
+    <p style="margin-top:10px"><strong>${escapa(t.leyendo || 'Leyendo…')}</strong></p>
+    <p class="tutor-nota">Solo copio el enunciado. No lo resuelvo.</p>
+  </div></section>`;
+}
+
+function elegir(estado, ctx, t) {
+  const r = t.respuestaIA;
+  return cabecera('¿Cuál hacemos?') + `<section class="seccion">
+    ${t.fotoVista ? `<div class="tarjeta"><img class="tutor-foto-real" src="${t.fotoVista}" alt="Tu foto" /></div>` : ''}
+    <p class="tutor-nota" style="margin:10px 0">En la foto hay ${r.ejercicios.length} ejercicios. Elige uno: vamos de uno en uno.</p>
+    ${r.ejercicios.map((ej, i) => `<button class="tarjeta tutor-foto" data-accion="tutor-elegir-ej" data-i="${i}">
+      <span>${escapa(V.resumenEjercicioIA(ej))}</span></button>`).join('')}
+  </section>`;
 }
 
 function confirmar(estado, ctx, t) {
   const l = t.lectura;
-  const foto = V.FOTOS_DEMO.find((f) => f.id === l.fotoId);
+  const foto = l.fotoId ? V.FOTOS_DEMO.find((f) => f.id === l.fotoId) : null;
   const paso = V.ejercicioDeLectura(l);
   const leido = l.piezas.map((p, i) => (p.duda
     ? `<mark class="tutor-duda">${escapa(l.elecciones[i] ?? '?')}</mark>`
     : escapa(p.t))).join('');
+  const opciones = (o) => escapa(o === '−' ? '− menos' : o === '+' ? '+ más' : o);
   return cabecera('Comprobar lo leído') + `
   <section class="seccion">
     <div class="tarjeta">
-      ${dibujoFoto(foto)}
-      <p class="tutor-nota">${escapa(l.origen)} · lectura de ejemplo, no real</p>
+      ${foto ? dibujoFoto(foto) : t.fotoVista ? `<img class="tutor-foto-real" src="${t.fotoVista}" alt="Tu foto" />` : ''}
+      <p class="tutor-nota">${escapa(l.origen)}${l.simulada ? ' · lectura de ejemplo, no real' : ' · puede equivocarse: compruébalo'}</p>
       <div class="tutor-leido">
         ${l.lineas.map((x) => `<div>${escapa(x)}</div>`).join('')}
         <div class="tutor-ecuacion">${leido}</div>
@@ -157,13 +193,20 @@ function confirmar(estado, ctx, t) {
       <div class="tarjeta tutor-pregunta" role="group" aria-labelledby="tutor-preg">
         <p id="tutor-preg"><strong>${escapa(paso.pregunta)}</strong></p>
         <p class="tutor-nota">${escapa(paso.motivo)} Prefiero preguntarte antes que inventármelo.</p>
-        <div class="fila">${paso.opciones.map((o) => `<button class="grande" data-accion="tutor-elegir" data-i="${paso.indice}" data-op="${escapa(o)}">${escapa(o === '−' ? '− menos' : o === '+' ? '+ más' : o)}</button>`).join('')}</div>
+        <div class="${paso.opciones.length > 2 ? 'tutor-opciones' : 'fila'}">${paso.opciones.map((o) => `<button class="grande" data-accion="tutor-elegir" data-i="${paso.indice}" data-op="${escapa(o)}">${opciones(o)}</button>`).join('')}</div>
+        <button class="fantasma ancho mini" data-accion="tutor-ir" data-pantalla="subir" style="margin-top:8px">No es ninguno: lo escribo yo</button>
       </div>` : paso.tipo === 'ejercicio' ? `
       <div class="tarjeta">
         <p><strong>¿Pone esto?</strong> ${escapa(paso.ejercicio.enunciado)}</p>
         <button class="principal ancho" data-accion="tutor-confirmar">Sí, es esto</button>
         <button class="fantasma ancho" data-accion="tutor-ir" data-pantalla="subir" style="margin-top:8px">No, lo escribo yo</button>
-      </div>` : `<div class="aviso-caja">${escapa(paso.mensaje)}</div>`}
+      </div>` : `
+      <div class="tarjeta">
+        <p><strong>¿Pone esto?</strong> ${escapa([paso.instruccion, paso.texto].filter(Boolean).join(' '))}</p>
+        <p class="tutor-nota">${escapa(paso.mensaje)}</p>
+        <button class="principal ancho" data-accion="tutor-a-clara">Preguntar a Clara con este enunciado</button>
+        <button class="fantasma ancho" data-accion="tutor-ir" data-pantalla="subir" style="margin-top:8px">No pone eso: lo escribo yo</button>
+      </div>`}
   </section>`;
 }
 
@@ -330,7 +373,7 @@ function pausa() {
 
 export function vistaTutor(estado, ctx) {
   const t = ctx.tutor;
-  const pintor = { inicio, subir, confirmar, ejercicio, explicar, repasar, hablar, pausa }[t.pantalla] || inicio;
+  const pintor = { inicio, subir, leyendo, elegir, confirmar, ejercicio, explicar, repasar, hablar, pausa }[t.pantalla] || inicio;
   return `<div class="tutor">${pintor(estado, ctx, t)}</div>`;
 }
 
@@ -363,6 +406,7 @@ export function vistaFamilia(estado, ctx) {
     ${!r.vacio && !t.ficticio ? '<button class="principal ancho" data-accion="tutor-enviar-pau" style="margin-top:10px">📤 Mandar el resumen a Pau</button>' : ''}
     ${r.vacio ? '<button class="ancho" data-accion="tutor-ficticio" style="margin-top:10px">Ver con una semana de ejemplo (ficticia)</button>' : ''}
   </section>
+  ${bloqueFotosPau(t)}
   <section class="seccion">
     <header><h2>Qué se comparte</h2></header>
     <div class="tarjeta">
@@ -375,6 +419,29 @@ export function vistaFamilia(estado, ctx) {
       </ul>
     </div>
   </section></div>`;
+}
+
+/* Interruptor de Pau para leer fotos con IA. Explica qué sale y adónde
+   ANTES de activarlo; activar pide su PIN, apagar no (apagar siempre se puede). */
+function bloqueFotosPau(t) {
+  const a = t.ajustes || {};
+  return `<section class="seccion">
+    <header><h2>Leer fotos de sus deberes (IA)</h2></header>
+    <div class="tarjeta tutor-resumen">
+      <p><strong>${a.leerFotos ? '🟢 Activado' : '⚪ Apagado'}</strong>${a.leerFotos && a.activadoEl ? ` desde el ${escapa(a.activadoEl.split('-').reverse().join('/'))}` : ''}</p>
+      <p class="tutor-et">Qué sale del móvil</p>
+      <p>Solo la foto del ejercicio, reducida en el móvil. Nunca su nombre, su curso ni el colegio; si salen en la foto, la IA los tapa con [nombre].</p>
+      <p class="tutor-et">Adónde va</p>
+      <p>A nuestro servidor (Vercel), que se la pasa a Claude, una IA de Anthropic, solo para copiar el enunciado. No la resuelve.</p>
+      <p class="tutor-et">Cuánto se guarda</p>
+      <p>La app no guarda la foto. Anthropic borra lo que recibe por su API en un plazo de 30 días, salvo contenido que infrinja sus normas, que puede guardar más tiempo.</p>
+      <p class="tutor-et">Lo que ve Nicer</p>
+      <p>Que la lee una IA, que puede equivocarse y que le pregunta si algo no se distingue.</p>
+      ${a.leerFotos
+        ? '<button class="ancho peligro" data-accion="tutor-fotos-apagar" style="margin-top:12px">Apagar</button>'
+        : `<button class="principal ancho" data-accion="tutor-fotos-activar" style="margin-top:12px">Activar (lo hace Pau, con PIN)</button>`}
+    </div>
+  </section>`;
 }
 
 /* Tarjeta de entrada en Hoy. */
