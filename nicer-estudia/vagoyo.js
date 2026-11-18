@@ -1009,3 +1009,51 @@ export function capacidades({ enLinea = true, puedeDictar = false, puedeLeer = f
     { id: 'conexion', nombre: 'Conexión', estado: enLinea ? 'si' : 'no', texto: enLinea ? 'Con conexión.' : 'Sin conexión: Vago Yo sigue funcionando porque todo es local. Clara no.' }
   ];
 }
+
+/* ── Progreso guardado en el móvil ───────────────────────────────── */
+
+/* Valida lo leído de localStorage: solo habilidades conocidas y registros
+   con su forma. Nunca hay texto del alumno que validar porque no se guarda.
+   Los datos ficticios no se guardan nunca. */
+export function normalizaProgreso(crudo, hoy) {
+  if (!crudo || typeof crudo !== 'object' || Array.isArray(crudo)) return {};
+  const fecha = /^\d{4}-\d{2}-\d{2}$/;
+  let p = {};
+  for (const [id, h] of Object.entries(crudo)) {
+    if (!HABILIDADES[id] || !Array.isArray(h?.registros)) continue;
+    const regs = h.registros
+      .filter((r) => r && fecha.test(r.fecha) && typeof r.ejercicioId === 'string' && !r.ficticio)
+      .slice(-200)
+      .map((r) => ({
+        fecha: r.fecha, habilidad: id, ejercicioId: r.ejercicioId.slice(0, 80),
+        correcto: r.correcto !== false, autonomo: r.autonomo === true,
+        ayudas: Math.max(0, Math.min(50, Number(r.ayudas) || 0)),
+        errores: (Array.isArray(r.errores) ? r.errores : []).filter((e) => ERRORES[e]),
+        esRepaso: r.esRepaso === true
+      }))
+      .sort((a, b) => a.fecha.localeCompare(b.fecha));
+    if (!regs.length) continue;
+    // Se recalcula todo desde los registros: el motivo y la fecha no se fían de lo guardado,
+    // salvo un aplazamiento pedido por el alumno, que se respeta.
+    regs.forEach((r) => { p = registra(p, r, r.fecha); });
+    const ap = h.repaso?.fecha && fecha.test(h.repaso.fecha) && /^Pospuesto/.test(h.repaso.motivo || '') ? h.repaso : null;
+    if (ap && fecha.test(h.aplazado?.fecha || '')) {
+      p[id] = { ...p[id], repaso: { fecha: ap.fecha, motivo: String(ap.motivo).slice(0, 80) }, aplazado: p[id].repaso };
+    }
+  }
+  return p;
+}
+
+/* ── Mensaje para Pau ────────────────────────────────────────────── */
+
+/* El texto que se le manda a su padre: lo mismo que el panel, nada más.
+   Se enseña antes de enviarlo y lo manda el propio alumno o Pau a mano. */
+export function textoParaPau(resumen, { alumno = 'Nicer', hoy } = {}) {
+  const lineas = [`Vago Yo · resumen de la semana de ${alumno}${hoy ? ` (${hoy.split('-').reverse().join('/')})` : ''}`, ''];
+  lineas.push(`✅ Avance: ${resumen.avance}`);
+  if (resumen.dificultad) lineas.push(`🧩 Dificultad: ${resumen.dificultad}`);
+  if (resumen.accion) lineas.push(`👨‍👦 10 minutos juntos: ${resumen.accion}`);
+  if (resumen.proximo) lineas.push(`🔁 Próximo repaso: ${resumen.proximo.habilidad}, ${resumen.proximo.fecha.split('-').reverse().join('/')}. ${resumen.proximo.motivo}`);
+  lineas.push('', 'No incluye lo que escribe, ni fotos ni audios.');
+  return lineas.join('\n');
+}

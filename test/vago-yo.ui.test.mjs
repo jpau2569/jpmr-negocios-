@@ -62,7 +62,7 @@ check("Hoy tiene la tarjeta de Vago Yo", await page.locator('[data-vista="tutor"
 await page.click('[data-accion="ir"][data-vista="tutor"]');
 let t = await texto();
 check("inicio: Subir ejercicio, Explícame, Repasar, Hablar", ["Subir ejercicio", "Explícame", "Repasar", "Hablar"].every((x) => t.includes(x)));
-check("dice que es una demostración sin IA", /Demostración/.test(t) && /Sin IA/.test(t));
+check("dice que aún no hay IA y que el progreso se guarda en el móvil", /Sin IA todavía/.test(t) && /se guarda en este móvil/.test(t));
 check("no ofrece «Seguir donde lo dejé» sin sesión", !t.includes("Seguir donde lo dejé"));
 check("las seis asignaturas están", (await page.locator('[data-accion="tutor-asignatura"]').count()) === 6);
 await foto("01-inicio");
@@ -115,8 +115,30 @@ t = await texto();
 check("avance, dificultad, acción y próximo repaso", ["un avance", "una dificultad", "diez minutos con vosotros", "próximo repaso"].every((x) => t.toLowerCase().includes(x)), t.slice(0, 300));
 check("la dificultad es concreta", /signo menos/.test(t));
 check("no aparece nada de lo que escribió", !t.includes("3x + 6") && !t.includes("3x - 6"));
-check("avisos externos desactivados y sin supervisor", /desactivados/.test(t) && /nadie tiene acceso/.test(t));
+check("es el panel de Pau", /Panel de Pau/.test(t));
+check("no manda nada solo y nadie más tiene acceso", /no manda avisos sola/.test(t) && /Nadie más tiene acceso/.test(t));
 await foto("05-familia");
+
+console.log("\n📤 Mandar el resumen a Pau (vista previa antes)");
+await page.evaluate(() => { window.__compartido = null; navigator.share = async (d) => { window.__compartido = d; }; });
+await page.click('[data-accion="tutor-enviar-pau"]');
+const previa = await page.locator(".tutor-previa").innerText();
+check("enseña el texto entero antes de mandar", /Avance/.test(previa) && /No incluye lo que escribe/.test(previa));
+check("la vista previa no lleva lo que escribió", !previa.includes("3x + 6") && !previa.includes("3x - 6"));
+check("todavía no se ha mandado nada", await page.evaluate(() => window.__compartido === null));
+await page.click("#dlg-cancelar");
+check("cancelar no manda nada", await page.evaluate(() => window.__compartido === null));
+await page.click('[data-accion="tutor-enviar-pau"]');
+await page.click("#dlg-aceptar");
+check("al confirmar, se comparte ese mismo texto", (await page.evaluate(() => window.__compartido?.text)) === previa);
+
+console.log("\n💾 El progreso sobrevive a cerrar la app");
+const guardado = await page.evaluate(() => localStorage.getItem("nicer-estudia:vagoyo") || "");
+check("se guarda sin texto del alumno", guardado.includes("ecuaciones-parentesis") && !guardado.includes("3x"));
+await page.reload({ waitUntil: "networkidle" });
+await page.goto(`http://localhost:${PORT}/app.html?vista=familia`, { waitUntil: "networkidle" });
+check("tras recargar, el panel de Pau sigue con los datos", /signo menos/.test(await texto()));
+
 
 console.log("\n🗂️  Las otras cinco asignaturas");
 for (const [id, mal, bien] of [["lengua", "mañana", "mis primos"], ["fyq", "25000", "2,5"], ["ingles", "play", "plays"], ["frances", "sont", "sommes"]]) {

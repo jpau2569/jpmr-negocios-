@@ -77,7 +77,9 @@ Se sirve por HTTP, no con `file://`.
 
 Fase 1 hecha como demostración local: `vagoyo.js` (motor puro), `interfaz-tutor.js`
 (pantallas y panel familiar) y las acciones `tutor-*` de `app.js`; el estado va en
-`ctx.tutor`, en memoria. Reglas propias: **sin ninguna petición de red** (lo vigila
+`ctx.tutor`; el progreso (sin texto del alumno) se guarda en `localStorage` con la clave
+`nicer-estudia:vagoyo` y Pau lo ve en el «Panel de Pau» o con «Mandar el resumen a Pau»
+(vista previa obligatoria, lo manda una persona). Reglas propias: **sin ninguna petición de red** (lo vigila
 `test/vago-yo.ui.test.mjs`), ante un signo dudoso **pregunta**, un acierto con
 pista **no es autónomo**, «consolidado» exige ejercicios distintos en días distintos,
 el resumen familiar sale **solo** del registro (que no guarda texto del alumno) y lo

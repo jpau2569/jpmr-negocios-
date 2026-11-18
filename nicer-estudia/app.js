@@ -54,9 +54,21 @@ const ctx = {
   error: null,
   instalable: false,
   enLinea: typeof navigator === 'undefined' ? true : navigator.onLine !== false,
-  // Vago Yo (fase 1, demostración): todo en memoria, nada sale del móvil.
+  // Vago Yo: el progreso se guarda solo en este móvil (sin texto del alumno).
   tutor: tutorNuevo()
 };
+
+/* El progreso del tutor va aparte del estado general: solo habilidad,
+   con/sin ayuda, fallo típico y fecha. Los datos ficticios no se guardan. */
+const CLAVE_TUTOR = 'nicer-estudia:vagoyo';
+function cargaProgresoTutor() {
+  try { return VY.normalizaProgreso(JSON.parse(localStorage.getItem(CLAVE_TUTOR) || '{}')); } catch { return {}; }
+}
+function guardaProgresoTutor() {
+  if (ctx.tutor.ficticio) return;
+  try { localStorage.setItem(CLAVE_TUTOR, JSON.stringify(ctx.tutor.progreso)); } catch { /* incógnito: sigue en memoria */ }
+}
+ctx.tutor.progreso = cargaProgresoTutor();
 
 function tutorNuevo() {
   return {
@@ -230,7 +242,9 @@ function tutorEntrega(texto) {
   t.ayuda = null;
   if (r.registro) {
     t.registro = r.registro;
+    if (t.ficticio) quitaFicticio();
     t.progreso = VY.registra(t.progreso, r.registro, ctx.hoy);
+    guardaProgresoTutor();
   }
   render();
 }
@@ -249,6 +263,14 @@ function tutorTextoParaLeer() {
 }
 
 const idiomaTutor = (asig, texto) => (asig === 'frances' ? 'fr' : asig === 'ingles' ? 'en' : Voz.idiomaDe(texto));
+
+function quitaFicticio() {
+  const t = T();
+  if (!t.ficticio) return;
+  t.progreso = t.progresoReal || {};
+  t.progresoReal = null;
+  t.ficticio = false;
+}
 
 let pararDictadoTutor = null;
 
@@ -319,10 +341,12 @@ const accionesTutor = {
   'tutor-posponer': (el) => {
     // El motivo nuevo («Pospuesto…») ya sale en pantalla; deshacer, en Repasar.
     T().progreso = VY.pospone(T().progreso, el.dataset.id, 1);
+    guardaProgresoTutor();
     render();
   },
   'tutor-deshacer': (el) => {
     T().progreso = VY.deshacePospuesto(T().progreso, el.dataset.id);
+    guardaProgresoTutor();
     render();
   },
   'tutor-leer': () => {
@@ -379,9 +403,28 @@ const accionesTutor = {
   },
   'sub-esquemas': () => { ctx.sub = 'esquemas'; irA('estudiar'); },
   'tutor-ficticio': () => {
+    T().progresoReal = T().progreso;
     T().progreso = VY.semanaFicticia(ctx.hoy);
     T().ficticio = true;
     render();
+  },
+  'tutor-quitar-ficticio': () => { quitaFicticio(); render(); },
+  /* Resumen para Pau: se enseña entero antes de mandarlo y lo manda una
+     persona (compartir o WhatsApp). La app no envía nada sola. */
+  'tutor-enviar-pau': async () => {
+    const texto = VY.textoParaPau(VY.resumenFamiliar(T().progreso, ctx.hoy), { alumno: estado.alumno.nombre || 'Nicer', hoy: ctx.hoy });
+    const ok = await pide({
+      titulo: 'Mandar el resumen a Pau',
+      html: `<p class="tutor-nota" style="margin-top:0">Esto es exactamente lo que se manda. Nada más.</p>
+        <pre class="tutor-previa">${escapa(texto)}</pre>`,
+      aceptar: 'Mandar'
+    });
+    if (!ok) return;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Resumen de Vago Yo', text: texto }); return; }
+      catch (e) { if (e?.name === 'AbortError') return; }
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
   }
 };
 
@@ -694,6 +737,8 @@ const acciones = {
   'borrar-todo': async () => {
     if (!(await confirma('Se borra TODO: deberes, exámenes, tarjetas, notas y horario. No hay vuelta atrás.'))) return;
     estado = D.estadoInicial();
+    ctx.tutor = tutorNuevo();
+    try { localStorage.removeItem(CLAVE_TUTOR); } catch { /* nada */ }
     estado.asignaturas = D.ASIGNATURAS_ESO.map((a) => ({ id: id('as'), nombre: a.nombre, color: a.color, profe: '' }));
     persiste(); render();
   },

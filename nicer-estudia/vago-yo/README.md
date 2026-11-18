@@ -81,10 +81,25 @@ Además:
 - El **panel familiar** se ve en el mismo móvil; no hay cuentas.
 - La «semana ficticia» del panel son datos inventados y lo pone.
 
-### Qué no se guarda
+### Qué se guarda (y qué no)
 
-El progreso del tutor vive **en memoria**: al cerrar la app se borra (se dice
-en Repasar). Es a propósito en la demo; persistirlo es de la fase 2.
+El progreso se guarda **solo en este móvil**, en `localStorage` con la clave
+`nicer-estudia:vagoyo`: habilidad, ejercicio, con/sin ayuda, fallo típico y
+fecha. **Nunca** el texto que escribe, fotos ni audios. Al cargar se valida
+con `normalizaProgreso` y se recalculan estados y repasos. La semana ficticia
+no se guarda. «Borrar todo» (Yo) también lo borra.
+
+## Uso por Pau (su padre)
+
+Sin cuentas ni nube, para respetar que los datos del menor no salen del móvil:
+
+- **Panel de Pau** (`app.html?vista=familia`, o Vago Yo → «Panel de Pau»): lo
+  mira en el móvil de Nicer.
+- **«Mandar el resumen a Pau»**: enseña el texto entero (`textoParaPau`) y solo
+  se manda si alguien pulsa «Mandar», con el menú de compartir del móvil o, si
+  no lo hay, WhatsApp. La app no manda nada sola.
+- Si más adelante Pau quiere verlo en su propio móvil sin pedírselo a Nicer,
+  eso es la fase 2 (cuentas con permisos en el servidor).
 
 ## Fase 2 — pendiente
 
@@ -105,8 +120,8 @@ queda **preparado y bloqueado** hasta la revisión humana.
 ## Pruebas
 
 ```bash
-node test/vago-yo.test.mjs        # motor: 89 comprobaciones (pruebas obligatorias 1, 2, 6, 7 y 8)
-node test/vago-yo.ui.test.mjs     # Chromium a 360 px: recorrido completo, 40 comprobaciones
+node test/vago-yo.test.mjs        # motor: 99 comprobaciones (pruebas obligatorias 1, 2, 6, 7 y 8)
+node test/vago-yo.ui.test.mjs     # Chromium a 360 px: recorrido completo, 48 comprobaciones
 node test/vago-yo.ui.test.mjs --capturas <carpeta>   # además guarda capturas
 node nicer-estudia/herramientas/auditoria-visual.mjs # incluye tutor y panel familiar
 ```

@@ -18,8 +18,8 @@ function cabecera(t) {
 }
 
 const DEMO = `<div class="aviso-caja tutor-demo" role="note">
-  <strong>Demostración.</strong> Sin IA ni internet: las explicaciones están preparadas y la lectura
-  de fotos es de ejemplo. Corregir tus pasos sí es de verdad.
+  <strong>Sin IA todavía.</strong> Las explicaciones están preparadas y las fotos son de ejemplo.
+  Corregir tus pasos sí es de verdad, y tu progreso se guarda en este móvil.
 </div>`;
 
 function chipsAsignatura(actual) {
@@ -99,7 +99,7 @@ function inicio(estado, ctx, t) {
       <ul>${V.capacidades({ enLinea: ctx.enLinea, puedeDictar: ctx.puedeDictar, puedeLeer: ctx.puedeLeer }).map((c) =>
         `<li><span aria-hidden="true">${ICONO_ESTADO[c.estado]}</span><div><strong>${escapa(c.nombre)}</strong><br>${escapa(c.texto)}</div></li>`).join('')}</ul>
     </details>
-    <button class="fantasma ancho mini" data-accion="ir" data-vista="familia" style="margin-top:8px">👪 Qué ve tu familia</button>
+    <button class="fantasma ancho mini" data-accion="ir" data-vista="familia" style="margin-top:8px">👪 Panel de Pau (qué ve tu familia)</button>
   </section>`;
 }
 
@@ -189,7 +189,7 @@ function registroHecho(t, ctx) {
     <p>${r.autonomo ? '🟢 Sin ayuda en este ejercicio' : `🟡 Con ayuda (${r.ayudas === 1 ? 'una pista o explicación' : `${r.ayudas} pistas o explicaciones`})`}
       · estado: <strong>${escapa(V.ESTADOS[h.estado])}</strong></p>
     <p>🔁 Próximo repaso: <strong>${escapa(fechaHumana(h.repaso.fecha, ctx.hoy))}</strong>. ${escapa(h.repaso.motivo)}</p>
-    <p class="tutor-nota">Tu familia ve solo esto: la habilidad, si fue con ayuda y el próximo repaso. No ve lo que escribes.</p>
+    <p class="tutor-nota">Pau ve solo esto: la habilidad, si fue con ayuda y el próximo repaso. No ve lo que escribes.</p>
     <div class="fila">
       <button class="principal" data-accion="tutor-otro">Otro del mismo tipo</button>
       <button data-accion="tutor-posponer" data-id="${r.habilidad}">Posponer repaso</button>
@@ -295,7 +295,7 @@ function repasar(estado, ctx, t) {
       </div>
     </div>`).join('') : `<div class="vacio">Aún no hay nada que repasar en Vago Yo: haz un ejercicio y te digo cuándo volver.</div>`}
     <button class="fantasma ancho" data-accion="ir-tarjetas" style="margin-top:10px">Ir a mis tarjetas</button>
-    <p class="tutor-nota">En la demo, este progreso se queda en memoria: si cierras la app, se borra.</p>
+    <p class="tutor-nota">El progreso se guarda solo en este móvil: qué practicaste, si fue con ayuda y cuándo repasar. Lo que escribes, no.</p>
   </section>`;
 }
 
@@ -342,14 +342,16 @@ export function vistaFamilia(estado, ctx) {
   return `<div class="tutor">
   <div class="tutor-cab">
     <button class="mini fantasma" data-accion="ir" data-vista="tutor" aria-label="Volver a Vago Yo">←</button>
-    <div class="tutor-titulo"><strong>Panel de la familia</strong><span>Resumen de la semana</span></div>
+    <div class="tutor-titulo"><strong>Panel de Pau</strong><span>Para la familia · resumen de la semana</span></div>
   </div>
   <section class="seccion">
     <div class="aviso-caja" role="note">
-      <strong>Demostración en este móvil.</strong> Con cuentas (fase 2), la familia lo verá en su propio
-      móvil y los permisos se comprobarán en el servidor. Aquí no hay conversaciones, fotos ni audios: el tutor no los guarda.
+      <strong>Cómo lo usa Pau:</strong> lo mira aquí, en el móvil de Nicer, o le llega con
+      «Mandar el resumen a Pau» (lo ves entero antes y lo mandas tú). No hay cuentas ni nube:
+      conversaciones, fotos y audios no se guardan ni se enseñan.
     </div>
-    ${t.ficticio ? '<p class="tutor-nota" style="margin-top:8px">🧪 Datos ficticios de ejemplo.</p>' : ''}
+    ${t.ficticio ? `<div class="aviso-caja" style="margin-top:8px">🧪 Estás viendo una semana <strong>inventada</strong> de ejemplo. No se guarda.
+      <button class="mini" data-accion="tutor-quitar-ficticio" style="margin-top:6px">Volver a los datos reales</button></div>` : ''}
   </section>
   <section class="seccion">
     <div class="tarjeta tutor-resumen">
@@ -358,6 +360,7 @@ export function vistaFamilia(estado, ctx) {
       ${r.accion ? `<p class="tutor-et">Diez minutos con vosotros</p><p>${escapa(r.accion)}</p>` : ''}
       ${r.proximo ? `<p class="tutor-et">Próximo repaso</p><p>${escapa(r.proximo.habilidad)}, ${escapa(fechaHumana(r.proximo.fecha, ctx.hoy))}. ${escapa(r.proximo.motivo)}</p>` : ''}
     </div>
+    ${!r.vacio && !t.ficticio ? '<button class="principal ancho" data-accion="tutor-enviar-pau" style="margin-top:10px">📤 Mandar el resumen a Pau</button>' : ''}
     ${r.vacio ? '<button class="ancho" data-accion="tutor-ficticio" style="margin-top:10px">Ver con una semana de ejemplo (ficticia)</button>' : ''}
   </section>
   <section class="seccion">
@@ -367,8 +370,8 @@ export function vistaFamilia(estado, ctx) {
         <li>✅ Qué habilidad practicó, si fue solo o con ayuda y el próximo repaso.</li>
         <li>⛔ Lo que escribe o dice al tutor, sus fotos y audios: no se enseñan.</li>
         <li>⛔ Minutos, rachas o número de ejercicios no son una nota de aprendizaje.</li>
-        <li>🔕 Avisos fuera de la app: desactivados.</li>
-        <li>🔒 Supervisor: nadie tiene acceso. Invitar, limitar y revocar llega en la fase 2.</li>
+        <li>🔕 La app no manda avisos sola: el resumen solo sale si alguien pulsa «Mandar» después de verlo.</li>
+        <li>🔒 Nadie más tiene acceso: ni profesores ni supervisores.</li>
       </ul>
     </div>
   </section></div>`;

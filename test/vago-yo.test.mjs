@@ -223,6 +223,27 @@ console.log("\n🖥️  Render (escapa lo del alumno)");
   check("el nombre nunca califica al alumno", !/eres (un )?vago/i.test(inicio + html + html2));
 }
 
+console.log("\n💾 Progreso guardado y mensaje para Pau");
+{
+  const reg = { fecha: HOY, habilidad: "sujeto", ejercicioId: "len-sujeto-1", correcto: true, autonomo: false, ayudas: 2, errores: ["sujeto-adverbio"] };
+  const p = V.registra({}, reg, HOY);
+  const vuelta = V.normalizaProgreso(JSON.parse(JSON.stringify(p)));
+  check("ida y vuelta por JSON conserva estado y repaso", vuelta.sujeto.estado === "con-ayuda" && vuelta.sujeto.repaso.fecha === "2026-11-19");
+  check("descarta habilidades desconocidas y basura", Object.keys(V.normalizaProgreso({ hackeo: { registros: [reg] }, sujeto: "x" })).length === 0);
+  check("descarta fallos que no existen", V.normalizaProgreso({ sujeto: { registros: [{ ...reg, errores: ["<script>"] }] } }).sujeto.registros[0].errores.length === 0);
+  check("los datos ficticios no se cargan nunca", Object.keys(V.normalizaProgreso(V.semanaFicticia(HOY))).length === 0);
+  check("null, lista o texto → vacío", [null, [], "hola", 5].every((x) => Object.keys(V.normalizaProgreso(x)).length === 0));
+  const pos = V.pospone(p, "sujeto", 2);
+  const posVuelta = V.normalizaProgreso(JSON.parse(JSON.stringify(pos)));
+  check("un aplazamiento pedido se respeta al recargar", posVuelta.sujeto.repaso.fecha === "2026-11-21" && posVuelta.sujeto.aplazado);
+  check("y se puede deshacer tras recargar", V.deshacePospuesto(posVuelta, "sujeto").sujeto.repaso.fecha === "2026-11-19");
+
+  const msg = V.textoParaPau(V.resumenFamiliar(p, HOY), { alumno: "Nicer", hoy: HOY });
+  check("el mensaje para Pau lleva avance, dificultad, acción y repaso", /Avance/.test(msg) && /Dificultad/.test(msg) && /10 minutos/.test(msg) && /Próximo repaso/.test(msg));
+  check("fecha en formato español", msg.includes("18/11/2026") && msg.includes("19/11/2026"));
+  check("dice que no incluye lo que escribe", /No incluye lo que escribe/.test(msg));
+}
+
 console.log("\n⏳ Pendientes de la fase 2 (no se prueban aún): 3 temario confirmado, 4 foto privada del supervisor, 5 revocar enlace.");
 
 console.log(`\n${fallados ? "❌" : "✅"} ${pasados} comprobaciones pasadas, ${fallados} fallidas\n`);

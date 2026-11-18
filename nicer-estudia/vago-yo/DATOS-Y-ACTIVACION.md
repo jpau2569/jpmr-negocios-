@@ -13,7 +13,8 @@ que hay aquí es asesoramiento legal: es la lista de lo que hay que comprobar.
 | Lo que escribe o dicta en el tutor | memoria del navegador | no | no |
 | Fotos | solo hay fotos de ejemplo dibujadas en el código | — | — |
 | Audio | lo procesa el reconocimiento de voz **del navegador** (Chrome lo envía a Google para transcribir) | sí, si usa el dictado | no lo guarda la app |
-| Registro de progreso (habilidad, con/sin ayuda, fallo típico, fecha) | memoria | no | no (se borra al cerrar) |
+| Registro de progreso (habilidad, con/sin ayuda, fallo típico, fecha) | `localStorage` del móvil | no | sí, en el móvil; se borra con «Borrar todo» |
+| Resumen para Pau | se compone al pulsar | solo si alguien lo ve y pulsa «Mandar» (compartir / WhatsApp) | no |
 
 Aviso honesto sobre el dictado: el `SpeechRecognition` de Chrome no es local.
 Es el mismo que ya usa Clara en Nicer Estudia. Si se quiere evitar, basta con
