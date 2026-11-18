@@ -14,6 +14,7 @@ import { AMBIENTES } from './ambiente.js';
 import * as L from './lecciones.js';
 import { SECCIONES } from './ficha.js';
 import * as B from './bloques.js';
+import { entradaTutor } from './interfaz-tutor.js';
 
 const pct = (n) => `${Math.round(n * 100)}%`;
 
@@ -144,6 +145,8 @@ export function vistaHoy(estado, ctx) {
     </button>
     ${planBloquesHoy(estado, hoy)}
   </section>
+
+  ${ctx.tutor ? entradaTutor(ctx) : ''}
 
   <section class="seccion">
     <header><h2>Qué toca ahora</h2><span class="extra">${plural(plan.length, 'cosa', 'cosas')}</span></header>

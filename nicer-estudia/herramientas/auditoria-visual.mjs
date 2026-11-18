@@ -1,4 +1,4 @@
-/* Auditoría visual de Nicer Estudia: recorre las 9 pantallas a 320, 390,
+/* Auditoría visual de Nicer Estudia: recorre las pantallas a 320, 390,
    768 y 1366 px, en tema claro y oscuro, con datos de prueba llenos de
    palabras larguísimas (lo peor que puede pegar un alumno: un enlace), y
    avisa de desbordes horizontales, botones de menos de 30 px y errores de
@@ -35,7 +35,7 @@ const semilla = () => {
   localStorage.setItem(clave,JSON.stringify(e));
   localStorage.setItem("nicer-estudia:chat",JSON.stringify([{rol:"user",texto:largo},{rol:"profe",texto:largo,buscado:true}]));
 };
-const vistas = [["hoy"],["agenda"],["estudiar","lecciones"],["estudiar","leccion"],["estudiar","tarjetas"],["estudiar","test"],["estudiar","esquemas"],["profe"],["yo"]];
+const vistas = [["hoy"],["agenda"],["estudiar","lecciones"],["estudiar","leccion"],["estudiar","tarjetas"],["estudiar","test"],["estudiar","esquemas"],["profe"],["yo"],["tutor"],["tutor","confirmar"],["tutor","ejercicio"],["familia"]];
 for (const [ancho, alto] of [[320,640],[390,844],[768,1024],[1366,768]]) {
   for (const tema of ["light","dark"]) {
     const ctx = await b.newContext({ viewport:{width:ancho,height:alto}, colorScheme: tema });
@@ -45,7 +45,17 @@ for (const [ancho, alto] of [[320,640],[390,844],[768,1024],[1366,768]]) {
     await p.evaluate(semilla);
     for (const [v, sub] of vistas) {
       await p.goto(`http://localhost:${PORT}/app.html?vista=${v}`,{waitUntil:"networkidle"});
-      if (sub) {
+      if (v === "tutor" && sub === "confirmar") {
+        await p.click('[data-pantalla="subir"]'); await p.click('[data-accion="tutor-foto"][data-id="orden"]');
+      } else if (v === "tutor" && sub === "ejercicio") {
+        await p.click('[data-pantalla="subir"]'); await p.click('[data-accion="tutor-foto"][data-id="ecuacion"]');
+        await p.click('[data-accion="tutor-elegir"]'); await p.click('[data-accion="tutor-confirmar"]');
+        await p.fill('#tutor-intento', "3x+6=12\n"+"x".repeat(80)); await p.click('[data-accion="tutor-comprobar"]');
+        await p.fill('#tutor-intento', "3x+6=12\nx=2"); await p.click('[data-accion="tutor-comprobar"]');
+        await p.click('[data-accion="tutor-ejemplo"]');
+      } else if (v === "familia") {
+        await p.click('[data-accion="tutor-ficticio"]');
+      } else if (sub) {
         await p.click(`[data-accion="sub"][data-sub="${sub==="leccion"?"lecciones":sub}"]`);
         if (sub==="leccion") await p.click('[data-accion="abrir-leccion"]');
       }

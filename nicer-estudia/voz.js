@@ -9,7 +9,7 @@
    botones simplemente no aparecen.
    ═══════════════════════════════════════════════════════════════════ */
 
-const IDIOMAS = { es: 'es-ES', en: 'en-GB' };
+const IDIOMAS = { es: 'es-ES', en: 'en-GB', fr: 'fr-FR' };
 
 const Reconocimiento = () =>
   (typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition)) || null;

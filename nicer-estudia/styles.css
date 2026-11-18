@@ -570,3 +570,73 @@ kbd {
 .bloque-foco .bloque-pie span { flex: 1; min-width: 0; }
 .bloque-foco.cambio { border-color: var(--ambar); background: var(--ambar-suave); animation: late 1s 3; }
 .cambio-titulo { font-weight: 800; color: var(--ambar); font-size: 1rem; }
+
+/* ── Vago Yo (tutor) ───────────────────────────────────────────── */
+.tutor-cab { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; }
+.tutor-cab > button { min-width: 44px; min-height: 44px; font-size: 1.1rem; }
+.tutor-titulo { display: flex; flex-direction: column; min-width: 0; }
+.tutor-titulo span { font-size: .82rem; color: var(--tinta-2); }
+.tutor-hola { display: flex; gap: 12px; align-items: center; }
+.tutor-hola .saludo { font-weight: 700; font-size: 1.1rem; }
+.tutor-hola .frase { color: var(--tinta-2); font-size: .9rem; }
+.tutor-avatar {
+  flex: none; width: 44px; height: 44px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--azul-suave); color: var(--azul); font-weight: 800; letter-spacing: .02em;
+}
+.tutor-demo { margin-top: 10px; }
+.tutor-acciones .tutor-boton {
+  min-height: 92px; flex-direction: column; gap: 6px; font-size: .95rem; text-align: center;
+}
+.tutor-boton > span[aria-hidden] { font-size: 1.6rem; }
+.tutor-sub { font-weight: 400; font-size: .8rem; opacity: .85; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tutor-entrada {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  justify-content: flex-start; padding: 12px 14px; min-height: 64px;
+}
+.tutor-entrada > span:last-child { min-width: 0; }
+.tutor-entrada small, .tutor-foto small { color: var(--tinta-2); font-weight: 400; }
+.tutor-foto {
+  width: 100%; display: flex; gap: 12px; align-items: center; text-align: left;
+  justify-content: flex-start; padding: 10px; min-height: 64px;
+}
+.tutor-foto > span { min-width: 0; }
+.tutor-foto + .tutor-foto { margin-top: 10px; }
+.foto-demo { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--borde); }
+.foto-demo--peque { width: 120px; flex: none; }
+.tutor-nota { font-size: .82rem; color: var(--tinta-2); margin-top: 6px; }
+.tutor-error { color: var(--rojo); font-size: .87rem; margin-top: 6px; }
+.tutor-leido { margin-top: 10px; font-size: .92rem; }
+.tutor-ecuacion, .tutor-enunciado { font-size: 1.25rem; font-weight: 700; margin: 6px 0; }
+.tutor-duda {
+  background: var(--rojo-suave); color: var(--rojo); border: 1px dashed var(--rojo);
+  border-radius: 6px; padding: 0 6px;
+}
+.tutor-pregunta p + p { margin-top: 4px; }
+.tutor-pregunta .fila { margin-top: 10px; }
+.tutor-feedback { margin-top: 10px; border-radius: var(--radio); padding: 12px 14px; border: 1px solid var(--borde); }
+.tutor-feedback p + p { margin-top: 6px; }
+.tutor-feedback.bien { background: var(--verde-suave); border-color: color-mix(in srgb, var(--verde) 35%, transparent); }
+.tutor-feedback.mal { background: var(--rojo-suave); border-color: color-mix(in srgb, var(--rojo) 30%, transparent); }
+.tutor-feedback.medio { background: var(--ambar-suave); border-color: color-mix(in srgb, var(--ambar) 30%, transparent); }
+.tutor-acierto { color: var(--verde); font-weight: 600; }
+.tutor-pista { font-weight: 600; }
+.tutor-ayuda { background: var(--azul-suave); border-color: color-mix(in srgb, var(--azul) 25%, transparent); }
+.tutor-ejemplo ol { margin: 8px 0 0 1.2em; }
+.tutor-ejemplo li + li { margin-top: 4px; }
+.tutor-registro p + p { margin-top: 6px; }
+.tutor-registro .fila { margin-top: 10px; }
+.tutor-leccion p + p { margin-top: 8px; }
+.tutor-ejemplo-linea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .95rem; }
+.tutor-opciones { display: grid; gap: 8px; margin-top: 8px; }
+.tutor-capacidades summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+.tutor-capacidades ul, .tutor-lista { list-style: none; display: grid; gap: 10px; margin-top: 10px; font-size: .88rem; }
+.tutor-capacidades li { display: flex; gap: 8px; }
+.tutor-capacidades li > div { min-width: 0; }
+.tutor-resumen .tutor-et {
+  font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--tinta-2); margin-top: 12px;
+}
+.tutor-resumen .tutor-et:first-child { margin-top: 0; }
+.tutor-rec { width: 12px; height: 12px; border-radius: 50%; background: var(--rojo); animation: tutor-latido 1s infinite; }
+@keyframes tutor-latido { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .tutor-rec { animation: none; } }
