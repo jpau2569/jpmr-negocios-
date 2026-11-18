@@ -17,6 +17,8 @@ import { icsExamen } from './calendario.js';
 import * as L from './lecciones.js';
 import * as F from './ficha.js';
 import * as B from './bloques.js';
+import * as VY from './vagoyo.js';
+import * as UT from './interfaz-tutor.js';
 
 /* ── Estado ─────────────────────────────────────────────────────── */
 let estado = D.cargar();
@@ -50,8 +52,34 @@ const ctx = {
   teclado: typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches,
   pensando: false,
   error: null,
-  instalable: false
+  instalable: false,
+  enLinea: typeof navigator === 'undefined' ? true : navigator.onLine !== false,
+  // Vago Yo: el progreso se guarda solo en este móvil (sin texto del alumno).
+  tutor: tutorNuevo()
 };
+
+/* El progreso del tutor va aparte del estado general: solo habilidad,
+   con/sin ayuda, fallo típico y fecha. Los datos ficticios no se guardan. */
+const CLAVE_TUTOR = 'nicer-estudia:vagoyo';
+function cargaProgresoTutor() {
+  try { return VY.normalizaProgreso(JSON.parse(localStorage.getItem(CLAVE_TUTOR) || '{}')); } catch { return {}; }
+}
+function guardaProgresoTutor() {
+  if (ctx.tutor.ficticio) return;
+  try { localStorage.setItem(CLAVE_TUTOR, JSON.stringify(ctx.tutor.progreso)); } catch { /* incógnito: sigue en memoria */ }
+}
+ctx.tutor.progreso = cargaProgresoTutor();
+
+function tutorNuevo() {
+  return {
+    pantalla: 'inicio', asignatura: 'mates',
+    lectura: null, sesion: null, correccion: null, ayuda: null, ejemplo: null, registro: null,
+    borrador: '', enunciadoEscrito: '', errorEnunciado: null,
+    explicar: { elegida: null, revelado: false, otra: false },
+    hablar: { texto: '', respuesta: null, boton: null },
+    grabando: false, progreso: {}, ficticio: false
+  };
+}
 
 let pararDictado = null;
 
@@ -85,7 +113,8 @@ function render() {
 
   const pintores = {
     hoy: UI.vistaHoy, agenda: UI.vistaAgenda, estudiar: UI.vistaEstudiar,
-    profe: UI.vistaProfe, yo: UI.vistaYo
+    profe: UI.vistaProfe, yo: UI.vistaYo,
+    tutor: UT.vistaTutor, familia: UT.vistaFamilia
   };
   vista.innerHTML = (pintores[ctx.vista] || UI.vistaHoy)(estado, ctx);
 
@@ -183,7 +212,236 @@ async function confirma(texto) {
 }
 
 /* ── Acciones ───────────────────────────────────────────────────── */
+/* ── Vago Yo (tutor, fase 1) ────────────────────────────────────── */
+const T = () => ctx.tutor;
+
+function tutorA(pantalla) {
+  Voz.calla();
+  T().pantalla = pantalla;
+  render();
+  vista.focus({ preventScroll: true });
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function tutorEmpieza(ejercicio, opciones = {}) {
+  Object.assign(T(), {
+    sesion: VY.nuevaSesion(ejercicio, opciones),
+    correccion: null, ayuda: null, ejemplo: null, registro: null, borrador: ''
+  });
+  tutorA('ejercicio');
+  $('#tutor-intento')?.focus();
+}
+
+function tutorEntrega(texto) {
+  const t = T();
+  if (!t.sesion || t.sesion.resuelto) return;
+  t.borrador = texto;
+  const r = VY.entregaIntento(t.sesion, texto, ctx.hoy);
+  t.sesion = r.sesion;
+  t.correccion = r.correccion;
+  t.ayuda = null;
+  if (r.registro) {
+    t.registro = r.registro;
+    if (t.ficticio) quitaFicticio();
+    t.progreso = VY.registra(t.progreso, r.registro, ctx.hoy);
+    guardaProgresoTutor();
+  }
+  render();
+}
+
+/* Qué se lee en voz alta según la pantalla. */
+function tutorTextoParaLeer() {
+  const t = T();
+  if (t.pantalla === 'explicar') {
+    const L = VY.LECCIONES[t.asignatura];
+    return [L.idea, L.ejemplo, t.explicar.otra ? L.otra : '', L.accion.pregunta].filter(Boolean).join('. ');
+  }
+  if (t.sesion) {
+    return [t.sesion.ejercicio.enunciado, t.correccion?.mensaje, t.correccion?.pista, t.ayuda].filter(Boolean).join('. ');
+  }
+  return '';
+}
+
+const idiomaTutor = (asig, texto) => (asig === 'frances' ? 'fr' : asig === 'ingles' ? 'en' : Voz.idiomaDe(texto));
+
+function quitaFicticio() {
+  const t = T();
+  if (!t.ficticio) return;
+  t.progreso = t.progresoReal || {};
+  t.progresoReal = null;
+  t.ficticio = false;
+}
+
+let pararDictadoTutor = null;
+
+const accionesTutor = {
+  'tutor-ir': (el) => {
+    if (el.dataset.pantalla === 'explicar') T().explicar = { elegida: null, revelado: false, otra: false };
+    if (el.dataset.pantalla === 'subir') T().errorEnunciado = null;
+    tutorA(el.dataset.pantalla || 'inicio');
+  },
+  'tutor-asignatura': (el) => {
+    T().asignatura = el.dataset.id;
+    T().explicar = { elegida: null, revelado: false, otra: false };
+    render();
+  },
+  'tutor-foto': (el) => {
+    const foto = VY.FOTOS_DEMO.find((f) => f.id === el.dataset.id);
+    if (!foto) return;
+    T().lectura = VY.leeFotoDemo(foto);
+    tutorA('confirmar');
+  },
+  'tutor-elegir': (el) => {
+    T().lectura = VY.eligeEnLectura(T().lectura, Number(el.dataset.i), el.dataset.op);
+    render();
+  },
+  'tutor-confirmar': () => {
+    const r = VY.ejercicioDeLectura(T().lectura);
+    if (r.tipo === 'ejercicio') tutorEmpieza(r.ejercicio);
+    else render();
+  },
+  'tutor-enunciado': () => {
+    const texto = ($('#tutor-enunciado')?.value || '').trim();
+    T().enunciadoEscrito = texto;
+    const ej = VY.deEnunciado(texto);
+    if (!ej) {
+      T().errorEnunciado = 'No reconozco una ecuación de primer grado con una x. Revisa los signos y que haya un solo «=».';
+      render();
+      return;
+    }
+    T().errorEnunciado = null;
+    tutorEmpieza({ ...ej, origen: 'Escrito por ti' });
+  },
+  'tutor-practicar': () => tutorEmpieza(VY.primerEjercicio(T().asignatura)),
+  'tutor-comprobar': () => tutorEntrega($('#tutor-intento')?.value || ''),
+  'tutor-opcion': (el) => tutorEntrega(el.dataset.op),
+  'tutor-pista': () => {
+    const r = VY.pidePista(T().sesion);
+    T().sesion = r.sesion;
+    T().ayuda = `💡 ${r.texto}`;
+    render();
+  },
+  'tutor-otra': () => {
+    const r = VY.otraExplicacion(T().sesion);
+    T().sesion = r.sesion;
+    T().ayuda = `🔄 ${r.texto}`;
+    render();
+  },
+  'tutor-ejemplo': () => {
+    const r = VY.verEjemplo(T().sesion);
+    T().sesion = r.sesion;
+    T().ejemplo = r.ejemplo;
+    render();
+  },
+  'tutor-otro': () => tutorEmpieza(VY.otroDelMismoTipo(T().sesion.ejercicio)),
+  'tutor-repasar': (el) => {
+    const ej = VY.ejercicioDeHabilidad(el.dataset.id);
+    if (ej) tutorEmpieza(ej, { esRepaso: true });
+  },
+  'tutor-posponer': (el) => {
+    // El motivo nuevo («Pospuesto…») ya sale en pantalla; deshacer, en Repasar.
+    T().progreso = VY.pospone(T().progreso, el.dataset.id, 1);
+    guardaProgresoTutor();
+    render();
+  },
+  'tutor-deshacer': (el) => {
+    T().progreso = VY.deshacePospuesto(T().progreso, el.dataset.id);
+    guardaProgresoTutor();
+    render();
+  },
+  'tutor-leer': () => {
+    const texto = tutorTextoParaLeer();
+    if (texto) Voz.lee(texto, idiomaTutor(T().asignatura, texto));
+  },
+  'tutor-explicar-otra': () => { T().explicar.otra = true; render(); },
+  'tutor-explicar-elige': (el) => { T().explicar.elegida = Number(el.dataset.i); render(); },
+  'tutor-revelar': () => { T().explicar.revelado = true; render(); },
+  'tutor-dictar': () => {
+    const t = T();
+    if (t.grabando) { pararDictadoTutor?.(); return; }
+    Voz.calla();
+    pararDictadoTutor = Voz.dicta({
+      alTexto: (txt) => {
+        t.hablar.texto = txt;
+        const caja = $('#tutor-habla');
+        if (caja) caja.value = txt;
+      },
+      alTerminar: () => { t.grabando = false; pararDictadoTutor = null; render(); $('#tutor-habla')?.focus(); },
+      alError: (motivo) => { t.grabando = false; avisa(`${motivo} Puedes escribirlo.`); }
+    });
+    if (!pararDictadoTutor) { avisa('Este navegador no deja dictar: escríbelo.'); return; }
+    t.grabando = true;
+    render();
+  },
+  'tutor-enviar-habla': () => {
+    const t = T();
+    const texto = ($('#tutor-habla')?.value || '').trim();
+    t.hablar.texto = texto;
+    if (!texto) { avisa('Di o escribe algo primero.'); return; }
+    const i = VY.intencion(texto);
+    const botones = {
+      'no-entiendo': { accion: 'tutor-ir', pantalla: 'explicar', texto: 'Ver la explicación' },
+      'otra-explicacion': { accion: 'tutor-ir', pantalla: 'explicar', texto: 'Ver la explicación' },
+      practicar: { accion: 'tutor-practicar', texto: 'Ponme uno' },
+      pausa: { accion: 'tutor-ir', pantalla: 'pausa', texto: 'Empezar la pausa' },
+      'no-puedo-mas': { accion: 'tutor-ir', pantalla: 'pausa', texto: 'Parar aquí' },
+      examen: { accion: 'ir', vista: 'agenda', texto: 'Ir a Agenda' },
+      dibujo: { accion: 'sub-esquemas', texto: 'Ver mis esquemas' },
+      pista: t.sesion && !t.sesion.resuelto ? { accion: 'tutor-ir', pantalla: 'ejercicio', texto: 'Volver al ejercicio' } : null,
+      corregir: { accion: 'tutor-ir', pantalla: 'subir', texto: 'Subir ejercicio' }
+    };
+    t.hablar.respuesta = i ? VY.RESPUESTAS_INTENCION[i]
+      : 'En la demo no hay IA, así que solo entiendo frases como «no entiendo», «otra explicación», «léemelo», «pausa», «quiero practicar» o «no puedo más». Para preguntas libres, Clara.';
+    t.hablar.boton = i ? botones[i] || null : { accion: 'ir', vista: 'profe', texto: 'Preguntar a Clara' };
+    if (i === 'otra-explicacion') t.explicar = { elegida: null, revelado: false, otra: true };
+    if (i === 'no-entiendo') t.explicar = { elegida: null, revelado: false, otra: false };
+    render();
+    if (i === 'leer') {
+      const leer = tutorTextoParaLeer() || VY.LECCIONES[t.asignatura].idea;
+      Voz.lee(leer, idiomaTutor(t.asignatura, leer));
+    }
+  },
+  'sub-esquemas': () => { ctx.sub = 'esquemas'; irA('estudiar'); },
+  'tutor-ficticio': () => {
+    T().progresoReal = T().progreso;
+    T().progreso = VY.semanaFicticia(ctx.hoy);
+    T().ficticio = true;
+    render();
+  },
+  'tutor-quitar-ficticio': () => { quitaFicticio(); render(); },
+  /* Resumen para Pau: se enseña entero antes de mandarlo y lo manda una
+     persona (compartir o WhatsApp). La app no envía nada sola. */
+  'tutor-enviar-pau': async () => {
+    const texto = VY.textoParaPau(VY.resumenFamiliar(T().progreso, ctx.hoy), { alumno: estado.alumno.nombre || 'Nicer', hoy: ctx.hoy });
+    const ok = await pide({
+      titulo: 'Mandar el resumen a Pau',
+      html: `<p class="tutor-nota" style="margin-top:0">Esto es exactamente lo que se manda. Nada más.</p>
+        <pre class="tutor-previa">${escapa(texto)}</pre>`,
+      aceptar: 'Mandar'
+    });
+    if (!ok) return;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Resumen de Vago Yo', text: texto }); return; }
+      catch (e) { if (e?.name === 'AbortError') return; }
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
+  }
+};
+
+/* Lo escrito se conserva aunque se repinte la pantalla. */
+document.addEventListener('input', (ev) => {
+  const t = ctx.tutor;
+  if (ev.target.id === 'tutor-intento') t.borrador = ev.target.value;
+  else if (ev.target.id === 'tutor-enunciado') t.enunciadoEscrito = ev.target.value;
+  else if (ev.target.id === 'tutor-habla') t.hablar.texto = ev.target.value;
+});
+
+const avisaRed = () => { ctx.enLinea = navigator.onLine !== false; if (ctx.vista === 'tutor') render(); };
+window.addEventListener('online', avisaRed);
+window.addEventListener('offline', avisaRed);
+
 const acciones = {
+  ...accionesTutor,
   ir: (el) => irA(el.dataset.vista),
 
   /* Agenda */
@@ -479,6 +737,8 @@ const acciones = {
   'borrar-todo': async () => {
     if (!(await confirma('Se borra TODO: deberes, exámenes, tarjetas, notas y horario. No hay vuelta atrás.'))) return;
     estado = D.estadoInicial();
+    ctx.tutor = tutorNuevo();
+    try { localStorage.removeItem(CLAVE_TUTOR); } catch { /* nada */ }
     estado.asignaturas = D.ASIGNATURAS_ESO.map((a) => ({ id: id('as'), nombre: a.nombre, color: a.color, profe: '' }));
     persiste(); render();
   },
@@ -1603,6 +1863,6 @@ const inicial = new URLSearchParams(location.search).get('vista');
 // estén instalados en el móvil tienen que seguir funcionando.
 const equivalencias = { repaso: 'estudiar' };
 const pedida = equivalencias[inicial] || inicial;
-if (pedida && ['hoy', 'agenda', 'estudiar', 'profe', 'yo'].includes(pedida)) ctx.vista = pedida;
+if (pedida && ['hoy', 'agenda', 'estudiar', 'profe', 'yo', 'tutor', 'familia'].includes(pedida)) ctx.vista = pedida;
 
 render();

@@ -73,10 +73,24 @@ Se sirve por HTTP, no con `file://`.
 - Al tocar cualquier `.js`, añadirlo a `RECURSOS` del service worker y subir
   `VERSION`, o el móvil seguirá con la versión vieja.
 
+## Vago Yo (el tutor)
+
+Fase 1 hecha como demostración local: `vagoyo.js` (motor puro), `interfaz-tutor.js`
+(pantallas y panel familiar) y las acciones `tutor-*` de `app.js`; el estado va en
+`ctx.tutor`; el progreso (sin texto del alumno) se guarda en `localStorage` con la clave
+`nicer-estudia:vagoyo` y Pau lo ve en el «Panel de Pau» o con «Mandar el resumen a Pau»
+(vista previa obligatoria, lo manda una persona). Reglas propias: **sin ninguna petición de red** (lo vigila
+`test/vago-yo.ui.test.mjs`), ante un signo dudoso **pregunta**, un acierto con
+pista **no es autónomo**, «consolidado» exige ejercicios distintos en días distintos,
+el resumen familiar sale **solo** del registro (que no guarda texto del alumno) y lo
+escrito dentro de un documento es texto, nunca órdenes. El nombre nunca califica al
+alumno. Todo en `vago-yo/README.md`; el prompt educativo en `vago-yo/PROMPT-TUTOR.md`;
+el modo real está **bloqueado** hasta la revisión de `vago-yo/DATOS-Y-ACTIVACION.md`.
+
 ## Separación por capas
 
 `utiles.js` → `datos.js` / `repaso.js` / `cuestionario.js` / `esquema.js` /
-`ambiente.js` / `calendario.js` / `lecciones.js` / `bloques.js` / `ficha.js` → `interfaz.js` → `app.js`
+`ambiente.js` / `calendario.js` / `lecciones.js` / `bloques.js` / `ficha.js` / `vagoyo.js` → `interfaz.js` / `interfaz-tutor.js` → `app.js`
 
 `voz.js` (dictado y lectura en voz alta) y `foto.js` (reducir la foto en el
 móvil) tocan el navegador, pero su lógica pura (`idiomaDe`, `limpiaParaLeer`,
@@ -120,6 +134,8 @@ regañar: si algo está atrasado, se dice y se ofrece el siguiente paso.
 ```bash
 node test/nicer-estudia.test.mjs      # tiene que quedar en 0 fallidas
 node test/nicer-estudia.ui.test.mjs   # navegador real, recorrido completo
+node test/vago-yo.test.mjs            # motor del tutor
+node test/vago-yo.ui.test.mjs         # tutor en Chromium
 ```
 
 Si añades una función del motor, añade su prueba. Si tocas una pantalla,
